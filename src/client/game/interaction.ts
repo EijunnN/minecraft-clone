@@ -1,6 +1,6 @@
 // Interacción con el mundo: minar y romper, colocar (reglas compartidas), usar bloques (puertas,
 // camas, tartas), comer y beber, arco, cubos, azada, polvo de hueso, animales (dar de comer,
-// esquilar, ordeñar), recoger y tirar objetos.
+// esquilar, ordeñar), ponerse armadura, recoger y tirar objetos.
 import { raycast, type RayHit } from './raycast';
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
@@ -10,6 +10,7 @@ import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, BRE
 import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
 import { EF_BABY, EF_SHEARED, EF_PICKABLE, type ServerMsg } from '../../shared/protocol';
 import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use } from './gameTypes';
+import type { ArmorSource } from './Survival';
 import type { Game } from './Game';
 
 export class Interaction {
@@ -24,6 +25,19 @@ export class Interaction {
   /** Usos de objetos sobre criaturas a la espera de respuesta del servidor. */
   interactQ = 0;
   pendingInteract = new Map<number, { slot: number; item: number }>();
+  /** Armadura para Survival: la del inventario, avisando cuando se rompe una pieza. */
+  readonly armor: ArmorSource = {
+    armorPoints: () => this.g.inv.armorPoints(),
+    armorToughness: () => this.g.inv.armorToughness(),
+    wearArmor: (amount) => {
+      const broken = this.g.inv.wearArmor(amount);
+      if (broken > 0) {
+        this.g.audio.playBreak('metal', [this.g.player.x, this.g.player.eyeY, this.g.player.z]);
+        this.g.ui.toast('¡Se rompió la armadura!');
+      }
+      return broken;
+    },
+  };
   onPicked(s: ItemStack): void {
     if (!s || !isValidItem(s.id)) return;
     const rest = this.g.inv.add({ id: s.id, count: Math.max(1, Math.min(64, s.count | 0)), dmg: s.dmg });
@@ -123,6 +137,10 @@ export class Interaction {
       if (pressed && (def.drink || this.g.survival.food < 20 || this.g.creative)) this.use = { kind: 'eat', t: 0, slot: this.g.selected, item: held.id, soundT: 0.3 };
       return;
     }
+    if (def.armor) {
+      if (pressed) this.equipHeld();
+      return;
+    }
     if (def.tool?.kind === 'bow') {
       if (pressed && (this.g.creative || this.g.inv.count(ARROW) > 0)) this.use = { kind: 'bow', t: 0, slot: this.g.selected, item: held.id, soundT: 0 };
       return;
@@ -136,6 +154,18 @@ export class Interaction {
       return;
     }
     if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
+  }
+
+  /** Clic derecho con una pieza de armadura: se la pone (intercambia con la puesta; en creativo no se gasta). */
+  equipHeld(): void {
+    const held = this.g.heldStack;
+    const def = held ? ITEMS[held.id]?.armor : undefined;
+    if (!held || !def) return;
+    if (this.g.creative) this.g.inv.equip(held);
+    else this.g.inv.equipFromSlot(this.g.selected, true);
+    const p = this.g.player;
+    this.g.audio.playPlace(def.material === 'leather' ? 'wool' : 'metal', [p.x, p.eyeY, p.z]);
+    this.g.swing(true);
   }
 
   /** Clic derecho en puertas, trampillas y portillos (se abren al momento) o en una cama. */

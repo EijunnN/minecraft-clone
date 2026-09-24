@@ -8,7 +8,7 @@ import {
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
   CLAY_BALL, BUCKET, BOW, ARROW, SHEARS, LAPIS, TOOLS, BONE, BREAD, WHEAT, SUGAR, EGG, MILK_BUCKET, BONE_MEAL,
-  type ItemStack,
+  ARMOR, type ItemStack,
 } from './items';
 
 type Cell = readonly number[] | null;
@@ -105,6 +105,15 @@ shape(['I I', ' I '], { I: IRON_INGOT }, BUCKET);
 shape([' I', 'I '], { I: IRON_INGOT }, SHEARS);
 shape([' SW', 'S W', ' SW'], { S: STICK, W: STRING }, BOW);
 shape(['F', 'S', 'E'], { F: FLINT, S: STICK, E: FEATHER }, ARROW, 4);
+
+// --- Armaduras ---
+const ARMOR_MATS: [string, number][] = [['leather', LEATHER], ['iron', IRON_INGOT], ['golden', GOLD_INGOT], ['diamond', DIAMOND]];
+for (const [mat, m] of ARMOR_MATS) {
+  shape(['MMM', 'M M'], { M: m }, ARMOR[mat].helmet);
+  shape(['M M', 'MMM', 'MMM'], { M: m }, ARMOR[mat].chestplate);
+  shape(['MMM', 'M M', 'M M'], { M: m }, ARMOR[mat].leggings);
+  shape(['M M', 'M M'], { M: m }, ARMOR[mat].boots);
+}
 
 // --- Granja ---
 shape(['WWW'], { W: WHEAT }, BREAD);
