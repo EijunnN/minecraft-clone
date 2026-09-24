@@ -20,7 +20,7 @@ import { cutoutCanvas, sprite, type Ink } from './genPlants';
 // ---------------------------------------------------------------------------
 
 /** Lleva el color medio de la textura a `base` sin cambiar su dibujo (claros y oscuros relativos). */
-function tintTo(t: Tex, base: RGB): void {
+export function tintTo(t: Tex, base: RGB): void {
   let sum = 0;
   let n = 0;
   for (let i = 0; i < N; i++) {

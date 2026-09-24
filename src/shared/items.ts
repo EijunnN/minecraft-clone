@@ -10,7 +10,7 @@ import {
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
   WOOD_TYPES, ALL_LOGS, ALL_PLANKS, ALL_SAPLINGS, RED_SAND, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
-  PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS, familyBase,
+  PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS, familyBase, CAVE_VINES, COPPER_ORE, DEEPSLATE_ORE, COBBLED_DEEPSLATE, DEEPSLATE,
 } from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod';
@@ -227,6 +227,13 @@ export const PUFFERFISH = item('pufferfish', 'Pez globo', {
   food: { hunger: 1, saturation: 0.2, effects: [[EFFECT_HUNGER, 15, 2, 1], [EFFECT_POISON, 60, 1, 1]] },
 });
 
+// ------------------------------------------------------------------ subsuelo (fase 5)
+export const COPPER_INGOT = item('copper_ingot', 'Lingote de cobre');
+export const EMERALD = item('emerald', 'Esmeralda');
+export const AMETHYST_SHARD = item('amethyst_shard', 'Fragmento de amatista');
+/** Bayas luminosas: se comen o se plantan bajo un techo (enredaderas de cueva). */
+export const GLOW_BERRIES = item('glow_berries', 'Bayas luminosas', { block: CAVE_VINES, food: { hunger: 2, saturation: 0.4 } });
+
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
 ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
@@ -266,6 +273,11 @@ smelt(IRON_ORE, IRON_INGOT);
 smelt(GOLD_ORE, GOLD_INGOT);
 for (const log of ALL_LOGS) smelt(log, CHARCOAL);
 smelt(RED_SAND, GLASS);
+smelt(COPPER_ORE, COPPER_INGOT);
+smelt(DEEPSLATE_ORE[IRON_ORE], IRON_INGOT);
+smelt(DEEPSLATE_ORE[GOLD_ORE], GOLD_INGOT);
+smelt(DEEPSLATE_ORE[COPPER_ORE], COPPER_INGOT);
+smelt(COBBLED_DEEPSLATE, DEEPSLATE);
 smelt(CLAY_BALL, BRICK);
 smelt(CLAY, TERRACOTTA);
 smelt(CACTUS, LIME_WOOL);
@@ -335,7 +347,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   ...Object.values(TOOLS).flatMap((t) => Object.values(t)),
   ...Object.values(ARMOR).flatMap((a) => Object.values(a)),
   GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD, COD, COOKED_COD,
-  SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH,
+  SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

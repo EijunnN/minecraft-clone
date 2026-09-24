@@ -24,6 +24,11 @@ import {
   WOOD_TYPES, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, RED_SANDSTONE,
   COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS,
 } from './biomes';
+import {
+  DEEPSLATE, COBBLED_DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE,
+  DEEPSLATE_ORE, EMERALD_BLOCK, MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, AMETHYST_BLOCK, BUDDING_AMETHYST,
+  AMETHYST_BUD, TINTED_GLASS,
+} from './underground';
 
 export * from './registry';
 export * from './classic';
@@ -32,6 +37,7 @@ export * from './farm';
 export * from './decoration';
 export * from './workstations';
 export * from './biomes';
+export * from './underground';
 export * from './queries';
 
 {
@@ -77,6 +83,10 @@ export const INVENTORY_ORDER: readonly number[] = [
   ...WOOD_TYPES.slice(3).flatMap((w) => [w.log, w.planks, w.leaves, w.sapling]),
   MYCELIUM, RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, RED_SANDSTONE, PACKED_ICE,
   ...Object.values(COLORED_TERRACOTTA), VINE, LILY_PAD, ...Object.values(FLOWERS), PINK_PETALS,
+  // Fase 5: subsuelo.
+  DEEPSLATE, COBBLED_DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE,
+  ...Object.values(DEEPSLATE_ORE), EMERALD_BLOCK, MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, AMETHYST_BLOCK,
+  BUDDING_AMETHYST, AMETHYST_BUD + 3, TINTED_GLASS,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [

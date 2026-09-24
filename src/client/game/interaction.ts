@@ -6,7 +6,7 @@ import { raycast, type RayHit } from './raycast';
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
-import { LILY_PAD, AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, RED_SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
+import { LILY_PAD, CAVE_VINES, BLOCK_NEEDS_SUPPORT, AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, RED_SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
   CAMPFIRE, stateProps } from '../../shared/blocks';
 import {
   ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, itemForBlock, maxStack,
@@ -153,6 +153,8 @@ export class Interaction {
     if (!held || !def) return;
     // Zanahorias y patatas se plantan en tierra de cultivo; si no, se comen.
     if (def.block !== undefined && hit && isCrop(def.block) && this.placeBlock(hit, def.block)) return;
+    // Bayas luminosas bajo un techo: se plantan; si no, se comen.
+    if (def.block === CAVE_VINES && hit && pressed && this.placeBlock(hit, CAVE_VINES)) return;
     if (held.id === SHEARS && hit?.id === PUMPKIN) {
       if (pressed) this.carve(hit);
       return;
@@ -523,7 +525,7 @@ export class Interaction {
       if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return false;
       // Plantas, antorchas de pie, cactus y caña necesitan apoyo.
       const r = BLOCK_RENDER[id];
-      if (r === R_CROSS || (r === R_TORCH && BLOCK_WALL[id] < 0) || id === CACTUS || id === SUGAR_CANE) {
+      if ((r === R_CROSS || (r === R_TORCH && BLOCK_WALL[id] < 0) || id === CACTUS || id === SUGAR_CANE) && !BLOCK_NEEDS_SUPPORT[id]) {
         const under = world.getBlock(x, y - 1, z);
         if (SAPLINGS.has(id)) {
           if (!SOIL.has(under)) return false;

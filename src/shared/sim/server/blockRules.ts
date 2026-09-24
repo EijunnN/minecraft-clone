@@ -16,6 +16,7 @@ const NEIGHBORS7 = [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0,
 /** Plantas, antorchas de pie y cactus: necesitan el bloque de abajo. */
 function needsSupport(id: number): boolean {
   const r = BLOCK_RENDER[id];
+  if (BLOCK_NEEDS_SUPPORT[id]) return false; // enredaderas de cueva, amatista…: su propio apoyo
   return ((r === R_CROSS || r === R_TORCH) && BLOCK_WALL[id] < 0) || id === CACTUS;
 }
 

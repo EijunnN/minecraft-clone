@@ -7,14 +7,15 @@ import {
   CARROTS, POTATOES, BEETROOTS, CAKE, CHEST, FURNACE, OAK_SAPLING, SPRUCE_SAPLING, MELON, PUMPKIN_STEM, MELON_STEM,
   ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER, WALLS, BEDS, SIGNS, WALL_SIGNS,
   CHEST_DOUBLE, SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER, JUNGLE_LOG, ACACIA_LOG, DARK_OAK_LOG, CHERRY_LOG, CHERRY_SAPLING,
-  VINE, LILY_PAD, MYCELIUM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS,
+  VINE, LILY_PAD, MYCELIUM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, DEEPSLATE, COPPER_ORE, DEEPSLATE_ORE,
+  COAL_ORE, EMERALD_BLOCK, MOSS_BLOCK, CAVE_VINES, POINTED_DRIPSTONE, AMETHYST_BUD, TINTED_GLASS,
 } from '../src/shared/blocks';
 import {
   STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR, ARMOR, GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, FISHING_ROD,
-  PUFFERFISH,
+  PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES,
 } from '../src/shared/items';
 
-const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry'];
+const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate'];
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).
@@ -39,6 +40,8 @@ test('los ids de bloques guardados no cambian', () => {
   // Maderas y biomas (fase 5).
   assert.deepEqual([JUNGLE_LOG, SLABS.jungle, DOORS.jungle, SIGNS.jungle, ACACIA_LOG, DARK_OAK_LOG, CHERRY_LOG, CHERRY_SAPLING], [1497, 1501, 1521, 1569, 1577, 1657, 1737, 1740]);
   assert.deepEqual([VINE, LILY_PAD, MYCELIUM, RED_SAND, COLORED_TERRACOTTA.white, PACKED_ICE, FLOWERS.blue_orchid, PINK_PETALS], [1817, 1821, 1822, 1826, 1828, 1834, 1835, 1844]);
+  // Subsuelo (fase 5).
+  assert.deepEqual([DEEPSLATE, SLABS.cobbled_deepslate, COPPER_ORE, DEEPSLATE_ORE[COAL_ORE], EMERALD_BLOCK, MOSS_BLOCK, CAVE_VINES, POINTED_DRIPSTONE, AMETHYST_BUD, TINTED_GLASS], [1845, 1851, 1862, 1864, 1872, 1873, 1877, 1879, 1887, 1891]);
 });
 
 test('los ids de objetos guardados no cambian', () => {
@@ -53,4 +56,6 @@ test('los ids de objetos guardados no cambian', () => {
   assert.deepEqual([GOLDEN_APPLE, SPIDER_EYE, SHIELD], [344, 345, 346]);
   // Calabazas, sandías y pesca (fase 4).
   assert.deepEqual([PUMPKIN_SEEDS, FISHING_ROD, PUFFERFISH], [347, 351, 357]);
+  // Subsuelo (fase 5).
+  assert.deepEqual([COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES], [358, 359, 360, 361]);
 });

@@ -10,8 +10,9 @@ Objects). Pensado para PC (teclado y ratón).
 - **Mundo infinito procedural** con 23 biomas: océanos (cálidos, fríos, helados y profundos), playas,
   llanuras, praderas en flor, bosques, abedulares, bosques oscuros, arboledas de cerezos, taiga,
   picos de hielo, desiertos, tierras baldías de terracota, sabanas de acacias, junglas con árboles
-  gigantes, pantanos, islas de champiñones y montañas con picos nevados; ríos, cuevas, lagos de lava
-  y minerales. Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
+  gigantes, pantanos, islas de champiñones y montañas con picos nevados; ríos, cuevas (frondosas con
+  bayas luminosas, de goteo con estalactitas, inundadas), lagos de lava, geodas de amatista y las ocho
+  menas de Minecraft (también en pizarra profunda por debajo de 0). Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
   de alto como en Minecraft actual: de y = −64 (lecho de roca) a 319.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
@@ -107,6 +108,8 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Jungla con árboles gigantes y enredaderas](docs/screenshots/jungle.png) | ![Arboleda de cerezos al pie de una montaña](docs/screenshots/cherry.png) |
 | ![Tierras baldías con mesetas de terracota](docs/screenshots/badlands.png) | ![Isla de champiñones gigantes](docs/screenshots/mushroom.png) |
 | ![Pantano con nenúfares y orquídeas azules](docs/screenshots/swamp.png) | ![Picos de hielo compacto en la nieve](docs/screenshots/ice_spikes.png) |
+| ![Cueva frondosa con musgo y enredaderas de bayas luminosas](docs/screenshots/lush.png) | ![Cueva de goteo con estalactitas](docs/screenshots/dripstone.png) |
+| ![Geoda de amatista a oscuras](docs/screenshots/geode.png) | ![Pizarra profunda con menas](docs/screenshots/deepslate.png) |
 
 ## Controles
 

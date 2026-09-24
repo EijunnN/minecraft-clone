@@ -1,6 +1,7 @@
 // Recetas de fabricación (cuadrícula 2x2 del inventario y 3x3 de la mesa de trabajo).
 import {
-  CRAFTING_TABLE, TORCH, CHEST, FURNACE, WOOD_TYPES, ALL_LOGS, ALL_PLANKS, MATERIALS, WOODS, RED_SAND, RED_SANDSTONE,
+  CRAFTING_TABLE, TORCH, CHEST, FURNACE, WOOD_TYPES, COBBLED_DEEPSLATE, COPPER_BLOCK, EMERALD_BLOCK, AMETHYST_BLOCK,
+  TINTED_GLASS, MOSS_BLOCK, MOSS_CARPET, ALL_LOGS, ALL_PLANKS, MATERIALS, WOODS, RED_SAND, RED_SANDSTONE,
   COBBLESTONE, STONE, STONE_BRICKS, SAND, SANDSTONE, BRICKS, CLAY, BOOKSHELF, IRON_BLOCK, GOLD_BLOCK, DIAMOND_BLOCK,
   WHITE_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL, POPPY, DANDELION, CORNFLOWER, SUGAR_CANE, GLASS, SLABS, STAIRS,
   FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED, HAY_BALE, CAKE, PUMPKIN, MELON, CARVED_PUMPKIN,
@@ -10,7 +11,7 @@ import {
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
   CLAY_BALL, BUCKET, BOW, ARROW, SHEARS, LAPIS, TOOLS, BONE, BREAD, WHEAT, SUGAR, EGG, MILK_BUCKET, BONE_MEAL,
-  APPLE, GOLDEN_APPLE, SHIELD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD,
+  APPLE, GOLDEN_APPLE, SHIELD, COPPER_INGOT, EMERALD, AMETHYST_SHARD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD,
   ARMOR, type ItemStack,
 } from './items';
 
@@ -67,7 +68,9 @@ shape(['PPP', 'P P', 'PPP'], { P: PLANKS }, CHEST);
 shape(['PPP', 'BBB', 'PPP'], { P: PLANKS, B: BOOK }, BOOKSHELF);
 
 // --- Piedra y construcción ---
-shape(['CCC', 'C C', 'CCC'], { C: COBBLESTONE }, FURNACE);
+/** Roca para herramientas de piedra y hornos (también la de pizarra profunda). */
+const ROCKS = [COBBLESTONE, COBBLED_DEEPSLATE] as const;
+shape(['CCC', 'C C', 'CCC'], { C: ROCKS }, FURNACE);
 shape(['SS', 'SS'], { S: STONE }, STONE_BRICKS, 4);
 shape(['SS', 'SS'], { S: SAND }, SANDSTONE);
 shape(['SS', 'SS'], { S: RED_SAND }, RED_SANDSTONE);
@@ -91,7 +94,7 @@ shape(['WWW', 'PPP'], { W: RED_WOOL, P: PLANKS }, RED_BED);
 
 // --- Herramientas ---
 const MATS: [string, number | readonly number[]][] = [
-  ['wooden', PLANKS], ['stone', COBBLESTONE], ['iron', IRON_INGOT], ['golden', GOLD_INGOT], ['diamond', DIAMOND],
+  ['wooden', PLANKS], ['stone', ROCKS], ['iron', IRON_INGOT], ['golden', GOLD_INGOT], ['diamond', DIAMOND],
 ];
 for (const [mat, m] of MATS) {
   shape(['MMM', ' S ', ' S '], { M: m, S: STICK }, TOOLS[mat].pickaxe);
@@ -147,6 +150,15 @@ shape([' L ', 'LFL', ' L '], { L: LOGS, F: FURNACE }, SMOKER);
 shape(['III', 'IFI', 'SSS'], { I: IRON_INGOT, F: FURNACE, S: STONE }, BLAST_FURNACE);
 shape([' S ', 'SCS', 'LLL'], { S: STICK, C: FUEL_COAL, L: LOGS }, CAMPFIRE);
 shape([' I ', 'SSS'], { I: IRON_INGOT, S: STONE }, STONECUTTER);
+
+// --- Subsuelo (fase 5) ---
+shape(['III', 'III', 'III'], { I: COPPER_INGOT }, COPPER_BLOCK);
+mix([COPPER_BLOCK], COPPER_INGOT, 9);
+shape(['EEE', 'EEE', 'EEE'], { E: EMERALD }, EMERALD_BLOCK);
+mix([EMERALD_BLOCK], EMERALD, 9);
+shape(['AA', 'AA'], { A: AMETHYST_SHARD }, AMETHYST_BLOCK);
+shape([' A ', 'AGA', ' A '], { A: AMETHYST_SHARD, G: GLASS }, TINTED_GLASS, 2);
+shape(['MM'], { M: MOSS_BLOCK }, MOSS_CARPET, 3);
 
 // --- Combate y estado ---
 shape(['GGG', 'GAG', 'GGG'], { G: GOLD_INGOT, A: APPLE }, GOLDEN_APPLE);

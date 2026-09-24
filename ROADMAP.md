@@ -29,12 +29,12 @@ noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **c
 | Elemento | Minecraft | Estado |
 | --- | --- | --- |
 | Mundo infinito procedural, determinista por semilla | sí | ✅ |
-| Altura -64 a 320, capa de pizarra profunda (deepslate) por debajo de 0 | sí | 🟡 (altura ✅; falta la pizarra profunda) |
+| Altura -64 a 320, capa de pizarra profunda (deepslate) por debajo de 0 | sí | ✅ |
 | Biomas de superficie | llanura, llanura de girasoles, bosque, bosque de flores, abedular (y antiguo), bosque oscuro, jardín pálido, taiga (y antigua de pinos y de abetos), taiga nevada, arboleda, prado, cerezal, bosque moteado (26.3), sabana (y meseta y ventosa), desierto, badlands (3), jungla (3), pantano, manglar, colinas ventosas (3), llanura nevada, picos de hielo, laderas nevadas, picos (3), costa pedregosa, playas, ríos, champiñonal | 🟡 (llanura, bosque, abedular, bosque oscuro, taiga, nevado, picos de hielo, pradera, cerezal, desierto, badlands, sabana, jungla, pantano, champiñonal, montañas, picos nevados, playa) |
 | Océanos | cálido, templado, frío, helado, normal y sus versiones profundas | 🟡 (normal, cálido, frío, helado y profundo) |
-| Biomas de cueva | cuevas frondosas, cuevas de goteo, oscuridad profunda, cuevas de azufre (26.2) | ❌ |
-| Cuevas | "queso", "espagueti", "fideos", acuíferos, lagos de lava subterráneos | 🟡 (cuevas y lagos de lava sencillos) |
-| Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, restos antiguos | 🟡 (6 de 8, sin cobre ni esmeralda) |
+| Biomas de cueva | cuevas frondosas, cuevas de goteo, oscuridad profunda, cuevas de azufre (26.2) | 🟡 (frondosas y de goteo) |
+| Cuevas | "queso", "espagueti", "fideos", acuíferos, lagos de lava subterráneos | 🟡 (queso, espaguetis, acuíferos y lagos de lava) |
+| Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, restos antiguos | ✅ (las 8 del mundo normal, con sus versiones de pizarra profunda) |
 | Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea | 🟡 (roble, abedul, abeto, jungla —también gigante—, acacia, roble oscuro, cerezo y champiñones gigantes) |
 | Clima | lluvia, nieve, tormentas con rayos; la nieve se acumula y el agua se congela | 🟡 (lluvia y nieve visuales) |
 | Ciclo día/noche, fases lunares | sí | ✅ |
@@ -307,6 +307,13 @@ acumulación de nieve.
   brote, losa, escaleras, valla, portillo, puerta, trampilla y carteles; el roble oscuro crece de 2×2
   brotes y la jungla da un árbol gigante con 2×2. Nueve flores nuevas (tulipanes, allium, margarita…).
   Faltan manglar, bosque de flores, arboleda nevada y las variantes (ventosas, antiguas…).
+- ✅ **Subsuelo.** Pizarra profunda por debajo de 0 (mezclada con piedra hasta y = 8) con toba y las
+  versiones de pizarra de todas las menas; cobre (lingotes y bloque) y esmeralda en las montañas;
+  cuevas frondosas (musgo, azaleas y enredaderas de cueva con bayas luminosas que dan luz) y de goteo
+  (bloques de espeleotema, estalactitas y estalagmitas, más cobre); acuíferos (cuevas inundadas por
+  debajo de un nivel de agua por zonas); y geodas de amatista (basalto liso, calcita, amatista y
+  amatista con brotes que echa racimos; los racimos dan fragmentos para el cristal tintado). La pizarra
+  profunda rocosa sirve para herramientas de piedra, hornos, losas y escaleras.
 
 ### Fase 6 — Criaturas (XL)
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y

@@ -2,14 +2,16 @@
 import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, isLeaves, isVine, woodOf, MYCELIUM, PACKED_ICE,
-  RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, RED_MUSHROOM, BROWN_MUSHROOM,
+  RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, RED_MUSHROOM, BROWN_MUSHROOM, DEEPSLATE, COBBLED_DEEPSLATE, SURFACE_ORE,
+  EMERALD_ORE, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
   PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE,
 } from '../blocks';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
-  BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, type ItemStack,
+  BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
+  GLOW_BERRIES, type ItemStack,
 } from '../items';
 
 /** Botín de un bloque roto con la herramienta `toolId` (0 = mano). */
@@ -44,6 +46,21 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
     return n > 0 ? one(block === RED_MUSHROOM_BLOCK ? RED_MUSHROOM : BROWN_MUSHROOM, n) : [];
   }
   if (block === MYCELIUM) return one(DIRT);
+  // Pizarra profunda: como la piedra; sus menas sueltan lo mismo que las normales.
+  if (block === DEEPSLATE) return one(COBBLED_DEEPSLATE);
+  if (SURFACE_ORE[block] !== undefined) {
+    const same = blockDrops(SURFACE_ORE[block], toolId, rand);
+    return same.length === 1 && same[0].id === SURFACE_ORE[block] ? one(block) : same;
+  }
+  if (block === EMERALD_ORE) return one(EMERALD);
+  // La amatista con brotes no se puede recoger (como sin toque de seda).
+  if (block === BUDDING_AMETHYST) return [];
+  // Brotes de amatista: sólo el racimo suelta fragmentos (4 con pico, 2 a mano).
+  if (familyBase(block) === AMETHYST_BUD) {
+    if (block - AMETHYST_BUD < 3) return [];
+    return one(AMETHYST_SHARD, tool?.kind === 'pickaxe' ? 4 : 2);
+  }
+  if (familyBase(block) === CAVE_VINES) return block === CAVE_VINES + 1 ? one(GLOW_BERRIES) : [];
   // El hielo compacto sólo se consigue con toque de seda.
   if (block === PACKED_ICE) return [];
   if (isCrop(block)) {

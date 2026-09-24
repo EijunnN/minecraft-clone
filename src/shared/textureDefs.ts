@@ -212,6 +212,28 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...['blue_orchid', 'allium', 'azure_bluet', 'red_tulip', 'orange_tulip', 'white_tulip', 'pink_tulip', 'oxeye_daisy',
     'lily_of_the_valley'].map((k): TextureDef => ({ name: k, wave: 2, sss: 0.7, cutout: true })),
   { name: 'pink_petals', sss: 0.6, cutout: true },
+  // Subsuelo de la fase 5: pizarra profunda, menas, cuevas frondosas y de goteo, geodas.
+  { name: 'deepslate' },
+  { name: 'deepslate_top' },
+  { name: 'cobbled_deepslate' },
+  { name: 'tuff' },
+  { name: 'calcite' },
+  { name: 'smooth_basalt' },
+  { name: 'dripstone_block' },
+  { name: 'pointed_dripstone' },
+  { name: 'copper_ore' },
+  { name: 'emerald_ore' },
+  ...['coal', 'iron', 'copper', 'gold', 'redstone', 'lapis', 'diamond', 'emerald'].map((k): TextureDef => ({ name: `deepslate_${k}_ore` })),
+  { name: 'emerald_block' },
+  { name: 'moss_block', sss: 0.3 },
+  { name: 'azalea', wave: 2, sss: 0.7, cutout: true },
+  { name: 'flowering_azalea', wave: 2, sss: 0.7, cutout: true },
+  { name: 'cave_vines', wave: 2, sss: 0.7, cutout: true },
+  { name: 'cave_vines_lit', wave: 2, sss: 0.7, cutout: true },
+  { name: 'amethyst_block' },
+  { name: 'budding_amethyst' },
+  ...['small_amethyst_bud', 'medium_amethyst_bud', 'large_amethyst_bud', 'amethyst_cluster'].map((k): TextureDef => ({ name: k, sss: 0.4, cutout: true })),
+  { name: 'tinted_glass', special: 3 },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

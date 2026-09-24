@@ -3,7 +3,7 @@
 // añaden sus propios manejadores de ticks aleatorios.
 import {
   AIR, GRASS, DIRT, SNOWY_GRASS, CACTUS, SUGAR_CANE, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_RENDER, BLOCK_REPLACEABLE,
-  R_CROSS, MYCELIUM, isVine,
+  R_CROSS, MYCELIUM, isVine, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, familyBase,
 } from '../../blocks';
 import { MIN_Y, MAX_Y, CHUNK_SIZE, CHUNK_VOLUME, indexY } from '../../constants';
 import { leafDecayDrops } from '../drops';
@@ -95,7 +95,6 @@ export class Nature {
 
   /** Ticks aleatorios: brotes que crecen, hierba que se extiende o muere, cactus y cañas que crecen. */
   private randomTicks(): void {
-    const w = this.ctx.world;
     const rand = () => this.ctx.rand();
     for (const c of this.loadedNearPlayers()) {
       for (let k = 0; k < RANDOM_TICKS_PER_CHUNK; k++) {
@@ -103,37 +102,58 @@ export class Nature {
         const id = c.blocks[idx];
         if (id === AIR) continue;
         const x = c.cx * 16 + (idx & 15), y = indexY(idx), z = c.cz * 16 + ((idx >> 4) & 15);
-        if (SAPLINGS.has(id)) {
-          this.growTree(x, y, z, SAPLINGS.get(id)!);
-        } else if (id === GRASS || id === SNOWY_GRASS || id === MYCELIUM) {
-          const above = w.getBlock(x, y + 1, z);
-          if (above > 0 && (BLOCK_OPAQUE[above] || BLOCK_FLUID[above])) {
-            w.setBlock(x, y, z, DIRT);
-            continue;
-          }
-          // La hierba y el micelio se extienden por la tierra de alrededor.
-          const spread = id === MYCELIUM ? MYCELIUM : GRASS;
-          for (let t = 0; t < 2; t++) {
-            const nx = x + ((rand() * 3) | 0) - 1, ny = y + ((rand() * 5) | 0) - 3, nz = z + ((rand() * 3) | 0) - 1;
-            if (w.getBlock(nx, ny, nz) !== DIRT) continue;
-            const up = w.getBlock(nx, ny + 1, nz);
-            if (up < 0 || BLOCK_OPAQUE[up] || BLOCK_FLUID[up]) continue;
-            // Sólo a la luz: cielo abierto encima o bajo la copa de un árbol.
-            const top = w.skyTop(nx, nz);
-            if (top <= ny + 1 || LEAVES.has(w.getBlock(nx, top, nz))) w.setBlock(nx, ny, nz, spread);
-          }
-        } else if (isVine(id)) {
-          // Las enredaderas bajan poco a poco hasta el suelo.
-          if (rand() < 0.25 && w.getBlock(x, y - 1, z) === AIR) w.setBlock(x, y - 1, z, id);
-        } else if (id === CACTUS || id === SUGAR_CANE) {
-          if (w.getBlock(x, y + 1, z) !== AIR || rand() > 0.25) continue;
-          let h = 1;
-          while (h < 3 && w.getBlock(x, y - h, z) === id) h++;
-          if (h < 3) w.setBlock(x, y + 1, z, id);
-        } else {
-          for (const handle of this.handlers) if (handle(id, x, y, z)) break;
-        }
+        this.tickBlock(id, x, y, z);
       }
+    }
+  }
+
+  /** Tick aleatorio sobre un bloque concreto (las pruebas lo usan para no depender del azar). */
+  randomTickAt(x: number, y: number, z: number): void {
+    const id = this.ctx.world.getBlock(x, y, z);
+    if (id > 0) this.tickBlock(id, x, y, z);
+  }
+
+  private tickBlock(id: number, x: number, y: number, z: number): void {
+    const w = this.ctx.world;
+    const rand = () => this.ctx.rand();
+    if (SAPLINGS.has(id)) {
+      this.growTree(x, y, z, SAPLINGS.get(id)!);
+    } else if (id === GRASS || id === SNOWY_GRASS || id === MYCELIUM) {
+      const above = w.getBlock(x, y + 1, z);
+      if (above > 0 && (BLOCK_OPAQUE[above] || BLOCK_FLUID[above])) {
+        w.setBlock(x, y, z, DIRT);
+        return;
+      }
+      // La hierba y el micelio se extienden por la tierra de alrededor.
+      const spread = id === MYCELIUM ? MYCELIUM : GRASS;
+      for (let t = 0; t < 2; t++) {
+        const nx = x + ((rand() * 3) | 0) - 1, ny = y + ((rand() * 5) | 0) - 3, nz = z + ((rand() * 3) | 0) - 1;
+        if (w.getBlock(nx, ny, nz) !== DIRT) continue;
+        const up = w.getBlock(nx, ny + 1, nz);
+        if (up < 0 || BLOCK_OPAQUE[up] || BLOCK_FLUID[up]) continue;
+        // Sólo a la luz: cielo abierto encima o bajo la copa de un árbol.
+        const top = w.skyTop(nx, nz);
+        if (top <= ny + 1 || LEAVES.has(w.getBlock(nx, top, nz))) w.setBlock(nx, ny, nz, spread);
+      }
+    } else if (id === BUDDING_AMETHYST) {
+      // La amatista con brotes echa un brote encima que crece hasta ser un racimo.
+      if (rand() > 0.2) return;
+      const up = w.getBlock(x, y + 1, z);
+      if (up === AIR) w.setBlock(x, y + 1, z, AMETHYST_BUD);
+      else if (familyBase(up) === AMETHYST_BUD && up - AMETHYST_BUD < 3) w.setBlock(x, y + 1, z, up + 1);
+    } else if (id === CAVE_VINES) {
+      // Las enredaderas de cueva dan bayas luminosas de vez en cuando.
+      if (rand() < 0.1) w.setBlock(x, y, z, CAVE_VINES + 1);
+    } else if (isVine(id)) {
+      // Las enredaderas bajan poco a poco hasta el suelo.
+      if (rand() < 0.25 && w.getBlock(x, y - 1, z) === AIR) w.setBlock(x, y - 1, z, id);
+    } else if (id === CACTUS || id === SUGAR_CANE) {
+      if (w.getBlock(x, y + 1, z) !== AIR || rand() > 0.25) return;
+      let h = 1;
+      while (h < 3 && w.getBlock(x, y - h, z) === id) h++;
+      if (h < 3) w.setBlock(x, y + 1, z, id);
+    } else {
+      for (const handle of this.handlers) if (handle(id, x, y, z)) break;
     }
   }
 

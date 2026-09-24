@@ -78,7 +78,7 @@ export function stoneBase(t: Tex): void {
 // Menas
 // ---------------------------------------------------------------------------
 
-interface OreStyle {
+export interface OreStyle {
   main: RGB;
   light: RGB;
   dark: RGB;
@@ -102,6 +102,7 @@ const SH_PLUS = ['.#.', '###', '.#.'];
 const SH_BLOB = ['.##', '###', '##.'];
 const SH_BIG = ['.##.', '####', '###.', '.#..'];
 const SH_GEM = ['.#.', '###', '.##'];
+export const ORE_SHAPES = { SH_DOT, SH_2, SH_2V, SH_SQ, SH_L, SH_L3, SH_PLUS, SH_BLOB, SH_BIG, SH_GEM };
 
 const COAL: OreStyle = {
   main: [44, 44, 48],
@@ -167,8 +168,9 @@ const REDSTONE: OreStyle = {
   emit: 50,
 };
 
-function ore(t: Tex, st: OreStyle): void {
-  stoneBase(t);
+/** Mena: pepitas sobre la roca de fondo (`base`: piedra o, para las de pizarra profunda, pizarra). */
+export function ore(t: Tex, st: OreStyle, base: (t: Tex) => void = stoneBase): void {
+  base(t);
   const r = t.rng('nuggets');
   const sites = scatter(r, st.count, st.minDist);
   const occ = new Uint8Array(N);
@@ -258,7 +260,7 @@ function cellLayout(seed: string, count: number, minDist: number, gapW: number, 
   return { cell, gap, dist: distanceTo(gap) };
 }
 
-function cobblestone(t: Tex, mossy: boolean): void {
+export function cobblestone(t: Tex, mossy: boolean): void {
   const L = cellLayout('cobblestone:layout', 11, 3.9, 0.95, 0.8, 1.25);
   const r = new Rng('cobblestone:shade');
   const n8 = new Noise(r, 8);
@@ -407,7 +409,7 @@ interface SpeckGroup {
   dh: number;
 }
 
-interface SpeckStyle {
+export interface SpeckStyle {
   base: RGB[];
   weights: number[];
   specks: SpeckGroup[];
@@ -415,7 +417,7 @@ interface SpeckStyle {
   depth: number;
 }
 
-function speckled(t: Tex, st: SpeckStyle): void {
+export function speckled(t: Tex, st: SpeckStyle): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -578,6 +580,9 @@ function obsidian(t: Tex): void {
   }
   t.depth = 1.0;
 }
+
+/** Estilos de las menas clásicas (para sus versiones de pizarra profunda). */
+export const ORE_STYLES: Record<string, OreStyle> = { coal: COAL, iron: IRON, gold: GOLD, diamond: DIAMOND, lapis: LAPIS, redstone: REDSTONE };
 
 export const STONE_GENERATORS: Record<string, Generator> = {
   stone: stoneBase,

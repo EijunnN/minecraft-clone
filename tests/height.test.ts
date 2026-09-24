@@ -3,7 +3,7 @@
 // guardados con la altura antigua.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AIR, STONE, BEDROCK, LAVA, DIAMOND_ORE, CHEST } from '../src/shared/blocks';
+import { AIR, STONE, BEDROCK, LAVA, DIAMOND_ORE, CHEST, DEEPSLATE, TUFF, DEEPSLATE_ORE } from '../src/shared/blocks';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, CHUNK_VOLUME, blockIndex, indexY } from '../src/shared/constants';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { MemoryStore, BLOCK_FORMAT, encodeChunkEdits, decodeChunkEdits, migrateStore } from '../src/shared/sim/store';
@@ -38,9 +38,9 @@ test('terreno: piedra bajo cero, lecho de roca en −64, lava y diamantes en lo 
           for (let y = MIN_Y + 5; y < 0; y++) {
             const b = blocks[blockIndex(x, y, z)];
             total++;
-            if (b === STONE) stoneBelow++;
+            if (b === STONE || b === DEEPSLATE || b === TUFF) stoneBelow++;
             if (b === LAVA) lava++;
-            if (b === DIAMOND_ORE) diamonds++;
+            if (b === DIAMOND_ORE || b === DEEPSLATE_ORE[DIAMOND_ORE]) diamonds++;
             if (b === LAVA) assert.ok(y <= MIN_Y + 10, `lava sólo abajo del todo (y = ${y})`);
           }
         }

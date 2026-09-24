@@ -9,6 +9,9 @@ import {
   BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS, PUMPKIN, MELON, TERRACOTTA, JUNGLE_LOG, JUNGLE_LEAVES, ACACIA_LOG,
   ACACIA_LEAVES, DARK_OAK_LOG, DARK_OAK_LEAVES, CHERRY_LOG, CHERRY_LEAVES, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK,
   BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, isLeaves,
+  DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE, DEEPSLATE_ORE,
+  MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, CAVE_VINES, AMETHYST_BLOCK, BUDDING_AMETHYST, AMETHYST_BUD,
+  BLOCK_OPAQUE,
 } from '../blocks';
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
@@ -114,6 +117,9 @@ export class TerrainGenerator {
   private nEntrance: Simplex;
   private nWeird: Simplex;
   private nMush: Simplex;
+  private nLush: Simplex;
+  private nDrip: Simplex;
+  private nAquifer: Simplex;
   private info: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
 
   constructor(seed: number) {
@@ -136,6 +142,34 @@ export class TerrainGenerator {
     // Añadidos al final: los ruidos anteriores no cambian.
     this.nWeird = new Simplex(s());
     this.nMush = new Simplex(s());
+    this.nLush = new Simplex(s());
+    this.nDrip = new Simplex(s());
+    this.nAquifer = new Simplex(s());
+  }
+
+  /** Roca de fondo: pizarra profunda por debajo de 0 y mezclada con piedra entre 0 y 7. */
+  private rockAt(x: number, y: number, z: number): number {
+    if (y < 0) return DEEPSLATE;
+    if (y >= 8) return STONE;
+    return hashToFloat(hash3(x, y, z, this.seed ^ 0xdee9)) < (8 - y) / 8 ? DEEPSLATE : STONE;
+  }
+
+  /**
+   * Nivel del agua subterránea (acuífero) de una columna, o -1e9 si no hay: zonas amplias donde las
+   * cuevas por debajo de ese nivel están inundadas. El nivel va en escalones de 6 bloques.
+   */
+  private aquiferLevel(x: number, z: number, top: number): number {
+    const n = this.nAquifer.noise2(x / 170, z / 170);
+    if (n < 0.28) return -1e9;
+    const level = Math.floor((-40 + (n - 0.28) * 140) / 6) * 6;
+    return Math.min(level, top - 14, SEA_LEVEL - 12);
+  }
+
+  /** Bioma de cueva de una columna: 1 frondosa, 2 de goteo, 0 normal. */
+  caveBiomeAt(x: number, z: number): number {
+    if (this.nLush.noise2(x / 240, z / 240) > 0.4) return 1;
+    if (this.nDrip.noise2(x / 240 + 31.7, z / 240 - 12.1) > 0.42) return 2;
+    return 0;
   }
 
   /** Parámetros 2D de una columna (altura base, amplitud 3D, clima y bioma). */
@@ -456,11 +490,11 @@ export class TerrainGenerator {
         const wx = x0 + lx, wz = z0 + lz;
         const lo = Math.max(MIN_Y + 1, Math.floor(inf.height - inf.amp));
         const hi = Math.min(MAX_Y - 8, Math.ceil(inf.height + inf.amp));
-        for (let y = MIN_Y; y < lo; y++) blocks[blockIndex(lx, y, lz)] = STONE;
+        for (let y = MIN_Y; y < lo; y++) blocks[blockIndex(lx, y, lz)] = y < 8 ? this.rockAt(wx, y, wz) : STONE;
         let top = lo - 1;
         for (let y = lo; y <= hi; y++) {
           if (this.solidAt(wx, y, wz, inf.height, inf.amp)) {
-            blocks[blockIndex(lx, y, lz)] = STONE;
+            blocks[blockIndex(lx, y, lz)] = y < 8 ? this.rockAt(wx, y, wz) : STONE;
             top = y;
           }
         }
@@ -520,6 +554,7 @@ export class TerrainGenerator {
         const ceiling = this.caveCeiling(x0 + lx, z0 + lz, top);
         const gx = lx >> 2, gz = lz >> 2;
         const fx = (lx & 3) / 4, fz = (lz & 3) / 4;
+        const aquifer = this.aquiferLevel(x0 + lx, z0 + lz, top);
         for (let y = MIN_Y + 5; y <= ceiling && y <= maxTop; y++) {
           const i = blockIndex(lx, y, lz);
           const b = blocks[i];
@@ -541,8 +576,8 @@ export class TerrainGenerator {
             ),
             fy,
           );
-          // Por debajo de y = −54 las cuevas se llenan de lava (como en Minecraft).
-          if (v > 0) blocks[i] = y <= MIN_Y + 10 ? LAVA : AIR;
+          // Por debajo de y = −54 las cuevas se llenan de lava (como en Minecraft); en los acuíferos, de agua.
+          if (v > 0) blocks[i] = y <= MIN_Y + 10 ? LAVA : y <= aquifer ? WATER : AIR;
         }
       }
     }
@@ -577,6 +612,7 @@ export class TerrainGenerator {
           if (x >= 0 && x < 16 && z >= 0 && z < 16 && y > MIN_Y && y < MAX_Y) {
             const i = blockIndex(x, y, z);
             if (blocks[i] === replace) blocks[i] = id;
+            else if (replace === STONE && blocks[i] === DEEPSLATE && DEEPSLATE_ORE[id] !== undefined) blocks[i] = DEEPSLATE_ORE[id];
           }
           const dir = Math.floor(rng() * 6);
           if (dir === 0) x++; else if (dir === 1) x--; else if (dir === 2) y++;
@@ -599,6 +635,14 @@ export class TerrainGenerator {
     vein(LAPIS_ORE, 4, MIN_Y + 5, 32, 6, STONE);
     vein(DIAMOND_ORE, 2, MIN_Y + 5, 16, 5, STONE);
     vein(DIAMOND_ORE, 3, MIN_Y + 5, MIN_Y + 20, 5, STONE);
+    // Cobre (más en las cuevas de goteo), toba en la pizarra profunda y esmeraldas sueltas en las montañas.
+    vein(COPPER_ORE, this.caveBiomeAt(x0 + 8, z0 + 8) === 2 ? 20 : 9, -16, 112, 9, STONE);
+    vein(TUFF, 3, MIN_Y + 5, 0, 32, DEEPSLATE);
+    const cb = infos[8 * 16 + 8].biome;
+    if (cb === BIOME_MOUNTAINS || cb === BIOME_SNOWY_PEAKS) vein(EMERALD_ORE, 8, -16, 200, 1, STONE);
+
+    this.decorateCaves(blocks, tops, x0, z0);
+    this.placeGeodes(blocks, cx, cz);
 
     // --- 7. Plantas y flores ---
     const col = [0, 0, 0];
@@ -1168,6 +1212,120 @@ export class TerrainGenerator {
         return r < 0.42 ? SHORT_GRASS : 0;
     }
     return r < 0.18 ? SHORT_GRASS : 0;
+  }
+
+  // ---------------------------------------------------------------- subsuelo
+
+  /** Cuevas frondosas (musgo, azaleas, enredaderas con bayas) y de goteo (espeleotemas). */
+  private decorateCaves(blocks: Uint16Array, tops: Int16Array, x0: number, z0: number): void {
+    const seed = this.seed;
+    const ROW = 256; // distancia en el índice entre una fila y la siguiente
+    const solid = (b: number) => b !== AIR && BLOCK_OPAQUE[b] === 1;
+    const drip = (dir: number, part: number) => POINTED_DRIPSTONE + dir + part * 2;
+    for (let lz = 0; lz < 16; lz++) {
+      for (let lx = 0; lx < 16; lx++) {
+        const wx = x0 + lx, wz = z0 + lz;
+        const kind = this.caveBiomeAt(wx, wz);
+        if (kind === 0) continue;
+        const top = tops[lz * 16 + lx];
+        for (let y = MIN_Y + 6; y < top - 12; y++) {
+          const i = blockIndex(lx, y, lz);
+          if (blocks[i] !== AIR) continue;
+          const h = hash3(wx, y, wz, seed ^ 0xca7e);
+          const r = (h & 0xffff) / 65536;
+          const r2 = ((h >>> 16) & 0xff) / 256;
+          const len = 1 + ((h >>> 24) % 4);
+          const floor = solid(blocks[i - ROW]), ceil = solid(blocks[i + ROW]);
+          if (kind === 1) {
+            if (floor) {
+              if (r < 0.85) blocks[i - ROW] = MOSS_BLOCK;
+              if (r2 < 0.2) blocks[i] = MOSS_CARPET;
+              else if (r2 < 0.24) blocks[i] = AZALEA;
+              else if (r2 < 0.26) blocks[i] = FLOWERING_AZALEA;
+              else if (r2 < 0.42) blocks[i] = SHORT_GRASS;
+            }
+            if (ceil) {
+              if (r < 0.6) blocks[i + ROW] = MOSS_BLOCK;
+              if (r2 > 0.88 && blocks[i] === AIR) {
+                for (let k = 0; k <= len && y - k > MIN_Y + 5; k++) {
+                  const j = i - k * ROW;
+                  if (blocks[j] !== AIR) break;
+                  blocks[j] = hash3(wx, y - k, wz, seed ^ 0xbe1) % 3 === 0 ? CAVE_VINES + 1 : CAVE_VINES;
+                }
+              }
+            }
+          } else {
+            if (floor) {
+              if (r < 0.5) blocks[i - ROW] = DRIPSTONE_BLOCK;
+              if (r2 < 0.08) {
+                let n = 0;
+                while (n < len && y + n < top - 12 && blocks[i + n * ROW] === AIR) n++;
+                for (let k = 0; k < n; k++) blocks[i + k * ROW] = drip(0, k === n - 1 ? 0 : k === 0 && n >= 3 ? 2 : 1);
+              }
+            }
+            if (ceil && blocks[i] === AIR) {
+              if (r < 0.5) blocks[i + ROW] = DRIPSTONE_BLOCK;
+              if (r2 > 0.9) {
+                let n = 0;
+                while (n < len && y - n > MIN_Y + 5 && blocks[i - n * ROW] === AIR) n++;
+                for (let k = 0; k < n; k++) blocks[i - k * ROW] = drip(1, k === n - 1 ? 0 : k === 0 && n >= 3 ? 2 : 1);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Geodas de amatista (una de cada ~24 chunks, entre y = −50 y 20): capas de basalto liso, calcita
+   * y amatista (con alguna amatista con brotes que echa racimos) alrededor de un hueco. Pueden
+   * cruzar el borde del chunk: cada chunk dibuja su parte de las geodas de sus vecinos.
+   */
+  private placeGeodes(blocks: Uint16Array, cx: number, cz: number): void {
+    const seed = this.seed;
+    const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
+    for (let gz = cz - 1; gz <= cz + 1; gz++) {
+      for (let gx = cx - 1; gx <= cx + 1; gx++) {
+        const h = hash2(gx, gz, seed ^ 0x6e0de);
+        if (h % 24 !== 0) continue;
+        const ox = gx * 16 + ((h >>> 5) & 15), oz = gz * 16 + ((h >>> 9) & 15);
+        const oy = -50 + ((h >>> 13) % 70);
+        const R = 5 + ((h >>> 20) % 3);
+        // Que no asome a la superficie ni al fondo del mar.
+        if (oy + R > this.columnInfo(ox, oz).height - 10) continue;
+        for (let y = oy - R; y <= oy + R; y++) {
+          if (y <= MIN_Y + 4) continue;
+          for (let z = Math.max(z0, oz - R); z <= Math.min(z0 + 15, oz + R); z++) {
+            for (let x = Math.max(x0, ox - R); x <= Math.min(x0 + 15, ox + R); x++) {
+              const j = hash3(x, y, z, seed ^ 0x9e0);
+              const d = Math.hypot(x - ox, (y - oy) * 1.1, z - oz) + (j % 5) * 0.08;
+              if (d > R) continue;
+              const i = blockIndex(x - x0, y, z - z0);
+              if (d > R - 1) blocks[i] = SMOOTH_BASALT;
+              else if (d > R - 2) blocks[i] = CALCITE;
+              else if (d > R - 3) blocks[i] = (j >>> 8) % 5 === 0 ? BUDDING_AMETHYST : AMETHYST_BLOCK;
+              else blocks[i] = AIR;
+            }
+          }
+        }
+        // Racimos de amatista en el suelo de la geoda (hacia arriba).
+        for (let y = oy - R + 1; y <= oy + R; y++) {
+          if (y <= MIN_Y + 5) continue;
+          for (let z = Math.max(z0, oz - R); z <= Math.min(z0 + 15, oz + R); z++) {
+            for (let x = Math.max(x0, ox - R); x <= Math.min(x0 + 15, ox + R); x++) {
+              const i = blockIndex(x - x0, y, z - z0);
+              const below = blocks[i - 256];
+              if (blocks[i] !== AIR || (below !== BUDDING_AMETHYST && below !== AMETHYST_BLOCK)) continue;
+              const k = hash3(x, y, z, seed ^ 0xa3e);
+              // Sobre la amatista con brotes siempre; sobre la normal, a veces (racimos que ya no crecen).
+              if (below === AMETHYST_BLOCK && (k >>> 4) % 100 >= 35) continue;
+              blocks[i] = AMETHYST_BUD + (k % 4);
+            }
+          }
+        }
+      }
+    }
   }
 
   /** Busca un punto de aparición en tierra firme cerca del origen. */
