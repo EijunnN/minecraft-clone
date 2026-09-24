@@ -4,9 +4,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SLABS, STAIRS, FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, WALL_TORCH, RED_BED, FARMLAND, WHEAT_CROP,
-  CARROTS, POTATOES, BEETROOTS, CAKE, CHEST, FURNACE, OAK_SAPLING, SPRUCE_SAPLING,
+  CARROTS, POTATOES, BEETROOTS, CAKE, CHEST, FURNACE, OAK_SAPLING, SPRUCE_SAPLING, MELON, PUMPKIN_STEM, MELON_STEM,
+  ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER,
 } from '../src/shared/blocks';
-import { STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR, ARMOR, GOLDEN_APPLE, SPIDER_EYE, SHIELD } from '../src/shared/items';
+import {
+  STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR, ARMOR, GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, FISHING_ROD,
+  PUFFERFISH,
+} from '../src/shared/items';
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).
@@ -19,6 +23,11 @@ test('los ids de bloques guardados no cambian', () => {
   assert.deepEqual([LADDER, GLASS_PANE, WALL_TORCH, RED_BED], [1283, 1287, 1288, 1292]);
   // Granja (fase 4).
   assert.deepEqual([FARMLAND, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE], [1300, 1302, 1310, 1318, 1326, 1330]);
+  // Calabazas, sandías y compostador (fase 4).
+  assert.deepEqual(
+    [MELON, PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER],
+    [1337, 1338, 1346, 1354, 1358, 1362, 1366, 1370],
+  );
 });
 
 test('los ids de objetos guardados no cambian', () => {
@@ -31,4 +40,6 @@ test('los ids de objetos guardados no cambian', () => {
   assert.deepEqual([ARMOR.leather.helmet, ARMOR.iron.helmet, ARMOR.golden.helmet, ARMOR.diamond.boots], [328, 332, 336, 343]);
   // Efectos y escudo (fase 4).
   assert.deepEqual([GOLDEN_APPLE, SPIDER_EYE, SHIELD], [344, 345, 346]);
+  // Calabazas, sandías y pesca (fase 4).
+  assert.deepEqual([PUMPKIN_SEEDS, FISHING_ROD, PUFFERFISH], [347, 351, 357]);
 });

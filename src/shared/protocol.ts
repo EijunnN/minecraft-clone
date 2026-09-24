@@ -106,6 +106,10 @@ export type ClientMsg =
   | { t: 'pickup'; e: number }
   | { t: 'drop'; items: ItemStack[]; p: [number, number, number]; v?: [number, number, number] }
   | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number }
+  /** Lanzar un objeto (huevo) desde p en la dirección d. */
+  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number }
+  /** Caña de pescar: lanzar el flotador o, si ya está fuera, recogerlo. */
+  | { t: 'fish'; p: [number, number, number]; d: [number, number, number] }
   | { t: 'open'; x: number; y: number; z: number }
   | { t: 'close' }
   | { t: 'cclick'; x: number; y: number; z: number; slot: number; btn: number; cur: ItemStack | null; q: number }
@@ -121,6 +125,8 @@ export type ServerMsg =
     mode: GameMode; diff: number; save: PlayerSave | null; spawn: [number, number, number];
     /** Reaparición en la cama (si tiene). */
     bed?: [number, number, number] | null;
+    /** Flotadores de pesca ya lanzados: [jugador, entidad]. */
+    rods?: [string, number][];
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
@@ -148,6 +154,8 @@ export type ServerMsg =
   | { t: 'effect'; id: number; s: number; a: number }
   /** El jugador recogió orbes de experiencia por valor de `n`. */
   | { t: 'xp'; n: number }
+  /** Flotador del jugador p (e = id de la entidad, 0 = recogido); w = desgaste de la caña al recoger. */
+  | { t: 'rod'; p: string; e: number; w?: number }
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
   | { t: 'ires'; q: number; ok: boolean; take?: number; give?: ItemStack; wear?: number }
   /** Punto de reaparición del jugador (cama); null = el del mundo. */

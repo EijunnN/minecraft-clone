@@ -25,6 +25,10 @@ export const ENT_ARROW = 101;
 export const ENT_FALLING = 102;
 /** Orbe de experiencia (extra: valor). */
 export const ENT_XP = 103;
+/** Objeto lanzado (huevo; extra: id del objeto). */
+export const ENT_THROWN = 104;
+/** Flotador de una caña de pescar. */
+export const ENT_BOBBER = 105;
 
 export interface ModelPart {
   name: string;

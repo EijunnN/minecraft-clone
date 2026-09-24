@@ -4,7 +4,7 @@
 import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
   RED_BED, stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
-  isFarmland, isMatureCrop,
+  isFarmland, isMatureCrop, COMPOSTER,
   blockSupported, orientedFor, type NeighborGet,
 } from './blocks';
 import { DIR_X, DIR_Z } from './blockModels';
@@ -157,9 +157,9 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
   return null;
 }
 
-/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas). */
+/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores). */
 export function isUsable(id: number): boolean {
-  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id);
+  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER;
 }
 
 /** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */

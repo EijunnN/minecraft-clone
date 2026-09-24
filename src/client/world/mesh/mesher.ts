@@ -10,7 +10,7 @@ import {
   AIR, BEDROCK, ICE, GLASS, CACTUS, SUGAR_CANE,
   BLOCK_RENDER, BLOCK_OPAQUE, BLOCK_AO, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, BLOCK_TEX, BLOCK_FLUID, BLOCK_SOLID,
   BLOCK_FLUID_LEVEL, R_NONE, R_CUBE, R_CUTOUT, R_CROSS, R_WATER, R_TRANSLUCENT, R_TORCH, R_CACTUS, R_LAVA, R_MODEL,
-  BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland,
+  BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland, isCrop,
 } from '../../../shared/blocks';
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2 } from '../../../shared/constants';
@@ -517,11 +517,13 @@ export class Mesher {
     const bl = this.blk[i];
     // Desplazamiento aleatorio por columna (igual para plantas apiladas).
     const h = hash2(cx * 16 + x, cz * 16 + z, this.seed ^ 0x51a7);
-    const ox = id === SUGAR_CANE ? 0 : (h & 7) - 3;
-    const oz = id === SUGAR_CANE ? 0 : ((h >>> 3) & 7) - 3;
+    // La caña y los tallos (cultivos en cruz) van centrados; los tallos, hundidos en la tierra de cultivo.
+    const still = id === SUGAR_CANE || isCrop(id);
+    const ox = still ? 0 : (h & 7) - 3;
+    const oz = still ? 0 : ((h >>> 3) & 7) - 3;
     const bx = x * 16 + ox;
     const bz = z * 16 + oz;
-    const by = y * 16;
+    const by = y * 16 - (isCrop(id) && isFarmland(this.vox[i - SY]) ? 1 : 0);
     const buf = this.cutout;
     buf.ensure(32);
     // Dos planos diagonales, cada uno con sus dos caras.

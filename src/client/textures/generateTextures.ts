@@ -27,6 +27,7 @@ import { MISC_GENERATORS } from './genMisc';
 import { SURVIVAL_GENERATORS } from './genSurvival';
 import { BUILDING_GENERATORS } from './genBuilding';
 import { FARM_GENERATORS } from './genFarm';
+import { GOURD_GENERATORS } from './genGourds';
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -48,6 +49,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...SURVIVAL_GENERATORS,
   ...BUILDING_GENERATORS,
   ...FARM_GENERATORS,
+  ...GOURD_GENERATORS,
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

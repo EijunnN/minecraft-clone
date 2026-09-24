@@ -6,7 +6,7 @@ import {
   DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, SANDSTONE, SNOWY_GRASS, SNOW_BLOCK, ICE, CLAY, CACTUS,
   BIRCH_LOG, BIRCH_LEAVES, SPRUCE_LOG, SPRUCE_LEAVES, SHORT_GRASS, FERN, POPPY, DANDELION, CORNFLOWER,
   DEAD_BUSH, SUGAR_CANE, RED_MUSHROOM, BROWN_MUSHROOM, LAVA, BEDROCK, GRANITE, DIORITE, ANDESITE,
-  BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS,
+  BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS, PUMPKIN, MELON,
 } from '../blocks';
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, WORLD_HEIGHT, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
@@ -500,6 +500,28 @@ export class TerrainGenerator {
             for (let k = 1; k <= hgt; k++) blocks[blockIndex(lx, top + k, lz)] = SUGAR_CANE;
           }
         }
+      }
+    }
+
+    // --- 7b. Calabazas (llanuras, bosques, taigas) y sandías (sabanas y llanuras): grupos raros ---
+    const patch = hashToFloat(hash2(cx, cz, seed ^ 0x6a7c));
+    if (patch < 0.05) {
+      const melon = patch < 0.015;
+      const pr = mulberry32(hash2(cx, cz, seed ^ 0x3d1));
+      const clx = 3 + Math.floor(pr() * 10), clz = 3 + Math.floor(pr() * 10);
+      const b0 = infos[clz * 16 + clx].biome;
+      const okBiome = melon
+        ? b0 === BIOME_SAVANNA || b0 === BIOME_PLAINS
+        : b0 === BIOME_PLAINS || b0 === BIOME_FOREST || b0 === BIOME_TAIGA || b0 === BIOME_BIRCH_FOREST;
+      for (let k = 0; okBiome && k < 10; k++) {
+        const lx = clx + Math.floor(pr() * 7) - 3, lz = clz + Math.floor(pr() * 7) - 3;
+        if (lx < 0 || lx > 15 || lz < 0 || lz > 15) continue;
+        const top = tops[lz * 16 + lx];
+        if (top >= WORLD_HEIGHT - 2 || blocks[blockIndex(lx, top, lz)] !== GRASS) continue;
+        const above = blockIndex(lx, top + 1, lz);
+        const cur = blocks[above];
+        if (cur !== AIR && cur !== SHORT_GRASS && cur !== FERN) continue;
+        blocks[above] = melon ? MELON : PUMPKIN;
       }
     }
 

@@ -3,11 +3,12 @@ import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES, OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
-  WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake,
+  WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
+  PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM,
 } from '../blocks';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
-  BEETROOT, BEETROOT_SEEDS, type ItemStack,
+  BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, type ItemStack,
 } from '../items';
 
 /** Botín de un bloque roto con la herramienta `toolId` (0 = mano). */
@@ -29,7 +30,18 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
     // Cosecha como en Minecraft: tres intentos al 57 % de sacar una semilla o fruto más.
     const extra = () => (rand() < 4 / 7 ? 1 : 0) + (rand() < 4 / 7 ? 1 : 0) + (rand() < 4 / 7 ? 1 : 0);
     const ripe = isMatureCrop(block);
+    // Tallos: tres intentos de sacar una semilla, más probables cuanto más crecido (el unido, como maduro).
+    const stemSeeds = (age: number) => [0, 1, 2].reduce((n) => n + (rand() < (age + 1) / 15 ? 1 : 0), 0);
     switch (familyBase(block)) {
+      case PUMPKIN_STEM:
+      case MELON_STEM:
+      case ATTACHED_PUMPKIN_STEM:
+      case ATTACHED_MELON_STEM: {
+        const pumpkin = familyBase(block) === PUMPKIN_STEM || familyBase(block) === ATTACHED_PUMPKIN_STEM;
+        const age = familyBase(block) === PUMPKIN_STEM || familyBase(block) === MELON_STEM ? block - familyBase(block) : 7;
+        const n = stemSeeds(age);
+        return n > 0 ? one(pumpkin ? PUMPKIN_SEEDS : MELON_SEEDS, n) : [];
+      }
       case WHEAT_CROP:
         return ripe ? [{ id: WHEAT, count: 1 }, { id: WHEAT_SEEDS, count: 1 + extra() }] : one(WHEAT_SEEDS);
       case CARROTS:
@@ -64,6 +76,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
       return [];
     case BOOKSHELF:
       return one(BOOK, 3);
+    case MELON:
+      return one(MELON_SLICE, rnd(3, 7));
     case SHORT_GRASS:
     case FERN:
       // Semillas de trigo con un 12,5 % de probabilidad.
@@ -81,6 +95,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
       return out;
     }
   }
+  // El compostador lleno suelta también su polvo de hueso.
+  if (familyBase(block) === COMPOSTER && block - COMPOSTER === 8) return [{ id: COMPOSTER, count: 1 }, { id: BONE_MEAL, count: 1 }];
   return one(baseBlock(block));
 }
 

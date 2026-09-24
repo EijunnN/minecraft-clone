@@ -1,9 +1,12 @@
 // Granja: labrar con la azada, polvo de hueso, humedad de la tierra de cultivo, crecimiento de los
-// cultivos, pisoteo y lo que se hace con los animales (dar de comer, esquilar, ordeñar).
+// cultivos, tallos que dan calabazas y sandías, tallar calabazas, pisoteo y lo que se hace con los
+// animales (dar de comer, esquilar, ordeñar).
 import {
-  AIR, GRASS, DIRT, FARMLAND, POPPY, DANDELION, SHORT_GRASS, BLOCK_FLUID, CROP_MAX_AGE, isFarmland, isCrop,
-  isMatureCrop, familyBase,
+  AIR, GRASS, DIRT, FARMLAND, POPPY, DANDELION, SHORT_GRASS, PUMPKIN, MELON, CARVED_PUMPKIN, BLOCK_FLUID, CROP_MAX_AGE,
+  STEM_FRUIT, isFarmland, isCrop, isMatureCrop, isStem, attachedFacing, familyBase, orientedFor,
 } from '../../blocks';
+import { DIR_X, DIR_Z } from '../../blockModels';
+import { PUMPKIN_SEEDS } from '../../items';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { rainAt } from '../../weather';
 import { SAPLINGS } from './plants';
@@ -91,6 +94,49 @@ export class Farming {
     return false;
   }
 
+  /** Tijeras sobre una calabaza: se talla la cara que mira al jugador y suelta 4 semillas. */
+  carve(x: number, y: number, z: number, yaw: number): boolean {
+    const ctx = this.ctx;
+    if (ctx.world.getBlock(x, y, z) !== PUMPKIN) return false;
+    const carved = orientedFor(CARVED_PUMPKIN, yaw);
+    ctx.world.setBlock(x, y, z, carved);
+    const f = carved - CARVED_PUMPKIN;
+    ctx.entities.dropStacks([{ id: PUMPKIN_SEEDS, count: 4 }], x + 0.5 + DIR_X[f] * 0.65, y + 0.4, z + 0.5 + DIR_Z[f] * 0.65);
+    ctx.fx('shear', x + 0.5, y + 0.5, z + 0.5);
+    return true;
+  }
+
+  /** Un fruto desaparece: los tallos unidos a él vuelven a ser tallos maduros. */
+  onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
+    if ((old !== PUMPKIN && old !== MELON) || id === old) return;
+    for (let f = 0; f < 4; f++) {
+      const sx = x - DIR_X[f], sz = z - DIR_Z[f];
+      const b = this.ctx.world.getBlock(sx, y, sz);
+      if (attachedFacing(b) === f) this.detach(sx, y, sz, b);
+    }
+  }
+
+  /** Tallo unido → tallo de su tipo en la última edad. */
+  private detach(x: number, y: number, z: number, attached: number): void {
+    const base = familyBase(attached);
+    for (const [stem, [, att]] of Object.entries(STEM_FRUIT)) {
+      if (att === base) this.ctx.world.setBlock(x, y, z, Number(stem) + CROP_MAX_AGE[Number(stem)]);
+    }
+  }
+
+  /** Tallo maduro: intenta dar su fruto en una celda vecina libre con suelo de tierra. */
+  private growFruit(x: number, y: number, z: number, stem: number): void {
+    const ctx = this.ctx;
+    const w = ctx.world;
+    const f = Math.floor(ctx.rand() * 4);
+    const tx = x + DIR_X[f], tz = z + DIR_Z[f];
+    const below = w.getBlock(tx, y - 1, tz);
+    if (w.getBlock(tx, y, tz) !== AIR || !(below === DIRT || below === GRASS || isFarmland(below))) return;
+    const [fruit, attached] = STEM_FRUIT[stem];
+    w.setBlock(tx, y, tz, fruit);
+    w.setBlock(x, y, z, attached + f);
+  }
+
   /** Humedad de la tierra de cultivo y crecimiento de los cultivos. */
   private randomTick(id: number, x: number, y: number, z: number): boolean {
     const ctx = this.ctx;
@@ -106,7 +152,16 @@ export class Farming {
       return true;
     }
     if (!isCrop(id)) return false;
-    if (isMatureCrop(id)) return true;
+    // Tallo unido cuyo fruto ya no está (por si se perdió el aviso del cambio).
+    const facing = attachedFacing(id);
+    if (facing >= 0) {
+      const fruit = w.getBlock(x + DIR_X[facing], y, z + DIR_Z[facing]);
+      if (fruit !== PUMPKIN && fruit !== MELON) this.detach(x, y, z, id);
+      return true;
+    }
+    // Los tallos maduros siguen "creciendo": en vez de edad, dan fruto.
+    const stem = isStem(id) ? familyBase(id) : 0;
+    if (isMatureCrop(id) && !stem) return true;
     // Luz: cielo abierto (aunque sea de noche, como en Minecraft) o una antorcha cerca.
     if (w.skyTop(x, z) > y && !w.isLitByBlocks(x, y, z)) return true;
     // Velocidad como en Minecraft: la tierra húmeda de debajo y la de alrededor ayudan.
@@ -119,7 +174,10 @@ export class Farming {
         f += dx === 0 && dz === 0 ? (wet ? 3 : 1) : wet ? 0.75 : 0.25;
       }
     }
-    if (ctx.rand() < 1 / (Math.floor(25 / f) + 1)) w.setBlock(x, y, z, id + 1);
+    if (ctx.rand() < 1 / (Math.floor(25 / f) + 1)) {
+      if (!isMatureCrop(id)) w.setBlock(x, y, z, id + 1);
+      else this.growFruit(x, y, z, stem);
+    }
     return true;
   }
 }

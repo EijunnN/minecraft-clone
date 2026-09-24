@@ -4,6 +4,7 @@ import { RemotePlayer } from './RemotePlayers';
 import type { Welcome } from '../net/Net';
 import { AIR, BLOCKS, BLOCK_FLUID, isValidBlockId, BLOCK_COLLIDE } from '../../shared/blocks';
 import { containerFromWire } from '../../shared/containers';
+import { ITEMS } from '../../shared/items';
 import type { PlayerInfo, ServerMsg, GameMode } from '../../shared/protocol';
 import { lighten } from './gameTypes';
 import type { Game } from './Game';
@@ -95,6 +96,17 @@ export class ServerEvents {
       case 'ires':
         this.g.interaction.onInteractResult(msg);
         break;
+      case 'rod': {
+        // Flotador lanzado o recogido; al dueño le llega además el desgaste de la caña.
+        if (typeof msg.p !== 'string') break;
+        if (Number.isInteger(msg.e) && msg.e > 0) this.g.bobbers.set(msg.p, msg.e);
+        else this.g.bobbers.delete(msg.p);
+        const w = Number(msg.w);
+        if (msg.p === this.g.net?.id && w > 0 && !this.g.creative && ITEMS[this.g.heldId]?.tool?.kind === 'fishing_rod') {
+          this.g.interaction.wearHeld(Math.min(2, w));
+        }
+        break;
+      }
       case 'xp': {
         const n = Number(msg.n);
         if (!Number.isInteger(n) || n <= 0) break;

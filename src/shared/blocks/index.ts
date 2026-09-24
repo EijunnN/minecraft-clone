@@ -14,7 +14,10 @@ import {
 import {
   MATERIALS, WOODS, SLABS, STAIRS, FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED,
 } from './building';
-import { FARMLAND, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE } from './farm';
+import {
+  FARMLAND, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM,
+  ATTACHED_MELON_STEM, MELON, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER,
+} from './farm';
 
 export * from './registry';
 export * from './classic';
@@ -31,7 +34,9 @@ export * from './queries';
   for (const v of Object.values(SLABS)) kindOf.set(v, KINDS.slab);
   for (const v of Object.values(STAIRS)) kindOf.set(v, KINDS.stairs);
   kindOf.set(RED_BED, KINDS.bed);
-  for (const v of [WHEAT_CROP, CARROTS, POTATOES, BEETROOTS]) kindOf.set(v, KINDS.crop);
+  for (const v of [WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM]) {
+    kindOf.set(v, KINDS.crop);
+  }
   kindOf.set(CAKE, KINDS.cake);
   kindOf.set(FARMLAND, KINDS.farmland);
   finalizeBlocks(kindOf);
@@ -53,7 +58,7 @@ export const INVENTORY_ORDER: readonly number[] = [
   WHITE_WOOL, BLACK_WOOL, RED_WOOL, ORANGE_WOOL, YELLOW_WOOL, LIME_WOOL, BLUE_WOOL, PURPLE_WOOL,
   ...MATERIALS.flatMap((m) => [SLABS[m.key], STAIRS[m.key]]),
   ...WOODS.flatMap((w) => [FENCES[w.key], FENCE_GATES[w.key], DOORS[w.key], TRAPDOORS[w.key]]),
-  LADDER, GLASS_PANE, RED_BED,
+  LADDER, GLASS_PANE, RED_BED, MELON, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [

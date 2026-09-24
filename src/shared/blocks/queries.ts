@@ -5,6 +5,7 @@ import {
   BLOCK_FLUID, BLOCK_FLUID_LEVEL, STATIC_COLLISION, R_MODEL, R_CROSS, R_TORCH, R_CACTUS, type NeighborGet,
 } from './registry';
 import { WATER, WATER_FLOW_1, WATER_FALL, LAVA, LAVA_FLOW_1, LAVA_FALL, FURNACE, FURNACE_LIT, CHEST } from './classic';
+import { CARVED_PUMPKIN, JACK_O_LANTERN } from './farm';
 import { MAX_BLOCK_ID } from '../constants';
 import { flatBoxes, unionBox, DIR_X, DIR_Z, type ModelBox } from '../blockModels';
 
@@ -131,7 +132,7 @@ export function blockFacing(id: number): number {
 
 /** Variante orientada de un bloque base para un yaw del jugador (el frente mira al jugador). */
 export function orientedFor(base: number, yaw: number): number {
-  if (base !== FURNACE && base !== CHEST && base !== FURNACE_LIT) return base;
+  if (base !== FURNACE && base !== CHEST && base !== FURNACE_LIT && base !== CARVED_PUMPKIN && base !== JACK_O_LANTERN) return base;
   // El jugador mira hacia (-sin yaw, -cos yaw); el frente del bloque apunta en sentido contrario.
   const fx = Math.sin(yaw), fz = Math.cos(yaw);
   let f: number;

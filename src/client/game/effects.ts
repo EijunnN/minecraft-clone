@@ -91,6 +91,41 @@ export class Effects {
         this.g.audio.playPlace('grass', p);
         fx.spawnSparkles(p[0], p[1], p[2], 12, 0.5);
         break;
+      // Huevos y pesca.
+      case 'throw':
+        this.g.audio.playBowShoot(p, 0.15);
+        break;
+      case 'egg_break':
+        this.g.audio.playBlockHit('sand', p);
+        fx.spawnSmoke(p[0], p[1], p[2], 6, 0.15, 0.95, 0.35, 0.6);
+        break;
+      case 'rod_cast':
+        this.g.audio.playBowShoot(p, 0.3);
+        break;
+      case 'fish_splash':
+        this.g.audio.playSplash(p, 0.3);
+        fx.spawnSmoke(p[0], p[1], p[2], 5, 0.2, 0.9, 0.3, 0.8);
+        break;
+      case 'fish_bite':
+        this.g.audio.playSplash(p, 0.7);
+        fx.spawnSmoke(p[0], p[1], p[2], 10, 0.3, 0.92, 0.35, 1.4);
+        break;
+      case 'fish_catch':
+        this.g.audio.playSplash(p, 0.5);
+        this.g.audio.playPickup();
+        break;
+      // Compostador.
+      case 'compost':
+        this.g.audio.playPlace('grass', p);
+        if (a) fx.spawnSparkles(p[0], p[1], p[2], 6, 0.3);
+        break;
+      case 'compost_ready':
+        this.g.audio.playPlace('gravel', p);
+        fx.spawnSparkles(p[0], p[1], p[2], 10, 0.4);
+        break;
+      case 'compost_empty':
+        this.g.audio.playBreak('grass', p);
+        break;
     }
   }
 

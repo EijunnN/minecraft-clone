@@ -29,6 +29,7 @@ import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTyp
 import { Interaction } from './interaction';
 import { Experience } from './experience';
 import { StatusEffects } from './statusEffects';
+import { fishingLines } from './fishingLines';
 import { renderArmorBar } from '../ui/armorBar';
 import { renderXpBar } from '../ui/xpBar';
 import { renderEffectsHud } from '../ui/effectsHud';
@@ -76,6 +77,8 @@ export class Game {
   private local: LocalServer | null = null;
   private offline = false;
   remote = new Map<string, RemotePlayer>();
+  /** Flotadores de pesca fuera: jugador → entidad. */
+  readonly bobbers = new Map<string, number>();
   selected = 0;
   time: WorldTime = { base: 0.08, at: Date.now(), rate: 1 / DAY_LENGTH_SECONDS };
   private running = false;
@@ -195,6 +198,7 @@ export class Game {
     this.difficulty = w.diff;
     if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
     this.life.bed = Array.isArray(w.bed) && w.bed.length === 3 && w.bed.every(Number.isInteger) ? w.bed : null;
+    for (const r of Array.isArray(w.rods) ? w.rods : []) if (Array.isArray(r) && typeof r[0] === 'string' && Number.isInteger(r[1])) this.bobbers.set(r[0], r[1]);
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)));
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
@@ -824,6 +828,9 @@ export class Game {
       lightAtEye: [skyAtEye, (le & 15) / 15],
       grassTint: [srgbToLin(this.tmpGrass[0]), srgbToLin(this.tmpGrass[1]), srgbToLin(this.tmpGrass[2])],
       players: views,
+      fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, {
+        cam: [camX, camY, camZ], yaw, pitch, firstPerson: this.thirdPerson === 0, feet: [p.x, p.y, p.z], bodyYaw: p.yaw,
+      }, views),
       showHand: this.thirdPerson === 0 && !this.hudHidden,
     };
     this.renderer.render(state);

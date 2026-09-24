@@ -1,17 +1,22 @@
 // Interacción con el mundo: minar y romper, colocar (reglas compartidas), usar bloques (puertas,
-// camas, tartas), comer y beber, arco, cubos, azada, polvo de hueso, animales (dar de comer,
-// esquilar, ordeñar), ponerse armadura, recoger y tirar objetos.
+// camas, tartas, compostadores), comer y beber, arco, escudo, cubos, azada, polvo de hueso, tallar
+// calabazas, lanzar huevos, pescar, animales (dar de comer, esquilar, ordeñar), ponerse armadura,
+// recoger y tirar objetos.
 import { raycast, type RayHit } from './raycast';
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
-import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND } from '../../shared/blocks';
-import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, BREED_FOOD, isValidItem, type ItemStack } from '../../shared/items';
+import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor } from '../../shared/blocks';
+import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, type ItemStack } from '../../shared/items';
+import { COMPOSTER_READY, canCompost, composterLevel } from '../../shared/composting';
 import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
 import { EF_BABY, EF_SHEARED, EF_PICKABLE, type ServerMsg } from '../../shared/protocol';
 import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use } from './gameTypes';
 import type { ArmorSource } from './Survival';
 import type { Game } from './Game';
+
+/** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
+const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
 
 export class Interaction {
   constructor(private g: Game) {}
@@ -125,8 +130,20 @@ export class Interaction {
     if (!held || !def) return;
     // Zanahorias y patatas se plantan en tierra de cultivo; si no, se comen.
     if (def.block !== undefined && hit && isCrop(def.block) && this.placeBlock(hit, def.block)) return;
+    if (held.id === SHEARS && hit?.id === PUMPKIN) {
+      if (pressed) this.carve(hit);
+      return;
+    }
     if (def.tool?.kind === 'hoe') {
       if (pressed && hit) this.till(hit);
+      return;
+    }
+    if (held.id === EGG) {
+      if (pressed) this.throwEgg(dir);
+      return;
+    }
+    if (def.tool?.kind === 'fishing_rod') {
+      if (pressed) this.castRod(dir);
       return;
     }
     if (held.id === BONE_MEAL) {
@@ -200,6 +217,11 @@ export class Interaction {
   useBlock(hit: RayHit): void {
     const world = this.g.world!;
     const yaw = this.g.player.yaw;
+    const level = composterLevel(hit.id);
+    if (level >= 0) {
+      this.compost(hit, level);
+      return;
+    }
     if (isCake(hit.id)) {
       // Una porción: 2 de hambre y 0,4 de saturación (sólo con hambre, salvo en creativo).
       if (!this.g.creative && this.g.survival.food >= 20) return;
@@ -262,7 +284,7 @@ export class Interaction {
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.005);
       const tool = ITEMS[this.g.heldId]?.tool;
-      if (tool && tool.kind !== 'bow' && tool.kind !== 'shield' && BLOCK_HARDNESS[id] > 0) this.wearHeld(tool.kind === 'sword' ? 2 : 1);
+      if (tool && !WEARLESS.has(tool.kind) && BLOCK_HARDNESS[id] > 0) this.wearHeld(tool.kind === 'sword' ? 2 : 1);
     }
   }
 
@@ -285,7 +307,7 @@ export class Interaction {
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.1);
       const tool = ITEMS[this.g.heldId]?.tool;
-      if (tool && tool.kind !== 'bow' && tool.kind !== 'shield') this.wearHeld(tool.kind === 'sword' ? 1 : 2);
+      if (tool && !WEARLESS.has(tool.kind)) this.wearHeld(tool.kind === 'sword' ? 1 : 2);
     }
   }
 
@@ -413,6 +435,43 @@ export class Interaction {
     this.g.audio.playPlace(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
     return true;
+  }
+
+  /**
+   * Compostador: echar el objeto de la mano (se gasta aunque no suba de nivel; el servidor decide si
+   * sube) o, si está listo, sacar el polvo de hueso.
+   */
+  compost(hit: RayHit, level: number): void {
+    const item = this.g.heldId;
+    if (level === COMPOSTER_READY) this.g.world!.setBlock(hit.x, hit.y, hit.z, COMPOSTER);
+    else if (canCompost(level, item)) {
+      if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    } else return;
+    this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.g.player.yaw, item });
+    this.g.swing(true);
+  }
+
+  /** Tijeras sobre una calabaza: se talla la cara que mira al jugador (las semillas las suelta el servidor). */
+  carve(hit: RayHit): void {
+    this.g.world!.setBlock(hit.x, hit.y, hit.z, orientedFor(CARVED_PUMPKIN, this.g.player.yaw));
+    this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.g.player.yaw, item: SHEARS });
+    this.g.swing(false);
+    this.wearHeld(1);
+  }
+
+  /** Lanzar un huevo hacia donde se mira (1 de cada 8 da un pollito). */
+  throwEgg(dir: number[]): void {
+    const p = this.g.player;
+    this.g.net?.send({ t: 'throw', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], item: EGG });
+    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    this.g.swing(false);
+  }
+
+  /** Caña de pescar: lanza el flotador o lo recoge (el servidor responde con 'rod' y el desgaste). */
+  castRod(dir: number[]): void {
+    const p = this.g.player;
+    this.g.net?.send({ t: 'fish', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]] });
+    this.g.swing(false);
   }
 
   /** Azada: hierba o tierra con aire encima → tierra de cultivo. */

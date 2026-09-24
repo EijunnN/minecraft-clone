@@ -3,7 +3,7 @@
 // Todo se valida aquí; si algo no vale, se devuelve al jugador el bloque real.
 import {
   AIR, BEDROCK, FURNACE_LIT, BLOCKS, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, BLOCK_REPLACEABLE, isValidBlockId,
-  isBed,
+  isBed, familyBase, COMPOSTER,
 } from '../../blocks';
 import { WORLD_HEIGHT, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
@@ -14,10 +14,14 @@ import { oreXp } from '../../experience';
 import type { BlockRules } from './blockRules';
 import type { Farming } from './farming';
 import type { Beds } from './beds';
+import type { Composters } from './composters';
 import type { ServerContext, Session } from './context';
 
 export class BlockEdits {
-  constructor(private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds) {}
+  constructor(
+    private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
+    private composters: Composters,
+  ) {}
 
   /** Romper un bloque o usar un cubo (colocar o recoger un fluido). */
   onSet(s: Session, msg: Extract<ClientMsg, { t: 'set' }>): void {
@@ -105,18 +109,25 @@ export class BlockEdits {
     ctx.asActor(s.id, () => this.rules.applyEdits(edits));
   }
 
-  /** Clic derecho sobre un bloque: objetos (azada, polvo de hueso), puertas, tartas y camas. */
+  /** Clic derecho sobre un bloque: objetos (azada, polvo de hueso, tijeras), puertas, tartas, camas y compostadores. */
   onUse(s: Session, msg: Extract<ClientMsg, { t: 'use' }>): void {
     const ctx = this.ctx;
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z), yaw = Number(msg.yaw);
     if (![x, y, z].every(Number.isInteger) || !Number.isFinite(yaw) || s.s & STATE_DEAD || !ctx.reachOk(s, x, y, z, 8)) return;
     const id = ctx.world.getBlock(x, y, z);
     if (id < 0) return;
-    // Usar un objeto sobre el bloque: azada (labrar) y polvo de hueso.
     const item = Number(msg.item);
+    // El compostador acepta cualquier objeto (o la mano, para sacar el polvo de hueso).
+    if (familyBase(id) === COMPOSTER) {
+      this.composters.use(s, x, y, z, Number.isInteger(item) && item > 0 ? item : 0);
+      return;
+    }
+    // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
     if (Number.isInteger(item) && item > 0) {
       const done = ctx.asActor(s.id, () => {
-        if (ITEMS[item]?.tool?.kind === 'hoe') return this.farming.till(x, y, z);
+        const kind = ITEMS[item]?.tool?.kind;
+        if (kind === 'hoe') return this.farming.till(x, y, z);
+        if (kind === 'shears') return this.farming.carve(x, y, z, yaw);
         if (item === BONE_MEAL) return this.farming.fertilize(x, y, z);
         return false;
       });

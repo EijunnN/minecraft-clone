@@ -35,10 +35,15 @@ Objects). Pensado para PC (teclado y ratón).
 - **Granja**: azadas y tierra de cultivo (se hidrata con agua a 4 bloques o con la lluvia, se seca y
   se pisotea al saltar encima); semillas que salen de la hierba; trigo, zanahorias, patatas y
   remolachas que crecen con la velocidad de Minecraft; polvo de hueso; pan, patata asada, azúcar,
-  fardos de heno y tarta (se come por porciones y devuelve los cubos).
+  fardos de heno y tarta (se come por porciones y devuelve los cubos). Calabazas y sandías: sus
+  tallos maduran y dan el fruto al lado; las calabazas se tallan con tijeras (con una antorcha, farol)
+  y salen en grupos por el mundo. El compostador convierte restos de cosecha en polvo de hueso.
+- **Pesca**: caña con flotador y sedal; cuando pica un pez el flotador se hunde y hay que recoger a
+  tiempo: bacalao, salmón, pez tropical, pez globo, algo de basura y a veces un tesoro.
 - **Animales de granja**: los animales siguen a quien lleva su comida y se crían (corazones, crías que
   crecen en 20 minutos y más rápido si comen); las ovejas se esquilan y les vuelve a crecer la lana
-  comiendo hierba; las vacas se ordeñan con un cubo y las gallinas ponen huevos.
+  comiendo hierba; las vacas se ordeñan con un cubo y las gallinas ponen huevos, que se pueden lanzar
+  (a veces nace un pollito).
 - **Armaduras**: cuero, hierro, oro y diamante (casco, peto, grebas y botas) con la reducción de daño
   y el desgaste de Minecraft; se ponen con clic derecho o en las ranuras del inventario, se ven sobre
   los jugadores (también sobre los demás) y tienen su barra en el HUD.

@@ -554,7 +554,7 @@ function pumpkinTop(t: Tex): void {
   t.depth = 1.2;
 }
 
-function pumpkinSide(t: Tex): void {
+export function pumpkinSide(t: Tex): void {
   const r = t.rng();
   const px = pixelNoise(r);
   const nv = new Noise(r, 8, 4);

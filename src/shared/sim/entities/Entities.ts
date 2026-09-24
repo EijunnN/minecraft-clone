@@ -1,7 +1,10 @@
-// Entidades del servidor: criaturas (con IA), objetos tirados, flechas, bloques que caen y orbes de
-// experiencia. Este gestor guarda la lista, crea y retira entidades, aplica daño y explosiones y
-// reparte cada tick entre sus comportamientos: itemPhysics, mobBrain, animalLife, spawner y xpOrbs.
-import { MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, type MobDef } from '../../mobs';
+// Entidades del servidor: criaturas (con IA), objetos tirados, flechas, bloques que caen, orbes de
+// experiencia, huevos lanzados y flotadores de pesca. Este gestor guarda la lista, crea y retira
+// entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
+// projectiles, mobBrain, animalLife, spawner y xpOrbs.
+import {
+  MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, type MobDef,
+} from '../../mobs';
 import { ITEMS, ARROW, type ItemStack } from '../../items';
 import { WHITE_WOOL, BLOCK_FLUID, BLOCK_HARDNESS } from '../../blocks';
 import type { WorldSim } from '../WorldSim';
@@ -12,6 +15,7 @@ import { MobBrain } from './mobBrain';
 import { AnimalLife } from './animalLife';
 import { Spawner } from './spawner';
 import { XpOrbs } from './xpOrbs';
+import { Projectiles } from './projectiles';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -25,6 +29,7 @@ export class Entities {
   readonly animals = new AnimalLife(this);
   readonly spawner = new Spawner(this);
   readonly xp = new XpOrbs(this);
+  readonly projectiles = new Projectiles(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -115,6 +120,30 @@ export class Entities {
     e.arrowDamage = damage;
     e.yaw = Math.atan2(-vx, -vz);
     e.pitch = Math.atan2(vy, Math.hypot(vx, vz));
+    this.list.set(e.id, e);
+    return e;
+  }
+
+  /** Objeto lanzado por un jugador (huevo). */
+  spawnThrown(item: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, thrower: string): Entity {
+    this.makeRoom(ENT_THROWN, MAX_ARROWS);
+    const e = this.base(ENT_THROWN, x, y, z, 0.25, 0.25, 1);
+    e.vx = vx;
+    e.vy = vy;
+    e.vz = vz;
+    e.stack = { id: item, count: 1 };
+    e.shooter = thrower;
+    this.list.set(e.id, e);
+    return e;
+  }
+
+  /** Flotador de la caña de pescar de `owner`. */
+  spawnBobber(x: number, y: number, z: number, vx: number, vy: number, vz: number, owner: string): Entity {
+    const e = this.base(ENT_BOBBER, x, y, z, 0.25, 0.25, 1);
+    e.vx = vx;
+    e.vy = vy;
+    e.vz = vz;
+    e.shooter = owner;
     this.list.set(e.id, e);
     return e;
   }
@@ -286,6 +315,8 @@ export class Entities {
       else if (e.type === ENT_ARROW) this.items.arrowTick(e, dt, players);
       else if (e.type === ENT_FALLING) this.items.fallingTick(e, dt);
       else if (e.type === ENT_XP) this.xp.orbTick(e, dt, players);
+      else if (e.type === ENT_THROWN) this.projectiles.thrownTick(e, dt, players);
+      else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

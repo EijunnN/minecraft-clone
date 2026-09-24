@@ -1,6 +1,6 @@
 // Envío de entidades a cada jugador: sólo las cercanas y sólo lo que cambió desde el último envío
 // (altas, actualizaciones y bajas, con quién recogió cada objeto para la animación).
-import { ENT_ITEM, ENT_FALLING, ENT_XP } from '../../mobs';
+import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN } from '../../mobs';
 import type { ServerMsg } from '../../protocol';
 import type { Entity } from '../entities';
 import { r2, type ServerContext } from './context';
@@ -44,7 +44,7 @@ export class EntitySync {
         s.known.set(e.id, key);
         if (prev === undefined) {
           const rec = [e.id, e.type, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), e.flags];
-          if (e.type === ENT_ITEM && e.stack) rec.push(e.stack.id, e.stack.count);
+          if ((e.type === ENT_ITEM || e.type === ENT_THROWN) && e.stack) rec.push(e.stack.id, e.stack.count);
           else if (e.type === ENT_FALLING) rec.push(e.block ?? 0);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (e.ai) rec.push(Math.round(e.health));

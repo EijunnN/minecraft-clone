@@ -87,7 +87,7 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Elemento | Estado |
 | --- | --- |
 | Herramientas de madera, piedra, hierro, oro y diamante (pico, hacha, pala, espada) | ✅ |
-| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | 🟡 (azadas) |
+| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | 🟡 (azadas y caña de pescar) |
 | Tijeras | ✅ (hojas y ovejas) |
 | Cubos de agua y lava | ✅ |
 | Cubos de leche, de peces, de ajolote, de nieve polvo, de cubo de azufre | 🟡 (leche) |
@@ -106,11 +106,11 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Elemento | Estado |
 | --- | --- |
 | Brotes que crecen, caña de azúcar y cactus que crecen, hierba que se extiende | ✅ |
-| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | 🟡 (trigo, zanahoria, patata y remolacha) |
+| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | 🟡 (trigo, zanahoria, patata, remolacha, calabaza y sandía) |
 | Azada, tierra de cultivo e hidratación | ✅ |
-| Polvo de hueso, compostador | 🟡 (polvo de hueso) |
+| Polvo de hueso, compostador | ✅ |
 | Pan, tarta, galletas, sopas | 🟡 (pan, tarta y patata asada) |
-| Reproducción de animales, crías, pesca, apicultura (miel) | 🟡 (criar, crías, esquilar, ordeñar, huevos) |
+| Reproducción de animales, crías, pesca, apicultura (miel) | 🟡 (criar, crías, esquilar, ordeñar, huevos que se lanzan y pesca; falta la apicultura) |
 
 ### 2.7 Aldeanos, comercio y asaltos
 
@@ -221,10 +221,11 @@ escaleras de mano y antorchas en la pared. Granja: azadas, tierra de cultivo (hu
 zanahorias, patatas y remolachas, polvo de hueso, pan, patata asada, azúcar, fardo de heno y tarta;
 criar animales (crías que crecen, seguir la comida), esquilar, ordeñar y huevos. Armaduras de cuero,
 hierro, oro y diamante (con modelo en el jugador) y experiencia (orbes y niveles). Escudo y efectos de
-estado (manzana dorada, ojo de araña, carne podrida, leche y el comando `/efecto`).
+estado (manzana dorada, ojo de araña, carne podrida, leche y el comando `/efecto`). Calabazas y sandías
+(tallos que dan fruto, calabaza tallada, farol, tarta de calabaza), compostador, lanzar huevos
+(pollitos) y pesca (flotador, picada, peces, basura y tesoros).
 
-Pendiente: calabaza, sandía, compostador, lanzar huevos, pesca; muros,
-carteles, cofres dobles y camas de colores; ahumador, alto horno, fogata, cortapiedras. (Las puertas
+Pendiente: muros, carteles, cofres dobles y camas de colores; ahumador, alto horno, fogata, cortapiedras. (Las puertas
 de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
 
 ### Fase 5 — Un mundo más rico (XL)

@@ -10,9 +10,10 @@ import {
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
   OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
+  PUMPKIN_STEM, MELON_STEM,
 } from './blocks';
 
-export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield';
+export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod';
 
 export interface ToolInfo {
   kind: ToolType;
@@ -192,6 +193,25 @@ export const SPIDER_EYE = item('spider_eye', 'Ojo de araña', {
 export const SHIELD = item('shield', 'Escudo', {
   stack: 1, fuel: 15, tool: { kind: 'shield', tier: 0, speed: 1, durability: 336, damage: 1 },
 });
+
+// ------------------------------------------------------------------ calabazas, sandías y pesca (fase 4)
+export const PUMPKIN_SEEDS = item('pumpkin_seeds', 'Semillas de calabaza', { block: PUMPKIN_STEM });
+export const MELON_SEEDS = item('melon_seeds', 'Semillas de sandía', { block: MELON_STEM });
+export const MELON_SLICE = item('melon_slice', 'Rodaja de sandía', { food: { hunger: 2, saturation: 1.2 } });
+export const PUMPKIN_PIE = item('pumpkin_pie', 'Tarta de calabaza', { food: { hunger: 8, saturation: 4.8 } });
+export const FISHING_ROD = item('fishing_rod', 'Caña de pescar', {
+  stack: 1, fuel: 15, tool: { kind: 'fishing_rod', tier: 0, speed: 1, durability: 64, damage: 1 },
+});
+export const COD = item('cod', 'Bacalao crudo', { food: { hunger: 2, saturation: 0.4 } });
+export const COOKED_COD = item('cooked_cod', 'Bacalao cocinado', { food: { hunger: 5, saturation: 6 } });
+export const SALMON = item('salmon', 'Salmón crudo', { food: { hunger: 2, saturation: 0.4 } });
+export const COOKED_SALMON = item('cooked_salmon', 'Salmón cocinado', { food: { hunger: 6, saturation: 9.6 } });
+export const TROPICAL_FISH = item('tropical_fish', 'Pez tropical', { food: { hunger: 1, saturation: 0.2 } });
+/** Pez globo: Hambre III y Veneno II (como en Minecraft, sin la náusea). */
+export const PUFFERFISH = item('pufferfish', 'Pez globo', {
+  food: { hunger: 1, saturation: 0.2, effects: [[EFFECT_HUNGER, 15, 2, 1], [EFFECT_POISON, 60, 1, 1]] },
+});
+
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
 ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
@@ -201,7 +221,7 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   cow: [WHEAT],
   sheep: [WHEAT],
   pig: [CARROT, POTATO, BEETROOT],
-  chicken: [WHEAT_SEEDS, BEETROOT_SEEDS],
+  chicken: [WHEAT_SEEDS, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS],
 };
 
 export const ITEM_COUNT = nextId;
@@ -239,6 +259,8 @@ smelt(RAW_BEEF, STEAK);
 smelt(RAW_CHICKEN, COOKED_CHICKEN);
 smelt(RAW_MUTTON, COOKED_MUTTON);
 smelt(POTATO, BAKED_POTATO);
+smelt(COD, COOKED_COD);
+smelt(SALMON, COOKED_SALMON);
 
 // Los hornos y cofres se apilan hasta 64 como bloque base.
 void FURNACE;
@@ -284,7 +306,8 @@ export const CREATIVE_ITEMS: readonly number[] = [
   MILK_BUCKET,
   ...Object.values(TOOLS).flatMap((t) => Object.values(t)),
   ...Object.values(ARMOR).flatMap((a) => Object.values(a)),
-  GOLDEN_APPLE, SPIDER_EYE, SHIELD,
+  GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD, COD, COOKED_COD,
+  SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

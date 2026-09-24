@@ -25,6 +25,8 @@ import { BlockRules, fallsThrough } from './server/blockRules';
 import { Nature } from './server/nature';
 import { Farming } from './server/farming';
 import { Beds } from './server/beds';
+import { Composters } from './server/composters';
+import { Fishing } from './server/fishing';
 import { ContainerSystem } from './server/containerSystem';
 import { BlockEdits } from './server/blockEdits';
 import { PlayerActions } from './server/playerActions';
@@ -76,6 +78,8 @@ export class GameServer {
   private nature: Nature;
   private farming: Farming;
   private beds: Beds;
+  private composters: Composters;
+  private fishing: Fishing;
   private containers: ContainerSystem;
   private edits: BlockEdits;
   private actions: PlayerActions;
@@ -123,7 +127,9 @@ export class GameServer {
     this.farming = new Farming(this.ctx, this.nature);
     this.beds = new Beds(this.ctx);
     this.containers = new ContainerSystem(this.ctx, store);
-    this.edits = new BlockEdits(this.ctx, this.rules, this.farming, this.beds);
+    this.composters = new Composters(this.ctx);
+    this.fishing = new Fishing(this.ctx);
+    this.edits = new BlockEdits(this.ctx, this.rules, this.farming, this.beds, this.composters);
     this.actions = new PlayerActions(this.ctx);
     this.commands = new Commands(this.ctx);
     this.entitySync = new EntitySync(this.ctx);
@@ -411,6 +417,12 @@ export class GameServer {
       case 'shoot':
         if (this.allow(s, 3)) this.actions.onShoot(s, msg);
         break;
+      case 'throw':
+        if (this.allow(s, 1)) this.actions.onThrow(s, msg);
+        break;
+      case 'fish':
+        if (this.allow(s, 1)) this.fishing.onFish(s, msg);
+        break;
       case 'open':
         if (this.allow(s, 1)) this.containers.onOpen(s, msg);
         break;
@@ -500,7 +512,7 @@ export class GameServer {
     for (const o of this.sessions.values()) if (o.joined && o !== s) players.push(this.info(o));
     this.send(s, {
       t: 'welcome', id: s.id, seed: this.seed, time: this.time, now: this.now(), players, editCount: edits.length,
-      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawnPoint, bed: s.bed,
+      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawnPoint, bed: s.bed, rods: this.fishing.active(),
     });
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: this.info(s) }, s);
@@ -639,6 +651,7 @@ export class GameServer {
     this.containers.onBlockChanged(x, y, z, old, id);
     this.nature.onBlockChanged(x, y, z, old, id);
     this.beds.onBlockChanged(x, y, z, old, id);
+    this.farming.onBlockChanged(x, y, z, old, id);
     this.rules.onBlockChanged(x, y, z, id);
   }
 
@@ -653,6 +666,8 @@ export class GameServer {
     this.nature.tick();
     this.entities.tick(DT);
     this.beds.tick();
+    this.composters.tick();
+    this.fishing.tick();
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) this.containers.tickFurnaces(DT * 4);

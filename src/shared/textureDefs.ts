@@ -153,6 +153,18 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'cake_side' },
   { name: 'cake_inner' },
   { name: 'cake_bottom' },
+  // Calabazas, sandías y compostador (fase 4).
+  { name: 'melon_side' },
+  { name: 'melon_top' },
+  ...[0, 1, 2, 3, 4, 5, 6, 7].map((s): TextureDef => ({ name: `stem_stage${s}`, wave: 2, sss: 0.5, cutout: true })),
+  { name: 'stem_attached', wave: 2, sss: 0.5, cutout: true },
+  { name: 'carved_pumpkin' },
+  { name: 'jack_o_lantern' },
+  { name: 'composter_side' },
+  { name: 'composter_top' },
+  { name: 'composter_bottom' },
+  { name: 'compost' },
+  { name: 'compost_ready' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

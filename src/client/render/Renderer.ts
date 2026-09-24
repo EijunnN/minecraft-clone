@@ -30,8 +30,10 @@ import { XpOrbRenderer } from './XpOrbRenderer';
 import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
-import { ENT_ITEM, ENT_ARROW, ENT_FALLING } from '../../shared/mobs';
+import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER } from '../../shared/mobs';
+import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
+import { WHITE_WOOL, RED_WOOL, BLACK_WOOL } from '../../shared/blocks';
 
 export interface RenderSettings {
   renderScale: number;
@@ -116,6 +118,8 @@ export interface FrameState {
   grassTint: [number, number, number];
   players: RemotePlayerView[];
   showHand: boolean;
+  /** Sedales de pesca: [punta de la caña, flotador]. */
+  fishLines?: FishLine[];
 }
 
 const NEAR = 0.05;
@@ -787,6 +791,24 @@ export class Renderer {
         mat4.rotateZ(m, m, -Math.PI / 4);
         mat4.scale(m, m, [0.7, 0.7, 0.7]);
         out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
+      } else if (e.type === ENT_THROWN && e.item > 0) {
+        // Huevo en vuelo: el sprite de cara a la cámara.
+        const model = this.items.model(e.item);
+        if (!model) continue;
+        const m = mat4.create();
+        mat4.translate(m, m, [rx, ry + 0.12, rz]);
+        mat4.rotateY(m, m, Math.atan2(-rx, -rz));
+        mat4.scale(m, m, [0.3, 0.3, 0.3]);
+        out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
+      } else if (e.type === ENT_BOBBER) {
+        // Flotador: mitad de abajo blanca y mitad de arriba roja.
+        const light = lightOf(e.x, e.y + 0.1, e.z);
+        for (const [block, dy] of [[WHITE_WOOL, 0.04], [RED_WOOL, 0.11]] as const) {
+          const m = mat4.create();
+          mat4.translate(m, m, [rx, ry + dy, rz]);
+          mat4.scale(m, m, [0.12, 0.07, 0.12]);
+          out.push({ model: this.items.blockModel(block), m, light });
+        }
       } else if (e.type === ENT_FALLING && e.item > 0) {
         const model = this.items.blockModel(e.item);
         const m = mat4.create();
@@ -795,7 +817,36 @@ export class Renderer {
         out.push({ model, m, light: lightOf(e.x, e.y + 0.5, e.z) });
       }
     }
+    for (const l of s.fishLines ?? []) this.pushFishLine(out, s, l, lightOf);
     return out;
+  }
+
+  /** Sedal: segmentos finos de una curva que cuelga entre la punta de la caña y el flotador. */
+  private pushFishLine(
+    out: ItemDraw[], s: FrameState, l: FishLine, lightOf: (x: number, y: number, z: number) => [number, number],
+  ): void {
+    const model = this.items.blockModel(BLACK_WOOL);
+    const len = Math.hypot(l[3] - l[0], l[4] - l[1], l[5] - l[2]);
+    if (!(len > 0.05) || len > 40) return;
+    const sag = Math.min(1.2, len * 0.06);
+    const SEG = 14;
+    const at = (t: number): [number, number, number] => [
+      l[0] + (l[3] - l[0]) * t, l[1] + (l[4] - l[1]) * t - sag * 4 * t * (1 - t), l[2] + (l[5] - l[2]) * t,
+    ];
+    const light = lightOf((l[0] + l[3]) / 2, (l[1] + l[4]) / 2, (l[2] + l[5]) / 2);
+    let a = at(0);
+    for (let k = 1; k <= SEG; k++) {
+      const b = at(k / SEG);
+      const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+      const d = Math.hypot(dx, dy, dz);
+      const m = mat4.create();
+      mat4.translate(m, m, [(a[0] + b[0]) / 2 - s.camX, (a[1] + b[1]) / 2 - s.camY, (a[2] + b[2]) / 2 - s.camZ]);
+      mat4.rotateY(m, m, Math.atan2(dx, dz));
+      mat4.rotateX(m, m, -Math.atan2(dy, Math.hypot(dx, dz)));
+      mat4.scale(m, m, [0.012, 0.012, d]);
+      out.push({ model, m, light });
+      a = b;
+    }
   }
 
   /** Arcos en las manos de los esqueletos. */

@@ -104,6 +104,9 @@ export interface Entity extends Body {
   shooter?: string | number;
   arrowDamage?: number;
   stuck?: boolean;
+  // Pesca: segundos hasta que pique y lo que queda de la picada (> 0: está picando).
+  fishWait?: number;
+  fishBite?: number;
   // Bloques que caen
   block?: number;
   // Orbes de experiencia

@@ -1,6 +1,7 @@
-// Acciones de los jugadores sobre entidades: atacar, recoger y tirar objetos, disparar flechas.
+// Acciones de los jugadores sobre entidades: atacar, recoger y tirar objetos, disparar flechas y
+// lanzar huevos.
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
-import { ITEMS } from '../../items';
+import { ITEMS, EGG } from '../../items';
 import { sanitizeStack } from '../../containers';
 import type { PlayerView } from '../entities';
 import type { ServerContext, Session } from './context';
@@ -75,5 +76,19 @@ export class PlayerActions {
     const speed = 55 * f;
     ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, 2);
     ctx.fx('bow', p[0], p[1], p[2], f);
+  }
+
+  /** Lanzar un huevo (el cliente ya lo quitó del inventario). */
+  onThrow(s: Session, msg: Extract<ClientMsg, { t: 'throw' }>): void {
+    const ctx = this.ctx;
+    if (s.s & STATE_DEAD || Number(msg.item) !== EGG || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
+    const p = msg.p.map(Number), d = msg.d.map(Number);
+    if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite)) return;
+    if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
+    const len = Math.hypot(d[0], d[1], d[2]) || 1;
+    // 1,5 bloques por tick, como en Minecraft.
+    const speed = 30;
+    ctx.entities.spawnThrown(EGG, p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id);
+    ctx.fx('throw', p[0], p[1], p[2]);
   }
 }
