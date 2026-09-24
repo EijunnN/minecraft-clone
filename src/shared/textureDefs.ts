@@ -142,6 +142,17 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'birch_trapdoor', cutout: true },
   { name: 'spruce_trapdoor', cutout: true },
   { name: 'ladder', cutout: true },
+  // Granja: tierra de cultivo, etapas de los cultivos y tarta.
+  { name: 'farmland_dry' },
+  { name: 'farmland_wet' },
+  ...[0, 1, 2, 3, 4, 5, 6, 7].map((s): TextureDef => ({ name: `wheat_stage${s}`, wave: 2, sss: 0.5, cutout: true })),
+  ...['carrots', 'potatoes', 'beetroots'].flatMap((c) =>
+    [0, 1, 2, 3].map((s): TextureDef => ({ name: `${c}_stage${s}`, wave: 2, sss: 0.55, cutout: true })),
+  ),
+  { name: 'cake_top' },
+  { name: 'cake_side' },
+  { name: 'cake_inner' },
+  { name: 'cake_bottom' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

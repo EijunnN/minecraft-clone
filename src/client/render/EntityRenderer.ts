@@ -303,6 +303,28 @@ export class EntityRenderer {
     });
   }
 
+  /** Corazones (animales en modo amor, crías que nacen). */
+  spawnHearts(x: number, y: number, z: number, n: number, spread = 0.4): void {
+    this.spawnShaped(x, y, z, n, spread, -3, 0.22);
+  }
+
+  /** Destellos verdes (polvo de hueso). */
+  spawnSparkles(x: number, y: number, z: number, n: number, spread = 0.5): void {
+    this.spawnShaped(x, y, z, n, spread, -4, 0.14);
+  }
+
+  private spawnShaped(x: number, y: number, z: number, n: number, spread: number, layer: number, size: number): void {
+    for (let i = 0; i < n; i++) {
+      if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * spread * 2, y: y + (Math.random() - 0.5) * spread, z: z + (Math.random() - 0.5) * spread * 2,
+        vx: (Math.random() - 0.5) * 0.3, vy: 0.3 + Math.random() * 0.4, vz: (Math.random() - 0.5) * 0.3,
+        life: 0, max: 0.9 + Math.random() * 0.6, size: size * (0.8 + Math.random() * 0.4), layer, u: 0, v: 0, light: 0xff,
+        smoke: true,
+      });
+    }
+  }
+
   /** Chispas de golpe crítico / daño. */
   spawnCrit(x: number, y: number, z: number, n: number): void {
     for (let i = 0; i < n; i++) {

@@ -21,6 +21,12 @@ export const EF_DEAD = 4;
 export const EF_ANGRY = 8;
 export const EF_ACTION = 16;
 export const EF_PICKABLE = 32;
+/** Cría (se dibuja a la mitad de tamaño y con la cabeza grande). */
+export const EF_BABY = 64;
+/** Oveja esquilada (sin lana). */
+export const EF_SHEARED = 128;
+/** Animal en modo amor (corazones). */
+export const EF_LOVE = 256;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';
@@ -73,8 +79,12 @@ export type ClientMsg =
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
   /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
   | { t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number }
-  /** Clic derecho sobre un bloque (abrir puertas, dormir en una cama). */
-  | { t: 'use'; x: number; y: number; z: number; yaw: number }
+  /** Clic derecho sobre un bloque (abrir puertas, dormir, labrar con la azada, polvo de hueso). */
+  | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number }
+  /** Usar el objeto de la mano sobre una criatura (dar de comer, esquilar, ordeñar). */
+  | { t: 'interact'; e: number; item: number; q: number }
+  /** El jugador cayó sobre tierra de cultivo y la pisoteó. */
+  | { t: 'trample'; x: number; y: number; z: number }
   | { t: 'wake' }
   | { t: 'chat'; m: string }
   | { t: 'swing' }
@@ -121,6 +131,8 @@ export type ServerMsg =
   /** Resultado de intentar dormir: p = posición en la cama, f = orientación; m = motivo si no. */
   | { t: 'sleep'; ok: boolean; p?: [number, number, number]; f?: number; m?: string }
   | { t: 'wake' }
+  /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
+  | { t: 'ires'; q: number; ok: boolean; take?: number; give?: ItemStack; wear?: number }
   /** Punto de reaparición del jugador (cama); null = el del mundo. */
   | { t: 'spawn'; p: [number, number, number] | null };
 

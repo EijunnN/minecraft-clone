@@ -1,7 +1,7 @@
 // Entidades en el cliente: réplica de las del servidor (criaturas, objetos, flechas, bloques que
 // caen) con interpolación entre instantáneas (se dibujan ~110 ms en el pasado para suavizar).
 import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING } from '../../shared/mobs';
-import { EF_DEAD, EF_HURT, EF_ACTION, type EntAdd, type EntUpd } from '../../shared/protocol';
+import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd } from '../../shared/protocol';
 
 interface Snap {
   t: number;
@@ -180,8 +180,9 @@ export class ClientEntities {
     for (const e of this.list.values()) {
       const def = MOBS[e.type];
       if (!def || e.gone || e.deathT >= 0) continue;
-      const hw = def.width / 2 + 0.05;
-      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height, e.z + hw];
+      const k = e.flags & EF_BABY ? 0.5 : 1;
+      const hw = (def.width * k) / 2 + 0.05;
+      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height * k, e.z + hw];
       let tmin = 0, tmax = maxDist;
       const o = [ox, oy, oz], d = [dx, dy, dz];
       let hit = true;

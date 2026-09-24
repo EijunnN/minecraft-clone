@@ -3,11 +3,12 @@ import {
   OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, TORCH, CHEST, FURNACE,
   COBBLESTONE, STONE, STONE_BRICKS, SAND, SANDSTONE, BRICKS, CLAY, BOOKSHELF, IRON_BLOCK, GOLD_BLOCK, DIAMOND_BLOCK,
   WHITE_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL, POPPY, DANDELION, CORNFLOWER, SUGAR_CANE, GLASS, SLABS, STAIRS,
-  FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED,
+  FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED, HAY_BALE, CAKE,
 } from './blocks';
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
-  CLAY_BALL, BUCKET, BOW, ARROW, SHEARS, LAPIS, TOOLS, type ItemStack,
+  CLAY_BALL, BUCKET, BOW, ARROW, SHEARS, LAPIS, TOOLS, BONE, BREAD, WHEAT, SUGAR, EGG, MILK_BUCKET, BONE_MEAL,
+  type ItemStack,
 } from './items';
 
 type Cell = readonly number[] | null;
@@ -98,11 +99,23 @@ for (const [mat, m] of MATS) {
   shape(['MM', 'MS', ' S'], { M: m, S: STICK }, TOOLS[mat].axe);
   shape(['M', 'S', 'S'], { M: m, S: STICK }, TOOLS[mat].shovel);
   shape(['M', 'M', 'S'], { M: m, S: STICK }, TOOLS[mat].sword);
+  shape(['MM', ' S', ' S'], { M: m, S: STICK }, TOOLS[mat].hoe);
 }
 shape(['I I', ' I '], { I: IRON_INGOT }, BUCKET);
 shape([' I', 'I '], { I: IRON_INGOT }, SHEARS);
 shape([' SW', 'S W', ' SW'], { S: STICK, W: STRING }, BOW);
 shape(['F', 'S', 'E'], { F: FLINT, S: STICK, E: FEATHER }, ARROW, 4);
+
+// --- Granja ---
+shape(['WWW'], { W: WHEAT }, BREAD);
+shape(['WWW', 'WWW', 'WWW'], { W: WHEAT }, HAY_BALE);
+mix([HAY_BALE], WHEAT, 9);
+mix([BONE], BONE_MEAL, 3);
+mix([SUGAR_CANE], SUGAR);
+shape(['MMM', 'SES', 'WWW'], { M: MILK_BUCKET, S: SUGAR, E: EGG, W: WHEAT }, CAKE);
+
+/** Lo que queda en la cuadrícula al fabricar (los cubos de leche de la tarta vuelven vacíos). */
+export const CRAFT_REMAINDER: Readonly<Record<number, number>> = { [MILK_BUCKET]: BUCKET };
 
 // --- Papel y libros ---
 shape(['CCC'], { C: SUGAR_CANE }, PAPER, 3);

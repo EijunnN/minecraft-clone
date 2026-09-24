@@ -3,9 +3,12 @@ import {
   MOBS, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER,
   MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, type MobDef,
 } from '../mobs';
-import { ITEMS, ARROW, maxStack, type ItemStack } from '../items';
-import { GRASS, SNOWY_GRASS, AIR, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER } from '../blocks';
-import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_PICKABLE } from '../protocol';
+import { ITEMS, ARROW, EGG, BUCKET, MILK_BUCKET, SHEARS, BREED_FOOD, maxStack, type ItemStack } from '../items';
+import {
+  GRASS, SNOWY_GRASS, DIRT, AIR, WHITE_WOOL, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER,
+  isFarmland,
+} from '../blocks';
+import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_PICKABLE, EF_BABY, EF_SHEARED, EF_LOVE } from '../protocol';
 import { SEA_LEVEL } from '../constants';
 import { moveBody, lineOfSight, boxCollides, type Body } from './physics';
 import { findPath, standable, type PathNode } from './pathfind';
@@ -22,6 +25,8 @@ export interface PlayerView {
   creative: boolean;
   /** Entidad a la que mira (para los enderman). */
   lookingAt: number;
+  /** Objeto en la mano (los animales siguen a quien lleva su comida). */
+  held?: number;
 }
 
 export interface EntityHost {
@@ -39,7 +44,25 @@ export interface EntityHost {
   breakBlock(x: number, y: number, z: number, drop: boolean): void;
   /** Un bloque que caía toca el suelo en la celda (x, y, z). */
   landBlock(x: number, y: number, z: number, block: number): void;
+  /** Una criatura cae sobre tierra de cultivo y la pisotea. */
+  trample(x: number, y: number, z: number): void;
 }
+
+/** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */
+export interface InteractResult {
+  ok: boolean;
+  /** Objetos que se gastan de la mano. */
+  take?: number;
+  /** Objeto que se recibe a cambio (cubo de leche). */
+  give?: ItemStack;
+  /** Desgaste de la herramienta (tijeras). */
+  wear?: number;
+}
+
+/** Segundos que tarda una cría en crecer (Minecraft: 20 minutos). */
+export const GROW_SECONDS = 1200;
+const LOVE_SECONDS = 30;
+const BREED_COOLDOWN = 300;
 
 interface AI {
   target: string | null;
@@ -60,6 +83,9 @@ interface AI {
   swimDir: [number, number, number];
   lookYaw: number;
   teleportCd: number;
+  /** Dirección elegida por animalGoal: [x, z, velocidad, saltar]. */
+  goalDir: [number, number, number, number];
+  lookAt: [number, number, number] | null;
 }
 
 export interface Entity extends Body {
@@ -89,6 +115,16 @@ export interface Entity extends Body {
   stuck?: boolean;
   // Bloques que caen
   block?: number;
+  // Animales
+  /** Segundos que le faltan para ser adulto (> 0: cría). */
+  growAge?: number;
+  /** Segundos que le quedan en modo amor (buscando pareja). */
+  love?: number;
+  /** Espera hasta poder volver a criar. */
+  breedCd?: number;
+  sheared?: boolean;
+  /** Gallinas: segundos hasta el próximo huevo. */
+  eggTimer?: number;
   ai?: AI;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
@@ -142,15 +178,23 @@ export class Entities {
     };
   }
 
-  spawnMob(type: number, x: number, y: number, z: number): Entity | null {
+  spawnMob(type: number, x: number, y: number, z: number, baby = false): Entity | null {
     const def = MOBS[type];
     if (!def) return null;
     const e = this.base(type, x, y, z, def.width, def.height, def.health);
     e.bodyYaw = e.yaw;
+    if (!def.hostile && !def.aquatic) {
+      e.growAge = 0;
+      e.love = 0;
+      e.breedCd = 0;
+      e.sheared = false;
+      if (type === MOB_CHICKEN) e.eggTimer = 300 + this.rand() * 300;
+      if (baby) this.setBaby(e, GROW_SECONDS);
+    }
     e.ai = {
       target: null, goal: null, path: null, pathIdx: 0, repath: 0, think: this.rand() * 2, attackCd: 0, shootCd: 1 + this.rand(),
       fuse: 0, angry: 0, panic: 0, panicFrom: [x, z], stuck: 0, lastX: x, lastZ: z, swimDir: [0, 0, 0], lookYaw: e.yaw,
-      teleportCd: 0,
+      teleportCd: 0, goalDir: [0, 0, 0, 0], lookAt: null,
     };
     this.list.set(e.id, e);
     return e;
@@ -270,10 +314,11 @@ export class Entities {
     e.deathTime = 0;
     e.health = 0;
     this.host.fx('mob_death', e.x, e.y + e.height / 2, e.z, e.type);
-    if (drops && e.ai) {
+    if (drops && e.ai && !((e.growAge ?? 0) > 0)) {
       const def = MOBS[e.type];
       const stacks: ItemStack[] = [];
       for (const [id, min, max] of def.drops) {
+        if (id === WHITE_WOOL && e.sheared) continue;
         const n = min + Math.floor(this.rand() * (max - min + 1));
         if (n > 0) stacks.push({ id, count: n });
       }
@@ -614,6 +659,8 @@ export class Entities {
       }
     }
 
+    if (!def.hostile && !def.aquatic) this.animalTick(e, dt);
+    if (e.dead || !this.list.has(e.id)) return;
     ai.attackCd -= dt;
     ai.shootCd -= dt;
     ai.repath -= dt;
@@ -743,6 +790,13 @@ export class Entities {
       moveX = dx / d + Math.sin(e.age * 3) * 0.3;
       moveZ = dz / d + Math.cos(e.age * 3) * 0.3;
       speed = def.run;
+    } else if (!def.hostile && this.animalGoal(e, players, dt)) {
+      // Buscar pareja o seguir a quien lleva su comida (animalGoal deja la dirección en ai.goalDir).
+      moveX = ai.goalDir[0];
+      moveZ = ai.goalDir[1];
+      speed = ai.goalDir[2];
+      jump = ai.goalDir[3] > 0;
+      if (ai.lookAt) lookAt = ai.lookAt;
     } else {
       // Paseo tranquilo.
       if (ai.think <= 0) {
@@ -811,6 +865,11 @@ export class Entities {
     if (!wasGround && e.onGround && !e.inWater && e.type !== MOB_CHICKEN) {
       const fall = e.fallStart - e.y;
       if (fall > 3.5 && prevVy < -8) this.damage(e, Math.floor(fall - 3), e.x, e.z, null, 0);
+      // Pisotear la tierra de cultivo al caer encima (sólo las criaturas grandes, como en Minecraft).
+      if (fall > 0.5 && this.rand() < fall - 0.5 && e.width * e.width * e.height > 0.512) {
+        const bx = Math.floor(e.x), by = Math.floor(e.y - 0.05), bz = Math.floor(e.z);
+        if (isFarmland(w.getBlock(bx, by, bz))) this.host.trample(bx, by, bz);
+      }
     }
     if (e.onGround || e.inWater) e.fallStart = e.y;
     else e.fallStart = Math.max(e.fallStart, e.y);
@@ -838,6 +897,149 @@ export class Entities {
     this.updateFlags(e, ai);
   }
 
+  // ------------------------------------------------------------------ animales de granja
+
+  private setBaby(e: Entity, seconds: number): void {
+    const def = MOBS[e.type];
+    e.growAge = seconds;
+    e.width = def.width * 0.5;
+    e.height = def.height * 0.5;
+  }
+
+  /** Crecer, amor, huevos y lana (una vez por tick para los animales pacíficos). */
+  private animalTick(e: Entity, dt: number): void {
+    if ((e.growAge ?? 0) > 0) {
+      e.growAge! -= dt;
+      if (e.growAge! <= 0) {
+        const def = MOBS[e.type];
+        e.growAge = 0;
+        e.width = def.width;
+        e.height = def.height;
+        // Al crecer puede quedar dentro de un bloque bajo: subirla un poco.
+        if (boxCollides(this.w, e.x - e.width / 2, e.y, e.z - e.width / 2, e.x + e.width / 2, e.y + e.height, e.z + e.width / 2)) e.y += 0.5;
+      }
+    }
+    if ((e.love ?? 0) > 0) e.love! -= dt;
+    if ((e.breedCd ?? 0) > 0) e.breedCd! -= dt;
+    // Gallina adulta: un huevo cada 5–10 minutos.
+    if (e.type === MOB_CHICKEN && !((e.growAge ?? 0) > 0)) {
+      e.eggTimer = (e.eggTimer ?? 300) - dt;
+      if (e.eggTimer <= 0) {
+        e.eggTimer = 300 + this.rand() * 300;
+        this.spawnItem({ id: EGG, count: 1 }, e.x, e.y + 0.3, e.z, 0, 1, 0, undefined, 0.5);
+        this.host.fx('egg', e.x, e.y + 0.3, e.z);
+      }
+    }
+    // Oveja esquilada: le vuelve a crecer la lana comiendo hierba (una vez por minuto de media).
+    if (e.type === MOB_SHEEP && e.sheared && e.onGround && this.rand() < dt / 60) {
+      const bx = Math.floor(e.x), by = Math.floor(e.y - 0.05), bz = Math.floor(e.z);
+      if (this.w.getBlock(bx, by, bz) === GRASS) {
+        this.w.setBlock(bx, by, bz, DIRT);
+        e.sheared = false;
+        this.host.fx('eat_grass', e.x, e.y + 0.3, e.z);
+      }
+    }
+  }
+
+  /**
+   * Objetivo de un animal tranquilo: acercarse a su pareja en modo amor (y criar al tocarla) o seguir
+   * a un jugador que lleva su comida en la mano. Devuelve false si no tiene ninguno.
+   */
+  private animalGoal(e: Entity, players: PlayerView[], dt: number): boolean {
+    const ai = e.ai!;
+    const def = MOBS[e.type];
+    const food = BREED_FOOD[def.key];
+    if (!food) return false;
+    ai.lookAt = null;
+    // Pareja: otro adulto de la misma especie en modo amor a menos de 8 bloques.
+    if ((e.love ?? 0) > 0) {
+      let mate: Entity | null = null, best = 8;
+      for (const o of this.list.values()) {
+        if (o === e || o.type !== e.type || o.dead || !((o.love ?? 0) > 0) || (o.growAge ?? 0) > 0) continue;
+        const d = Math.hypot(o.x - e.x, o.z - e.z);
+        if (d < best && Math.abs(o.y - e.y) < 3) {
+          best = d;
+          mate = o;
+        }
+      }
+      if (mate) {
+        ai.lookAt = [mate.x, mate.y + mate.height * 0.8, mate.z];
+        if (best < 1.3) {
+          this.breed(e, mate);
+          return false;
+        }
+        const [mx, mz, jump] = this.followPath(e, { id: '', name: '', x: mate.x, y: mate.y, z: mate.z, alive: true, creative: false, lookingAt: -1 }, dt);
+        ai.goalDir = [mx, mz, def.walk, jump ? 1 : 0];
+        return true;
+      }
+    }
+    // Seguir a quien lleva su comida (hasta 10 bloques), parando a 2 bloques.
+    let lure: PlayerView | null = null, best = 10;
+    for (const p of players) {
+      if (!p.alive || p.held === undefined || !food.includes(p.held)) continue;
+      const d = Math.hypot(p.x - e.x, p.z - e.z);
+      if (d < best && Math.abs(p.y - e.y) < 4) {
+        best = d;
+        lure = p;
+      }
+    }
+    if (!lure) return false;
+    ai.lookAt = [lure.x, lure.y + 1.6, lure.z];
+    if (best < 2.2) {
+      ai.goalDir = [0, 0, 0, 0];
+      return true;
+    }
+    const [mx, mz, jump] = this.followPath(e, lure, dt);
+    ai.goalDir = [mx, mz, def.walk * 1.15, jump ? 1 : 0];
+    return true;
+  }
+
+  /** Dos adultos en modo amor tienen una cría entre ellos. */
+  private breed(a: Entity, b: Entity): void {
+    a.love = 0;
+    b.love = 0;
+    a.breedCd = BREED_COOLDOWN;
+    b.breedCd = BREED_COOLDOWN;
+    const x = (a.x + b.x) / 2, y = Math.max(a.y, b.y), z = (a.z + b.z) / 2;
+    const baby = this.spawnMob(a.type, x, y, z, true);
+    if (baby) baby.yaw = baby.bodyYaw = a.bodyYaw;
+    this.host.fx('breed', x, y + 0.6, z);
+  }
+
+  /**
+   * Usar un objeto sobre una criatura: dar de comer (amor o hacer crecer a una cría), esquilar una
+   * oveja u ordeñar una vaca con un cubo.
+   */
+  interact(e: Entity, item: number, creative: boolean): InteractResult {
+    const def = MOBS[e.type];
+    if (!def || e.dead || !e.ai || def.hostile) return { ok: false };
+    const baby = (e.growAge ?? 0) > 0;
+    const food = BREED_FOOD[def.key];
+    if (food && food.includes(item)) {
+      if (baby) {
+        // Comer acelera el crecimiento un 10 % de lo que le falta.
+        e.growAge = Math.max(0.05, e.growAge! * 0.9);
+      } else {
+        if ((e.love ?? 0) > 0 || (e.breedCd ?? 0) > 0) return { ok: false };
+        e.love = LOVE_SECONDS;
+      }
+      this.host.fx('feed', e.x, e.y + e.height, e.z, e.type);
+      return { ok: true, take: creative ? 0 : 1 };
+    }
+    if (e.type === MOB_SHEEP && item === SHEARS && !baby && !e.sheared) {
+      e.sheared = true;
+      const n = 1 + Math.floor(this.rand() * 3);
+      this.spawnItem({ id: WHITE_WOOL, count: n }, e.x, e.y + e.height, e.z, (this.rand() - 0.5) * 2, 3, (this.rand() - 0.5) * 2);
+      this.host.fx('shear', e.x, e.y + e.height * 0.7, e.z);
+      return { ok: true, wear: creative ? 0 : 1 };
+    }
+    if (e.type === MOB_COW && item === BUCKET && !baby) {
+      this.host.fx('milk', e.x, e.y + e.height * 0.5, e.z);
+      return { ok: true, take: 1, give: { id: MILK_BUCKET, count: 1 } };
+    }
+    return { ok: false };
+  }
+
   private updateFlags(e: Entity, ai: AI): void {
     let f = 0;
     if (e.hurt < 0.4) f |= EF_HURT;
@@ -845,6 +1047,9 @@ export class Entities {
     if (e.dead) f |= EF_DEAD;
     if (ai.angry > 0 || (ai.target && MOBS[e.type].hostile)) f |= EF_ANGRY;
     if (ai.fuse > 0 || (ai.target && ai.shootCd < 0.6 && (e.type === MOB_SKELETON || e.type === MOB_STRAY))) f |= EF_ACTION;
+    if ((e.growAge ?? 0) > 0) f |= EF_BABY;
+    if (e.sheared) f |= EF_SHEARED;
+    if ((e.love ?? 0) > 0) f |= EF_LOVE;
     e.flags = f;
   }
 
@@ -1070,7 +1275,10 @@ export class Entities {
     const out: number[][] = [];
     for (const e of this.list.values()) {
       if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
-      out.push([e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health)]);
+      out.push([
+        e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
+        Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
+      ]);
     }
     return JSON.stringify(out);
   }
@@ -1079,10 +1287,13 @@ export class Entities {
     if (!json) return;
     try {
       const arr = JSON.parse(json) as number[][];
-      for (const [type, x, y, z, hp] of arr) {
+      for (const [type, x, y, z, hp, grow, sheared] of arr) {
         if (!MOBS[type] || ![x, y, z].every(Number.isFinite)) continue;
         const e = this.spawnMob(type, x, y, z);
-        if (e && Number.isFinite(hp)) e.health = Math.max(1, Math.min(e.maxHealth, hp));
+        if (!e) continue;
+        if (Number.isFinite(hp)) e.health = Math.max(1, Math.min(e.maxHealth, hp));
+        if (Number.isFinite(grow) && grow > 0) this.setBaby(e, Math.min(GROW_SECONDS, grow));
+        if (sheared === 1) e.sheared = true;
       }
     } catch {
       /* ignorar */

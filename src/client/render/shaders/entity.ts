@@ -132,6 +132,21 @@ in vec2 vLight;
 layout(location = 0) out vec4 outColor;
 void main() {
   vec3 up = texelFetch(uIrradiance, ivec2(2, 0), 0).rgb;
+  if (vLayer < -2.5) {
+    // Partículas con forma: -3 corazón (animales enamorados), -4 destello verde (polvo de hueso).
+    vec2 q = floor((vUV * 4.0 - 0.5) * 8.0) / 8.0 + 1.0 / 16.0;
+    if (vLayer > -3.5) {
+      vec2 h = vec2(q.x, -q.y + 0.08) * 2.6;
+      float f = pow(h.x * h.x + h.y * h.y - 1.0, 3.0) - h.x * h.x * h.y * h.y * h.y;
+      if (f > 0.0) discard;
+      outColor = vec4(vec3(1.0, 0.12, 0.2) * 2.2, 1.0);
+    } else {
+      if (abs(q.x) + abs(q.y) > 0.32 && min(abs(q.x), abs(q.y)) > 0.07) discard;
+      if (dot(q, q) > 0.25) discard;
+      outColor = vec4(vec3(0.35, 1.0, 0.45) * 2.5, 1.0);
+    }
+    return;
+  }
   if (vLayer < -0.5) {
     // Humo: disco gris suave (capa negativa = -1 - gris).
     vec2 q = vUV * 4.0 - 0.5;

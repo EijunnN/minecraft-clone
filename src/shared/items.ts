@@ -5,10 +5,10 @@ import {
   BLOCKS, BLOCK_COUNT, R_NONE, WATER, LAVA, FURNACE, CHEST, OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS,
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
   OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
-  FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, baseBlock,
+  FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
 } from './blocks';
 
-export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow';
+export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe';
 
 export interface ToolInfo {
   kind: ToolType;
@@ -41,6 +41,8 @@ export interface ItemDef {
   fuel?: number;
   /** Resultado al fundirlo en un horno. */
   smelt?: number;
+  /** Se bebe (en cualquier momento, aunque no haya hambre): cubo de leche. */
+  drink?: boolean;
 }
 
 export const ITEMS: ItemDef[] = [];
@@ -49,7 +51,7 @@ export const ITEMS: ItemDef[] = [];
 for (let id = 1; id < BLOCK_COUNT; id++) {
   const b = BLOCKS[id];
   // Sin variantes (fluidos en movimiento, hornos encendidos u orientados): sólo el bloque base es objeto.
-  if (!b || b.render === R_NONE || b.level !== 0 || baseBlock(id) !== id) continue;
+  if (!b || b.render === R_NONE || b.level !== 0 || baseBlock(id) !== id || b.noItem) continue;
   ITEMS[id] = { id, key: b.key, name: b.name, stack: 64, block: id };
 }
 // Puertas y camas se ven como un dibujo plano (como en Minecraft); la cama no se apila.
@@ -129,6 +131,36 @@ for (const [mat, matName, tier, speed, dur, dmg] of MATERIALS) {
   }
 }
 
+// ------------------------------------------------------------------ granja
+// (Van al final para no cambiar los ids de los objetos guardados en inventarios y cofres.)
+export const WHEAT_SEEDS = item('wheat_seeds', 'Semillas de trigo', { block: WHEAT_CROP });
+export const WHEAT = item('wheat', 'Trigo');
+export const CARROT = item('carrot', 'Zanahoria', { block: CARROTS, food: { hunger: 3, saturation: 3.6 } });
+export const POTATO = item('potato', 'Patata', { block: POTATOES, food: { hunger: 1, saturation: 0.6 } });
+export const BAKED_POTATO = item('baked_potato', 'Patata asada', { food: { hunger: 5, saturation: 6 } });
+export const BEETROOT = item('beetroot', 'Remolacha', { food: { hunger: 1, saturation: 1.2 } });
+export const BEETROOT_SEEDS = item('beetroot_seeds', 'Semillas de remolacha', { block: BEETROOTS });
+export const BONE_MEAL = item('bone_meal', 'Polvo de hueso');
+export const EGG = item('egg', 'Huevo', { stack: 16 });
+export const MILK_BUCKET = item('milk_bucket', 'Cubo de leche', { stack: 1, drink: true });
+export const SUGAR = item('sugar', 'Azúcar');
+for (const [mat, matName, tier, speed, dur] of MATERIALS) {
+  TOOLS[mat].hoe = item(`${mat}_hoe`, `Azada ${matName}`, {
+    stack: 1,
+    fuel: mat === 'wooden' ? 10 : undefined,
+    tool: { kind: 'hoe', tier, speed, durability: dur, damage: 1 },
+  });
+}
+ITEMS[CAKE].stack = 1;
+
+/** Comida que acepta cada animal para criar (y que le hace seguir al jugador). */
+export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
+  cow: [WHEAT],
+  sheep: [WHEAT],
+  pig: [CARROT, POTATO, BEETROOT],
+  chicken: [WHEAT_SEEDS, BEETROOT_SEEDS],
+};
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -163,6 +195,7 @@ smelt(RAW_PORKCHOP, COOKED_PORKCHOP);
 smelt(RAW_BEEF, STEAK);
 smelt(RAW_CHICKEN, COOKED_CHICKEN);
 smelt(RAW_MUTTON, COOKED_MUTTON);
+smelt(POTATO, BAKED_POTATO);
 
 // Los hornos y cofres se apilan hasta 64 como bloque base.
 void FURNACE;
@@ -204,6 +237,12 @@ export const CREATIVE_ITEMS: readonly number[] = [
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, BRICK, BONE, STRING,
   FEATHER, GUNPOWDER, LEATHER, ROTTEN_FLESH, PAPER, BOOK, ENDER_PEARL, APPLE, BREAD, RAW_PORKCHOP, COOKED_PORKCHOP,
   RAW_BEEF, STEAK, RAW_CHICKEN, COOKED_CHICKEN, RAW_MUTTON, COOKED_MUTTON, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOW,
-  ARROW, SHEARS,
+  ARROW, SHEARS, WHEAT_SEEDS, WHEAT, CARROT, POTATO, BAKED_POTATO, BEETROOT, BEETROOT_SEEDS, BONE_MEAL, EGG, SUGAR,
+  MILK_BUCKET,
   ...Object.values(TOOLS).flatMap((t) => Object.values(t)),
 ];
+
+/** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */
+export const PLACEABLE_BLOCKS: ReadonlySet<number> = new Set(
+  ITEMS.filter((i) => i && i.block !== undefined && !i.tool).map((i) => i.block!),
+);

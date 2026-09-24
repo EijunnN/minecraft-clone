@@ -4,7 +4,7 @@ import { mat4 } from 'gl-matrix';
 import { Program, type GL } from '../engine/gl';
 import { MOB_VS, MOB_FS, MOB_SHADOW_VS, MOB_SHADOW_FS, MAX_BONES } from './shaders/mob';
 import { MOBS, boxFaces, type MobDef, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } from '../../shared/mobs';
-import { EF_ACTION, EF_ANGRY } from '../../shared/protocol';
+import { EF_ACTION, EF_ANGRY, EF_BABY, EF_SHEARED } from '../../shared/protocol';
 import type { ClientEntity } from '../game/ClientEntities';
 
 export interface MobTexture {
@@ -212,6 +212,9 @@ export class MobRenderer {
       mat4.rotateY(m, m, rest[1] + rot[1]);
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
+      // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
+      if (part.name === 'wool' && e.flags & EF_SHEARED) mat4.scale(m, m, [0, 0, 0]);
+      else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
       b.set(m, i * 16);
     }
@@ -224,6 +227,7 @@ export class MobRenderer {
     mat4.rotateY(m, m, e.bodyYaw);
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
     let s = def.scale;
+    if (e.flags & EF_BABY) s *= 0.5;
     if (def.id === MOB_CREEPER && e.actionT >= 0) {
       // El creeper se hincha mientras arde la mecha.
       const k = Math.min(1, e.actionT / 1.5);

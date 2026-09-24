@@ -3,7 +3,8 @@
 // bloques con bisagra, trampillas, portillos, escaleras de mano y antorchas en la pared, camas.
 import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
-  RED_BED, stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed,
+  RED_BED, stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
+  isFarmland, isMatureCrop,
   blockSupported, orientedFor, type NeighborGet,
 } from './blocks';
 import { DIR_X, DIR_Z } from './blockModels';
@@ -80,6 +81,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   const facing = facingFromYaw(yaw);
   const one = (id: number): Edit[] => [[x, y, z, id]];
 
+  // Semillas, zanahorias y patatas: sólo sobre tierra de cultivo.
+  if (isCrop(base)) return isFarmland(get(x, y - 1, z)) ? one(base) : null;
+  if (isCake(base)) return firm(get(x, y - 1, z)) ? one(base) : null;
   if (isSlab(base)) return one(stateOf(base, { type: upper ? 1 : 0 }));
   if (isStairs(base)) return one(stateOf(base, { facing, half: upper ? 1 : 0 }));
   if (isFenceGate(base)) return one(stateOf(base, { facing }));
@@ -153,9 +157,17 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
   return null;
 }
 
-/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas). */
+/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas). */
 export function isUsable(id: number): boolean {
-  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id);
+  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id);
+}
+
+/** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */
+export function canFertilize(get: GetBlock, x: number, y: number, z: number, saplings: ReadonlySet<number>, grass: number): boolean {
+  const id = get(x, y, z);
+  if (isCrop(id)) return !isMatureCrop(id);
+  if (saplings.has(id)) return true;
+  return id === grass && get(x, y + 1, z) === 0;
 }
 
 /** Abrir o cerrar puertas, trampillas y portillos (las dos mitades de una puerta a la vez). */
@@ -173,6 +185,7 @@ export function toggleEdits(get: GetBlock, x: number, y: number, z: number, yaw:
     return out;
   }
   if (isTrapdoor(id)) return [[x, y, z, stateOf(base, { ...st, open: st.open ? 0 : 1 })]];
+  if (isCake(id)) return [[x, y, z, st.bites >= 6 ? 0 : stateOf(base, { bites: st.bites + 1 })]];
   if (isFenceGate(id)) {
     if (st.open) return [[x, y, z, stateOf(base, { ...st, open: 0 })]];
     // Se abre alejándose de quien la empuja.

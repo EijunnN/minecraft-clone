@@ -136,9 +136,11 @@ mob({
 });
 mob({
   id: MOB_SHEEP, key: 'sheep', name: 'Oveja', hostile: false, health: 8, walk: 1.1, run: 2.4, width: 0.9, height: 1.3,
-  damage: 0, burnsInSun: false, drops: [[WHITE_WOOL, 1, 1], [RAW_MUTTON, 1, 2]], atlas: [64, 64], anim: 'quadruped', scale: 1,
+  damage: 0, burnsInSun: false, drops: [[WHITE_WOOL, 1, 1], [RAW_MUTTON, 1, 2]], atlas: [64, 96], anim: 'quadruped', scale: 1,
   parts: [
+    // Cuerpo esquilado (piel) y, encima, la capa de lana que desaparece al esquilarla.
     { name: 'body', pivot: [0, 12, 0], from: [-5, 0, -8], size: [10, 8, 16], uv: [0, 14] },
+    { name: 'wool', parent: 'body', pivot: [0, 0, 0], from: [-6, -1, -9], size: [12, 10, 18], uv: [0, 56] },
     { name: 'head', pivot: [0, 18, -8], from: [-3, -4, -8], size: [6, 6, 8], uv: [0, 0] },
     ...quadLegs(12, 3, [-5, 6], [0, 38]),
   ],

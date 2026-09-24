@@ -10,7 +10,7 @@ import {
   AIR, BEDROCK, ICE, GLASS, CACTUS, SUGAR_CANE,
   BLOCK_RENDER, BLOCK_OPAQUE, BLOCK_AO, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, BLOCK_TEX, BLOCK_FLUID, BLOCK_SOLID,
   BLOCK_FLUID_LEVEL, R_NONE, R_CUBE, R_CUTOUT, R_CROSS, R_WATER, R_TRANSLUCENT, R_TORCH, R_CACTUS, R_LAVA, R_MODEL,
-  BLOCK_MODEL_CUTOUT, BLOCK_WALL, fluidHeight, blockModel,
+  BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland,
 } from '../../../shared/blocks';
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2 } from '../../../shared/constants';
@@ -314,6 +314,10 @@ export class Mesher {
             case R_MODEL:
               emitted = this.emitModel(i, id, x, y, z);
               break;
+            case R_CROP:
+              this.emitCrop(i, id, x, y, z);
+              emitted = true;
+              break;
             case R_CACTUS:
               this.emitCactus(i, id, x, y, z);
               emitted = true;
@@ -536,6 +540,34 @@ export class Mesher {
       this.pushVertex(buf, bx + ax, by, bz + az, 0, 16, layer, 6, 2, sl, bl);
       this.pushVertex(buf, bx + ax, by + 16, bz + az, 0, 0, layer, 6, 3, sl, bl);
       this.pushVertex(buf, bx + bxx, by + 16, bz + bzz, 16, 0, layer, 6, 3, sl, bl);
+    }
+  }
+
+  /** Cultivo: cuatro planos en forma de # (a 4/16 y 12/16), 1/16 más bajo sobre tierra de cultivo. */
+  private emitCrop(i: number, id: number, x: number, y: number, z: number): void {
+    const layer = BLOCK_TEX[id * 6];
+    const sl = this.sky[i];
+    const bl = this.blk[i];
+    const bx = x * 16, bz = z * 16;
+    const by = y * 16 - (isFarmland(this.vox[i - SY]) ? 1 : 0);
+    const buf = this.cutout;
+    buf.ensure(64);
+    for (const k of [4, 12]) {
+      // Plano paralelo a Z (x = k) y plano paralelo a X (z = k), cada uno con sus dos caras.
+      const planes = [
+        [k, 0, k, 16],
+        [0, k, 16, k],
+      ];
+      for (const [ax, az, cx2, cz2] of planes) {
+        this.pushVertex(buf, bx + ax, by, bz + az, 0, 16, layer, 6, 2, sl, bl);
+        this.pushVertex(buf, bx + cx2, by, bz + cz2, 16, 16, layer, 6, 2, sl, bl);
+        this.pushVertex(buf, bx + cx2, by + 16, bz + cz2, 16, 0, layer, 6, 3, sl, bl);
+        this.pushVertex(buf, bx + ax, by + 16, bz + az, 0, 0, layer, 6, 3, sl, bl);
+        this.pushVertex(buf, bx + cx2, by, bz + cz2, 16, 16, layer, 6, 2, sl, bl);
+        this.pushVertex(buf, bx + ax, by, bz + az, 0, 16, layer, 6, 2, sl, bl);
+        this.pushVertex(buf, bx + ax, by + 16, bz + az, 0, 0, layer, 6, 3, sl, bl);
+        this.pushVertex(buf, bx + cx2, by + 16, bz + cz2, 16, 0, layer, 6, 3, sl, bl);
+      }
     }
   }
 

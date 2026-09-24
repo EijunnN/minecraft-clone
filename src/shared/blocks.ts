@@ -14,6 +14,7 @@ export const R_TORCH = 6; // antorcha
 export const R_CACTUS = 7; // cactus (caras laterales hundidas 1/16)
 export const R_LAVA = 8; // lava (opaca, emisiva, superficie rebajada)
 export const R_MODEL = 9; // forma hecha de cajas (losas, escaleras, vallas, puertas…)
+export const R_CROP = 10; // cultivo: cuatro planos en forma de # (trigo, zanahorias…)
 
 /** Vecino relativo (dx, dy, dz) → id del bloque (-1 si no se sabe). */
 export type NeighborGet = (dx: number, dy: number, dz: number) => number;
@@ -86,6 +87,8 @@ export interface BlockDef {
   walkThrough?: boolean;
   /** Textura con la que se dibuja plano como objeto (escalera de mano, panel). */
   flatItem?: string;
+  /** No se obtiene como objeto (cultivos, tierra de cultivo). */
+  noItem?: boolean;
 }
 
 export type ToolKind = 'pickaxe' | 'axe' | 'shovel';
@@ -136,6 +139,7 @@ function def(id: number, key: string, name: string, o: Opts): void {
     wall: o.wall,
     walkThrough: o.walkThrough,
     flatItem: o.flatItem,
+    noItem: o.noItem,
   };
 }
 
@@ -632,6 +636,45 @@ export const RED_BED = family('red_bed', 'Cama roja', [['facing', 4], ['part', 2
   };
 });
 
+// Las familias nuevas van SIEMPRE al final: sus ids se guardan en los mundos (ver tests/ids.test.ts).
+// ------------------------------------------------------------------ granja
+
+/** Tierra de cultivo (seca o húmeda); mide 15/16. Al romperla suelta tierra. */
+export const FARMLAND = family('farmland', 'Tierra de cultivo', [['moist', 2]], (st) => {
+  const dirt = L('dirt'), top = L(st.moist ? 'farmland_wet' : 'farmland_dry');
+  return {
+    render: R_MODEL, hardness: 0.6, tool: 'shovel', sound: 'dirt', category: null, noItem: true,
+    top: st.moist ? 'farmland_wet' : 'farmland_dry', side: 'dirt', bottom: 'dirt',
+    model: [mbox(0, 0, 0, 16, 15, 16, [dirt, dirt, top, dirt, dirt, dirt])],
+  };
+});
+
+/** Cultivo con `ages` edades; `tex(edad)` da la textura y `h(edad)` la altura de selección (1/16). */
+function crop(key: string, name: string, ages: number, tex: (age: number) => string, h: (age: number) => number): number {
+  return family(key, name, [['age', ages]], (st) => ({
+    render: R_CROP, solid: false, opaque: false, lightOpacity: 0, sound: 'grass', hardness: 0, category: null,
+    noItem: true, all: tex(st.age), selection: [0, 0, 0, 1, h(st.age) / 16, 1],
+  }));
+}
+/** Las zanahorias y patatas tienen 8 edades pero 4 dibujos (como en Minecraft). */
+const quarter = (age: number) => (age < 2 ? 0 : age < 4 ? 1 : age < 7 ? 2 : 3);
+export const WHEAT_CROP = crop('wheat_crop', 'Trigo', 8, (a) => `wheat_stage${a}`, (a) => 2 + a * 2);
+export const CARROTS = crop('carrots', 'Zanahorias', 8, (a) => `carrots_stage${quarter(a)}`, (a) => 2 + a);
+export const POTATOES = crop('potatoes', 'Patatas', 8, (a) => `potatoes_stage${quarter(a)}`, (a) => 2 + a);
+export const BEETROOTS = crop('beetroots', 'Remolachas', 4, (a) => `beetroots_stage${a}`, (a) => 2 + a * 2);
+/** Edad máxima de cada cultivo (por su estado base). */
+export const CROP_MAX_AGE: Readonly<Record<number, number>> = { [WHEAT_CROP]: 7, [CARROTS]: 7, [POTATOES]: 7, [BEETROOTS]: 3 };
+
+/** Tarta: siete porciones; cada mordisco quita 2/16 por el lado oeste. */
+export const CAKE = family('cake', 'Tarta', [['bites', 7]], (st) => {
+  const top = L('cake_top'), side = L('cake_side'), bottom = L('cake_bottom'), inner = L('cake_inner');
+  return {
+    render: R_MODEL, hardness: 0.5, sound: 'wool', category: 'decoracion', top: 'cake_top', side: 'cake_side', bottom: 'cake_bottom',
+    model: [mbox(1 + st.bites * 2, 0, 1, 15, 8, 15, [side, st.bites ? inner : side, top, bottom, side, side])],
+  };
+});
+
+
 export const BLOCKS: readonly BlockDef[] = defs;
 /** Uno más que el mayor id registrado (el registro es disperso: hay huecos entre 96 y 1024). */
 export const BLOCK_COUNT = defs.length;
@@ -665,6 +708,7 @@ export const BLOCK_MODEL_CUTOUT = new Uint8Array(MAX_BLOCK_ID);
 const STATIC_COLLISION: (number[] | undefined)[] = [];
 /** Tipo de bloque con estados: 1 puerta, 2 trampilla, 3 portillo, 4 cama, 5 losa, 6 escalera. */
 const KIND_DOOR = 1, KIND_TRAPDOOR = 2, KIND_GATE = 3, KIND_BED = 4, KIND_SLAB = 5, KIND_STAIRS = 6;
+const KIND_CROP = 7, KIND_CAKE = 8, KIND_FARMLAND = 9;
 export const BLOCK_KIND = new Uint8Array(MAX_BLOCK_ID);
 /** Necesita apoyo de un vecino (antorchas de pared, escaleras de mano, puertas, camas). */
 export const BLOCK_NEEDS_SUPPORT = new Uint8Array(MAX_BLOCK_ID);
@@ -678,12 +722,16 @@ export const BLOCK_TALL = new Uint8Array(MAX_BLOCK_ID);
   for (const v of Object.values(SLABS)) kindOf.set(v, KIND_SLAB);
   for (const v of Object.values(STAIRS)) kindOf.set(v, KIND_STAIRS);
   kindOf.set(RED_BED, KIND_BED);
+  for (const v of [WHEAT_CROP, CARROTS, POTATOES, BEETROOTS]) kindOf.set(v, KIND_CROP);
+  kindOf.set(CAKE, KIND_CAKE);
+  kindOf.set(FARMLAND, KIND_FARMLAND);
   for (const b of defs) {
     if (!b) continue;
     const k = kindOf.get(familyBase(b.id)) ?? 0;
     BLOCK_KIND[b.id] = k;
     BLOCK_TALL[b.id] = FENCE_IDS.has(b.id) || (k === KIND_GATE && b.solid) ? 1 : 0;
-    BLOCK_NEEDS_SUPPORT[b.id] = k === KIND_DOOR || k === KIND_BED || (b.wall !== undefined && b.wall >= 0) ? 1 : 0;
+    BLOCK_NEEDS_SUPPORT[b.id] = k === KIND_DOOR || k === KIND_BED || k === KIND_CROP || k === KIND_CAKE ||
+      (b.wall !== undefined && b.wall >= 0) ? 1 : 0;
   }
 }
 
@@ -705,6 +753,24 @@ export function isFenceGate(id: number): boolean {
 
 export function isSlab(id: number): boolean {
   return BLOCK_KIND[id] === KIND_SLAB;
+}
+
+export function isCrop(id: number): boolean {
+  return BLOCK_KIND[id] === KIND_CROP;
+}
+
+export function isCake(id: number): boolean {
+  return BLOCK_KIND[id] === KIND_CAKE;
+}
+
+export function isFarmland(id: number): boolean {
+  return BLOCK_KIND[id] === KIND_FARMLAND;
+}
+
+/** ¿Cultivo en su última edad? */
+export function isMatureCrop(id: number): boolean {
+  const b = familyBase(id);
+  return isCrop(id) && id - b >= CROP_MAX_AGE[b];
 }
 
 export function isStairs(id: number): boolean {
@@ -795,6 +861,14 @@ export function blockSupported(id: number, get: NeighborGet): boolean {
   if (d.wall !== undefined && d.wall >= 0) {
     const b = get(-DIR_X[d.wall], 0, -DIR_Z[d.wall]);
     return b < 0 || BLOCK_OPAQUE[b] === 1;
+  }
+  if (isCrop(id)) {
+    const below = get(0, -1, 0);
+    return below < 0 || isFarmland(below);
+  }
+  if (isCake(id)) {
+    const below = get(0, -1, 0);
+    return below < 0 || BLOCK_SOLID[below] === 1;
   }
   const st = stateProps(id);
   if (!st) return true;

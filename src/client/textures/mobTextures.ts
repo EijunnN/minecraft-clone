@@ -422,7 +422,12 @@ function wool(t: Texel, seed: number): RGB {
 
 function sheep(t: Texel): Paint {
   const seed = 303;
-  if (t.g === 'body') return wool(t, seed);
+  if (t.g === 'wool') return wool(t, seed);
+  if (t.g === 'body') {
+    // Piel rosada que se ve al esquilarla, con restos de lana corta.
+    if (rnd(t, seed + 7) > 0.82) return tone(WOOL, 0.35);
+    return rnd(t, seed + 8) > 0.7 ? SHEEP_SKIN_D : SHEEP_SKIN;
+  }
   if (t.g === 'leg') {
     if (t.f === BOTTOM) return [104, 88, 76];
     if (t.y < 1.2) return [124, 104, 88];

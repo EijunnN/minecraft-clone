@@ -2,7 +2,7 @@
 // buscan el hueco más cercano, se secan al quitar la fuente, dos fuentes de agua crean una
 // tercera y el contacto agua–lava produce obsidiana, roca o piedra.
 import {
-  AIR, OBSIDIAN, COBBLESTONE, STONE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_TORCH,
+  AIR, OBSIDIAN, COBBLESTONE, STONE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_TORCH, R_CROP,
   FLUID_MAX_LEVEL, fluidBlock,
 } from '../blocks';
 import { posKey, keyX, keyY, keyZ } from './posKey';
@@ -84,7 +84,7 @@ export class FluidSim {
     if (fl) return true;
     if (BLOCK_SOLID[id]) return false;
     const r = BLOCK_RENDER[id];
-    return r === R_CROSS || r === R_TORCH;
+    return r === R_CROSS || r === R_TORCH || r === R_CROP;
   }
 
   private update(world: FluidWorld, x: number, y: number, z: number): void {

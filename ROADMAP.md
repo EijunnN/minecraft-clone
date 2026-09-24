@@ -106,11 +106,11 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Elemento | Estado |
 | --- | --- |
 | Brotes que crecen, caña de azúcar y cactus que crecen, hierba que se extiende | ✅ |
-| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | ❌ |
-| Azada, tierra de cultivo e hidratación | ❌ |
-| Polvo de hueso, compostador | ❌ |
-| Pan (existe el objeto pero no hay trigo para fabricarlo), tarta, galletas, sopas | 🟡 |
-| Reproducción de animales, crías, pesca, apicultura (miel) | ❌ |
+| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | 🟡 (trigo, zanahoria, patata y remolacha) |
+| Azada, tierra de cultivo e hidratación | ✅ |
+| Polvo de hueso, compostador | 🟡 (polvo de hueso) |
+| Pan, tarta, galletas, sopas | 🟡 (pan, tarta y patata asada) |
+| Reproducción de animales, crías, pesca, apicultura (miel) | 🟡 (criar, crías, esquilar, ordeñar, huevos) |
 
 ### 2.7 Aldeanos, comercio y asaltos
 
@@ -217,11 +217,12 @@ servidor (autoritativa), `npm test` con `node:test` y GitHub Actions (tipos, pru
 ### Fase 4 — Supervivencia completa (XL)
 Ya hecho: camas (dormir de noche con todos los jugadores, reaparición en la cama), puertas y puertas
 dobles, trampillas, portillos, vallas, escaleras y losas de 8 materiales, paneles de cristal,
-escaleras de mano y antorchas en la pared.
+escaleras de mano y antorchas en la pared. Granja: azadas, tierra de cultivo (humedad, pisoteo), trigo,
+zanahorias, patatas y remolachas, polvo de hueso, pan, patata asada, azúcar, fardo de heno y tarta;
+criar animales (crías que crecen, seguir la comida), esquilar, ordeñar y huevos.
 
 Pendiente: armaduras (con modelo en el jugador), escudo, experiencia, efectos de
-estado; cultivos (azada, tierra de cultivo, trigo, zanahoria, patata, remolacha, calabaza, sandía),
-polvo de hueso y compostador; reproducción y crías, esquilar, ordeñar, huevos, pesca; muros,
+estado; calabaza, sandía, compostador, lanzar huevos, pesca; muros,
 carteles, cofres dobles, camas de colores y puertas de hierro;
 ahumador, alto horno, fogata, cortapiedras.
 

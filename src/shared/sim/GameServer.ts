@@ -13,10 +13,11 @@ import {
   OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES, OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, FURNACE, FURNACE_LIT,
   BLOCKS, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, BLOCK_REPLACEABLE,
   R_CROSS, R_TORCH, BLOCK_WALL, BLOCK_NEEDS_SUPPORT, isValidBlockId, isContainer, isChest, isFurnace, blockFacing,
-  blockSupported, isBed, stateProps,
+  blockSupported, isBed, stateProps, FARMLAND, POPPY, DANDELION, SHORT_GRASS, isFarmland, isCrop, isMatureCrop,
+  familyBase, CROP_MAX_AGE,
 } from '../blocks';
 import { planPlacement, partnerOf, toggleEdits, isUsable, type Edit } from '../placement';
-import { ITEMS, isValidItem, maxStack, type ItemStack } from '../items';
+import { ITEMS, BONE_MEAL, PLACEABLE_BLOCKS, isValidItem, maxStack, type ItemStack } from '../items';
 import { MOBS, MOB_TYPES, ENT_ITEM, ENT_FALLING } from '../mobs';
 import {
   newContainer, clickSlot, insertStack, takeFromSlot, furnaceTick, containerToWire, containerFromWire,
@@ -248,6 +249,7 @@ export class GameServer {
         this.world.setBlock(x, y, z, AIR);
         if (drop) this.entities.dropStacks(blockDrops(id, 0, this.rand), x + 0.5, y + 0.3, z + 0.5);
       },
+      trample: (x, y, z) => this.trampleAt(x, y, z),
       landBlock: (x, y, z, block) => {
         const cur = this.world.getBlock(x, y, z);
         if (cur >= 0 && fallsThrough(cur) && isValidBlockId(block)) this.world.setBlock(x, y, z, block);
@@ -263,7 +265,7 @@ export class GameServer {
       if (!s.joined) continue;
       out.push({
         id: s.id, name: s.name, x: s.p[0], y: s.p[1], z: s.p[2], alive: !(s.s & STATE_DEAD), creative: s.mode === 'c',
-        lookingAt: s.lookUntil > now ? s.lookAt : -1,
+        lookingAt: s.lookUntil > now ? s.lookAt : -1, held: s.h,
       });
     }
     return out;
@@ -406,6 +408,14 @@ export class GameServer {
       case 'wake':
         this.wake(s);
         break;
+      case 'interact':
+        if (this.allow(s, 1)) this.onInteract(s, msg);
+        break;
+      case 'trample': {
+        const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z);
+        if ([x, y, z].every(Number.isInteger) && this.allow(s, 1) && this.reachOk(s, x, y, z, 3)) this.trampleAt(x, y, z);
+        break;
+      }
       case 'chat':
         this.onChat(s, msg.m);
         break;
@@ -632,7 +642,7 @@ export class GameServer {
       for (let d = 0; d < 4; d++) cells.push([n[0] + [0, 1, 0, -1][d], n[1], n[2] + [-1, 0, 1, 0][d]]);
       for (const [dx, dy, dz] of cells) this.reject(s, x + dx, y + dy, z + dz);
     };
-    if (!isValidBlockId(item) || ITEMS[item]?.block !== item || BLOCK_FLUID[item] || item === BEDROCK) {
+    if (!isValidBlockId(item) || !PLACEABLE_BLOCKS.has(item) || BLOCK_FLUID[item] || item === BEDROCK) {
       undo();
       return;
     }
@@ -662,6 +672,21 @@ export class GameServer {
     if (![x, y, z].every(Number.isInteger) || !Number.isFinite(yaw) || s.s & STATE_DEAD || !this.reachOk(s, x, y, z, 8)) return;
     const id = this.world.getBlock(x, y, z);
     if (id < 0) return;
+    // Usar un objeto sobre el bloque: azada (labrar) y polvo de hueso.
+    const item = Number(msg.item);
+    if (Number.isInteger(item) && item > 0) {
+      this.actor = s.id;
+      let done = false;
+      try {
+        if (ITEMS[item]?.tool?.kind === 'hoe') done = this.till(x, y, z);
+        else if (item === BONE_MEAL) done = this.fertilize(x, y, z);
+      } finally {
+        this.actor = null;
+      }
+      if (!done) this.reject(s, x, y, z);
+      if (!done && item !== BONE_MEAL) this.reject(s, x, y + 1, z);
+      return;
+    }
     if (!isUsable(id)) {
       this.reject(s, x, y, z);
       return;
@@ -678,6 +703,80 @@ export class GameServer {
     } finally {
       this.actor = null;
     }
+  }
+
+  // ------------------------------------------------------------------ granja
+
+  private onInteract(s: Session, msg: Extract<ClientMsg, { t: 'interact' }>): void {
+    const q = Number(msg.q) | 0;
+    const e = this.entities.list.get(Number(msg.e));
+    const item = Number(msg.item);
+    const far = e && !this.local && Math.hypot(e.x - s.p[0], e.y - s.p[1], e.z - s.p[2]) > 6;
+    if (!e || far || !Number.isInteger(item) || s.s & STATE_DEAD) {
+      this.send(s, { t: 'ires', q, ok: false });
+      return;
+    }
+    const r = this.entities.interact(e, item, s.mode === 'c');
+    this.send(s, { t: 'ires', q, ...r });
+  }
+
+  /** ¿Hay agua a 4 bloques en horizontal (a la misma altura o uno por encima)? */
+  private hydrated(x: number, y: number, z: number): boolean {
+    for (let dy = 0; dy <= 1; dy++) {
+      for (let dz = -4; dz <= 4; dz++) {
+        for (let dx = -4; dx <= 4; dx++) {
+          const b = this.world.getBlock(x + dx, y + dy, z + dz);
+          if (b > 0 && BLOCK_FLUID[b] === 1) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Labrar con la azada: hierba o tierra con aire encima → tierra de cultivo. */
+  private till(x: number, y: number, z: number): boolean {
+    const id = this.world.getBlock(x, y, z);
+    if (id !== GRASS && id !== DIRT) return false;
+    if (this.world.getBlock(x, y + 1, z) !== AIR) return false;
+    this.world.setBlock(x, y, z, FARMLAND + (this.hydrated(x, y, z) ? 1 : 0));
+    return true;
+  }
+
+  /** La tierra de cultivo pisoteada vuelve a ser tierra (y el cultivo de encima se rompe). */
+  private trampleAt(x: number, y: number, z: number): void {
+    if (isFarmland(this.world.getBlock(x, y, z))) this.world.setBlock(x, y, z, DIRT);
+  }
+
+  /** Polvo de hueso: hace crecer cultivos y brotes, y cubre la hierba de plantas. */
+  private fertilize(x: number, y: number, z: number): boolean {
+    const w = this.world;
+    const id = w.getBlock(x, y, z);
+    if (isCrop(id)) {
+      if (isMatureCrop(id)) return false;
+      const base = familyBase(id);
+      w.setBlock(x, y, z, Math.min(base + CROP_MAX_AGE[base], id + 2 + Math.floor(this.rand() * 4)));
+      this.fx('bonemeal', x + 0.5, y + 0.4, z + 0.5);
+      return true;
+    }
+    if (SAPLINGS.has(id)) {
+      this.fx('bonemeal', x + 0.5, y + 0.4, z + 0.5);
+      if (this.rand() < 0.45) this.growTree(x, y, z, SAPLINGS.get(id)!);
+      return true;
+    }
+    if (id === GRASS && w.getBlock(x, y + 1, z) === AIR) {
+      for (let k = 0; k < 40; k++) {
+        const bx = x + Math.round((this.rand() - 0.5) * 6), bz = z + Math.round((this.rand() - 0.5) * 6);
+        for (let by = y + 2; by >= y - 2; by--) {
+          if (w.getBlock(bx, by, bz) !== GRASS || w.getBlock(bx, by + 1, bz) !== AIR) continue;
+          const r = this.rand();
+          w.setBlock(bx, by + 1, bz, r < 0.85 ? SHORT_GRASS : r < 0.93 ? POPPY : DANDELION);
+          break;
+        }
+      }
+      this.fx('bonemeal', x + 0.5, y + 1.2, z + 0.5);
+      return true;
+    }
+    return false;
   }
 
   // ------------------------------------------------------------------ camas
@@ -777,6 +876,8 @@ export class GameServer {
         }
       }
     }
+    // Un bloque sólido encima de la tierra de cultivo la aplasta.
+    if (id > 0 && BLOCK_SOLID[id] && isFarmland(this.world.getBlock(x, y - 1, z))) this.world.setBlock(x, y - 1, z, DIRT);
     if (this.supportBatch) this.supportBatch.push([x, y, z]);
     else this.checkSupport(x, y, z, id);
     // Arena y grava caen.
@@ -1295,6 +1396,29 @@ export class GameServer {
             const top = w.skyTop(nx, nz);
             if (top <= ny + 1 || LEAVES.has(w.getBlock(nx, top, nz))) w.setBlock(nx, ny, nz, GRASS);
           }
+        } else if (isFarmland(id)) {
+          const above = w.getBlock(x, y + 1, z);
+          const rain = rainAt(this.worldTime(), this.seed) > 0.2 && w.skyTop(x, z) <= y;
+          const moist = id !== FARMLAND;
+          if (this.hydrated(x, y, z) || rain) {
+            if (!moist) w.setBlock(x, y, z, FARMLAND + 1);
+          } else if (moist) w.setBlock(x, y, z, FARMLAND);
+          else if (!isCrop(above)) w.setBlock(x, y, z, DIRT);
+        } else if (isCrop(id)) {
+          if (isMatureCrop(id)) continue;
+          // Luz: cielo abierto (aunque sea de noche, como en Minecraft) o una antorcha cerca.
+          if (w.skyTop(x, z) > y && !w.isLitByBlocks(x, y, z)) continue;
+          // Velocidad como en Minecraft: la tierra húmeda de debajo y la de alrededor ayudan.
+          let f = 1;
+          for (let dz = -1; dz <= 1; dz++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const b = w.getBlock(x + dx, y - 1, z + dz);
+              if (!isFarmland(b)) continue;
+              const wet = b !== FARMLAND;
+              f += dx === 0 && dz === 0 ? (wet ? 3 : 1) : wet ? 0.75 : 0.25;
+            }
+          }
+          if (this.rand() < 1 / (Math.floor(25 / f) + 1)) w.setBlock(x, y, z, id + 1);
         } else if (id === CACTUS || id === SUGAR_CANE) {
           if (w.getBlock(x, y + 1, z) !== AIR || this.rand() > 0.25) continue;
           let h = 1;

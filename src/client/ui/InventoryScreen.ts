@@ -3,7 +3,7 @@
 // derecho reparte o deja de uno en uno, mayúsculas mueve rápido, 1–9 intercambia con la barra
 // y Q suelta. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
-import { matchRecipe } from '../../shared/recipes';
+import { matchRecipe, CRAFT_REMAINDER } from '../../shared/recipes';
 import {
   clickSlot, cloneStack, COOK_TIME, FURNACE_FUEL, FURNACE_IN, FURNACE_OUT, type ContainerState,
 } from '../../shared/containers';
@@ -300,7 +300,10 @@ export class InventoryScreen {
       const s = this.grid[i];
       if (!s) continue;
       s.count--;
-      if (s.count <= 0) this.grid[i] = null;
+      if (s.count <= 0) {
+        const rest = CRAFT_REMAINDER[s.id];
+        this.grid[i] = rest ? { id: rest, count: 1 } : null;
+      }
     }
   }
 

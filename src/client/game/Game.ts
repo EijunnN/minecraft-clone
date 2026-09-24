@@ -18,19 +18,21 @@ import { Inventory, HOTBAR } from './Inventory';
 import { Survival, deathMessage } from './Survival';
 import { ClientEntities, type ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
-import { planPlacement, partnerOf, toggleEdits, isUsable } from '../../shared/placement';
+import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
 import {
   AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS,
   DEFAULT_HOTBAR, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SNOWY_GRASS, SAND,
   OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, FURNACE_LIT, isValidBlockId, isContainer,
-  BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase,
+  BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, isFarmland, FARMLAND, R_CROP,
 } from '../../shared/blocks';
-import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, maxStack, isValidItem, type ItemStack } from '../../shared/items';
-import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN } from '../../shared/mobs';
+import {
+  ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, BREED_FOOD, maxStack, isValidItem, type ItemStack,
+} from '../../shared/items';
+import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
 import { containerFromWire } from '../../shared/containers';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
 import {
-  STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, EF_PICKABLE, EF_FIRE, worldTimeAt, type PlayerInfo, type WorldTime,
+  STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, EF_LOVE, EF_BABY, EF_SHEARED, EF_PICKABLE, EF_FIRE, worldTimeAt, type PlayerInfo, type WorldTime,
   type ServerMsg, type GameMode, type PlayerSave,
 } from '../../shared/protocol';
 import { rainAt } from '../../shared/weather';
@@ -144,6 +146,10 @@ export class Game {
   private sleeping: { t: number } | null = null;
   /** Cama donde reaparece (pies). */
   private bed: [number, number, number] | null = null;
+  /** Usos de objetos sobre criaturas a la espera de respuesta del servidor. */
+  private interactQ = 0;
+  private pendingInteract = new Map<number, { slot: number; item: number }>();
+  private heartT = 0;
 
   constructor(cfg: GameConfig) {
     this.cfg = cfg;
@@ -424,6 +430,9 @@ export class Game {
       case 'spawn':
         this.bed = Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isInteger) ? msg.p : null;
         break;
+      case 'ires':
+        this.onInteractResult(msg);
+        break;
     }
   }
 
@@ -693,6 +702,31 @@ export class Game {
       case 'leaves':
         if (a !== undefined && isValidBlockId(a)) fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2]), a, 0xf0);
         break;
+      case 'feed':
+        this.audio.playEat();
+        fx.spawnHearts(p[0], p[1], p[2], 3, 0.3);
+        break;
+      case 'breed':
+        fx.spawnHearts(p[0], p[1], p[2], 9, 0.6);
+        this.audio.playPickup();
+        break;
+      case 'shear':
+        this.audio.playBreak('wool', p);
+        break;
+      case 'milk':
+        this.audio.playSplash(p, 0.25);
+        break;
+      case 'egg':
+        this.audio.playPickup();
+        break;
+      case 'eat_grass':
+        this.audio.playBreak('grass', p);
+        fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1] - 1), Math.floor(p[2]), GRASS, 0xf0);
+        break;
+      case 'bonemeal':
+        this.audio.playPlace('grass', p);
+        fx.spawnSparkles(p[0], p[1], p[2], 12, 0.5);
+        break;
     }
   }
 
@@ -922,6 +956,14 @@ export class Game {
       sprint: active && (input.isDown('ControlLeft') || input.isDown('ControlRight')) && (this.creative || surv.canSprint()),
     }, world);
     const moved = Math.hypot(p.x - ox, p.z - oz);
+    // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
+    if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
+      const bx = Math.floor(p.x), by = Math.floor(p.y - 0.05), bz = Math.floor(p.z);
+      if (isFarmland(world.getBlock(bx, by, bz))) {
+        world.setBlock(bx, by, bz, DIRT);
+        this.net?.send({ t: 'trample', x: bx, y: by, z: bz });
+      }
+    }
 
     // Sonidos de pasos y aterrizaje.
     const below = world.getBlock(Math.floor(p.x), Math.floor(p.y - 0.2), Math.floor(p.z));
@@ -981,7 +1023,9 @@ export class Game {
     const reach = this.creative ? REACH_CREATIVE : REACH_SURVIVAL;
     this.hit = surv.dead ? null : raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], reach, (x, y, z) => world.getBlock(x, y, z));
     const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH);
-    const target = entHit && (!this.hit || entHit.dist < this.hit.dist) ? entHit.e : null;
+    // Las plantas sin colisión (hierba, flores, cultivos) no tapan a las criaturas.
+    const hitBlocks = this.hit && BLOCK_RENDER[this.hit.id] !== R_CROSS && BLOCK_RENDER[this.hit.id] !== R_CROP;
+    const target = entHit && (!hitBlocks || entHit.dist < this.hit!.dist) ? entHit.e : null;
     this.placeCooldown -= dt;
     this.breakDelay -= dt;
     if (active) this.interact(dt, target, dir);
@@ -1272,6 +1316,11 @@ export class Game {
     const pressed = input.mousePressed[2];
     if (!pressed && !(input.mouseDown[2] && this.placeCooldown <= 0)) return;
     this.placeCooldown = 0.2;
+    // Criatura delante: dar de comer, esquilar u ordeñar.
+    if (pressed && target && held && this.canInteract(target, held.id)) {
+      this.interactEntity(target, held.id);
+      return;
+    }
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.player.sneaking) {
       if (isUsable(hit.id)) {
@@ -1291,8 +1340,18 @@ export class Game {
       }
     }
     if (!held || !def) return;
-    if (def.food) {
-      if (pressed && (this.survival.food < 20 || this.creative)) this.use = { kind: 'eat', t: 0, slot: this.selected, item: held.id, soundT: 0.3 };
+    // Zanahorias y patatas se plantan en tierra de cultivo; si no, se comen.
+    if (def.block !== undefined && hit && isCrop(def.block) && this.placeBlock(hit, def.block)) return;
+    if (def.tool?.kind === 'hoe') {
+      if (pressed && hit) this.till(hit);
+      return;
+    }
+    if (held.id === BONE_MEAL) {
+      if (pressed && hit) this.boneMeal(hit);
+      return;
+    }
+    if (def.food || def.drink) {
+      if (pressed && (def.drink || this.survival.food < 20 || this.creative)) this.use = { kind: 'eat', t: 0, slot: this.selected, item: held.id, soundT: 0.3 };
       return;
     }
     if (def.tool?.kind === 'bow') {
@@ -1314,6 +1373,12 @@ export class Game {
   private useBlock(hit: RayHit): void {
     const world = this.world!;
     const yaw = this.player.yaw;
+    if (isCake(hit.id)) {
+      // Una porción: 2 de hambre y 0,4 de saturación (sólo con hambre, salvo en creativo).
+      if (!this.creative && this.survival.food >= 20) return;
+      this.survival.eat(2, 0.4);
+      this.audio.playEat();
+    }
     if (!isBed(hit.id)) {
       const edits = toggleEdits((x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z, yaw);
       if (edits) for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
@@ -1398,8 +1463,15 @@ export class Game {
 
   private finishEating(): void {
     const u = this.use!;
-    const food = ITEMS[u.item]?.food;
+    const def = ITEMS[u.item];
+    const food = def?.food;
     this.use = null;
+    if (def?.drink) {
+      // Cubo de leche: se bebe y queda el cubo vacío.
+      this.audio.playBurp();
+      if (!this.creative) this.inv.set(this.selected, { id: BUCKET, count: 1 });
+      return;
+    }
     if (!food) return;
     this.survival.eat(food.hunger, food.saturation);
     this.audio.playBurp();
@@ -1477,24 +1549,24 @@ export class Game {
     return false;
   }
 
-  private placeBlock(hit: RayHit, base: number): void {
+  private placeBlock(hit: RayHit, base: number): boolean {
     const world = this.world!;
     const get = (x: number, y: number, z: number) => world.getBlock(x, y, z);
     const edits = planPlacement(get, hit, base, this.player.yaw);
-    if (!edits) return;
+    if (!edits) return false;
     for (const [x, y, z, id] of edits) {
-      if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return;
+      if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return false;
       // Plantas, antorchas de pie, cactus y caña necesitan apoyo.
       const r = BLOCK_RENDER[id];
       if (r === R_CROSS || (r === R_TORCH && BLOCK_WALL[id] < 0) || id === CACTUS || id === SUGAR_CANE) {
         const under = world.getBlock(x, y - 1, z);
         if (SAPLINGS.has(id)) {
-          if (!SOIL.has(under)) return;
+          if (!SOIL.has(under)) return false;
         } else if (id === CACTUS) {
-          if (under !== CACTUS && under !== SAND) return;
+          if (under !== CACTUS && under !== SAND) return false;
         } else {
           const okSame = id === SUGAR_CANE && under === id;
-          if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return;
+          if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return false;
         }
       }
     }
@@ -1507,6 +1579,67 @@ export class Game {
     const [x, y, z, id] = edits[0];
     this.audio.playPlace(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     if (!this.creative) this.inv.consume(this.selected, 1);
+    return true;
+  }
+
+  /** Azada: hierba o tierra con aire encima → tierra de cultivo. */
+  private till(hit: RayHit): void {
+    const world = this.world!;
+    if (hit.ny < 0 || (hit.id !== GRASS && hit.id !== DIRT) || world.getBlock(hit.x, hit.y + 1, hit.z) !== AIR) return;
+    world.setBlock(hit.x, hit.y, hit.z, FARMLAND);
+    this.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.player.yaw, item: this.heldId });
+    this.audio.playPlace('gravel', [hit.x + 0.5, hit.y + 1, hit.z + 0.5]);
+    this.swing(false);
+    this.wearHeld(1);
+  }
+
+  /** Polvo de hueso sobre un cultivo, un brote o la hierba (el servidor decide el resultado). */
+  private boneMeal(hit: RayHit): void {
+    const world = this.world!;
+    if (!canFertilize((x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z, SAPLINGS, GRASS)) return;
+    this.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.player.yaw, item: BONE_MEAL });
+    this.swing(false);
+    if (!this.creative) this.inv.consume(this.selected, 1);
+  }
+
+  /** ¿Sirve el objeto con esta criatura? (comida para criar, tijeras con ovejas, cubo con vacas). */
+  private canInteract(e: ClientEntity, item: number): boolean {
+    const def = MOBS[e.type];
+    if (!def || def.hostile || e.deathT >= 0) return false;
+    const baby = (e.flags & EF_BABY) !== 0;
+    if (BREED_FOOD[def.key]?.includes(item)) return true;
+    if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
+    if (item === BUCKET) return e.type === MOB_COW && !baby;
+    return false;
+  }
+
+  private interactEntity(e: ClientEntity, item: number): void {
+    const q = ++this.interactQ;
+    this.pendingInteract.set(q, { slot: this.selected, item });
+    if (this.pendingInteract.size > 32) this.pendingInteract.delete(this.pendingInteract.keys().next().value!);
+    this.net?.send({ t: 'interact', e: e.id, item, q });
+    this.swing(true);
+  }
+
+  /** Respuesta del servidor: gastar comida, desgastar las tijeras o cambiar el cubo por leche. */
+  private onInteractResult(msg: Extract<ServerMsg, { t: 'ires' }>): void {
+    const p = this.pendingInteract.get(msg.q);
+    this.pendingInteract.delete(msg.q);
+    if (!p || !msg.ok) return;
+    let slot = p.slot;
+    if (this.inv.slots[slot]?.id !== p.item) slot = this.inv.slots.findIndex((st) => st?.id === p.item);
+    if (slot < 0) return;
+    if (msg.take && !this.creative) this.inv.consume(slot, msg.take);
+    if (msg.wear && !this.creative && this.inv.wear(slot, msg.wear)) this.ui.toast('¡Se rompió la herramienta!');
+    if (msg.give && isValidItem(msg.give.id)) {
+      const give = { id: msg.give.id, count: Math.max(1, msg.give.count | 0) };
+      if (!this.inv.slots[slot]) this.inv.set(slot, give);
+      else {
+        const rest = this.inv.add(give);
+        if (rest) this.throwStack(rest, false);
+      }
+    }
+    this.inv.changed();
   }
 
   /** Q: tirar el objeto de la mano (con Ctrl, la pila entera). */
@@ -1555,10 +1688,17 @@ export class Game {
   private mobSounds(dt: number): void {
     const p = this.player;
     const now = performance.now() / 1000;
+    this.heartT -= dt;
+    const hearts = this.heartT <= 0;
+    if (hearts) this.heartT = 0.7;
     for (const e of this.ents.list.values()) {
       const def = MOBS[e.type];
       if (!def || e.deathT >= 0) continue;
       const d = Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z);
+      // Animales enamorados: corazones de vez en cuando.
+      if (hearts && e.flags & EF_LOVE && d < 32) {
+        this.renderer.entities.spawnHearts(e.x, e.y + def.height * (e.flags & EF_BABY ? 0.5 : 1) + 0.2, e.z, 1, 0.3);
+      }
       if ((e.flags & EF_FIRE) && d < 48 && Math.random() < dt * 14) {
         const hw = def.width / 2;
         this.renderer.entities.spawnFlame(

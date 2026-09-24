@@ -32,6 +32,13 @@ Objects). Pensado para PC (teclado y ratón).
   haces clic y hacia dónde miras), tienen colisiones reales y se suben losas y escalones sin saltar.
 - **Camas**: dormir de noche salta al amanecer cuando todos los jugadores del mundo están acostados
   (no si hay monstruos cerca) y la cama pasa a ser tu punto de reaparición.
+- **Granja**: azadas y tierra de cultivo (se hidrata con agua a 4 bloques o con la lluvia, se seca y
+  se pisotea al saltar encima); semillas que salen de la hierba; trigo, zanahorias, patatas y
+  remolachas que crecen con la velocidad de Minecraft; polvo de hueso; pan, patata asada, azúcar,
+  fardos de heno y tarta (se come por porciones y devuelve los cubos).
+- **Animales de granja**: los animales siguen a quien lleva su comida y se crían (corazones, crías que
+  crecen en 20 minutos y más rápido si comen); las ovejas se esquilan y les vuelve a crecer la lana
+  comiendo hierba; las vacas se ordeñan con un cubo y las gallinas ponen huevos.
 - **Mundo vivo**: la arena y la grava caen, las plantas y antorchas necesitan apoyo, las hojas se
   caen al talar el árbol, los brotes crecen hasta ser árboles, la hierba se extiende y los cactus y
   la caña crecen.
@@ -68,7 +75,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Horno e inventario](docs/screenshots/furnace.png) | ![Minando con un pico](docs/screenshots/mining.png) |
 | ![Bloques PBR sobre el agua](docs/screenshots/build.png) | ![Bajo el agua](docs/screenshots/underwater.png) |
 | ![Tormenta](docs/screenshots/rain.png) | ![Noche con antorchas](docs/screenshots/torches.png) |
-| ![Losas, escaleras, vallas, puerta y cama](docs/screenshots/building.png) | |
+| ![Losas, escaleras, vallas, puerta y cama](docs/screenshots/building.png) | ![Granja con trigo, zanahorias, patatas y remolachas](docs/screenshots/farm.png) |
 
 ## Controles
 
@@ -79,7 +86,7 @@ Objects). Pensado para PC (teclado y ratón).
 | Shift | Agacharse (no caes por los bordes; permite colocar bloques sobre cofres, mesas y puertas; quieto en una escalera de mano; levantarse de la cama) |
 | Ctrl o doble W | Correr (en supervivencia hace falta tener algo de hambre saciada) |
 | Clic izquierdo | Romper bloque (mantener) · atacar criaturas |
-| Clic derecho | Colocar · abrir cofres, hornos, mesas, puertas, trampillas y portillos · dormir · comer (mantener) · tensar el arco · usar cubos |
+| Clic derecho | Colocar · abrir cofres, hornos, mesas, puertas, trampillas y portillos · dormir · comer o beber (mantener) · tensar el arco · usar cubos · labrar con la azada · polvo de hueso · dar de comer, esquilar u ordeñar animales |
 | Clic central | Copiar el bloque apuntado a la mano |
 | 1–9, rueda | Elegir ranura |
 | Q · Ctrl + Q | Tirar un objeto · tirar la pila |
@@ -115,8 +122,9 @@ Recetas incluidas: tablones, palos, mesa de trabajo, antorchas, cofre, horno, li
 de piedra, arenisca, ladrillos, arcilla, las 20 herramientas (madera, piedra, hierro, oro y
 diamante × pico, hacha, pala y espada), cubo, tijeras, arco, flechas, papel, libro, bloques de
 hierro/oro/diamante (y de vuelta a lingotes), lana y lana teñida con flores o lapislázuli, losas,
-escaleras, vallas, portillos, puertas, trampillas, escalera de mano, paneles de cristal y cama. En el
-horno: vidrio, piedra, lingotes, carbón vegetal, ladrillos, terracota y carne cocinada.
+escaleras, vallas, portillos, puertas, trampillas, escalera de mano, paneles de cristal, cama, azadas,
+pan, fardo de heno, polvo de hueso, azúcar y tarta. En el horno: vidrio, piedra, lingotes, carbón
+vegetal, ladrillos, terracota, carne cocinada y patata asada.
 
 ## Desarrollo local
 
@@ -135,7 +143,7 @@ Otros comandos:
 
 ```bash
 npm run typecheck   # comprobación de tipos (cliente, servidor y pruebas)
-npm test            # pruebas del servidor de juego (fluidos, criaturas, colocación, camas...)
+npm test            # pruebas del servidor de juego (fluidos, criaturas, colocación, camas, granja, ids...)
 npm run build       # compila cliente + Worker en dist/
 npm run preview     # compila y sirve la versión de producción en local
 ```
@@ -193,7 +201,7 @@ VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no t
 - 12 tipos de criatura (no las ~80 de Minecraft): sin aldeanos, lobos, caballos, brujas, slimes,
   jefes, etc.
 - Sin redstone, armaduras, experiencia,
-  encantamientos, pociones, cultivos, estructuras generadas, barcas ni vagonetas, ni Nether o End.
+  encantamientos, pociones, estructuras generadas, barcas ni vagonetas, ni Nether o End.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores
