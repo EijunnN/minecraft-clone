@@ -1,4 +1,6 @@
 // Punto de entrada: prepara texturas, renderizador, menú y arranca el juego.
+import { parseSeed } from '../shared/seed';
+import { loadRecentWorlds, rememberWorld, forgetWorld } from './ui/recentWorlds';
 import './style.css';
 import { generateTextures } from './textures/generateTextures';
 import { generateItemSprites } from './textures/itemSprites';
@@ -121,7 +123,7 @@ async function boot(): Promise<void> {
     menuBg.stop();
     ui.hideMenu();
     game = new Game({
-      room: v.room, name, shirt: v.shirt, mode: v.mode, offline: v.offline || params.get('offline') === '1',
+      room: v.room, name, shirt: v.shirt, mode: v.mode, offline: v.offline || params.get('offline') === '1', seed: parseSeed(v.seed),
       canvas, ui, audio, textures, settings, renderer,
     });
     game.onQuit(() => {
@@ -132,6 +134,8 @@ async function boot(): Promise<void> {
     });
     try {
       await game.start();
+      rememberWorld(v.room, v.offline || params.get('offline') === '1');
+      showRecent();
     } catch (e) {
       console.error(e);
       game?.stop();
@@ -142,6 +146,15 @@ async function boot(): Promise<void> {
       ui.setMenuError(`Error al iniciar la partida: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
+
+  // Mundos recientes en el menú.
+  function showRecent(): void {
+    ui.renderRecentWorlds(loadRecentWorlds(), (w) => {
+      forgetWorld(w.room, w.offline);
+      showRecent();
+    });
+  }
+  showRecent();
 
   // Atajo para pruebas automáticas: ?autostart=1
   if (params.get('autostart') === '1' && !initError) ui.onPlay?.();

@@ -207,6 +207,8 @@ export class Player {
     this.updatePose(world);
     const targetEye = this.pose !== 'stand' ? PRONE_EYE : this.sneaking ? PLAYER_SNEAK_EYE_HEIGHT : PLAYER_EYE_HEIGHT;
     this.eyeOffset += (targetEye - this.eyeOffset) * (1 - Math.exp(-dt * 14));
+    // Tumbado, los ojos nunca por encima del cuerpo (no se ve a través del techo al entrar en un hueco).
+    this.eyeOffset = Math.min(this.eyeOffset, this.height - 0.1);
 
     if (this.flying) {
       const speed = this.sprinting ? 21.6 : 10.9;

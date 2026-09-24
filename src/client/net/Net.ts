@@ -76,9 +76,11 @@ export class Net {
     this.local = local;
   }
 
-  static websocketFactory(room: string): () => Transport {
+  /** Conexión al mundo `room`; `seed` sólo cuenta si el mundo aún no existe. */
+  static websocketFactory(room: string, seed: number | null = null): () => Transport {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${proto}://${location.host}/api/room/${encodeURIComponent(room)}/ws`;
+    const q = seed === null ? '' : `?semilla=${seed}`;
+    const url = `${proto}://${location.host}/api/room/${encodeURIComponent(room)}/ws${q}`;
     return () => new WebSocket(url) as unknown as Transport;
   }
 

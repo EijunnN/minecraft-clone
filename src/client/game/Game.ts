@@ -48,6 +48,8 @@ export interface GameConfig {
   shirt: string;
   mode: GameMode;
   offline: boolean;
+  /** Semilla elegida para un mundo nuevo (si el mundo ya existe, se ignora). */
+  seed?: number | null;
   canvas: HTMLCanvasElement;
   ui: UI;
   audio: AudioEngine;
@@ -86,6 +88,10 @@ export class Game {
   private local: LocalServer | null = null;
   private offline = false;
   remote = new Map<string, RemotePlayer>();
+  /** Inclinación de la cámara al recibir un golpe (se endereza sola). */
+  hurtRoll = 0;
+  /** Captura de pantalla pedida (F2): se toma justo después de dibujar. */
+  private wantShot = false;
   /** Agacharse y correr fijos (ajuste de alternar). */
   private sneakOn = false;
   private keysSig = '';
@@ -194,7 +200,7 @@ export class Game {
       },
     };
     if (!this.cfg.offline) {
-      this.net = new Net(Net.websocketFactory(this.cfg.room), this.cfg.name, this.cfg.shirt, this.cfg.mode, events);
+      this.net = new Net(Net.websocketFactory(this.cfg.room, this.cfg.seed ?? null), this.cfg.name, this.cfg.shirt, this.cfg.mode, events);
       try {
         await this.net.connect();
       } catch (e) {
@@ -206,7 +212,7 @@ export class Game {
     if (!this.net) {
       this.offline = true;
       ui.showLoading('Preparando el mundo local…', 0.08);
-      this.local = new LocalServer(this.cfg.room, hashSeed(this.cfg.room));
+      this.local = new LocalServer(this.cfg.room, this.cfg.seed ?? hashSeed(this.cfg.room));
       this.net = new Net(this.local.factory, this.cfg.name, this.cfg.shirt, this.cfg.mode, events, true);
       await this.net.connect(30000);
     }
@@ -257,6 +263,9 @@ export class Game {
     ui.addChat(null, this.offline
       ? 'Modo un jugador: el mundo se guarda en este navegador. Escribe /ayuda para ver los comandos.'
       : `Bienvenido a «${this.cfg.room}». E: inventario · T: chat · /ayuda: comandos. Comparte el enlace para jugar con amigos.`);
+    if (this.cfg.seed !== undefined && this.cfg.seed !== null && w.seed !== this.cfg.seed) {
+      ui.addChat(null, `Este mundo ya existía: sigue con su semilla (${w.seed}). La semilla sólo vale para mundos nuevos.`);
+    }
     ui.addChat(null, this.creative ? 'Modo creativo: vuela con doble espacio y rompe al instante.' : 'Modo supervivencia: consigue madera, fabrica herramientas y sobrevive a la noche.');
     this.playing = true;
     this.running = true;
@@ -490,6 +499,24 @@ export class Game {
     this.ui.setOffhand(this.inv.offhand);
   }
 
+  /** Guarda lo que se ve (sin la interfaz) como PNG. */
+  private saveScreenshot(): void {
+    const canvas = this.cfg.canvas;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const name = `voxelcraft-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.png`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      this.ui.toast(`Captura guardada: ${name}`);
+      this.audio.playUi('click');
+    }, 'image/png');
+  }
+
   /** Tecla F: intercambia lo de la mano con la mano secundaria. */
   private swapHands(): void {
     this.interaction.use = null;
@@ -569,6 +596,7 @@ export class Game {
           ui.setHudVisible(!this.hudHidden);
         }
         if (input.wasPressed('F3')) this.debug = !this.debug;
+        if (input.wasPressed('F2')) this.wantShot = true;
         if (input.wasPressed(k.perspective)) this.thirdPerson = (this.thirdPerson + 1) % 3;
         for (let i = 0; i < 9; i++) {
           if (input.wasPressed('Digit' + (i + 1))) this.selectSlot(i);
@@ -867,7 +895,7 @@ export class Game {
     const mainUse = use && use.slot !== OFFHAND ? use : null;
     const offUse = use && use.slot === OFFHAND ? use : null;
     const state: FrameState = {
-      camX, camY, camZ, yaw, pitch,
+      camX, camY, camZ, yaw, pitch, roll: this.hurtRoll,
       time: performance.now() / 1000,
       dt,
       dayTime,
@@ -903,6 +931,11 @@ export class Game {
       showHand: this.thirdPerson === 0 && !this.hudHidden,
     };
     this.renderer.render(state);
+    this.hurtRoll *= Math.exp(-dt * 5);
+    if (this.wantShot) {
+      this.wantShot = false;
+      this.saveScreenshot();
+    }
 
     // Etiquetas de nombre.
     for (const rp of this.remote.values()) {

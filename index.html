@@ -146,6 +146,7 @@
               <button id="btn-random" class="btn icon" title="Nombre aleatorio">⟳</button>
             </div>
           </label>
+          <div id="recent-worlds" class="recent hidden"></div>
           <div class="field">
             <span>Modo de juego (para mundos nuevos)</span>
             <div id="mode-seg" class="seg">
@@ -153,6 +154,10 @@
               <button data-mode="c">Creativo</button>
             </div>
           </div>
+          <label class="field">
+            <span>Semilla (opcional, sólo para mundos nuevos)</span>
+            <input id="in-seed" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Aleatoria" />
+          </label>
           <label class="check">
             <input id="in-offline" type="checkbox" />
             <span>Jugar sin conexión (el mundo se guarda en este navegador)</span>

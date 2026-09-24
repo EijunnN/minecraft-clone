@@ -50,7 +50,16 @@ export class LifeCycle {
     if (cause !== 'kill' && Array.isArray(k) && k.every(Number.isFinite) && this.g.interaction.blockHit(amount, k)) return;
     const dmg = this.g.survival.damage(amount, cause, cause === 'kill');
     if (dmg <= 0) return;
-    if (Array.isArray(k) && k.every(Number.isFinite)) this.g.player.impulse(k[0], k[1], k[2]);
+    if (Array.isArray(k) && k.every(Number.isFinite)) {
+      this.g.player.impulse(k[0], k[1], k[2]);
+      // La cámara se inclina hacia el lado del golpe (el atacante está contra el empuje).
+      const kl = Math.hypot(k[0], k[2]);
+      if (kl > 0.01) {
+        const yaw = this.g.player.yaw;
+        const side = (Math.cos(yaw) * -k[0] - Math.sin(yaw) * -k[2]) / kl;
+        this.g.hurtRoll = -side * 0.14;
+      }
+    }
     this.hurtFeedback(dmg);
     if (this.g.survival.dead) this.die();
   }

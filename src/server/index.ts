@@ -91,14 +91,19 @@ class SqlStore implements ServerStore {
 }
 
 export class GameWorld extends DurableObject<Env> {
-  private game!: GameServer;
+  private gameServer: GameServer | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * El servidor del mundo se crea con la primera conexión: así un mundo nuevo puede nacer con la
+   * semilla que eligió quien lo creó (si ya existe, manda la guardada).
+   */
+  private get game(): GameServer {
+    return (this.gameServer ??= new GameServer(new SqlStore(this.ctx.storage.sql)));
+  }
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    ctx.blockConcurrencyWhile(async () => {
-      this.game = new GameServer(new SqlStore(ctx.storage.sql));
-    });
     // Respuesta automática a los latidos sin despertar al objeto.
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"hb"}', '{"t":"hb"}'));
     // Conexiones que sobrevivieron a un reinicio no tienen sesión: que se reconecten.
@@ -112,7 +117,11 @@ export class GameWorld extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    void request;
+    if (!this.gameServer) {
+      const raw = new URL(request.url).searchParams.get('semilla');
+      const seed = raw !== null && /^-?\d{1,10}$/.test(raw) ? Number(raw) | 0 : undefined;
+      this.gameServer = new GameServer(new SqlStore(this.ctx.storage.sql), { seed });
+    }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
     this.ctx.acceptWebSocket(server);

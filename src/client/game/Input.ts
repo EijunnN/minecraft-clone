@@ -159,7 +159,7 @@ export class Input {
     // (y así se abre la pausa). Mantener Esc sigue saliendo de la pantalla completa.
     if (e.code === 'Escape' && this.keyboardLocked && this.locked) this.exitLock();
     // Evita acciones del navegador en las teclas del juego.
-    if (this.locked && (this.reserved.has(e.code) || ['Tab', 'F1', 'F3', 'F5', 'Space'].includes(e.code))) e.preventDefault();
+    if (this.locked && (this.reserved.has(e.code) || ['Tab', 'F1', 'F2', 'F3', 'F5', 'Space'].includes(e.code))) e.preventDefault();
     if (this.locked && (e.ctrlKey || e.metaKey) && (this.movement.has(e.code) || e.code === 'KeyW')) e.preventDefault();
   };
 

@@ -101,21 +101,26 @@ Objects). Pensado para PC (teclado y ratón).
 
 ## Controles
 
+Todas las teclas se pueden cambiar en **Ajustes → Teclas** (también agacharse y correr con una sola
+pulsación). Estas son las de por defecto:
+
 | Tecla | Acción |
 | --- | --- |
 | WASD | Moverse |
 | Espacio | Saltar · en creativo, doble pulsación para volar |
 | Shift | Agacharse (no caes por los bordes; permite colocar bloques sobre cofres, mesas y puertas; quieto en una escalera de mano; levantarse de la cama) |
 | Ctrl o doble W | Correr (en supervivencia hace falta tener algo de hambre saciada). En una ventana normal, Ctrl + W es el atajo de cerrar la pestaña: el juego pide confirmación antes de cerrar, y en **Pantalla completa** (botón de la pausa) Ctrl + W ya no cierra nada |
-| Clic izquierdo | Romper bloque (mantener) · atacar criaturas |
+| Clic izquierdo | Romper bloque (mantener) · atacar criaturas (cada arma tiene su ritmo: la barra bajo la mira indica cuándo el golpe hace todo su daño) |
 | Clic derecho | Colocar · abrir cofres, hornos, mesas, puertas, trampillas y portillos · dormir · comer o beber (mantener) · tensar el arco · usar cubos · labrar con la azada · polvo de hueso · dar de comer, esquilar u ordeñar animales |
-| Clic central | Copiar el bloque apuntado a la mano |
+| Clic central | Coger el bloque apuntado: lo selecciona en la barra, lo trae de la mochila o, en creativo, lo crea |
 | 1–9, rueda | Elegir ranura |
 | Q · Ctrl + Q | Tirar un objeto · tirar la pila |
+| F | Pasar lo que llevas a la mano secundaria (escudo, antorcha, comida…); el clic derecho la usa si la principal no hace nada |
+| Ctrl corriendo bajo el agua | Bucear en postura horizontal; en huecos de un bloque se gatea |
 | E | Inventario (en creativo, selector de bloques y objetos) |
-| T, Enter, / | Chat y comandos |
+| T, Enter, / | Chat y comandos (flechas: lo enviado antes · Tab: completar comandos y nombres) |
 | Tab | Lista de jugadores |
-| F1 · F3 · F5 | Ocultar HUD · información de depuración · tercera persona |
+| F1 · F2 · F3 · F5 | Ocultar HUD · captura de pantalla · información de depuración · tercera persona |
 | Esc | Pausa / ajustes |
 
 ### Comandos

@@ -123,6 +123,8 @@ export interface FrameState {
   grassTint: [number, number, number];
   players: RemotePlayerView[];
   showHand: boolean;
+  /** Inclinación lateral de la cámara (radianes). */
+  roll?: number;
   /** Sedales de pesca: [punta de la caña, flotador]. */
   fishLines?: FishLine[];
   /** Carteles con texto cercanos. */
@@ -466,6 +468,8 @@ export class Renderer {
     const cp = Math.cos(s.pitch), sp = Math.sin(s.pitch);
     const fwd = vec3.fromValues(-Math.sin(s.yaw) * cp, sp, -Math.cos(s.yaw) * cp);
     mat4.lookAt(this.viewRot, [0, 0, 0], fwd, [0, 1, 0]);
+    // Inclinación lateral de la cámara (al recibir un golpe).
+    if (s.roll) mat4.multiply(this.viewRot, mat4.fromZRotation(mat4.create(), s.roll), this.viewRot);
     mat4.multiply(this.viewProj, this.proj, this.viewRot);
     mat4.multiply(this.viewProjUnjit, this.projUnjit, this.viewRot);
     mat4.invert(this.invViewProj, this.viewProj);

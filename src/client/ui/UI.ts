@@ -1,4 +1,5 @@
 // Interfaz de usuario en DOM: menú principal, HUD, chat, inventario, pausa, ajustes y carga.
+import { ago, type RecentWorld } from './recentWorlds';
 import { KEY_ACTIONS, assignKey, defaultKeybinds, keyLabel } from '../game/keybinds';
 import { itemTooltipHtml } from './itemTooltip';
 import { ChatCompletion } from './chatCompletion';
@@ -199,14 +200,38 @@ export class UI {
     for (const b of document.querySelectorAll<HTMLButtonElement>('#mode-seg button')) b.classList.toggle('active', b.dataset.mode === m);
   }
 
-  menuValues(): { name: string; room: string; shirt: string; mode: GameMode; offline: boolean } {
+  menuValues(): { name: string; room: string; shirt: string; mode: GameMode; offline: boolean; seed: string } {
     return {
+      seed: $<HTMLInputElement>('in-seed').value,
       name: $<HTMLInputElement>('in-name').value.trim(),
       room: sanitizeRoomInput($<HTMLInputElement>('in-room').value),
       shirt: $<HTMLInputElement>('in-color').value,
       mode: this.menuMode,
       offline: $<HTMLInputElement>('in-offline').checked,
     };
+  }
+
+  /** Mundos recientes bajo el nombre del mundo: clic para elegirlo, × para quitarlo de la lista. */
+  renderRecentWorlds(list: RecentWorld[], onForget: (w: RecentWorld) => void): void {
+    const box = $('recent-worlds');
+    box.classList.toggle('hidden', list.length === 0);
+    box.innerHTML = '<span class="recent-title">Recientes</span>';
+    for (const w of list) {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.title = `${w.offline ? 'Sin conexión' : 'En línea'} · ${ago(w.at)}`;
+      chip.innerHTML = `<span>${escapeHtml(w.room)}</span>${w.offline ? '<i>local</i>' : ''}<b title="Quitar de la lista">×</b>`;
+      chip.addEventListener('click', (e) => {
+        this.onUiSound?.('click');
+        if ((e.target as HTMLElement).tagName === 'B') {
+          onForget(w);
+          return;
+        }
+        $<HTMLInputElement>('in-room').value = w.room;
+        $<HTMLInputElement>('in-offline').checked = w.offline;
+      });
+      box.appendChild(chip);
+    }
   }
 
   showMenu(): void {

@@ -199,7 +199,7 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 | Velocidad de ataque propia de cada arma (espada 1,6, hacha 0,8, pico 1,2, pala 1, azada según material) | ✅ (y el daño de Minecraft por arma) |
 | Indicador de recarga del ataque bajo la mira | ✅ |
 | El hacha deja el escudo del rival inútil unos segundos | — (sólo importa con PvP o vindicadores, que aún no hay) |
-| Inclinación de la cámara hacia el lado del golpe | 🟡 (sacudida sin dirección) |
+| Inclinación de la cámara hacia el lado del golpe | ✅ |
 
 **Movimiento y cuerpo**
 
@@ -215,8 +215,8 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 | --- | --- |
 | Cambiar las teclas; agacharse y correr con pulsación fija o mantenida | ✅ |
 | Chat: historial con flechas y autocompletar comandos y nombres con Tab | ✅ |
-| Lista de mundos recientes en el menú y semilla al crear un mundo | ❌ (se escribe el nombre a mano) |
-| Captura de pantalla (F2) | ❌ |
+| Lista de mundos recientes en el menú y semilla al crear un mundo | ✅ |
+| Captura de pantalla (F2) | ✅ |
 
 **Técnico**
 
@@ -277,7 +277,7 @@ cofres dobles, camas de colores, ahumador, alto horno, fogata (asa y quema) y co
 
 Fase 4 terminada. (Las puertas de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
 
-### Fase 4.5 — Experiencia de juego (M)
+### Fase 4.5 — Experiencia de juego (M) · ✅ hecha
 Lo indispensable de 2.14 antes de seguir con contenido: descripción completa de los objetos, velocidad
 de ataque por arma con su indicador, mano secundaria, clic central, arrastrar y doble clic en el
 inventario, historial y autocompletado del chat, teclas configurables y agacharse/correr fijo, nadar y
