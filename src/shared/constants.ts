@@ -1,0 +1,48 @@
+// Constantes globales del mundo, compartidas por cliente, workers y servidor.
+
+export const CHUNK_SIZE = 16;
+export const CHUNK_SHIFT = 4;
+export const CHUNK_MASK = 15;
+export const WORLD_HEIGHT = 256;
+export const CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE;
+export const CHUNK_VOLUME = CHUNK_AREA * WORLD_HEIGHT;
+
+/** El agua llena las celdas con y < SEA_LEVEL (la superficie queda en y = SEA_LEVEL). */
+export const SEA_LEVEL = 63;
+
+/** Duración de un día completo en segundos reales (como en Minecraft: 20 minutos). */
+export const DAY_LENGTH_SECONDS = 1200;
+
+export const PLAYER_HEIGHT = 1.8;
+export const PLAYER_WIDTH = 0.6;
+export const PLAYER_EYE_HEIGHT = 1.62;
+export const PLAYER_SNEAK_EYE_HEIGHT = 1.32;
+
+/** Coordenada horizontal máxima permitida (en bloques) para ediciones. */
+export const WORLD_LIMIT = 1_000_000;
+
+/** Índice de un bloque dentro de una columna de chunk (x, z en 0..15, y en 0..255). */
+export function blockIndex(x: number, y: number, z: number): number {
+  return (y << 8) | (z << 4) | x;
+}
+
+export function chunkKey(cx: number, cz: number): string {
+  return cx + ',' + cz;
+}
+
+/** Hash entero rápido y determinista (para decoración procedural). */
+export function hash2(x: number, z: number, seed: number): number {
+  let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(z | 0, 0x165667b1) ^ Math.imul(seed | 0, 0x9e3779b1);
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+export function hash3(x: number, y: number, z: number, seed: number): number {
+  return hash2(x ^ Math.imul(y | 0, 0x3c6ef372), z, seed);
+}
+
+/** Convierte un hash de 32 bits en un float en [0, 1). */
+export function hashToFloat(h: number): number {
+  return h / 4294967296;
+}

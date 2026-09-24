@@ -1,0 +1,116 @@
+// Iconos del HUD de supervivencia (corazones, hambre, burbujas de aire) en pixel art, y los
+// iconos de los objetos que no son bloques (a partir del atlas de sprites).
+import { ITEMS, itemSpriteIndex } from '../../shared/items';
+import type { ItemSprites } from '../textures/itemSprites';
+
+type Pal = Record<string, string>;
+
+const HEART = [
+  '.KK...KK.',
+  'KrrK.KrrK',
+  'KrWrKrrrK',
+  'KrrrrrrrK',
+  'KrrrrrrdK',
+  '.KrrrrdK.',
+  '..KrrdK..',
+  '...KdK...',
+  '....K....',
+];
+
+const FOOD = [
+  '....KKKK.',
+  '...KbbbbK',
+  '..KbWbbbK',
+  '..KbbbbbK',
+  '.KbbbbbK.',
+  'KwKbbbK..',
+  'KwwKKK...',
+  '.KwK.....',
+  '..K......',
+];
+
+const BUBBLE = [
+  '..KKKK...',
+  '.KbbbbK..',
+  'KbWWbbbK.',
+  'KbWbbbbK.',
+  'KbbbbbbK.',
+  'KbbbbbbK.',
+  '.KbbbbK..',
+  '..KKKK...',
+  '.........',
+];
+
+function draw(rows: string[], pal: Pal, half: 'full' | 'left' | 'none', emptyPal: Pal): string {
+  const c = document.createElement('canvas');
+  c.width = 9;
+  c.height = 9;
+  const g = c.getContext('2d')!;
+  for (let y = 0; y < 9; y++) {
+    for (let x = 0; x < 9; x++) {
+      const ch = rows[y][x];
+      if (ch === '.') continue;
+      const filled = half === 'full' || (half === 'left' && x < 5);
+      const col = ch === 'K' ? pal.K : filled ? pal[ch] : emptyPal[ch] ?? emptyPal.fill;
+      if (!col) continue;
+      g.fillStyle = col;
+      g.fillRect(x, y, 1, 1);
+    }
+  }
+  return c.toDataURL();
+}
+
+export interface HudIcons {
+  heart: string;
+  heartHalf: string;
+  heartEmpty: string;
+  heartFlash: string;
+  food: string;
+  foodHalf: string;
+  foodEmpty: string;
+  bubble: string;
+}
+
+export function buildHudIcons(): HudIcons {
+  const heartPal: Pal = { K: '#1b0707', r: '#e02828', W: '#ffd0d0', d: '#a31515' };
+  const heartEmpty: Pal = { fill: '#3a1717', W: '#3a1717', r: '#3a1717', d: '#3a1717' };
+  const flashPal: Pal = { K: '#ffffff', r: '#ff9a9a', W: '#ffffff', d: '#ff7070' };
+  const foodPal: Pal = { K: '#1d1006', b: '#c07a3b', W: '#f0c48f', w: '#efe6d6' };
+  const foodEmpty: Pal = { fill: '#2e2218', b: '#2e2218', W: '#2e2218', w: '#3a3129' };
+  const bubPal: Pal = { K: '#0b2342', b: '#5fb4f0', W: '#e9f6ff' };
+  return {
+    heart: draw(HEART, heartPal, 'full', heartEmpty),
+    heartHalf: draw(HEART, heartPal, 'left', heartEmpty),
+    heartEmpty: draw(HEART, heartPal, 'none', heartEmpty),
+    heartFlash: draw(HEART, flashPal, 'none', { fill: '#5a2a2a' }),
+    food: draw(FOOD, foodPal, 'full', foodEmpty),
+    foodHalf: draw(FOOD, foodPal, 'left', foodEmpty),
+    foodEmpty: draw(FOOD, foodPal, 'none', foodEmpty),
+    bubble: draw(BUBBLE, bubPal, 'full', bubPal),
+  };
+}
+
+/** Iconos de todos los objetos: bloques (isométricos, ya generados) y sprites. */
+export function buildItemIcons(blockIcons: Map<number, string>, sprites: ItemSprites): Map<number, string> {
+  const out = new Map<number, string>();
+  const c = document.createElement('canvas');
+  c.width = 16;
+  c.height = 16;
+  const g = c.getContext('2d')!;
+  for (const it of ITEMS) {
+    if (!it) continue;
+    if (it.block !== undefined && it.sprite === undefined) {
+      const url = blockIcons.get(it.block);
+      if (url) out.set(it.id, url);
+      continue;
+    }
+    const s = itemSpriteIndex(it.id);
+    if (s < 0 || s >= sprites.count) continue;
+    const img = g.createImageData(16, 16);
+    img.data.set(sprites.rgba.subarray(s * 1024, s * 1024 + 1024));
+    g.clearRect(0, 0, 16, 16);
+    g.putImageData(img, 0, 0);
+    out.set(it.id, c.toDataURL());
+  }
+  return out;
+}

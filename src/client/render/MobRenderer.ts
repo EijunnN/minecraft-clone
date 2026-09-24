@@ -1,0 +1,338 @@
+// Criaturas: construye la malla de cajas de cada especie (un hueso por parte), anima las partes
+// según el tipo (cuadrúpedo, humanoide, araña, calamar...) y las dibuja con sombras.
+import { mat4 } from 'gl-matrix';
+import { Program, type GL } from '../engine/gl';
+import { MOB_VS, MOB_FS, MOB_SHADOW_VS, MOB_SHADOW_FS, MAX_BONES } from './shaders/mob';
+import { MOBS, boxFaces, type MobDef, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } from '../../shared/mobs';
+import { EF_ACTION, EF_ANGRY } from '../../shared/protocol';
+import type { ClientEntity } from '../game/ClientEntities';
+
+export interface MobTexture {
+  width: number;
+  height: number;
+  rgba: Uint8Array;
+}
+
+interface MobMesh {
+  vao: WebGLVertexArrayObject;
+  count: number;
+  parents: number[];
+  names: string[];
+}
+
+const P = 1 / 16;
+
+export class MobRenderer {
+  private gl: GL;
+  private prog: Program;
+  private shadowProg: Program;
+  private meshes = new Map<number, MobMesh>();
+  private skins = new Map<number, WebGLTexture>();
+  private texSource: (id: number) => MobTexture | null;
+  private bones = new Float32Array(MAX_BONES * 16);
+  private model = mat4.create();
+
+  constructor(gl: GL, texSource: (id: number) => MobTexture | null) {
+    this.gl = gl;
+    this.texSource = texSource;
+    this.prog = new Program(gl, { name: 'mob', vs: MOB_VS, fs: MOB_FS });
+    this.shadowProg = new Program(gl, { name: 'mob-shadow', vs: MOB_SHADOW_VS, fs: MOB_SHADOW_FS });
+  }
+
+  // ---------------------------------------------------------------- recursos
+
+  private mesh(def: MobDef): MobMesh {
+    let m = this.meshes.get(def.id);
+    if (m) return m;
+    const gl = this.gl;
+    const [aw, ah] = def.atlas;
+    const pos: number[] = [], nrm: number[] = [], uv: number[] = [], bone: number[] = [], idx: number[] = [];
+    const names = def.parts.map((p) => p.name);
+    const parents = def.parts.map((p) => (p.parent ? names.indexOf(p.parent) : -1));
+    def.parts.forEach((part, bi) => {
+      const [x0, y0, z0] = part.from.map((v) => v * P);
+      const [w, h, d] = part.size;
+      const x1 = x0 + w * P, y1 = y0 + h * P, z1 = z0 + d * P;
+      const faces = boxFaces(part.uv[0], part.uv[1], w, h, d);
+      const corners: number[][][] = [
+        [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]],
+        [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]],
+        [[x1, y1, z0], [x0, y1, z0], [x0, y1, z1], [x1, y1, z1]],
+        [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]],
+        [[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]],
+        [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]],
+      ];
+      const normals = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, -1], [0, 0, 1]];
+      for (let f = 0; f < 6; f++) {
+        const [u, v, fw, fh] = faces[f];
+        const uvs = [[u, v + fh], [u + fw, v + fh], [u + fw, v], [u, v]];
+        const base = pos.length / 3;
+        for (let k = 0; k < 4; k++) {
+          pos.push(...corners[f][k]);
+          nrm.push(...normals[f]);
+          uv.push(uvs[k][0] / aw, uvs[k][1] / ah);
+          bone.push(bi);
+        }
+        idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      }
+    });
+    const vao = gl.createVertexArray()!;
+    gl.bindVertexArray(vao);
+    const attr = (loc: number, data: number[], size: number) => {
+      const buf = gl.createBuffer()!;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+    };
+    attr(0, pos, 3);
+    attr(1, nrm, 3);
+    attr(2, uv, 2);
+    attr(3, bone, 1);
+    const ib = gl.createBuffer()!;
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    m = { vao, count: idx.length, parents, names };
+    this.meshes.set(def.id, m);
+    return m;
+  }
+
+  private skin(def: MobDef): WebGLTexture {
+    let t = this.skins.get(def.id);
+    if (t) return t;
+    const gl = this.gl;
+    const src = this.texSource(def.id) ?? placeholderTexture(def);
+    t = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, src.width, src.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, src.rgba);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.skins.set(def.id, t);
+    return t;
+  }
+
+  /** Sustituye las texturas (cuando llega el arte definitivo). */
+  setTextureSource(src: (id: number) => MobTexture | null): void {
+    this.texSource = src;
+    for (const t of this.skins.values()) this.gl.deleteTexture(t);
+    this.skins.clear();
+  }
+
+  // ---------------------------------------------------------------- pose
+
+  /** Rotaciones de animación por parte: [x, y, z] añadidas a la de reposo. */
+  private animate(def: MobDef, e: ClientEntity, time: number, name: string, out: number[]): void {
+    out[0] = out[1] = out[2] = 0;
+    const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
+    const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
+    const acting = (e.flags & EF_ACTION) !== 0;
+    switch (def.anim) {
+      case 'quadruped':
+      case 'creeper':
+        if (name === 'leg0' || name === 'leg3') out[0] = swing;
+        else if (name === 'leg1' || name === 'leg2') out[0] = -swing;
+        else if (name === 'head') {
+          out[1] = headYaw;
+          out[0] = e.pitch;
+        }
+        break;
+      case 'chicken':
+        if (name === 'legR') out[0] = swing;
+        else if (name === 'legL') out[0] = -swing;
+        else if (name === 'wingR' || name === 'wingL') {
+          const flap = e.walkAmount > 0.6 ? Math.abs(Math.sin(time * 18)) * 0.9 : Math.abs(Math.sin(time * 2 + e.seed * 7)) * 0.08;
+          out[2] = name === 'wingR' ? flap : -flap;
+        } else if (name === 'head') {
+          out[1] = headYaw;
+          out[0] = e.pitch;
+        }
+        break;
+      case 'humanoid':
+      case 'zombie':
+      case 'skeleton':
+      case 'enderman': {
+        const amp = def.anim === 'enderman' ? 0.5 : 1;
+        if (name === 'legR') out[0] = swing * amp;
+        else if (name === 'legL') out[0] = -swing * amp;
+        else if (name === 'armR' || name === 'armL') {
+          const side = name === 'armR' ? 1 : -1;
+          const sway = Math.sin(time * 1.3 + e.seed * 5) * 0.05;
+          if (def.anim === 'zombie') out[0] = Math.PI / 2 + sway + swing * 0.1;
+          else if (def.anim === 'skeleton' && (acting || (e.flags & EF_ANGRY))) {
+            out[0] = Math.PI / 2 - 0.1;
+            out[1] = side * (acting ? 0.35 : 0.1);
+          } else if (def.anim === 'enderman' && (e.flags & EF_ANGRY)) out[0] = -swing * 0.4 + 0.3;
+          else out[0] = -swing * side * 0.8 * amp;
+          out[2] = side * (0.05 + Math.sin(time * 1.1 + e.seed * 3) * 0.03);
+        } else if (name === 'head') {
+          out[1] = headYaw;
+          out[0] = e.pitch;
+        }
+        break;
+      }
+      case 'spider':
+        if (name.startsWith('leg')) {
+          const i = Number(name.slice(3));
+          const ph = e.walkPhase * 1.4 + (i >> 1) * (Math.PI / 2) + (i & 1) * Math.PI;
+          out[1] = Math.sin(ph) * 0.35 * e.walkAmount;
+          out[2] = Math.abs(Math.cos(ph)) * 0.25 * e.walkAmount * (i & 1 ? 1 : -1);
+        } else if (name === 'head') {
+          out[1] = headYaw;
+          out[0] = e.pitch * 0.5;
+        }
+        break;
+      case 'squid':
+        if (name.startsWith('tent')) {
+          const i = Number(name.slice(4));
+          const a = (i / 8) * Math.PI * 2;
+          const open = 0.25 + Math.sin(time * 2.2 + e.seed * 9) * 0.25;
+          out[0] = Math.sin(a) * open;
+          out[2] = -Math.cos(a) * open;
+        }
+        break;
+    }
+  }
+
+  private pose(def: MobDef, mesh: MobMesh, e: ClientEntity, time: number): void {
+    const b = this.bones;
+    const rot = [0, 0, 0];
+    const mats: mat4[] = [];
+    for (let i = 0; i < def.parts.length && i < MAX_BONES; i++) {
+      const part = def.parts[i];
+      const m = mat4.create();
+      const parent = mesh.parents[i];
+      if (parent >= 0) mat4.copy(m, mats[parent]);
+      mat4.translate(m, m, [part.pivot[0] * P, part.pivot[1] * P, part.pivot[2] * P]);
+      this.animate(def, e, time, part.name, rot);
+      const rest = part.rot ?? [0, 0, 0];
+      mat4.rotateY(m, m, rest[1] + rot[1]);
+      mat4.rotateZ(m, m, -rest[2] + rot[2]);
+      mat4.rotateX(m, m, rest[0] + rot[0]);
+      mats.push(m);
+      b.set(m, i * 16);
+    }
+  }
+
+  private rootMatrix(def: MobDef, e: ClientEntity, camX: number, camY: number, camZ: number): mat4 {
+    const m = this.model;
+    mat4.identity(m);
+    mat4.translate(m, m, [e.x - camX, e.y - camY, e.z - camZ]);
+    mat4.rotateY(m, m, e.bodyYaw);
+    if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
+    let s = def.scale;
+    if (def.id === MOB_CREEPER && e.actionT >= 0) {
+      // El creeper se hincha mientras arde la mecha.
+      const k = Math.min(1, e.actionT / 1.5);
+      s *= 1 + 0.22 * k * k + Math.sin(e.actionT * 40) * 0.015 * k;
+    }
+    if (def.aquatic) {
+      // El calamar se inclina hacia donde nada.
+      mat4.translate(m, m, [0, 0.5, 0]);
+      mat4.rotateX(m, m, Math.max(-1, Math.min(1, e.pitch)) * 0.8);
+      mat4.translate(m, m, [0, -0.5, 0]);
+    }
+    mat4.scale(m, m, [s, s, s]);
+    return m;
+  }
+
+  // ---------------------------------------------------------------- dibujo
+
+  draw(
+    list: ClientEntity[], camX: number, camY: number, camZ: number, time: number,
+    lightAt: (e: ClientEntity) => [number, number], bindLighting: (p: Program) => Program,
+  ): void {
+    if (list.length === 0) return;
+    const gl = this.gl;
+    const p = bindLighting(this.prog.use());
+    const bonesLoc = p.loc('uBones');
+    for (const e of list) {
+      const def = MOBS[e.type];
+      if (!def) continue;
+      const mesh = this.mesh(def);
+      this.pose(def, mesh, e, time);
+      const root = this.rootMatrix(def, e, camX, camY, camZ);
+      const hurt = e.hurtT < 0.35 || e.deathT >= 0;
+      const light = lightAt(e);
+      let flash = 0;
+      if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
+      p.tex2D('uSkin', this.skin(def))
+        .m4('uModel', root as Float32Array)
+        .f2('uLightLevel', light[0], light[1])
+        .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
+        .f1('uFlash', flash);
+      gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
+      gl.bindVertexArray(mesh.vao);
+      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    }
+    gl.bindVertexArray(null);
+  }
+
+  drawShadow(list: ClientEntity[], camX: number, camY: number, camZ: number, time: number): void {
+    if (list.length === 0) return;
+    const gl = this.gl;
+    const p = this.shadowProg.use();
+    const bonesLoc = p.loc('uBones');
+    for (const e of list) {
+      const def = MOBS[e.type];
+      if (!def) continue;
+      const mesh = this.mesh(def);
+      this.pose(def, mesh, e, time);
+      const root = this.rootMatrix(def, e, camX, camY, camZ);
+      p.tex2D('uSkin', this.skin(def)).m4('uModel', root as Float32Array);
+      gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
+      gl.bindVertexArray(mesh.vao);
+      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    }
+    gl.bindVertexArray(null);
+  }
+
+  /** Matriz (relativa a la cámara) de la mano derecha de un esqueleto, para dibujar su arco. */
+  handMatrix(e: ClientEntity, camX: number, camY: number, camZ: number, time: number): mat4 | null {
+    const def = MOBS[e.type];
+    if (!def || (def.id !== MOB_SKELETON && def.id !== MOB_STRAY)) return null;
+    const mesh = this.mesh(def);
+    this.pose(def, mesh, e, time);
+    const i = mesh.names.indexOf('armR');
+    if (i < 0) return null;
+    const root = mat4.clone(this.rootMatrix(def, e, camX, camY, camZ));
+    const bone = mat4.clone(this.bones.subarray(i * 16, i * 16 + 16) as unknown as mat4);
+    const out = mat4.create();
+    mat4.multiply(out, root, bone);
+    mat4.translate(out, out, [0, -9 * P, -1 * P]);
+    return out;
+  }
+}
+
+function clampAngle(a: number, lim: number): number {
+  let d = a % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return Math.max(-lim, Math.min(lim, d));
+}
+
+/** Textura provisional (colores planos por especie) hasta que llegue el arte definitivo. */
+export function placeholderTexture(def: MobDef): MobTexture {
+  const [w, h] = def.atlas;
+  const rgba = new Uint8Array(w * h * 4);
+  const colors: Record<string, [number, number, number]> = {
+    pig: [240, 160, 160], cow: [80, 60, 45], sheep: [230, 230, 230], chicken: [245, 245, 245], zombie: [80, 140, 80],
+    husk: [170, 150, 100], skeleton: [200, 200, 200], stray: [170, 190, 190], creeper: [80, 170, 70], spider: [60, 50, 45],
+    enderman: [25, 20, 30], squid: [60, 80, 120],
+  };
+  const c = colors[def.key] ?? [200, 0, 200];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4;
+      const n = ((x * 7 + y * 13) % 5) * 6 - 12;
+      rgba[o] = Math.max(0, Math.min(255, c[0] + n));
+      rgba[o + 1] = Math.max(0, Math.min(255, c[1] + n));
+      rgba[o + 2] = Math.max(0, Math.min(255, c[2] + n));
+      rgba[o + 3] = 255;
+    }
+  }
+  return { width: w, height: h, rgba };
+}

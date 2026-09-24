@@ -1,0 +1,902 @@
+// Pipeline de renderizado completo.
+//
+// Orden por frame:
+//  1. LUT del cielo (vista + irradiancia)
+//  2. Mapa de sombras (terreno opaco/recorte + jugadores) y mapa de profundidad del agua (cáusticas)
+//  3. Pasada principal HDR: terreno opaco, recortes, jugadores, partículas y cielo
+//  4. Copia de color/profundidad → agua y hielo (refracción, SSR, absorción)
+//  5. Nubes volumétricas (resolución reducida) y luz volumétrica (media resolución)
+//  6. Composición atmosférica (niebla, bruma, nubes, rayos de luz)
+//  7. TAA → contorno de selección y bloque en la mano
+//  8. Exposición automática, bloom, tonemapping ACES (+ FXAA si no hay TAA)
+import { mat4, vec3 } from 'gl-matrix';
+import {
+  createContext, Program, RenderTarget, UniformBuffer, FullscreenTriangle, FULLSCREEN_VS, type GL, type GLCaps,
+} from '../engine/gl';
+import { TERRAIN_VS, TERRAIN_FS, SHADOW_VS, SHADOW_FS } from './shaders/terrain';
+import { WATER_VS, WATER_FS, WATER_SHADOW_VS, WATER_SHADOW_FS, WATER_NORMAL_GEN_FS } from './shaders/water';
+import {
+  VOLUMETRIC_FS, COMPOSITE_FS, TAA_FS, LUMINANCE_FS, ADAPT_FS, BLOOM_DOWN_FS, BLOOM_UP_FS, FINAL_FS, FXAA_FS,
+} from './shaders/post';
+import { Atmosphere, SUN_ILLUMINANCE } from './Atmosphere';
+import { Clouds } from './Clouds';
+import { TerrainRenderer } from './TerrainRenderer';
+import { BlockTextures } from './BlockTextures';
+import { EntityRenderer, type RemotePlayerView } from './EntityRenderer';
+import { Weather } from './Weather';
+import { ItemRenderer, type ItemDraw } from './ItemRenderer';
+import { MobRenderer, type MobTexture } from './MobRenderer';
+import type { GeneratedTextures } from '../textures/generateTextures';
+import type { ItemSprites } from '../textures/itemSprites';
+import type { ClientEntity } from '../game/ClientEntities';
+import { ENT_ITEM, ENT_ARROW, ENT_FALLING } from '../../shared/mobs';
+import { ARROW, BOW, ITEMS } from '../../shared/items';
+
+export interface RenderSettings {
+  renderScale: number;
+  shadowSize: number;
+  shadowDistance: number;
+  pcfSamples: number;
+  volumetric: boolean;
+  volumetricSteps: number;
+  clouds: boolean;
+  cloudSteps: number;
+  cloudScale: number;
+  ssrSteps: number;
+  taa: boolean;
+  bloom: boolean;
+  fov: number;
+  renderDistance: number;
+  brightness: number;
+  /** Relieve de texturas (parallax occlusion mapping). */
+  pom: boolean;
+}
+
+export type PresetName = 'bajo' | 'medio' | 'alto' | 'ultra';
+
+export const PRESETS: Record<PresetName, Omit<RenderSettings, 'fov' | 'brightness'>> = {
+  bajo: {
+    renderScale: 0.75, shadowSize: 1024, shadowDistance: 80, pcfSamples: 4, volumetric: false, volumetricSteps: 8,
+    clouds: true, cloudSteps: 18, cloudScale: 0.33, ssrSteps: 0, taa: false, bloom: true, renderDistance: 6, pom: false,
+  },
+  medio: {
+    renderScale: 1, shadowSize: 2048, shadowDistance: 112, pcfSamples: 8, volumetric: true, volumetricSteps: 12,
+    clouds: true, cloudSteps: 28, cloudScale: 0.35, ssrSteps: 18, taa: true, bloom: true, renderDistance: 8, pom: false,
+  },
+  alto: {
+    renderScale: 1, shadowSize: 2048, shadowDistance: 144, pcfSamples: 12, volumetric: true, volumetricSteps: 16,
+    clouds: true, cloudSteps: 40, cloudScale: 0.5, ssrSteps: 28, taa: true, bloom: true, renderDistance: 10, pom: true,
+  },
+  ultra: {
+    renderScale: 1, shadowSize: 4096, shadowDistance: 192, pcfSamples: 16, volumetric: true, volumetricSteps: 24,
+    clouds: true, cloudSteps: 56, cloudScale: 0.5, ssrSteps: 40, taa: true, bloom: true, renderDistance: 14, pom: true,
+  },
+};
+
+export interface FrameState {
+  camX: number;
+  camY: number;
+  camZ: number;
+  yaw: number;
+  pitch: number;
+  /** Tiempo real acumulado (s). */
+  time: number;
+  dt: number;
+  /** Fase del día 0..1 (0 = amanecer). */
+  dayTime: number;
+  /** Número de día (para las fases lunares). */
+  day: number;
+  underwater: boolean;
+  eyeSkyExposure: number;
+  rain: number;
+  /** La precipitación es nieve (bioma frío). */
+  snow: boolean;
+  cloudCoverage: number;
+  mist: number;
+  selection: { x: number; y: number; z: number; box?: number[] } | null;
+  /** Objeto en la mano (id de objeto; 0 = mano vacía). */
+  heldItem: number;
+  /** Uso del objeto: 0..1 (tensar el arco, comer). */
+  handUse: number;
+  handUseKind: 'none' | 'bow' | 'eat';
+  /** Bloque que se está minando y fase de la grieta (0..9). */
+  crack: { x: number; y: number; z: number; stage: number } | null;
+  /** Criaturas y demás entidades (objetos, flechas, bloques que caen). */
+  mobs: ClientEntity[];
+  drops: ClientEntity[];
+  /** Luz empaquetada (cielo << 4 | bloque) en una celda. */
+  lightAt: (x: number, y: number, z: number) => number;
+  handSwing: number;
+  handBob: [number, number];
+  handEquip: number;
+  lightAtEye: [number, number];
+  grassTint: [number, number, number];
+  players: RemotePlayerView[];
+  showHand: boolean;
+}
+
+const NEAR = 0.05;
+const FAR = 1600;
+const HALTON: [number, number][] = [];
+for (let i = 1; i <= 16; i++) {
+  const h = (b: number) => {
+    let f = 1, r = 0, n = i;
+    while (n > 0) { f /= b; r += f * (n % b); n = Math.floor(n / b); }
+    return r;
+  };
+  HALTON.push([h(2) - 0.5, h(3) - 0.5]);
+}
+
+const SUN_TILT = (25 * Math.PI) / 180;
+
+export class Renderer {
+  readonly gl: GL;
+  readonly caps: GLCaps;
+  readonly canvas: HTMLCanvasElement;
+  readonly terrain: TerrainRenderer;
+  readonly textures: BlockTextures;
+  readonly entities: EntityRenderer;
+  readonly weather: Weather;
+  readonly items: ItemRenderer;
+  readonly mobs: MobRenderer;
+  settings: RenderSettings;
+
+  private tri: FullscreenTriangle;
+  private ubo: UniformBuffer;
+  private atmosphere: Atmosphere;
+  private clouds: Clouds;
+
+  private pTerrain: Program;
+  private pTerrainCut: Program;
+  private pShadow: Program;
+  private pShadowCut: Program;
+  private pWater: Program;
+  private pWaterShadow: Program;
+  private pVol: Program;
+  private pComposite: Program;
+  private pTAA: Program;
+  private pLum: Program;
+  private pAdapt: Program;
+  private pBloomDown: Program;
+  private pBloomUp: Program;
+  private pFinal: Program;
+  private pFxaa: Program;
+
+  private main: RenderTarget;
+  private copy: RenderTarget;
+  private volRT: RenderTarget;
+  private compositeRT: RenderTarget;
+  private history: RenderTarget[];
+  private post: RenderTarget;
+  private ldr: RenderTarget;
+  private bloom: RenderTarget[] = [];
+  private exposure: RenderTarget[];
+  private lumTex: WebGLTexture;
+  private lumFbo: WebGLFramebuffer;
+  private shadowTex: WebGLTexture | null = null;
+  private shadowFbo: WebGLFramebuffer | null = null;
+  private waterShadowTex: WebGLTexture | null = null;
+  private waterShadowFbo: WebGLFramebuffer | null = null;
+  private shadowSize = 0;
+  private shadowSampler: WebGLSampler;
+  private waterNormal: WebGLTexture;
+  private dummyDepth: WebGLTexture;
+
+  private width = 0;
+  private height = 0;
+  private frame = 0;
+  private historyIndex = 0;
+  private historyValid = false;
+  private exposureIndex = 0;
+  private exposureReset = true;
+  private prevViewProj = mat4.create();
+  private prevCam = [0, 0, 0];
+  private viewRot = mat4.create();
+  private proj = mat4.create();
+  private projUnjit = mat4.create();
+  private viewProj = mat4.create();
+  private viewProjUnjit = mat4.create();
+  private invViewProj = mat4.create();
+  private shadowMat = mat4.create();
+  private tmpT = [0, 0, 0];
+  /** Últimos datos útiles para la UI (proyección de etiquetas). */
+  lastViewProj = mat4.create();
+  lastCam = [0, 0, 0];
+  stats = { drawCalls: 0, quads: 0 };
+  sunDir = [0, 1, 0];
+
+  constructor(
+    canvas: HTMLCanvasElement, tex: GeneratedTextures, settings: RenderSettings, sprites: ItemSprites,
+    mobTextures: (id: number) => MobTexture | null,
+  ) {
+    this.canvas = canvas;
+    const { gl, caps } = createContext(canvas);
+    this.gl = gl;
+    this.caps = caps;
+    this.settings = settings;
+    this.tri = new FullscreenTriangle(gl);
+    this.ubo = new UniformBuffer(gl, 156);
+    this.textures = new BlockTextures(gl, caps, tex);
+    this.terrain = new TerrainRenderer(gl);
+    this.atmosphere = new Atmosphere(gl, this.tri);
+    this.clouds = new Clouds(gl, this.tri);
+    this.entities = new EntityRenderer(gl, this.textures);
+    this.weather = new Weather(gl);
+    this.items = new ItemRenderer(gl, caps, this.textures, sprites);
+    this.mobs = new MobRenderer(gl, mobTextures);
+
+    this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
+    this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
+    this.pShadow = new Program(gl, { name: 'shadow', vs: SHADOW_VS, fs: SHADOW_FS });
+    this.pShadowCut = new Program(gl, { name: 'shadow-cutout', vs: SHADOW_VS, fs: SHADOW_FS, defines: { CUTOUT: true } });
+    this.pWater = new Program(gl, { name: 'water', vs: WATER_VS, fs: WATER_FS });
+    this.pWaterShadow = new Program(gl, { name: 'water-shadow', vs: WATER_SHADOW_VS, fs: WATER_SHADOW_FS });
+    this.pVol = new Program(gl, { name: 'volumetric', vs: FULLSCREEN_VS, fs: VOLUMETRIC_FS });
+    this.pComposite = new Program(gl, { name: 'composite', vs: FULLSCREEN_VS, fs: COMPOSITE_FS });
+    this.pTAA = new Program(gl, { name: 'taa', vs: FULLSCREEN_VS, fs: TAA_FS });
+    this.pLum = new Program(gl, { name: 'luminance', vs: FULLSCREEN_VS, fs: LUMINANCE_FS });
+    this.pAdapt = new Program(gl, { name: 'adapt', vs: FULLSCREEN_VS, fs: ADAPT_FS });
+    this.pBloomDown = new Program(gl, { name: 'bloom-down', vs: FULLSCREEN_VS, fs: BLOOM_DOWN_FS });
+    this.pBloomUp = new Program(gl, { name: 'bloom-up', vs: FULLSCREEN_VS, fs: BLOOM_UP_FS });
+    this.pFinal = new Program(gl, { name: 'final', vs: FULLSCREEN_VS, fs: FINAL_FS });
+    this.pFxaa = new Program(gl, { name: 'fxaa', vs: FULLSCREEN_VS, fs: FXAA_FS });
+
+    const hdr = { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, filter: gl.LINEAR };
+    this.main = new RenderTarget(gl, [hdr], 'texture');
+    this.copy = new RenderTarget(gl, [hdr], 'texture');
+    this.volRT = new RenderTarget(gl, [hdr]);
+    this.compositeRT = new RenderTarget(gl, [hdr]);
+    this.history = [new RenderTarget(gl, [hdr]), new RenderTarget(gl, [hdr])];
+    this.post = new RenderTarget(gl, [hdr], 'external');
+    this.ldr = new RenderTarget(gl, [{ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, filter: gl.LINEAR }]);
+    for (let i = 0; i < 6; i++) this.bloom.push(new RenderTarget(gl, [hdr]));
+    this.exposure = [
+      new RenderTarget(gl, [{ ...hdr, filter: gl.NEAREST }]),
+      new RenderTarget(gl, [{ ...hdr, filter: gl.NEAREST }]),
+    ];
+    for (const e of this.exposure) e.resize(1, 1);
+
+    // Luminancia media: 64x64 RG16F con mipmaps.
+    this.lumTex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, this.lumTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 7, gl.RG16F, 64, 64);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    this.lumFbo = gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.lumFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.lumTex, 0);
+
+    this.shadowSampler = gl.createSampler()!;
+    gl.samplerParameteri(this.shadowSampler, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+    gl.samplerParameteri(this.shadowSampler, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+    gl.samplerParameteri(this.shadowSampler, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.samplerParameteri(this.shadowSampler, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.samplerParameteri(this.shadowSampler, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.samplerParameteri(this.shadowSampler, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    // Textura de profundidad 1x1 (= 1.0) para cuando las sombras están desactivadas.
+    this.dummyDepth = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, this.dummyDepth);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT32F, 1, 1);
+    const dfb = gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dfb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.dummyDepth, 0);
+    gl.drawBuffers([gl.NONE]);
+    gl.clearDepth(1);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.deleteFramebuffer(dfb);
+
+    // Mapa de normales del agua.
+    const wn = new RenderTarget(gl, [{ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, filter: gl.LINEAR, wrap: gl.REPEAT }]);
+    wn.resize(256, 256);
+    wn.bind();
+    gl.disable(gl.DEPTH_TEST);
+    const pWN = new Program(gl, { name: 'water-normal', vs: FULLSCREEN_VS, fs: WATER_NORMAL_GEN_FS });
+    pWN.use();
+    this.tri.draw();
+    gl.deleteProgram(pWN.program);
+    this.waterNormal = wn.color;
+    gl.bindTexture(gl.TEXTURE_2D, this.waterNormal);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    this.atmosphere.precompute();
+  }
+
+  // ---------------------------------------------------------------- tamaño
+
+  private ensureSize(): void {
+    const gl = this.gl;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = Math.max(1, Math.floor(this.canvas.clientWidth * dpr));
+    const ch = Math.max(1, Math.floor(this.canvas.clientHeight * dpr));
+    if (this.canvas.width !== cw || this.canvas.height !== ch) {
+      this.canvas.width = cw;
+      this.canvas.height = ch;
+    }
+    // Resolución interna limitada (~1440p) para no agotar la memoria de vídeo en pantallas 4K.
+    let scale = this.settings.renderScale;
+    const maxPixels = 2560 * 1440;
+    if (cw * ch * scale * scale > maxPixels) scale = Math.sqrt(maxPixels / (cw * ch));
+    const w = Math.max(1, Math.floor(cw * scale));
+    const h = Math.max(1, Math.floor(ch * scale));
+    if (w === this.width && h === this.height) return;
+    this.width = w;
+    this.height = h;
+    this.main.resize(w, h);
+    this.copy.resize(w, h);
+    this.compositeRT.resize(w, h);
+    this.history[0].resize(w, h);
+    this.history[1].resize(w, h);
+    this.post.resize(w, h, this.main.depth);
+    this.ldr.resize(cw, ch);
+    this.volRT.resize(Math.ceil(w / 2), Math.ceil(h / 2));
+    let bw = Math.ceil(w / 2), bh = Math.ceil(h / 2);
+    for (const b of this.bloom) {
+      b.resize(bw, bh);
+      bw = Math.max(1, Math.ceil(bw / 2));
+      bh = Math.max(1, Math.ceil(bh / 2));
+    }
+    this.historyValid = false;
+    void gl;
+  }
+
+  private ensureShadowMap(): void {
+    const size = this.settings.shadowSize;
+    if (size === this.shadowSize) return;
+    const gl = this.gl;
+    if (this.shadowTex) gl.deleteTexture(this.shadowTex);
+    if (this.waterShadowTex) gl.deleteTexture(this.waterShadowTex);
+    if (this.shadowFbo) gl.deleteFramebuffer(this.shadowFbo);
+    if (this.waterShadowFbo) gl.deleteFramebuffer(this.waterShadowFbo);
+    this.shadowTex = this.waterShadowTex = null;
+    this.shadowFbo = this.waterShadowFbo = null;
+    this.shadowSize = size;
+    if (size <= 0) return;
+    const mk = (s: number): [WebGLTexture, WebGLFramebuffer] => {
+      const t = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT32F, s, s);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      const f = gl.createFramebuffer()!;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, t, 0);
+      gl.drawBuffers([gl.NONE]);
+      gl.readBuffer(gl.NONE);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return [t, f];
+    };
+    [this.shadowTex, this.shadowFbo] = mk(size);
+    [this.waterShadowTex, this.waterShadowFbo] = mk(Math.max(512, size / 2));
+  }
+
+  // ---------------------------------------------------------------- uniformes
+
+  private computeLights(s: FrameState) {
+    const theta = s.dayTime * Math.PI * 2;
+    const sun = [Math.cos(theta), Math.sin(theta) * Math.cos(SUN_TILT), Math.sin(theta) * Math.sin(SUN_TILT)];
+    const moon = [-sun[0], -sun[1], -sun[2]];
+    const sunUp = sun[1] >= 0;
+    const light = sunUp ? sun : moon;
+    const T = Atmosphere.transmittance(s.camY, light[1], this.tmpT);
+    const phase = ((s.day % 8) + 8) % 8 / 8;
+    const moonFull = 0.5 + 0.5 * Math.cos(phase * Math.PI * 2);
+    const moonIllum = SUN_ILLUMINANCE[0] * 0.009 * (0.3 + 0.7 * moonFull);
+    // Luz directa atenuada por el cielo cubierto cuando llueve.
+    const fade = smooth(0.0, 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain);
+    const lc = sunUp
+      ? [SUN_ILLUMINANCE[0] * T[0] * fade, SUN_ILLUMINANCE[1] * T[1] * fade, SUN_ILLUMINANCE[2] * T[2] * fade]
+      : [moonIllum * 0.75 * T[0] * fade, moonIllum * 0.85 * T[1] * fade, moonIllum * T[2] * fade];
+    return { sun, moon, light, lightColor: lc, sunUp, moonIllum, phase };
+  }
+
+  private writeUBO(s: FrameState, L: ReturnType<Renderer['computeLights']>, shadowOrigin: number[]): void {
+    const d = this.ubo.data;
+    d.set(this.viewRot, 0);
+    d.set(this.proj, 16);
+    d.set(this.viewProj, 32);
+    d.set(this.invViewProj, 48);
+    d.set(this.prevViewProj, 64);
+    d.set(this.shadowMat, 80);
+    d[96] = s.camX; d[97] = s.camY; d[98] = s.camZ; d[99] = s.time % 3600;
+    d[100] = s.camX - shadowOrigin[0]; d[101] = s.camY - shadowOrigin[1]; d[102] = s.camZ - shadowOrigin[2];
+    d[103] = this.settings.shadowDistance;
+    d[104] = L.sun[0]; d[105] = L.sun[1]; d[106] = L.sun[2]; d[107] = smooth(-0.1, 0.2, L.sun[1]);
+    d[108] = L.moon[0]; d[109] = L.moon[1]; d[110] = L.moon[2]; d[111] = L.phase;
+    d[112] = L.light[0]; d[113] = L.light[1]; d[114] = L.light[2]; d[115] = L.sunUp ? 1 : 0;
+    d[116] = L.lightColor[0]; d[117] = L.lightColor[1]; d[118] = L.lightColor[2]; d[119] = 0;
+    d[120] = SUN_ILLUMINANCE[0]; d[121] = SUN_ILLUMINANCE[1]; d[122] = SUN_ILLUMINANCE[2]; d[123] = L.moonIllum;
+    const R = this.settings.renderDistance * 16;
+    d[124] = s.mist; d[125] = 1 / 28; d[126] = R * 0.62; d[127] = R * 0.93;
+    d[128] = this.width; d[129] = this.height; d[130] = 1 / this.width; d[131] = 1 / this.height;
+    d[132] = 0; d[133] = 0; d[134] = 0; d[135] = 0;
+    d[136] = this.frame; d[137] = s.rain; d[138] = s.underwater ? 1 : 0; d[139] = s.eyeSkyExposure;
+    d[140] = s.cloudCoverage; d[141] = 230; d[142] = 560; d[143] = 1.0;
+    d[144] = s.time * 7.0; d[145] = s.time * 2.5; d[146] = 1.0 + s.rain * 1.5; d[147] = s.time % 10000;
+    d[148] = Math.max(1, this.shadowSize); d[149] = this.settings.pcfSamples;
+    d[150] = this.settings.ssrSteps; d[151] = this.settings.volumetricSteps;
+    const fovY = (this.settings.fov * Math.PI) / 180;
+    d[152] = NEAR; d[153] = FAR; d[154] = Math.tan(fovY / 2); d[155] = this.width / this.height;
+    this.ubo.upload();
+  }
+
+  // ---------------------------------------------------------------- frame
+
+  render(s: FrameState): void {
+    const gl = this.gl;
+    this.ensureSize();
+    this.ensureShadowMap();
+    const set = this.settings;
+    const W = this.width, H = this.height;
+    this.terrain.stats.drawCalls = 0;
+    this.terrain.stats.quads = 0;
+
+    // Cámara (relativa: la vista sólo rota).
+    const fovY = (set.fov * Math.PI) / 180;
+    mat4.perspective(this.projUnjit, fovY, W / H, NEAR, FAR);
+    mat4.copy(this.proj, this.projUnjit);
+    if (set.taa) {
+      const j = HALTON[this.frame % 8];
+      this.proj[8] += (j[0] * 2) / W;
+      this.proj[9] += (j[1] * 2) / H;
+    }
+    const cp = Math.cos(s.pitch), sp = Math.sin(s.pitch);
+    const fwd = vec3.fromValues(-Math.sin(s.yaw) * cp, sp, -Math.cos(s.yaw) * cp);
+    mat4.lookAt(this.viewRot, [0, 0, 0], fwd, [0, 1, 0]);
+    mat4.multiply(this.viewProj, this.proj, this.viewRot);
+    mat4.multiply(this.viewProjUnjit, this.projUnjit, this.viewRot);
+    mat4.invert(this.invViewProj, this.viewProj);
+    // Matriz del frame anterior desplazada por el movimiento de la cámara.
+    const moved = [s.camX - this.prevCam[0], s.camY - this.prevCam[1], s.camZ - this.prevCam[2]];
+    const prevRel = mat4.create();
+    mat4.translate(prevRel, this.prevViewProj, moved as unknown as vec3);
+    const lights = this.computeLights(s);
+    this.sunDir = lights.sun;
+
+    // Sombras: órbita estable alrededor del eje de la trayectoria solar.
+    const shadowOrigin = [Math.floor(s.camX), Math.floor(s.camY), Math.floor(s.camZ)];
+    const axis = [0, -Math.sin(SUN_TILT), Math.cos(SUN_TILT)];
+    const lv = mat4.create();
+    mat4.lookAt(lv, lights.light as unknown as vec3, [0, 0, 0], axis as unknown as vec3);
+    const D = set.shadowDistance;
+    const lp = mat4.create();
+    mat4.ortho(lp, -D, D, -D, D, -256, 256);
+    mat4.multiply(this.shadowMat, lp, lv);
+
+    // UBO con prevViewProj correcto.
+    const savedPrev = mat4.clone(this.prevViewProj);
+    mat4.copy(this.prevViewProj, prevRel);
+    this.writeUBO(s, lights, shadowOrigin);
+    mat4.copy(this.prevViewProj, savedPrev);
+
+    this.atmosphere.update();
+
+    // Culling.
+    this.terrain.setFrustum(this.viewProj);
+    this.terrain.cull(s.camX, s.camY, s.camZ, set.renderDistance, this.shadowSize > 0 ? D * 1.2 : 0);
+
+    const dropDraws = this.buildDropDraws(s);
+
+    // --- 2. Sombras ---
+    const lightOn = lights.lightColor[0] + lights.lightColor[1] + lights.lightColor[2] > 1e-4;
+    if (this.shadowFbo && this.waterShadowFbo && lightOn) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFbo);
+      gl.viewport(0, 0, this.shadowSize, this.shadowSize);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LESS);
+      gl.depthMask(true);
+      gl.disable(gl.CULL_FACE);
+      gl.disable(gl.BLEND);
+      gl.clearDepth(1);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      this.pShadow.use().tex2D('uLayerProps', this.textures.layerProps);
+      this.terrain.draw(this.pShadow, this.terrain.shadowList, 'opaque', s.camX, s.camY, s.camZ);
+      this.pShadowCut.use().tex2D('uLayerProps', this.textures.layerProps)
+        .tex('uAlbedo', gl.TEXTURE_2D_ARRAY, this.textures.albedo);
+      this.terrain.draw(this.pShadowCut, this.terrain.shadowList, 'cutout', s.camX, s.camY, s.camZ);
+      this.entities.drawPlayersShadow(s.players, s.camX, s.camY, s.camZ);
+      this.mobs.drawShadow(s.mobs, s.camX, s.camY, s.camZ, s.time);
+      this.items.drawShadow(dropDraws);
+      // Profundidad de la superficie del agua (para cáusticas y absorción de la luz).
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.waterShadowFbo);
+      const ws = Math.max(512, this.shadowSize / 2);
+      gl.viewport(0, 0, ws, ws);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      this.pWaterShadow.use().tex2D('uLayerProps', this.textures.layerProps);
+      this.terrain.draw(this.pWaterShadow, this.terrain.shadowList, 'translucent', s.camX, s.camY, s.camZ);
+    } else if (this.shadowFbo && this.waterShadowFbo) {
+      for (const f of [this.shadowFbo, this.waterShadowFbo]) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+        gl.clearDepth(1);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+      }
+    }
+    const shadowTex = this.shadowTex ?? this.dummyDepth;
+    const waterShadowTex = this.waterShadowTex ?? this.dummyDepth;
+
+    const bindLighting = (p: Program) => {
+      p.tex2D('uShadowMap', shadowTex, this.shadowSampler)
+        .tex2D('uWaterShadow', waterShadowTex)
+        .tex2D('uIrradiance', this.atmosphere.irradiance.color)
+        .tex2D('uCloudWeather', this.clouds.weather)
+        .tex2D('uSkyView', this.atmosphere.skyView.color)
+        .tex2D('uLayerProps', this.textures.layerProps)
+        .tex2D('uBiomeMap', this.terrain.biomeMap)
+        .tex('uAlbedo', gl.TEXTURE_2D_ARRAY, this.textures.albedo)
+        .tex('uNormalTex', gl.TEXTURE_2D_ARRAY, this.textures.normal)
+        .tex('uSpecular', gl.TEXTURE_2D_ARRAY, this.textures.specular);
+      return p;
+    };
+
+    // --- 3. Pasada principal ---
+    this.main.bind();
+    gl.clearColor(0, 0, 0, 1);
+    gl.clearDepth(1);
+    gl.depthMask(true);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LESS);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
+    bindLighting(this.pTerrain.use()).f1('uPom', set.pom ? 1 : 0);
+    this.terrain.draw(this.pTerrain, this.terrain.visibleOpaque, 'opaque', s.camX, s.camY, s.camZ);
+    bindLighting(this.pTerrainCut.use());
+    this.terrain.draw(this.pTerrainCut, this.terrain.visibleOpaque, 'cutout', s.camX, s.camY, s.camZ);
+    if (s.crack) this.items.drawCrack(s.crack.x, s.crack.y, s.crack.z, s.crack.stage, s.camX, s.camY, s.camZ, this.viewProj, bindLighting);
+    this.entities.drawPlayers(s.players, s.camX, s.camY, s.camZ, bindLighting);
+    const lightOf = (x: number, y: number, z: number): [number, number] => {
+      const l = s.lightAt(Math.floor(x), Math.floor(y), Math.floor(z));
+      return [(l >> 4) / 15, (l & 15) / 15];
+    };
+    this.mobs.draw(s.mobs, s.camX, s.camY, s.camZ, s.time, (e) => lightOf(e.x, e.y + 0.6, e.z), bindLighting);
+    this.drawMobHeldItems(s, lightOf, bindLighting);
+    this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
+    this.entities.drawParticles(s.camX, s.camY, s.camZ, this.atmosphere.irradiance.color);
+    gl.disable(gl.CULL_FACE);
+    this.atmosphere.drawSky();
+
+    // --- 4. Agua ---
+    if (this.terrain.visibleTranslucent.length > 0) {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.main.fbo);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.copy.fbo);
+      gl.blitFramebuffer(0, 0, W, H, 0, 0, W, H, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+      this.main.bind();
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LESS);
+      gl.depthMask(true);
+      bindLighting(this.pWater.use())
+        .tex2D('uSceneCopy', this.copy.color)
+        .tex2D('uDepthCopy', this.copy.depth)
+        .tex2D('uWaterNormal', this.waterNormal);
+      this.terrain.draw(this.pWater, this.terrain.visibleTranslucent, 'translucent', s.camX, s.camY, s.camZ);
+    }
+    gl.disable(gl.DEPTH_TEST);
+
+    // --- 5. Nubes y luz volumétrica ---
+    if (set.clouds) {
+      this.clouds.resize(W, H, set.cloudScale);
+      this.clouds.render(this.main.depth!, this.atmosphere.skyView.color, this.atmosphere.irradiance.color, set.cloudSteps, set.taa);
+    }
+    const volOn = set.volumetric && this.shadowSize > 0 && lightOn;
+    if (volOn) {
+      this.volRT.bind();
+      this.pVol.use()
+        .tex2D('uDepth', this.main.depth)
+        .tex2D('uShadowMap', shadowTex, this.shadowSampler)
+        .tex2D('uWaterShadow', waterShadowTex)
+        .f1('uSteps', set.volumetricSteps)
+        .f1('uTemporal', set.taa ? 1 : 0);
+      this.tri.draw();
+    }
+
+    // --- 6. Composición ---
+    this.compositeRT.bind();
+    this.pComposite.use()
+      .tex2D('uScene', this.main.color)
+      .tex2D('uDepth', this.main.depth)
+      .tex2D('uClouds', this.clouds.target.color)
+      .tex2D('uVolumetric', this.volRT.color)
+      .tex2D('uSkyView', this.atmosphere.skyView.color)
+      .tex2D('uIrradiance', this.atmosphere.irradiance.color)
+      .tex2D('uFarOcean', this.atmosphere.farOcean)
+      .f1('uCloudsOn', set.clouds ? 1 : 0)
+      .f1('uCloudBlur', set.taa ? 0 : 1)
+      .f1('uVolumetricOn', volOn ? 1 : 0);
+    this.tri.draw();
+
+    // --- 7. TAA ---
+    let resolved: RenderTarget;
+    if (set.taa) {
+      const cur = this.history[this.historyIndex];
+      const prev = this.history[1 - this.historyIndex];
+      cur.bind();
+      this.pTAA.use()
+        .tex2D('uCurrent', this.compositeRT.color)
+        .tex2D('uHistory', prev.color)
+        .tex2D('uDepth', this.main.depth)
+        .f1('uReset', this.historyValid ? 0 : 1);
+      this.tri.draw();
+      this.historyValid = true;
+      this.historyIndex = 1 - this.historyIndex;
+      resolved = cur;
+    } else {
+      this.historyValid = false;
+      resolved = this.compositeRT;
+    }
+    // Copia al buffer de post (con la profundidad de la escena) para contorno y mano.
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, resolved.fbo);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.post.fbo);
+    gl.blitFramebuffer(0, 0, W, H, 0, 0, W, H, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    this.post.bind();
+    // Sin jitter para lo que se dibuja después del TAA.
+    this.ubo.data.set(this.viewProjUnjit as Float32Array, 32);
+    this.ubo.upload();
+    if (s.selection) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      gl.depthMask(false);
+      this.entities.drawOutline(s.selection, s.camX, s.camY, s.camZ);
+      gl.depthMask(true);
+    }
+    // Lluvia o nieve (después del TAA para que las gotas no dejen estela).
+    this.weather.draw(s.camX, s.camY, s.camZ, s.rain, s.snow, s.time, this.atmosphere.irradiance.color);
+    gl.disable(gl.DEPTH_TEST);
+
+    // --- 8. Exposición automática (medida antes de dibujar la mano; el cielo pesa menos) ---
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.lumFbo);
+    gl.viewport(0, 0, 64, 64);
+    this.pLum.use().tex2D('uColor', this.post.color).tex2D('uDepth', this.main.depth);
+    this.tri.draw();
+    gl.bindTexture(gl.TEXTURE_2D, this.lumTex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+
+    // Objeto en la mano (con su propio buffer de profundidad).
+    if (s.showHand && s.heldItem > 0) {
+      this.post.bind();
+      gl.clearDepth(1);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LESS);
+      this.drawHeld(s, W / H, bindLighting);
+      gl.disable(gl.DEPTH_TEST);
+    }
+    const expCur = this.exposure[this.exposureIndex];
+    const expPrev = this.exposure[1 - this.exposureIndex];
+    expCur.bind();
+    this.pAdapt.use()
+      .tex2D('uLum', this.lumTex)
+      .tex2D('uPrev', expPrev.color)
+      .f1('uDt', Math.min(s.dt, 0.1))
+      .f1('uEV', set.brightness - s.rain * 0.7)
+      .f1('uLevels', 6)
+      .f1('uReset', this.exposureReset ? 1 : 0);
+    this.tri.draw();
+    this.exposureReset = false;
+    this.exposureIndex = 1 - this.exposureIndex;
+
+    // --- Bloom ---
+    if (set.bloom) {
+      let src = this.post.color;
+      for (let i = 0; i < this.bloom.length; i++) {
+        const b = this.bloom[i];
+        b.bind();
+        const sw = i === 0 ? W : this.bloom[i - 1].width;
+        const sh = i === 0 ? H : this.bloom[i - 1].height;
+        this.pBloomDown.use().tex2D('uSrc', src).f2('uTexel', 1 / sw, 1 / sh).f1('uFirst', i === 0 ? 1 : 0);
+        this.tri.draw();
+        src = b.color;
+      }
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE);
+      for (let i = this.bloom.length - 2; i >= 0; i--) {
+        const b = this.bloom[i];
+        const lower = this.bloom[i + 1];
+        b.bind();
+        this.pBloomUp.use().tex2D('uSrc', lower.color).f2('uTexel', 1 / lower.width, 1 / lower.height).f1('uRadius', 1.0);
+        this.tri.draw();
+      }
+      gl.disable(gl.BLEND);
+    }
+
+    // --- Final ---
+    const cw = this.canvas.width, ch = this.canvas.height;
+    const finalTarget = set.taa ? null : this.ldr;
+    if (finalTarget) finalTarget.bind();
+    else {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, cw, ch);
+    }
+    this.pFinal.use()
+      .tex2D('uColor', this.post.color)
+      .tex2D('uBloom', this.bloom[0].color)
+      .tex2D('uExposure', expCur.color)
+      .f1('uBloomStrength', set.bloom ? 0.065 : 0)
+      .f1('uSharpen', set.taa ? 0.55 : 0.0)
+      .f1('uSaturation', 1.08)
+      .f1('uVignette', 0.35)
+      .f1('uUnderwater', s.underwater ? 1 : 0);
+    this.tri.draw();
+    if (finalTarget) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, cw, ch);
+      this.pFxaa.use().tex2D('uColor', this.ldr.color).f2('uTexel', 1 / cw, 1 / ch);
+      this.tri.draw();
+    }
+
+    // Estado para el frame siguiente.
+    mat4.copy(this.prevViewProj, this.viewProjUnjit);
+    this.prevCam = [s.camX, s.camY, s.camZ];
+    mat4.copy(this.lastViewProj, this.viewProjUnjit);
+    this.lastCam = [s.camX, s.camY, s.camZ];
+    this.stats.drawCalls = this.terrain.stats.drawCalls;
+    this.stats.quads = this.terrain.stats.quads;
+    this.frame++;
+  }
+
+  // ---------------------------------------------------------------- objetos y mano
+
+  /** Objetos tirados, flechas y bloques que caen: lista de dibujo. */
+  private buildDropDraws(s: FrameState): ItemDraw[] {
+    const out: ItemDraw[] = [];
+    const lightOf = (x: number, y: number, z: number): [number, number] => {
+      const l = s.lightAt(Math.floor(x), Math.floor(y), Math.floor(z));
+      return [(l >> 4) / 15, (l & 15) / 15];
+    };
+    for (const e of s.drops) {
+      const rx = e.x - s.camX, ry = e.y - s.camY, rz = e.z - s.camZ;
+      if (rx * rx + ry * ry + rz * rz > 96 * 96) continue;
+      if (e.type === ENT_ITEM) {
+        const model = this.items.model(e.item);
+        if (!model) continue;
+        const copies = e.count <= 1 ? 1 : e.count <= 16 ? 2 : e.count <= 32 ? 3 : 4;
+        const bob = Math.sin(e.age * 2.4 + e.seed * 6.28) * 0.05;
+        const spin = e.age * 1.7 + e.seed * 6.28;
+        const size = model.flat ? 0.42 : 0.25;
+        const light = lightOf(e.x, e.y + 0.2, e.z);
+        for (let c = 0; c < copies; c++) {
+          const m = mat4.create();
+          const ox = c === 0 ? 0 : (((c * 37) % 7) - 3) * 0.03, oz = c === 0 ? 0 : (((c * 53) % 7) - 3) * 0.03;
+          mat4.translate(m, m, [rx + ox, ry + size / 2 + 0.06 + bob + (model.flat ? 0 : c * 0.04), rz + oz]);
+          mat4.rotateY(m, m, spin);
+          if (model.flat) mat4.translate(m, m, [0, 0, c * 0.05]);
+          mat4.scale(m, m, [size, size, size]);
+          out.push({ model, m, light });
+        }
+      } else if (e.type === ENT_ARROW) {
+        const model = this.items.model(ARROW);
+        if (!model) continue;
+        const m = mat4.create();
+        mat4.translate(m, m, [rx, ry, rz]);
+        mat4.rotateY(m, m, e.yaw);
+        mat4.rotateX(m, m, e.pitch);
+        mat4.rotateY(m, m, Math.PI / 2);
+        mat4.rotateZ(m, m, -Math.PI / 4);
+        mat4.scale(m, m, [0.7, 0.7, 0.7]);
+        out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
+      } else if (e.type === ENT_FALLING && e.item > 0) {
+        const model = this.items.blockModel(e.item);
+        const m = mat4.create();
+        mat4.translate(m, m, [rx, ry + 0.49, rz]);
+        mat4.scale(m, m, [0.98, 0.98, 0.98]);
+        out.push({ model, m, light: lightOf(e.x, e.y + 0.5, e.z) });
+      }
+    }
+    return out;
+  }
+
+  /** Arcos en las manos de los esqueletos. */
+  private drawMobHeldItems(
+    s: FrameState, lightOf: (x: number, y: number, z: number) => [number, number], bindLighting: (p: Program) => Program,
+  ): void {
+    const bow = this.items.model(BOW);
+    if (!bow) return;
+    const list: ItemDraw[] = [];
+    for (const e of s.mobs) {
+      if (e.deathT >= 0) continue;
+      const hand = this.mobs.handMatrix(e, s.camX, s.camY, s.camZ, s.time);
+      if (!hand) continue;
+      const m = mat4.clone(hand);
+      mat4.rotateX(m, m, -Math.PI / 2);
+      mat4.rotateY(m, m, Math.PI / 2);
+      mat4.rotateZ(m, m, Math.PI / 4);
+      mat4.scale(m, m, [0.7, 0.7, 0.7]);
+      list.push({ model: bow, m, light: lightOf(e.x, e.y + 1, e.z) });
+    }
+    this.items.drawWorld(list, this.viewProj, s.grassTint, bindLighting);
+  }
+
+  private drawHeld(s: FrameState, aspect: number, bindLighting: (p: Program) => Program): void {
+    const model = this.items.model(s.heldItem);
+    if (!model) return;
+    const proj = mat4.create();
+    mat4.perspective(proj, (70 * Math.PI) / 180, aspect, 0.01, 10);
+    const mv = mat4.create();
+    const swing = s.handSwing > 0 ? Math.sin(s.handSwing * Math.PI) : 0;
+    const swing2 = s.handSwing > 0 ? Math.sin(Math.sqrt(s.handSwing) * Math.PI) : 0;
+    const equip = s.handEquip;
+    const use = s.handUseKind !== 'none' ? s.handUse : 0;
+    if (!model.flat) {
+      mat4.translate(mv, mv, [
+        0.56 + s.handBob[0] - swing2 * 0.25,
+        -0.5 + s.handBob[1] - equip * 0.5 + swing2 * 0.12,
+        -0.95 - swing * 0.15,
+      ]);
+      mat4.rotateX(mv, mv, 0.32);
+      mat4.rotateY(mv, mv, (45 * Math.PI) / 180 + swing2 * 0.5);
+      mat4.rotateX(mv, mv, -swing * 0.8);
+      mat4.rotateZ(mv, mv, swing2 * 0.2);
+      mat4.scale(mv, mv, [0.34, 0.34, 0.34]);
+    } else if (s.handUseKind === 'bow' && use > 0) {
+      // Arco tensado: al centro de la pantalla, con temblor al máximo.
+      const shake = use >= 1 ? Math.sin(s.time * 60) * 0.004 : 0;
+      mat4.translate(mv, mv, [0.28 - use * 0.18 + s.handBob[0], -0.3 + s.handBob[1] + shake, -0.62 + use * 0.08]);
+      mat4.rotateY(mv, mv, -0.25);
+      mat4.rotateZ(mv, mv, -Math.PI / 4 - 0.35);
+      mat4.scale(mv, mv, [0.62, 0.62, 0.62]);
+    } else if (s.handUseKind === 'eat' && use > 0) {
+      const chew = Math.abs(Math.sin(s.time * 14)) * 0.035;
+      mat4.translate(mv, mv, [0.18 - Math.min(1, use * 4) * 0.12, -0.32 + chew, -0.55]);
+      mat4.rotateY(mv, mv, -0.6);
+      mat4.rotateX(mv, mv, 0.3);
+      mat4.scale(mv, mv, [0.5, 0.5, 0.5]);
+    } else {
+      // Herramientas con la hoja hacia arriba y hacia el centro; el resto, algo inclinado.
+      const isTool = !!ITEMS[s.heldItem]?.tool;
+      mat4.translate(mv, mv, [
+        0.6 + s.handBob[0] - swing2 * 0.32,
+        -0.52 + s.handBob[1] - equip * 0.5 + swing2 * 0.14,
+        -1.0 - swing * 0.25,
+      ]);
+      mat4.rotateY(mv, mv, -0.7 + swing2 * 0.35);
+      mat4.rotateX(mv, mv, -swing * 1.2);
+      mat4.rotateZ(mv, mv, isTool ? Math.PI / 2 - 0.25 : 0.25);
+      const k = isTool ? 0.62 : 0.46;
+      mat4.scale(mv, mv, [k, k, k]);
+    }
+    const ld = this.entities.lightDir;
+    const vr = this.viewRot;
+    const lv = [
+      vr[0] * ld[0] + vr[4] * ld[1] + vr[8] * ld[2],
+      vr[1] * ld[0] + vr[5] * ld[1] + vr[9] * ld[2],
+      vr[2] * ld[0] + vr[6] * ld[1] + vr[10] * ld[2],
+    ];
+    const gl = this.gl;
+    if (model.flat) gl.disable(gl.CULL_FACE);
+    else gl.enable(gl.CULL_FACE);
+    this.items.drawHand(model, mv, proj, lv, s.lightAtEye, s.grassTint, bindLighting);
+    gl.disable(gl.CULL_FACE);
+  }
+
+  /** Proyecta una posición del mundo a coordenadas CSS del canvas (o null si está detrás). */
+  project(x: number, y: number, z: number): [number, number] | null {
+    const m = this.lastViewProj;
+    const rx = x - this.lastCam[0], ry = y - this.lastCam[1], rz = z - this.lastCam[2];
+    const cx = m[0] * rx + m[4] * ry + m[8] * rz + m[12];
+    const cy = m[1] * rx + m[5] * ry + m[9] * rz + m[13];
+    const cw = m[3] * rx + m[7] * ry + m[11] * rz + m[15];
+    if (cw <= 0.05) return null;
+    const nx = cx / cw, ny = cy / cw;
+    if (nx < -1.2 || nx > 1.2 || ny < -1.2 || ny > 1.2) return null;
+    return [(nx * 0.5 + 0.5) * this.canvas.clientWidth, (1 - (ny * 0.5 + 0.5)) * this.canvas.clientHeight];
+  }
+
+  /** Fracción de océano por dirección (64 bins de azimut) más allá del terreno cargado. */
+  setFarOcean(data: Uint8Array): void {
+    this.atmosphere.setFarOcean(data);
+  }
+
+  resetTemporal(): void {
+    this.historyValid = false;
+    this.exposureReset = true;
+  }
+}
+
+function smooth(e0: number, e1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+}

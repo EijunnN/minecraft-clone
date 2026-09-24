@@ -1,0 +1,176 @@
+// Protocolo cliente ↔ servidor (JSON por WebSocket; las ediciones iniciales van en binario).
+import type { ItemStack } from './items';
+import type { ContainerWire } from './containers';
+
+export const PROTOCOL_VERSION = 2;
+export const MAX_PLAYERS = 16;
+export const MAX_NAME = 16;
+export const MAX_CHAT = 200;
+
+/** Bits del campo de estado del jugador. */
+export const STATE_SNEAK = 1;
+export const STATE_FLY = 2;
+export const STATE_SWIM = 4;
+export const STATE_DEAD = 8;
+
+/** Bits de estado de las entidades. */
+export const EF_HURT = 1;
+export const EF_FIRE = 2;
+export const EF_DEAD = 4;
+export const EF_ANGRY = 8;
+export const EF_ACTION = 16;
+export const EF_PICKABLE = 32;
+
+/** 's' supervivencia, 'c' creativo. */
+export type GameMode = 's' | 'c';
+
+export interface WorldTime {
+  /** Tiempo del mundo en días (fracción = hora del día; 0 = amanecer) en el instante `at`. */
+  base: number;
+  /** Date.now() del servidor en el que `base` era válido. */
+  at: number;
+  /** Días por segundo real. */
+  rate: number;
+}
+
+export interface PlayerInfo {
+  id: string;
+  name: string;
+  shirt: string;
+  p: [number, number, number];
+  r: [number, number];
+  s: number;
+  /** Objeto en la mano. */
+  h?: number;
+}
+
+/** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
+export type WireStack = [number, number] | [number, number, number];
+
+/** Estado del jugador que guarda el servidor (el inventario lo gestiona el cliente). */
+export interface PlayerSave {
+  inv: (WireStack | null)[];
+  hp: number;
+  food: number;
+  sat: number;
+  air?: number;
+  pos?: [number, number, number];
+  rot?: [number, number];
+  fly?: boolean;
+  sel?: number;
+  dead?: boolean;
+}
+
+/** Entidad nueva: [id, tipo, x, y, z, yaw, cuerpo, pitch, flags, extra...]. */
+export type EntAdd = number[];
+/** Actualización: [id, x, y, z, yaw, cuerpo, pitch, flags, cantidad?]. */
+export type EntUpd = number[];
+
+export type ClientMsg =
+  | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
+  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number }
+  | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
+  | { t: 'chat'; m: string }
+  | { t: 'swing' }
+  | { t: 'ping'; c: number }
+  | { t: 'attack'; e: number; item: number; crit?: boolean }
+  | { t: 'pickup'; e: number }
+  | { t: 'drop'; items: ItemStack[]; p: [number, number, number]; v?: [number, number, number] }
+  | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number }
+  | { t: 'open'; x: number; y: number; z: number }
+  | { t: 'close' }
+  | { t: 'cclick'; x: number; y: number; z: number; slot: number; btn: number; cur: ItemStack | null; q: number }
+  | { t: 'cput'; x: number; y: number; z: number; stack: ItemStack; q: number }
+  | { t: 'ctake'; x: number; y: number; z: number; slot: number; max: number; q: number }
+  | { t: 'look'; e: number }
+  | { t: 'state'; d: PlayerSave }
+  | { t: 'died'; m: string };
+
+export type ServerMsg =
+  | {
+    t: 'welcome'; id: string; seed: number; time: WorldTime; now: number; players: PlayerInfo[]; editCount: number;
+    mode: GameMode; diff: number; save: PlayerSave | null; spawn: [number, number, number];
+  }
+  | { t: 'join'; p: PlayerInfo }
+  | { t: 'leave'; id: string }
+  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number }
+  | { t: 'set'; id: string; x: number; y: number; z: number; b: number }
+  | { t: 'sets'; l: number[] }
+  | { t: 'chat'; id: string | null; name: string; m: string }
+  | { t: 'time'; time: WorldTime; now: number }
+  | { t: 'swing'; id: string }
+  | { t: 'pong'; c: number; now: number }
+  | { t: 'error'; m: string }
+  | { t: 'ents'; a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[] }
+  | { t: 'hurt'; a: number; k: [number, number, number]; c: string }
+  | { t: 'picked'; e: number; s: ItemStack }
+  | { t: 'fx'; k: string; p: [number, number, number]; a?: number; b?: number }
+  | { t: 'cont'; x: number; y: number; z: number; c: ContainerWire }
+  | { t: 'cres'; q: number; cur?: ItemStack | null; give?: ItemStack | null }
+  | { t: 'cclose' }
+  | { t: 'gm'; m: GameMode }
+  | { t: 'diff'; d: number };
+
+/** Mensaje binario de ediciones: [u8 tipo=1][u32 n] + n × ([i32 x][u8 y][i32 z][u8 b]). */
+export const BIN_EDITS = 1;
+export const EDIT_RECORD_BYTES = 10;
+
+export function encodeEdits(edits: [number, number, number, number][]): ArrayBuffer {
+  const buf = new ArrayBuffer(5 + edits.length * EDIT_RECORD_BYTES);
+  const dv = new DataView(buf);
+  dv.setUint8(0, BIN_EDITS);
+  dv.setUint32(1, edits.length, true);
+  let o = 5;
+  for (const [x, y, z, b] of edits) {
+    dv.setInt32(o, x, true);
+    dv.setUint8(o + 4, y);
+    dv.setInt32(o + 5, z, true);
+    dv.setUint8(o + 9, b);
+    o += EDIT_RECORD_BYTES;
+  }
+  return buf;
+}
+
+export function decodeEdits(buf: ArrayBuffer): [number, number, number, number][] {
+  const dv = new DataView(buf);
+  if (dv.getUint8(0) !== BIN_EDITS) return [];
+  const n = dv.getUint32(1, true);
+  const out: [number, number, number, number][] = new Array(n);
+  let o = 5;
+  for (let i = 0; i < n; i++) {
+    out[i] = [dv.getInt32(o, true), dv.getUint8(o + 4), dv.getInt32(o + 5, true), dv.getUint8(o + 9)];
+    o += EDIT_RECORD_BYTES;
+  }
+  return out;
+}
+
+export function sanitizeName(raw: unknown): string {
+  const s = typeof raw === 'string' ? raw : '';
+  const clean = s.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, MAX_NAME);
+  return clean || 'Jugador';
+}
+
+export function sanitizeColor(raw: unknown): string {
+  return typeof raw === 'string' && /^#[0-9a-fA-F]{6}$/.test(raw) ? raw.toLowerCase() : '#3a7bd5';
+}
+
+export function sanitizeRoom(raw: string): string {
+  return raw.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32) || 'mundo';
+}
+
+/** Tiempo del mundo (días) en el instante serverNow (ms). */
+export function worldTimeAt(t: WorldTime, serverNow: number): number {
+  return t.base + ((serverNow - t.at) / 1000) * t.rate;
+}
+
+export function stackToWire(s: ItemStack | null): WireStack | null {
+  if (!s || s.count <= 0) return null;
+  return s.dmg ? [s.id, s.count, s.dmg] : [s.id, s.count];
+}
+
+export function stackFromWire(w: unknown): ItemStack | null {
+  if (!Array.isArray(w) || w.length < 2) return null;
+  const s: ItemStack = { id: Number(w[0]), count: Number(w[1]) };
+  if (w.length > 2 && Number(w[2]) > 0) s.dmg = Number(w[2]);
+  return s;
+}

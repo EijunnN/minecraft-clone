@@ -1,0 +1,213 @@
+# VoxelCraft
+
+Un juego de bloques estilo Minecraft que corre en el navegador, con gráficos tipo *shader pack*,
+modo **supervivencia** completo y multijugador en tiempo real sobre Cloudflare (Workers + Durable
+Objects). Pensado para PC (teclado y ratón).
+
+- **Mundo infinito procedural**: océanos, playas, llanuras, bosques, abedulares, taiga, desiertos,
+  sabanas, montañas con picos nevados, ríos, cuevas, lagos de lava y minerales.
+- **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
+  ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
+  Minado con tiempos reales según la dureza del bloque y la herramienta (con grietas), desgaste de
+  herramientas, comida, arco y flechas, cubos de agua y lava.
+- **Inventario y fabricación**: inventario de 36 ranuras con fabricación 2×2, mesa de trabajo 3×3,
+  cofres y hornos compartidos entre jugadores. Clic, clic derecho, mayúsculas + clic, teclas 1–9 y Q
+  funcionan como en Minecraft.
+- **Criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: cerdo, vaca, oveja,
+  gallina, calamar, zombi, zombi momificado (desiertos), esqueleto, esqueleto errante (zonas
+  heladas), creeper (explota y rompe bloques), araña (neutral de día, trepa paredes) y enderman
+  (se enfada si le miras y se teletransporta). Los monstruos aparecen en la oscuridad y los no
+  muertos arden al sol.
+- **Agua y lava que fluyen** como en Minecraft: el agua avanza 7 bloques y la lava 3, caen, buscan
+  el hueco más cercano, se secan al quitar la fuente, dos fuentes de agua crean una tercera y el
+  contacto agua–lava forma obsidiana, roca o piedra. Las corrientes arrastran al jugador y la
+  superficie se inclina y fluye en los shaders.
+- **Mundo vivo**: la arena y la grava caen, las plantas y antorchas necesitan apoyo, las hojas se
+  caen al talar el árbol, los brotes crecen hasta ser árboles, la hierba se extiende y los cactus y
+  la caña crecen.
+- **Gráficos avanzados** (WebGL2, todo propio):
+  - Cielo físico con dispersión atmosférica (modelo de Hillaire): amaneceres, atardeceres, noche con
+    luna con fases y estrellas.
+  - Sombras suaves del sol y de la luna (mapa de sombras distorsionado + PCF), también de criaturas
+    y objetos.
+  - Nubes volumétricas con dispersión múltiple y sombras de nubes sobre el terreno.
+  - Rayos de luz volumétricos (*god rays*), también bajo el agua.
+  - Agua con refracción, absorción física por profundidad, reflejos en espacio de pantalla (SSR),
+    brillo del sol, espuma en la orilla, cáusticas y un océano infinito en el horizonte.
+  - Materiales PBR (normales, rugosidad, metales, emisión), dispersión subsuperficial en hojas y
+    plantas, viento en la vegetación, iluminación de antorchas y oclusión ambiental.
+  - TAA, bloom, exposición automática (adaptación de la vista), tonemapping ACES y visión nocturna.
+  - Texturas pixel art 16×16 originales generadas por código (bloques, 56 objetos y las 12
+    criaturas; sin recursos de Mojang).
+- **Multijugador**: comparte el enlace del mundo. Cada mundo es un Durable Object que ejecuta el
+  servidor de juego (20 ticks por segundo mientras haya alguien conectado) y guarda en SQLite los
+  cambios, los cofres y hornos, el estado de cada jugador y los animales.
+- **Un jugador sin conexión**: el mismo servidor de juego se ejecuta en un Web Worker y el mundo se
+  guarda en el navegador (IndexedDB). Se activa con la casilla del menú o automáticamente si no se
+  puede contactar con el servidor.
+- **Sonido procedural** (Web Audio): pasos por material, romper/colocar y golpes de minado, voces de
+  cada criatura, combate, comer, arco, explosiones, agua y lava cercanas, latido con poca vida,
+  ambiente (viento, pájaros, grillos, cuevas, orilla, bajo el agua) y música generativa.
+
+## Capturas
+
+| | |
+| --- | --- |
+| ![Bosque a mediodía](docs/screenshots/forest.png) | ![Atardecer sobre la costa](docs/screenshots/sunset.png) |
+| ![Criaturas](docs/screenshots/mobs.png) | ![Agua y lava que fluyen](docs/screenshots/fluids.png) |
+| ![Horno e inventario](docs/screenshots/furnace.png) | ![Minando con un pico](docs/screenshots/mining.png) |
+| ![Bloques PBR sobre el agua](docs/screenshots/build.png) | ![Bajo el agua](docs/screenshots/underwater.png) |
+| ![Tormenta](docs/screenshots/rain.png) | ![Noche con antorchas](docs/screenshots/torches.png) |
+
+## Controles
+
+| Tecla | Acción |
+| --- | --- |
+| WASD | Moverse |
+| Espacio | Saltar · en creativo, doble pulsación para volar |
+| Shift | Agacharse (no caes por los bordes; permite colocar bloques sobre cofres y mesas) |
+| Ctrl o doble W | Correr (en supervivencia hace falta tener algo de hambre saciada) |
+| Clic izquierdo | Romper bloque (mantener) · atacar criaturas |
+| Clic derecho | Colocar · abrir cofres, hornos y mesas · comer (mantener) · tensar el arco · usar cubos |
+| Clic central | Copiar el bloque apuntado a la mano |
+| 1–9, rueda | Elegir ranura |
+| Q · Ctrl + Q | Tirar un objeto · tirar la pila |
+| E | Inventario (en creativo, selector de bloques y objetos) |
+| T, Enter, / | Chat y comandos |
+| Tab | Lista de jugadores |
+| F1 · F3 · F5 | Ocultar HUD · información de depuración · tercera persona |
+| Esc | Pausa / ajustes |
+
+### Comandos
+
+| Comando | Qué hace |
+| --- | --- |
+| `/modo supervivencia` · `/modo creativo` | Cambia tu modo de juego |
+| `/dificultad pacifico\|facil\|normal\|dificil` | Dificultad del mundo (en pacífico no hay monstruos) |
+| `/time set dia\|mediodia\|atardecer\|noche\|medianoche\|amanecer` | Cambia la hora |
+| `/invocar <criatura>` | Hace aparecer una criatura delante (`cerdo`, `zombi`, `creeper`…) |
+| `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
+| `/matar` | Muerte instantánea (por si te quedas atascado) |
+| `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
+
+### Primeros pasos en supervivencia
+
+1. Rompe troncos con la mano y conviértelos en tablones (inventario, cuadrícula 2×2).
+2. Con 4 tablones haz una mesa de trabajo; en ella fabrica palos, un pico y una espada de madera.
+3. Consigue roca con el pico, haz herramientas de piedra y un horno (8 de roca).
+4. Funde menas de hierro con carbón para conseguir lingotes (herramientas de hierro, cubos,
+   tijeras). Los diamantes necesitan pico de hierro.
+5. Antes de la noche, fabrica antorchas (carbón + palo) y un refugio: los monstruos no aparecen en
+   lugares iluminados.
+
+Recetas incluidas: tablones, palos, mesa de trabajo, antorchas, cofre, horno, librería, ladrillos
+de piedra, arenisca, ladrillos, arcilla, las 20 herramientas (madera, piedra, hierro, oro y
+diamante × pico, hacha, pala y espada), cubo, tijeras, arco, flechas, papel, libro, bloques de
+hierro/oro/diamante (y de vuelta a lingotes), lana y lana teñida con flores o lapislázuli. En el
+horno: vidrio, piedra, lingotes, carbón vegetal, ladrillos, terracota y carne cocinada.
+
+## Desarrollo local
+
+Requisitos: Node.js 20 o superior.
+
+```bash
+npm install
+npm run dev
+```
+
+Abre `http://localhost:5173`. El servidor de desarrollo de Vite ejecuta también el Worker y el
+Durable Object (con `workerd`), así que el multijugador funciona en local: abre dos pestañas con el
+mismo mundo para probarlo.
+
+Otros comandos:
+
+```bash
+npm run typecheck   # comprobación de tipos (cliente y servidor)
+npm run build       # compila cliente + Worker en dist/
+npm run preview     # compila y sirve la versión de producción en local
+```
+
+## Desplegar en Cloudflare
+
+1. Crea una cuenta gratuita en [Cloudflare](https://dash.cloudflare.com/sign-up).
+2. Inicia sesión desde la terminal:
+
+   ```bash
+   npx wrangler login
+   ```
+
+3. Despliega:
+
+   ```bash
+   npm run deploy
+   ```
+
+   Wrangler te mostrará la URL pública (por ejemplo `https://voxelcraft.<tu-subdominio>.workers.dev`).
+   La primera vez crea el Durable Object `WorldRoom` con almacenamiento SQLite (incluido en el plan
+   gratuito). Los mundos creados con la versión anterior siguen funcionando: sus construcciones se
+   conservan.
+
+4. Comparte el enlace de invitación desde el juego (**Copiar invitación** en el menú o en la pausa).
+   Tiene la forma `https://…/?mundo=nombre-del-mundo`: todos los que entren con el mismo nombre de
+   mundo juegan juntos. El modo de juego elegido en el menú se aplica al crear un mundo nuevo; los
+   jugadores que se unen después empiezan en el modo del mundo.
+
+### Límites del plan gratuito
+
+El juego está pensado para grupos de amigos dentro del plan gratuito de Workers:
+
+- **Tiempo de servidor**: mientras haya alguien conectado, el Durable Object del mundo simula a 20
+  ticks por segundo (1–2 ms de CPU por tick con 4 jugadores y un centenar de criaturas). El plan
+  gratuito incluye 13.000 GB·s al día, unas **28 horas de mundo activo al día** (sumando todos los
+  mundos). Cuando se va el último jugador la simulación se detiene y deja de consumir.
+- **Peticiones**: los mensajes entrantes se facturan a razón de 20:1; con la posición a ~8 Hz (solo
+  cuando te mueves) y un ping cada 5 s, cada hora-jugador consume unas 1.500–2.500 de las 100.000
+  peticiones diarias.
+- **Escrituras**: el mundo se guarda cada 30 segundos (una fila por chunk modificado, por cofre y
+  por jugador) y al salir el último jugador, así que el agua que fluye o la hierba que crece no
+  agotan las 100.000 filas diarias.
+- El servidor es quien ordena las ediciones: si dos jugadores tocan el mismo bloque a la vez, todos
+  ven el mismo resultado; lo que construyas durante un corte de conexión se envía al reconectar.
+- Hasta 16 jugadores por mundo.
+
+Si el grupo es grande o juega muchas horas, el plan Workers Paid (5 USD/mes) elimina estas
+preocupaciones.
+
+### Qué no incluye (todavía)
+
+VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
+
+- 12 tipos de criatura (no las ~80 de Minecraft): sin aldeanos, lobos, caballos, brujas, slimes,
+  jefes, etc.
+- Sin redstone, camas (se reaparece en el punto de aparición del mundo), armaduras, experiencia,
+  encantamientos, pociones, cultivos, estructuras generadas, barcas ni vagonetas, ni Nether o End.
+- El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
+  bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
+- Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores
+  (unos 64 bloques), como las "distancias de simulación" de Minecraft.
+- Los objetos del suelo y los monstruos no se guardan si el servidor se reinicia sin nadie
+  conectado (los animales, los cofres y lo construido sí).
+
+## Calidad gráfica
+
+En **Ajustes** hay cuatro perfiles (Bajo, Medio, Alto, Ultra) y control individual de distancia de
+visión, escala de resolución, sombras, nubes, reflejos, luz volumétrica, TAA y bloom. El juego elige
+un perfil inicial según la GPU detectada. Si va lento en un portátil, prueba **Bajo** o reduce la
+escala de resolución.
+
+## Estructura
+
+```
+src/
+  shared/          Bloques, objetos, criaturas, recetas, contenedores, protocolo y generación del mundo
+    sim/           Servidor de juego: fluidos, criaturas (IA, A*), física, objetos, hornos, guardado
+  server/          Worker + Durable Object (WorldRoom) con almacenamiento SQLite
+  client/
+    world/         Iluminación y mallado (Web Workers), gestión de chunks
+    render/        Pipeline WebGL2 y shaders (cielo, terreno, agua, nubes, criaturas, objetos, post)
+    textures/      Texturas procedurales (bloques, objetos y criaturas)
+    audio/         Motor de sonido procedural
+    game/          Bucle de juego, jugador, supervivencia, inventario, entidades, entrada
+    net/           Cliente de red y servidor local (Web Worker + IndexedDB)
+    ui/            Menús, HUD, pantallas de inventario, fabricación, cofre y horno
+```
