@@ -668,7 +668,7 @@ export class Game {
     }
     this.refreshHotbar();
     ui.setSurvival(!this.creative && !surv.dead, surv.health, surv.food, surv.air, surv.hurtTime < 0.3);
-    renderArmorBar(this.inv.armor.reduce((n, st) => n + (st ? ITEMS[st.id]?.armor?.points ?? 0 : 0), 0), !this.creative && !surv.dead);
+    renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
     renderXpBar(this.xp, !this.creative && !surv.dead);
 
     // --- Horizonte lejano ---

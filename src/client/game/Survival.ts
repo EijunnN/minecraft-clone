@@ -89,8 +89,8 @@ export class Survival {
 
   /**
    * Aplica daño respetando la invulnerabilidad de medio segundo (en ella sólo cuenta el exceso
-   * sobre el último golpe). La armadura reduce el daño y se desgasta, salvo con las causas que la
-   * atraviesan (caídas, ahogo, vacío...) y el daño `bypass`. Devuelve el daño efectivo.
+   * sobre el último golpe; `bypass` se la salta). La armadura reduce el daño y se desgasta, salvo con
+   * las causas que la atraviesan (caídas, ahogo, vacío...). Devuelve el daño efectivo.
    */
   damage(amount: number, cause: DamageCause, bypass = false): number {
     if (this.dead || amount <= 0) return 0;
@@ -103,7 +103,9 @@ export class Survival {
       this.lastDamage = amount;
       this.invuln = 0.5;
     }
-    if (this.armor && !bypass && !ARMOR_BYPASS.has(cause)) {
+    // `bypass` sólo salta la invulnerabilidad (daño periódico); lo que atraviesa la armadura lo
+    // decide la causa (la lava y el fuego sí se reducen, como en Minecraft).
+    if (this.armor && !ARMOR_BYPASS.has(cause)) {
       const raw = dmg;
       dmg = armorReduce(raw, this.armor.armorPoints(), this.armor.armorToughness());
       this.armor.wearArmor(armorWear(raw));

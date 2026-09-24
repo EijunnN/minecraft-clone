@@ -64,7 +64,7 @@ test('armadura: Survival reduce el daño y desgasta las piezas', () => {
   assert.equal(bare.damage(6, 'skeleton'), 6);
 });
 
-test('armadura: causas que la atraviesan y daño bypass', () => {
+test('armadura: causas que la atraviesan; la lava sí se reduce', () => {
   for (const cause of ARMOR_BYPASS) {
     const inv = suited('iron');
     const s = new Survival();
@@ -72,12 +72,13 @@ test('armadura: causas que la atraviesan y daño bypass', () => {
     assert.equal(s.damage(5, cause), 5, cause);
     for (const p of inv.armor) assert.equal(p!.dmg, undefined, cause);
   }
-  // Daño que ya se salta la invulnerabilidad (lava, fuego...): tampoco se reduce ni desgasta.
+  // La lava y el fuego se saltan la invulnerabilidad (daño periódico) pero la armadura sí los reduce,
+  // como en Minecraft.
   const inv = suited('iron');
   const s = new Survival();
   s.armor = inv;
-  assert.equal(s.damage(4, 'lava', true), 4);
-  for (const p of inv.armor) assert.equal(p!.dmg, undefined);
+  assert.equal(s.damage(4, 'lava', true), armorReduce(4, inv.armorPoints(), 0));
+  for (const p of inv.armor) assert.equal(p!.dmg, armorWear(4));
 });
 
 test('armadura: desgaste y rotura', () => {
