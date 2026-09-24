@@ -27,6 +27,9 @@ import { TerrainGenerator, BIOME_NAMES } from '../../shared/world/terrain';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTypes';
 import { Interaction } from './interaction';
+import { Experience } from './experience';
+import { renderArmorBar } from '../ui/armorBar';
+import { renderXpBar } from '../ui/xpBar';
 import { Effects } from './effects';
 import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
@@ -57,6 +60,7 @@ export class Game {
   readonly life = new LifeCycle(this);
   readonly network = new ServerEvents(this);
   readonly environment = new Environment(this);
+  readonly xp = new Experience();
   cfg: GameConfig;
   renderer: Renderer;
   ui: UI;
@@ -244,6 +248,8 @@ export class Game {
     const p = this.player;
     if (save) {
       this.inv.fromWire(save.inv);
+      this.inv.armorFromWire(save.armor);
+      this.xp.total = Math.max(0, Math.floor(Number(save.xp) || 0));
       this.survival.reset();
       this.survival.health = Math.max(0, Math.min(20, save.hp));
       this.survival.food = Math.max(0, Math.min(20, save.food));
@@ -442,7 +448,7 @@ export class Game {
   sendState(force: boolean): void {
     if (!this.net || !this.playing) return;
     const p = this.player, s = this.survival;
-    const key = `${this.inv.version}|${s.version}|${Math.round(p.x)}|${Math.round(p.y)}|${Math.round(p.z)}|${this.selected}|${s.dead}`;
+    const key = `${this.inv.version}|${s.version}|${this.xp.version}|${Math.round(p.x)}|${Math.round(p.y)}|${Math.round(p.z)}|${this.selected}|${s.dead}`;
     if (!force && key === this.stateKey) return;
     this.stateKey = key;
     this.net.send({
@@ -450,6 +456,7 @@ export class Game {
       d: {
         inv: this.inv.toWire(), hp: s.health, food: s.food, sat: Math.round(s.saturation * 10) / 10, air: Math.round(s.air),
         pos: [p.x, p.y, p.z], rot: [p.yaw, p.pitch], fly: p.flying, sel: this.selected, dead: s.dead,
+        armor: this.inv.armorToWire(), xp: this.xp.total,
       },
     });
   }
@@ -459,9 +466,10 @@ export class Game {
     const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
       (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0);
     const q = (v: number, step: number) => Math.round(v / step);
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId}`;
+    const armor = this.inv.armorIds();
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${armor}`;
     if (!force && key === this.lastSentKey) return;
-    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId });
+    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, a: armor });
     this.lastSentKey = key;
   }
 
@@ -659,6 +667,8 @@ export class Game {
     }
     this.refreshHotbar();
     ui.setSurvival(!this.creative && !surv.dead, surv.health, surv.food, surv.air, surv.hurtTime < 0.3);
+    renderArmorBar(this.inv.armor.reduce((n, st) => n + (st ? ITEMS[st.id]?.armor?.points ?? 0 : 0), 0), !this.creative && !surv.dead);
+    renderXpBar(this.xp, !this.creative && !surv.dead);
 
     // --- Horizonte lejano ---
     this.environment.farTimer -= dt;

@@ -2,6 +2,7 @@
 import { ITEMS, maxStack, sameKind, isValidItem, type ItemStack } from '../../shared/items';
 import { stackToWire, stackFromWire, type WireStack } from '../../shared/protocol';
 import { cloneStack } from '../../shared/containers';
+import { ARMOR_SLOTS } from '../../shared/armor';
 
 export const INV_SIZE = 36;
 export const HOTBAR = 9;
@@ -9,6 +10,8 @@ export const HOTBAR = 9;
 export class Inventory {
   slots: (ItemStack | null)[] = new Array(INV_SIZE).fill(null);
   cursor: ItemStack | null = null;
+  /** Armadura puesta: [cabeza, pecho, piernas, pies]. */
+  armor: (ItemStack | null)[] = new Array(ARMOR_SLOTS).fill(null);
   /** Aumenta con cada cambio (para refrescar la interfaz y guardar). */
   version = 0;
 
@@ -147,6 +150,26 @@ export class Inventory {
     this.cursor = null;
     this.changed();
     return out;
+  }
+
+  /** Ids de la armadura puesta (0 = nada), para la red. */
+  armorIds(): number[] {
+    return this.armor.map((s) => s?.id ?? 0);
+  }
+
+  armorToWire(): (WireStack | null)[] {
+    return this.armor.map((s) => stackToWire(s));
+  }
+
+  armorFromWire(w: (WireStack | null)[] | undefined): void {
+    this.armor = new Array(ARMOR_SLOTS).fill(null);
+    if (Array.isArray(w)) {
+      for (let i = 0; i < Math.min(ARMOR_SLOTS, w.length); i++) {
+        const s = stackFromWire(w[i]);
+        if (s && isValidItem(s.id) && ITEMS[s.id]?.armor?.slot === i) this.armor[i] = { ...s, count: 1 };
+      }
+    }
+    this.changed();
   }
 
   toWire(): (WireStack | null)[] {

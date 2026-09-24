@@ -23,6 +23,8 @@ export const ENT_ITEM = 100;
 export const ENT_ARROW = 101;
 /** Bloque que cae (arena, grava). */
 export const ENT_FALLING = 102;
+/** Orbe de experiencia (extra: valor). */
+export const ENT_XP = 103;
 
 export interface ModelPart {
   name: string;

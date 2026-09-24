@@ -49,6 +49,8 @@ export interface PlayerInfo {
   s: number;
   /** Objeto en la mano. */
   h?: number;
+  /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
+  a?: number[];
 }
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
@@ -66,6 +68,10 @@ export interface PlayerSave {
   fly?: boolean;
   sel?: number;
   dead?: boolean;
+  /** Armadura puesta [cabeza, pecho, piernas, pies]. */
+  armor?: (WireStack | null)[];
+  /** Experiencia total acumulada. */
+  xp?: number;
 }
 
 /** Entidad nueva: [id, tipo, x, y, z, yaw, cuerpo, pitch, flags, extra...]. */
@@ -75,12 +81,14 @@ export type EntUpd = number[];
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
-  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number }
+  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; a?: number[] }
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
   /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
   | { t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number }
   /** Clic derecho sobre un bloque (abrir puertas, dormir, labrar con la azada, polvo de hueso). */
   | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number }
+  /** Al morir: soltar orbes con esta experiencia en la posición p. */
+  | { t: 'dropxp'; n: number; p: [number, number, number] }
   /** Usar el objeto de la mano sobre una criatura (dar de comer, esquilar, ordeñar). */
   | { t: 'interact'; e: number; item: number; q: number }
   /** El jugador cayó sobre tierra de cultivo y la pisoteó. */
@@ -111,7 +119,7 @@ export type ServerMsg =
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
-  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number }
+  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; a?: number[] }
   | { t: 'set'; id: string; x: number; y: number; z: number; b: number }
   | { t: 'sets'; l: number[] }
   | { t: 'chat'; id: string | null; name: string; m: string }
@@ -131,6 +139,8 @@ export type ServerMsg =
   /** Resultado de intentar dormir: p = posición en la cama, f = orientación; m = motivo si no. */
   | { t: 'sleep'; ok: boolean; p?: [number, number, number]; f?: number; m?: string }
   | { t: 'wake' }
+  /** El jugador recogió orbes de experiencia por valor de `n`. */
+  | { t: 'xp'; n: number }
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
   | { t: 'ires'; q: number; ok: boolean; take?: number; give?: ItemStack; wear?: number }
   /** Punto de reaparición del jugador (cama); null = el del mundo. */

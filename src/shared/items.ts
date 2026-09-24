@@ -1,6 +1,7 @@
 // Registro de objetos. Los objetos de bloque comparten id con su bloque (1..255 y, para las familias
 // con estados como losas o puertas, el estado base a partir de 1024); el resto va de 256 a 1023 y usa
 // un sprite 16x16 del atlas de objetos.
+import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
 import {
   BLOCKS, BLOCK_COUNT, R_NONE, WATER, LAVA, FURNACE, CHEST, OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS,
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
@@ -43,6 +44,8 @@ export interface ItemDef {
   smelt?: number;
   /** Se bebe (en cualquier momento, aunque no haya hambre): cubo de leche. */
   drink?: boolean;
+  /** Pieza de armadura. */
+  armor?: ArmorInfo;
 }
 
 export const ITEMS: ItemDef[] = [];
@@ -153,6 +156,24 @@ for (const [mat, matName, tier, speed, dur] of MATERIALS) {
 }
 ITEMS[CAKE].stack = 1;
 
+// ------------------------------------------------------------------ armaduras (fase 4)
+const ARMOR_NAMES: Record<string, [string, string]> = {
+  leather: ['de cuero', 'de cuero'], golden: ['de oro', 'de oro'], iron: ['de hierro', 'de hierro'], diamond: ['de diamante', 'de diamante'],
+};
+const PIECE_NAMES = ['Casco', 'Peto', 'Grebas', 'Botas'];
+/** ARMOR[material][pieza] → id (materiales: leather, iron, golden, diamond). */
+export const ARMOR: Record<string, Record<string, number>> = {};
+for (const mat of ARMOR_MATERIALS) {
+  ARMOR[mat] = {};
+  const st = ARMOR_STATS[mat];
+  ARMOR_PIECES.forEach((piece, slot) => {
+    ARMOR[mat][piece] = item(`${mat}_${piece}`, `${PIECE_NAMES[slot]} ${ARMOR_NAMES[mat][0]}`, {
+      stack: 1,
+      armor: { slot: slot as ArmorSlot, material: mat, points: st.points[slot], toughness: st.toughness, durability: st.durability[slot] },
+    });
+  });
+}
+
 /** Comida que acepta cada animal para criar (y que le hace seguir al jugador). */
 export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   cow: [WHEAT],
@@ -240,6 +261,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   ARROW, SHEARS, WHEAT_SEEDS, WHEAT, CARROT, POTATO, BAKED_POTATO, BEETROOT, BEETROOT_SEEDS, BONE_MEAL, EGG, SUGAR,
   MILK_BUCKET,
   ...Object.values(TOOLS).flatMap((t) => Object.values(t)),
+  ...Object.values(ARMOR).flatMap((a) => Object.values(a)),
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

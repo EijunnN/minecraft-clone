@@ -12,7 +12,7 @@ import {
 import { WORLD_LIMIT, CHUNK_SIZE } from '../constants';
 import { AIR, isValidBlockId } from '../blocks';
 import { sanitizeStack } from '../containers';
-import { isValidItem } from '../items';
+import { ITEMS, isValidItem } from '../items';
 import { sunHeightAt, rainAt } from '../weather';
 import { WorldSim } from './WorldSim';
 import { FluidSim, type FluidWorld } from './fluids';
@@ -564,7 +564,15 @@ export class GameServer {
       sel: num(raw.sel, 0, 8, 0) | 0,
       fly: !!raw.fly,
       dead: !!raw.dead,
+      xp: Math.floor(num(raw.xp, 0, 10_000_000, 0)),
     };
+    if (Array.isArray(raw.armor)) {
+      // Cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies).
+      save.armor = [0, 1, 2, 3].map((slot) => {
+        const st = sanitizeStack(stackFromWire(raw.armor![slot]));
+        return st && ITEMS[st.id]?.armor?.slot === slot ? (st.dmg ? [st.id, 1, st.dmg] : [st.id, 1]) : null;
+      });
+    }
     if (Array.isArray(raw.pos) && raw.pos.length === 3 && raw.pos.map(Number).every(Number.isFinite)) {
       save.pos = [r2(Number(raw.pos[0])), r2(Number(raw.pos[1])), r2(Number(raw.pos[2]))];
     }

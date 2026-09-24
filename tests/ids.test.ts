@@ -6,7 +6,7 @@ import {
   SLABS, STAIRS, FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, WALL_TORCH, RED_BED, FARMLAND, WHEAT_CROP,
   CARROTS, POTATOES, BEETROOTS, CAKE, CHEST, FURNACE, OAK_SAPLING, SPRUCE_SAPLING,
 } from '../src/shared/blocks';
-import { STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR } from '../src/shared/items';
+import { STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR, ARMOR } from '../src/shared/items';
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).
@@ -27,4 +27,6 @@ test('los ids de objetos guardados no cambian', () => {
   assert.deepEqual([TOOLS.wooden.pickaxe, TOOLS.diamond.sword], [292, 311]);
   // Granja (fase 4): añadidos al final.
   assert.deepEqual([WHEAT_SEEDS, SUGAR, TOOLS.wooden.hoe, TOOLS.diamond.hoe], [312, 322, 323, 327]);
+  // Armaduras (fase 4).
+  assert.deepEqual([ARMOR.leather.helmet, ARMOR.iron.helmet, ARMOR.golden.helmet, ARMOR.diamond.boots], [328, 332, 336, 343]);
 });
