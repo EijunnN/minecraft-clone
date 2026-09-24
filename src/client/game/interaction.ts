@@ -199,6 +199,11 @@ export class Interaction {
       if (pressed && hit) this.emptyBucket(hit, held.id === WATER_BUCKET ? WATER : LAVA);
       return;
     }
+    // Agua y lava como bloque (inventario creativo): se ponen igual que con un cubo, sin gastarlo.
+    if (def.block === WATER || def.block === LAVA) {
+      if (pressed && hit) this.pourFluid(hit, def.block);
+      return;
+    }
     // El nenúfar se pone sobre el agua: el rayo se detiene en la primera fuente.
     if (held.id === LILY_PAD) {
       const p = this.g.player, world = this.g.world!;
@@ -482,16 +487,22 @@ export class Interaction {
     }
   }
 
-  emptyBucket(hit: RayHit, fluid: number): void {
+  /** Pone una fuente de agua o lava en la celda que toca (cubo o bloque de fluido). */
+  private pourFluid(hit: RayHit, fluid: number): boolean {
     const world = this.g.world!;
     let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
     if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) [x, y, z] = [hit.x, hit.y, hit.z];
     const cur = world.getBlock(x, y, z);
-    if (cur < 0 || !BLOCK_REPLACEABLE[cur]) return;
+    if (cur < 0 || !BLOCK_REPLACEABLE[cur]) return false;
     world.setBlock(x, y, z, fluid);
     this.g.net?.sendSet(x, y, z, fluid);
     this.g.audio.playSplash([x + 0.5, y + 0.5, z + 0.5], 0.4);
     this.g.swing(false);
+    return true;
+  }
+
+  emptyBucket(hit: RayHit, fluid: number): void {
+    if (!this.pourFluid(hit, fluid)) return;
     if (!this.g.creative) this.g.inv.set(this.g.selected, { id: BUCKET, count: 1 });
   }
 

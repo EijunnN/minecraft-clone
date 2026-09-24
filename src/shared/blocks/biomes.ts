@@ -177,7 +177,8 @@ export const PINK_PETALS = family('pink_petals', 'Pétalos rosas', [], () => {
   return {
     render: R_MODEL, solid: false, opaque: false, lightOpacity: 0, hardness: 0, sound: 'grass', replaceable: true,
     category: 'naturaleza', walkThrough: true, flatItem: 'pink_petals',
-    model: [mbox(0, 0, 0, 16, 0.5, 16, [-1, -1, t, -1, -1, -1])],
+    // A 1/16 de la hierba (más cerca, la profundidad no los distingue de lejos y parpadean).
+    model: [mbox(0, 0, 0, 16, 1, 16, [-1, -1, t, -1, -1, -1])],
     collision: [],
     selection: [0, 0, 0, 1, 3 / 16, 1],
     support: (get) => {
