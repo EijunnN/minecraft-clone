@@ -123,6 +123,7 @@ export class Game {
       drop: (s) => this.interaction.throwStack(s, false),
       sound: (k) => (k === 'craft' ? this.audio.playCraft() : this.audio.playUi('click')),
     }, this.inv);
+    this.survival.armor = this.interaction.armor;
     this.ents.playerPos = (id) => {
       if (id === this.net?.id) return [this.player.x, this.player.y, this.player.z];
       const rp = this.remote.get(id);

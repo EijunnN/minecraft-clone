@@ -1,4 +1,5 @@
-// Inventario del jugador: 36 ranuras (0–8 barra rápida, 9–35 mochila) y la pila del cursor.
+// Inventario del jugador: 36 ranuras (0–8 barra rápida, 9–35 mochila), la pila del cursor y la
+// armadura puesta (4 ranuras).
 import { ITEMS, maxStack, sameKind, isValidItem, type ItemStack } from '../../shared/items';
 import { stackToWire, stackFromWire, type WireStack } from '../../shared/protocol';
 import { cloneStack } from '../../shared/containers';
@@ -6,6 +7,17 @@ import { ARMOR_SLOTS } from '../../shared/armor';
 
 export const INV_SIZE = 36;
 export const HOTBAR = 9;
+
+/** Ranura de armadura del objeto (−1 si no es armadura). */
+export function armorSlotOf(id: number): number {
+  return ITEMS[id]?.armor?.slot ?? -1;
+}
+
+/** Usos antes de romperse (herramientas y armaduras; 0 si no se desgasta). */
+function durabilityOf(id: number): number {
+  const def = ITEMS[id];
+  return def?.tool ? def.tool.durability : def?.armor?.durability ?? 0;
+}
 
 export class Inventory {
   slots: (ItemStack | null)[] = new Array(INV_SIZE).fill(null);
@@ -125,21 +137,24 @@ export class Inventory {
     this.changed();
   }
 
-  /** Desgasta la herramienta de una ranura. Devuelve true si se rompió. */
+  /** Desgasta la herramienta (o la pieza de armadura) de una ranura. Devuelve true si se rompió. */
   wear(i: number, amount = 1): boolean {
     const s = this.slots[i];
-    const tool = s ? ITEMS[s.id]?.tool : undefined;
-    if (!s || !tool) return false;
-    s.dmg = (s.dmg ?? 0) + amount;
-    this.changed();
-    if (s.dmg >= tool.durability) {
-      this.slots[i] = null;
-      return true;
-    }
-    return false;
+    if (!s || !this.wearStack(s, amount)) return false;
+    this.slots[i] = null;
+    return true;
   }
 
-  /** Vacía el inventario (y el cursor) y devuelve todo lo que había. */
+  /** Suma desgaste a una pila; true si llegó a su durabilidad (se rompe). */
+  private wearStack(s: ItemStack, amount: number): boolean {
+    const dur = durabilityOf(s.id);
+    if (dur <= 0) return false;
+    s.dmg = (s.dmg ?? 0) + amount;
+    this.changed();
+    return s.dmg >= dur;
+  }
+
+  /** Vacía el inventario (el cursor y la armadura) y devuelve todo lo que había. */
   takeAll(): ItemStack[] {
     const out: ItemStack[] = [];
     for (let i = 0; i < INV_SIZE; i++) {
@@ -148,8 +163,89 @@ export class Inventory {
     }
     if (this.cursor) out.push(this.cursor);
     this.cursor = null;
+    for (let k = 0; k < ARMOR_SLOTS; k++) {
+      if (this.armor[k]) out.push(this.armor[k]!);
+      this.armor[k] = null;
+    }
     this.changed();
     return out;
+  }
+
+  // ---------------------------------------------------------------- armadura
+
+  /** Puntos de armadura de lo puesto (medias corazas del HUD). */
+  armorPoints(): number {
+    let n = 0;
+    for (const s of this.armor) if (s) n += ITEMS[s.id]?.armor?.points ?? 0;
+    return n;
+  }
+
+  /** Dureza total de lo puesto. */
+  armorToughness(): number {
+    let n = 0;
+    for (const s of this.armor) if (s) n += ITEMS[s.id]?.armor?.toughness ?? 0;
+    return n;
+  }
+
+  /** Desgasta cada pieza puesta. Devuelve cuántas se rompieron (desaparecen). */
+  wearArmor(amount: number): number {
+    let broken = 0;
+    for (let k = 0; k < ARMOR_SLOTS; k++) {
+      const s = this.armor[k];
+      if (s && this.wearStack(s, amount)) {
+        this.armor[k] = null;
+        broken++;
+      }
+    }
+    return broken;
+  }
+
+  /**
+   * Pone una unidad de la pieza s en su ranura y devuelve la que había (o null). Si s no es
+   * armadura no hace nada y la devuelve tal cual.
+   */
+  equip(s: ItemStack): ItemStack | null {
+    const k = armorSlotOf(s.id);
+    if (k < 0) return s;
+    const prev = this.armor[k];
+    this.armor[k] = { ...s, count: 1 };
+    this.changed();
+    return prev;
+  }
+
+  /**
+   * Se pone la pieza de la ranura i del inventario. Con swap la que había ocupa su lugar; sin él
+   * (mayúsculas + clic) sólo si su ranura de armadura está libre. Devuelve true si se la puso.
+   */
+  equipFromSlot(i: number, swap: boolean): boolean {
+    const s = this.slots[i];
+    const k = s ? armorSlotOf(s.id) : -1;
+    if (!s || k < 0 || (!swap && this.armor[k])) return false;
+    const prev = this.equip(s);
+    s.count--;
+    if (s.count <= 0) this.slots[i] = prev;
+    else if (prev) this.add(prev);
+    this.changed();
+    return true;
+  }
+
+  /** Quita la pieza de la ranura k y la guarda en el inventario (si cabe). */
+  unequip(k: number): boolean {
+    const s = this.armor[k];
+    if (!s || this.room(s) < s.count) return false;
+    this.armor[k] = null;
+    this.add(s);
+    return true;
+  }
+
+  /** Clic en una ranura de armadura: coge la pieza, deja la del cursor o las intercambia. */
+  clickArmor(k: number): void {
+    const cur = this.cursor;
+    // Sólo acepta la pieza que corresponde (las armaduras no se apilan: el cursor lleva una).
+    if (cur && armorSlotOf(cur.id) !== k) return;
+    this.cursor = this.armor[k];
+    this.armor[k] = cur;
+    this.changed();
   }
 
   /** Ids de la armadura puesta (0 = nada), para la red. */

@@ -1,5 +1,6 @@
 // Estado de supervivencia del jugador: vida, hambre, saturación, agotamiento, aire, fuego,
-// invulnerabilidad tras un golpe, regeneración, inanición y muerte (reglas de Minecraft).
+// invulnerabilidad tras un golpe, armadura, regeneración, inanición y muerte (reglas de Minecraft).
+import { ARMOR_BYPASS, armorReduce, armorWear } from '../../shared/armor';
 
 export interface SurvivalContext {
   eyeInWater: boolean;
@@ -9,6 +10,14 @@ export interface SurvivalContext {
   inRain: boolean;
   /** 0 pacífico .. 3 difícil. */
   difficulty: number;
+}
+
+/** Armadura puesta (la implementa el inventario). */
+export interface ArmorSource {
+  armorPoints(): number;
+  armorToughness(): number;
+  /** Desgasta cada pieza puesta; devuelve cuántas se rompieron. */
+  wearArmor(amount: number): number;
 }
 
 export type DamageCause =
@@ -60,6 +69,8 @@ export class Survival {
   private lavaTimer = 0;
   /** Se ha curado o dañado (para refrescar el HUD). */
   version = 0;
+  /** Armadura que reduce el daño (sin ella, el daño llega entero). */
+  armor: ArmorSource | null = null;
 
   reset(): void {
     this.health = 20;
@@ -78,7 +89,8 @@ export class Survival {
 
   /**
    * Aplica daño respetando la invulnerabilidad de medio segundo (en ella sólo cuenta el exceso
-   * sobre el último golpe). Devuelve el daño efectivo.
+   * sobre el último golpe). La armadura reduce el daño y se desgasta, salvo con las causas que la
+   * atraviesan (caídas, ahogo, vacío...) y el daño `bypass`. Devuelve el daño efectivo.
    */
   damage(amount: number, cause: DamageCause, bypass = false): number {
     if (this.dead || amount <= 0) return 0;
@@ -90,6 +102,11 @@ export class Survival {
     } else {
       this.lastDamage = amount;
       this.invuln = 0.5;
+    }
+    if (this.armor && !bypass && !ARMOR_BYPASS.has(cause)) {
+      const raw = dmg;
+      dmg = armorReduce(raw, this.armor.armorPoints(), this.armor.armorToughness());
+      this.armor.wearArmor(armorWear(raw));
     }
     this.health = Math.max(0, this.health - dmg);
     this.hurtTime = 0;

@@ -1,5 +1,5 @@
-// Pantallas de inventario de supervivencia: inventario con fabricación 2x2, mesa de trabajo
-// (3x3), cofre y horno. Reglas de clic de Minecraft: clic izquierdo coge/deja/intercambia,
+// Pantallas de inventario de supervivencia: inventario con armadura y fabricación 2x2, mesa de
+// trabajo (3x3), cofre y horno. Reglas de clic de Minecraft: clic izquierdo coge/deja/intercambia,
 // derecho reparte o deja de uno en uno, mayúsculas mueve rápido, 1–9 intercambia con la barra
 // y Q suelta. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
@@ -9,6 +9,7 @@ import {
 } from '../../shared/containers';
 import type { ClientMsg, ServerMsg } from '../../shared/protocol';
 import type { Inventory } from '../game/Inventory';
+import { armorSilhouettes } from './armorBar';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace';
 
@@ -20,7 +21,9 @@ export interface ScreenHost {
   sound(kind: 'click' | 'craft'): void;
 }
 
-type SlotRef = { kind: 'inv'; i: number } | { kind: 'grid'; i: number } | { kind: 'out' } | { kind: 'cont'; i: number };
+type SlotRef =
+  | { kind: 'inv'; i: number } | { kind: 'grid'; i: number } | { kind: 'out' } | { kind: 'cont'; i: number }
+  | { kind: 'armor'; i: number };
 
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
@@ -165,6 +168,11 @@ export class InventoryScreen {
       top = `<h3>${kind === 'table' ? 'Mesa de trabajo' : 'Fabricación'}</h3><div class="craft">` +
         `<div class="grid g${n}">${Array.from({ length: n * n }, (_, i) => `<div class="slot2" data-s="grid:${i}"></div>`).join('')}</div>` +
         `<div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
+      // Inventario del jugador: la armadura en columna (cabeza arriba) a la izquierda.
+      if (kind === 'player') {
+        top = `<div class="armor-col">${Array.from({ length: 4 }, (_, i) => `<div class="slot2 armor-slot" data-s="armor:${i}"></div>`).join('')}</div>` +
+          `<div class="armor-craft">${top}</div>`;
+      }
     } else if (kind === 'chest') {
       top = `<h3>Cofre</h3><div class="grid g9">${Array.from({ length: 27 }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
     } else {
@@ -174,7 +182,7 @@ export class InventoryScreen {
         `<div class="arrow prog"><i></i></div><div class="slot2 big" data-s="cont:${FURNACE_OUT}"></div></div>`;
     }
     this.panel.innerHTML =
-      `<div class="inv2-top">${top}</div>` +
+      `<div class="inv2-top${kind === 'player' ? ' with-armor' : ''}">${top}</div>` +
       `<h3>Inventario</h3>` +
       `<div class="grid g9">${Array.from({ length: 27 }, (_, i) => `<div class="slot2" data-s="inv:${i + 9}"></div>`).join('')}</div>` +
       `<div class="grid g9 hotrow">${Array.from({ length: 9 }, (_, i) => `<div class="slot2" data-s="inv:${i}"></div>`).join('')}</div>` +
@@ -183,6 +191,7 @@ export class InventoryScreen {
       const key = el.dataset.s!;
       this.slotEls.set(key, el);
       el.innerHTML = '<div class="ico"></div><span class="cnt"></span><div class="dur"><i></i></div>';
+      if (key.startsWith('armor:')) el.style.setProperty('--sil', `url(${armorSilhouettes()[Number(key.slice(6))]})`);
       el.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -202,7 +211,7 @@ export class InventoryScreen {
   private parseRef(key: string): SlotRef {
     if (key === 'out') return { kind: 'out' };
     const [k, n] = key.split(':');
-    return { kind: k as 'inv' | 'grid' | 'cont', i: Number(n) };
+    return { kind: k as 'inv' | 'grid' | 'cont' | 'armor', i: Number(n) };
   }
 
   // ---------------------------------------------------------------- lectura de ranuras
@@ -217,6 +226,8 @@ export class InventoryScreen {
         return this.result();
       case 'cont':
         return this.container?.slots[r.i] ?? null;
+      case 'armor':
+        return this.inv.armor[r.i];
     }
   }
 
@@ -263,7 +274,11 @@ export class InventoryScreen {
     this.host.sound('click');
     if (r.kind === 'out') this.clickOutput(shift);
     else if (r.kind === 'cont') this.clickContainer(r.i, btn, shift);
-    else if (shift) this.quickMove(r);
+    else if (r.kind === 'armor') {
+      // Mayúsculas: devolver la pieza al inventario; si no, coger, dejar o intercambiar.
+      if (shift) this.inv.unequip(r.i);
+      else this.inv.clickArmor(r.i);
+    } else if (shift) this.quickMove(r);
     else {
       const arr = r.kind === 'inv' ? this.inv.slots : this.grid;
       const fake: ContainerState = { kind: 'chest', slots: arr, burn: 0, burnMax: 0, cook: 0 };
@@ -316,6 +331,8 @@ export class InventoryScreen {
       return;
     }
     if (r.kind !== 'inv') return;
+    // En el inventario del jugador, una pieza de armadura va a su ranura si está libre.
+    if (this.kind === 'player' && this.inv.equipFromSlot(r.i, false)) return;
     if (this.container && this.containerPos) {
       // Del inventario al contenedor (lo confirma el servidor).
       const q = this.seq++;
@@ -381,7 +398,11 @@ export class InventoryScreen {
 
   render(): void {
     if (!this.kind) return;
-    for (const [key, el] of this.slotEls) this.paint(el, this.stackAt(this.parseRef(key)));
+    for (const [key, el] of this.slotEls) {
+      const s = this.stackAt(this.parseRef(key));
+      this.paint(el, s);
+      if (key.startsWith('armor:')) el.classList.toggle('empty', !s);
+    }
     if (this.kind === 'furnace') {
       const c = this.container;
       const flame = this.panel.querySelector('.flame i') as HTMLElement | null;
@@ -402,9 +423,9 @@ export class InventoryScreen {
     const url = s ? this.host.icons.get(s.id) : undefined;
     ico.style.backgroundImage = url ? `url(${url})` : '';
     cnt.textContent = s && s.count > 1 ? String(s.count) : '';
-    const tool = s ? ITEMS[s.id]?.tool : undefined;
-    if (s && tool && s.dmg) {
-      const f = Math.max(0, 1 - s.dmg / tool.durability);
+    const max = s ? ITEMS[s.id]?.tool?.durability ?? ITEMS[s.id]?.armor?.durability : undefined;
+    if (s && max && s.dmg) {
+      const f = Math.max(0, 1 - s.dmg / max);
       dur.style.display = '';
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
@@ -434,9 +455,11 @@ export class InventoryScreen {
       return;
     }
     const tool = ITEMS[s.id]?.tool;
+    const armor = ITEMS[s.id]?.armor;
     const food = ITEMS[s.id]?.food;
     let extra = '';
     if (tool && tool.durability) extra = ` · ${tool.durability - (s.dmg ?? 0)}/${tool.durability}`;
+    else if (armor) extra = ` · +${armor.points} de armadura · ${armor.durability - (s.dmg ?? 0)}/${armor.durability}`;
     else if (food) extra = ` · +${food.hunger / 2} 🍗`;
     this.tooltip.textContent = itemName(s.id) + extra;
     this.tooltip.classList.remove('hidden');
