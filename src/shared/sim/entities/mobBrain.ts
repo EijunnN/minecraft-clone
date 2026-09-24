@@ -1,0 +1,401 @@
+// Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
+// disparos, teletransporte del enderman, paseo y movimiento con física.
+import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN } from '../../mobs';
+import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
+import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
+import { moveBody, lineOfSight } from '../physics';
+import { findPath, standable } from '../pathfind';
+import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type AI, type Entity } from './types';
+import type { Entities } from './Entities';
+
+export class MobBrain {
+  constructor(private m: Entities) {}
+
+  nearestPlayer(e: Entity, players: PlayerView[], max: number, needLos: boolean): PlayerView | null {
+    let best: PlayerView | null = null;
+    let bd = max * max;
+    for (const p of players) {
+      if (!p.alive || p.creative) continue;
+      const dx = p.x - e.x, dy = p.y - e.y, dz = p.z - e.z;
+      const d2 = dx * dx + dy * dy * 2 + dz * dz;
+      if (d2 >= bd) continue;
+      if (needLos && d2 > 36 && !lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, p.x, p.y + 1.5, p.z)) continue;
+      bd = d2;
+      best = p;
+    }
+    return best;
+  }
+
+  isSunlit(e: Entity): boolean {
+    if (this.m.host.sunHeight() < 0.05 || this.m.host.raining() > 0.3 || e.inWater) return false;
+    const top = this.m.w.skyTop(Math.floor(e.x), Math.floor(e.z));
+    return top >= -1 && e.y + e.height > top + 1;
+  }
+
+  mobTick(e: Entity, dt: number, players: PlayerView[]): void {
+    const def = MOBS[e.type];
+    const ai = e.ai!;
+    const w = this.m.w;
+    // Ambiente: sol, lava, fuego, caída, vacío.
+    if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
+    if (e.inLava) {
+      e.fire = 7;
+      e.burnAcc += dt * 8;
+    }
+    if (e.inWater) e.fire = 0;
+    if (e.fire > 0) {
+      e.fire -= dt;
+      e.burnAcc += dt;
+    }
+    if (e.burnAcc >= 1) {
+      e.burnAcc -= 1;
+      e.invuln = 0;
+      if (this.m.damage(e, 1, e.x, e.z, null, 0)) return;
+    }
+    if (e.y < -64) {
+      this.m.kill(e, false);
+      return;
+    }
+    if (def.aquatic) {
+      if (!e.inWater) {
+        ai.think -= dt;
+        if (ai.think <= 0) {
+          ai.think = 1;
+          e.invuln = 0;
+          if (this.m.damage(e, 1, e.x, e.z, null, 0)) return;
+        }
+      }
+    }
+    if (e.type === MOB_ENDERMAN && (e.inWater || (this.m.host.raining() > 0.3 && this.isSunlit({ ...e, inWater: false } as Entity)))) {
+      ai.teleportCd -= dt;
+      if (ai.teleportCd <= 0) {
+        ai.teleportCd = 1;
+        e.invuln = 0;
+        this.m.damage(e, 1, e.x, e.z, null, 0);
+        this.teleport(e);
+      }
+    }
+
+    if (!def.hostile && !def.aquatic) this.m.animals.animalTick(e, dt);
+    if (e.dead || !this.m.list.has(e.id)) return;
+    ai.attackCd -= dt;
+    ai.shootCd -= dt;
+    ai.repath -= dt;
+    ai.think -= dt;
+    if (ai.angry > 0) ai.angry -= dt;
+    if (ai.panic > 0) ai.panic -= dt;
+
+    // --- Decisión ---
+    let moveX = 0, moveZ = 0, speed = 0, jump = false;
+    let lookAt: [number, number, number] | null = null;
+    const hostileNow = def.hostile && (
+      !def.neutral || ai.angry > 0 ||
+      (e.type === MOB_SPIDER && (this.m.host.sunHeight() < 0.05 || w.skyTop(Math.floor(e.x), Math.floor(e.z)) > e.y + 2))
+    );
+    if (e.type === MOB_ENDERMAN) {
+      for (const p of players) {
+        if (p.lookingAt === e.id && p.alive && !p.creative) {
+          if (ai.angry <= 0) this.m.host.fx('enderman_scream', e.x, e.y + 2.5, e.z);
+          ai.angry = 30;
+          ai.target = p.id;
+        }
+      }
+    }
+    let target: PlayerView | null = null;
+    if (hostileNow) {
+      if (ai.target) target = players.find((p) => p.id === ai.target && p.alive && !p.creative) ?? null;
+      if (target && Math.hypot(target.x - e.x, target.z - e.z) > 40) target = null;
+      if (!target && (def.neutral ? ai.angry > 0 : true)) target = this.nearestPlayer(e, players, e.type === MOB_SPIDER ? 16 : 24, true);
+      ai.target = target ? target.id : null;
+    } else ai.target = null;
+
+    if (def.aquatic) {
+      // Calamar: impulsos aleatorios dentro del agua.
+      if (e.inWater) {
+        if (ai.think <= 0) {
+          ai.think = 2 + this.m.rand() * 3;
+          const a = this.m.rand() * TAU;
+          ai.swimDir = [Math.cos(a), (this.m.rand() - 0.5) * 0.8, Math.sin(a)];
+        }
+        e.vx += (ai.swimDir[0] * def.walk - e.vx) * dt * 1.5;
+        e.vz += (ai.swimDir[2] * def.walk - e.vz) * dt * 1.5;
+        e.vy += (ai.swimDir[1] * def.walk - e.vy) * dt * 1.5;
+        const above = w.getBlock(Math.floor(e.x), Math.floor(e.y + e.height + 0.3), Math.floor(e.z));
+        if (!(above > 0 && BLOCK_FLUID[above] === 1) && e.vy > 0) e.vy = -0.5;
+      } else {
+        e.vy -= GRAVITY * dt;
+        if (e.onGround && this.m.rand() < dt * 2) {
+          e.vy = 4;
+          e.vx = (this.m.rand() - 0.5) * 3;
+          e.vz = (this.m.rand() - 0.5) * 3;
+        }
+      }
+      if (Math.hypot(e.vx, e.vz) > 0.05) e.bodyYaw = lerpAngle(e.bodyYaw, Math.atan2(-e.vx, -e.vz), dt * 3);
+      e.yaw = e.bodyYaw;
+      moveBody(e, w, dt);
+      this.updateFlags(e, ai);
+      return;
+    }
+
+    if (target) {
+      const dx = target.x - e.x, dz = target.z - e.z;
+      const dist = Math.hypot(dx, dz);
+      const dy = target.y - e.y;
+      lookAt = [target.x, target.y + 1.6, target.z];
+      const reach = def.width / 2 + 1.1;
+      const los = dist < 20 && lineOfSight(w, e.x, e.y + e.height * 0.85, e.z, target.x, target.y + 1.5, target.z);
+      if (e.type === MOB_SKELETON || e.type === MOB_STRAY) {
+        // Mantener distancia y disparar.
+        if (dist < 6) {
+          moveX = -dx / dist;
+          moveZ = -dz / dist;
+          speed = def.walk;
+        } else if (dist > 12 || !los) {
+          [moveX, moveZ, jump] = this.followPath(e, target, dt);
+          speed = def.run;
+        } else {
+          // Rodeo lateral.
+          const side = Math.sin(e.age * 0.7 + e.id) > 0 ? 1 : -1;
+          moveX = (-dz / dist) * side;
+          moveZ = (dx / dist) * side;
+          speed = def.walk * 0.6;
+        }
+        if (los && dist < 16 && ai.shootCd <= 0) {
+          ai.shootCd = 1.6 + this.m.rand() * 1.2;
+          this.shootAt(e, target);
+        }
+      } else if (e.type === MOB_CREEPER) {
+        if (dist < 3.2 && los) {
+          ai.fuse += dt;
+          if (ai.fuse === dt) this.m.host.fx('creeper_fuse', e.x, e.y + 1, e.z);
+          speed = 0;
+          if (ai.fuse >= 1.5) {
+            this.m.remove(e.id);
+            this.m.explode(e.x, e.y + 0.5, e.z, 3);
+            return;
+          }
+        } else {
+          if (dist > 7) ai.fuse = Math.max(0, ai.fuse - dt);
+          if (ai.fuse <= 0) {
+            [moveX, moveZ, jump] = this.followPath(e, target, dt);
+            speed = def.run;
+          }
+        }
+      } else {
+        // Cuerpo a cuerpo.
+        if (dist < 2.5 && Math.abs(dy) < 1.5 && los) {
+          moveX = dx / (dist || 1);
+          moveZ = dz / (dist || 1);
+        } else [moveX, moveZ, jump] = this.followPath(e, target, dt);
+        speed = e.type === MOB_ENDERMAN ? def.run * 1.2 : def.run;
+        if (e.type === MOB_SPIDER && dist < 4 && dist > 2 && e.onGround && this.m.rand() < dt * 1.5) {
+          // Salto de ataque.
+          e.vy = 6;
+          e.vx += (dx / dist) * 4;
+          e.vz += (dz / dist) * 4;
+        }
+        if (dist < reach && Math.abs(dy) < 1.6 && ai.attackCd <= 0) {
+          ai.attackCd = 1;
+          const dmg = def.damage * this.m.difficultyScale();
+          this.m.host.hurtPlayer(target.id, dmg, (dx / (dist || 1)) * 5, 4, (dz / (dist || 1)) * 5, def.key);
+          this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
+        }
+      }
+    } else if (ai.panic > 0) {
+      const dx = e.x - ai.panicFrom[0], dz = e.z - ai.panicFrom[1];
+      const d = Math.hypot(dx, dz) || 1;
+      moveX = dx / d + Math.sin(e.age * 3) * 0.3;
+      moveZ = dz / d + Math.cos(e.age * 3) * 0.3;
+      speed = def.run;
+    } else if (!def.hostile && this.m.animals.animalGoal(e, players, dt)) {
+      // Buscar pareja o seguir a quien lleva su comida (animalGoal deja la dirección en ai.goalDir).
+      moveX = ai.goalDir[0];
+      moveZ = ai.goalDir[1];
+      speed = ai.goalDir[2];
+      jump = ai.goalDir[3] > 0;
+      if (ai.lookAt) lookAt = ai.lookAt;
+    } else {
+      // Paseo tranquilo.
+      if (ai.think <= 0) {
+        ai.think = 3 + this.m.rand() * 6;
+        if (this.m.rand() < 0.6) {
+          const a = this.m.rand() * TAU, r = 3 + this.m.rand() * 7;
+          ai.goal = [Math.floor(e.x + Math.cos(a) * r), Math.floor(e.y), Math.floor(e.z + Math.sin(a) * r)];
+        } else ai.goal = null;
+        // Mirar a los jugadores cercanos a veces.
+        const near = this.nearestPlayer(e, players.map((p) => ({ ...p, creative: false })), 8, false);
+        if (near && this.m.rand() < 0.5) ai.lookYaw = angleTo(e.x, e.z, near.x, near.z);
+        else ai.lookYaw = e.bodyYaw + (this.m.rand() - 0.5) * 1.5;
+      }
+      if (ai.goal) {
+        const dx = ai.goal[0] + 0.5 - e.x, dz = ai.goal[2] + 0.5 - e.z;
+        const d = Math.hypot(dx, dz);
+        if (d < 0.6) ai.goal = null;
+        else {
+          moveX = dx / d;
+          moveZ = dz / d;
+          speed = def.walk;
+        }
+      }
+    }
+
+    // --- Movimiento ---
+    const wantMove = speed > 0 && (moveX !== 0 || moveZ !== 0);
+    if (wantMove) {
+      const ml = Math.hypot(moveX, moveZ) || 1;
+      moveX /= ml;
+      moveZ /= ml;
+      // No caminar hacia la lava ni a caídas grandes al pasear.
+      if (!target && ai.panic <= 0) {
+        const ax = Math.floor(e.x + moveX * 0.9), az = Math.floor(e.z + moveZ * 0.9), fy = Math.floor(e.y);
+        const ahead = w.getBlock(ax, fy, az);
+        let drop = 0;
+        while (drop < 4 && !BLOCK_SOLID[Math.max(0, w.getBlock(ax, fy - 1 - drop, az))] && w.getBlock(ax, fy - 1 - drop, az) >= 0) drop++;
+        const below = w.getBlock(ax, fy - 1, az);
+        if ((ahead > 0 && BLOCK_FLUID[ahead] === 2) || (below > 0 && BLOCK_FLUID[below] === 2) || drop >= 4) {
+          moveX = moveZ = 0;
+          ai.goal = null;
+        }
+      }
+    }
+    const tvx = moveX * speed, tvz = moveZ * speed;
+    const acc = e.onGround ? 10 : e.inWater ? 4 : 2;
+    e.vx += (tvx - e.vx) * Math.min(1, dt * acc);
+    e.vz += (tvz - e.vz) * Math.min(1, dt * acc);
+    if (e.inWater || e.inLava) {
+      // Flotar (las criaturas terrestres nadan hacia arriba).
+      e.vy += (1.8 - e.vy) * Math.min(1, dt * 3);
+      if (e.hitWall) e.vy = Math.max(e.vy, 4);
+    } else {
+      e.vy -= GRAVITY * dt;
+      if (e.vy < -60) e.vy = -60;
+    }
+    if (e.onGround && (jump || (e.hitWall && wantMove && speed > 0))) {
+      if (e.type === MOB_CHICKEN || e.type === MOB_SPIDER || ai.stuck > 0.1 || jump || e.hitWall) e.vy = 8.6;
+    }
+    if (e.type === MOB_SPIDER && e.hitWall && wantMove) e.vy = Math.max(e.vy, 3.2);
+    if (e.type === MOB_CHICKEN && !e.onGround && e.vy < -2 && !e.inWater) e.vy = -2; // aleteo
+    const wasGround = e.onGround;
+    const prevVy = e.vy;
+    moveBody(e, w, dt, 0.6);
+    // Daño por caída.
+    if (!wasGround && e.onGround && !e.inWater && e.type !== MOB_CHICKEN) {
+      const fall = e.fallStart - e.y;
+      if (fall > 3.5 && prevVy < -8) this.m.damage(e, Math.floor(fall - 3), e.x, e.z, null, 0);
+      // Pisotear la tierra de cultivo al caer encima (sólo las criaturas grandes, como en Minecraft).
+      if (fall > 0.5 && this.m.rand() < fall - 0.5 && e.width * e.width * e.height > 0.512) {
+        const bx = Math.floor(e.x), by = Math.floor(e.y - 0.05), bz = Math.floor(e.z);
+        if (isFarmland(w.getBlock(bx, by, bz))) this.m.host.trample(bx, by, bz);
+      }
+    }
+    if (e.onGround || e.inWater) e.fallStart = e.y;
+    else e.fallStart = Math.max(e.fallStart, e.y);
+    // Atasco.
+    const moved = Math.hypot(e.x - ai.lastX, e.z - ai.lastZ);
+    ai.stuck = wantMove && moved < speed * dt * 0.2 ? ai.stuck + dt : 0;
+    if (ai.stuck > 2) {
+      ai.goal = null;
+      ai.path = null;
+      ai.stuck = 0;
+      ai.think = 0;
+    }
+    ai.lastX = e.x;
+    ai.lastZ = e.z;
+    // Orientación.
+    if (Math.hypot(e.vx, e.vz) > 0.3) e.bodyYaw = lerpAngle(e.bodyYaw, Math.atan2(-e.vx, -e.vz), dt * 8);
+    if (lookAt) {
+      e.yaw = lerpAngle(e.yaw, angleTo(e.x, e.z, lookAt[0], lookAt[2]), dt * 10);
+      const hd = Math.hypot(lookAt[0] - e.x, lookAt[2] - e.z);
+      e.pitch = Math.atan2(lookAt[1] - (e.y + e.height * 0.85), hd);
+    } else {
+      e.yaw = lerpAngle(e.yaw, ai.lookYaw, dt * 3);
+      e.pitch *= 1 - Math.min(1, dt * 3);
+    }
+    this.updateFlags(e, ai);
+  }
+
+  updateFlags(e: Entity, ai: AI): void {
+    let f = 0;
+    if (e.hurt < 0.4) f |= EF_HURT;
+    if (e.fire > 0) f |= EF_FIRE;
+    if (e.dead) f |= EF_DEAD;
+    if (ai.angry > 0 || (ai.target && MOBS[e.type].hostile)) f |= EF_ANGRY;
+    if (ai.fuse > 0 || (ai.target && ai.shootCd < 0.6 && (e.type === MOB_SKELETON || e.type === MOB_STRAY))) f |= EF_ACTION;
+    if ((e.growAge ?? 0) > 0) f |= EF_BABY;
+    if (e.sheared) f |= EF_SHEARED;
+    if ((e.love ?? 0) > 0) f |= EF_LOVE;
+    e.flags = f;
+  }
+
+  /** Sigue (o recalcula) el camino hacia el objetivo. Devuelve [dirX, dirZ, saltar]. */
+  followPath(e: Entity, target: PlayerView, dt: number): [number, number, boolean] {
+    const ai = e.ai!;
+    const tx = Math.floor(target.x), ty = Math.floor(target.y), tz = Math.floor(target.z);
+    const needs = !ai.path || ai.repath <= 0 || (ai.goal && Math.abs(ai.goal[0] - tx) + Math.abs(ai.goal[2] - tz) > 2);
+    if (needs) {
+      ai.repath = 1 + this.m.rand() * 0.6;
+      ai.goal = [tx, ty, tz];
+      const h = Math.ceil(e.height);
+      ai.path = findPath(this.m.w, Math.floor(e.x), Math.floor(e.y + 0.01), Math.floor(e.z), tx, ty, tz, h, 350);
+      ai.pathIdx = 0;
+    }
+    void dt;
+    const path = ai.path;
+    if (path && ai.pathIdx < path.length) {
+      let node = path[ai.pathIdx];
+      const dx = node[0] + 0.5 - e.x, dz = node[2] + 0.5 - e.z;
+      if (Math.hypot(dx, dz) < 0.4 && Math.abs(node[1] - e.y) < 1.2) {
+        ai.pathIdx++;
+        if (ai.pathIdx >= path.length) return this.direct(e, target);
+        node = path[ai.pathIdx];
+      }
+      const ndx = node[0] + 0.5 - e.x, ndz = node[2] + 0.5 - e.z;
+      const d = Math.hypot(ndx, ndz) || 1;
+      return [ndx / d, ndz / d, node[1] > Math.floor(e.y + 0.01)];
+    }
+    return this.direct(e, target);
+  }
+
+  direct(e: Entity, target: PlayerView): [number, number, boolean] {
+    const dx = target.x - e.x, dz = target.z - e.z;
+    const d = Math.hypot(dx, dz) || 1;
+    return [dx / d, dz / d, false];
+  }
+
+  shootAt(e: Entity, target: PlayerView): void {
+    const sx = e.x, sy = e.y + e.height * 0.8, sz = e.z;
+    const tx = target.x, ty = target.y + 1.2, tz = target.z;
+    const dx = tx - sx, dz = tz - sz;
+    const horiz = Math.max(1e-3, Math.hypot(dx, dz));
+    const speed = 30;
+    const t = Math.max(0.05, horiz / speed);
+    // Compensar la gravedad (20 m/s²) y añadir imprecisión según la dificultad.
+    const spread = [0.12, 0.09, 0.06, 0.03][this.m.host.difficulty()] ?? 0.06;
+    const vy = (ty - sy) / t + 0.5 * 20 * t;
+    const vx = dx / t + (this.m.rand() - 0.5) * spread * speed;
+    const vz = dz / t + (this.m.rand() - 0.5) * spread * speed;
+    this.m.spawnArrow(sx + (dx / horiz) * 0.6, sy, sz + (dz / horiz) * 0.6, vx, vy + (this.m.rand() - 0.5) * spread * speed, vz, e.id, 2);
+    this.m.host.fx('mob_shoot', sx, sy, sz, e.type);
+  }
+
+  teleport(e: Entity): void {
+    for (let i = 0; i < 16; i++) {
+      const x = Math.floor(e.x + (this.m.rand() - 0.5) * 32);
+      const z = Math.floor(e.z + (this.m.rand() - 0.5) * 32);
+      for (let y = Math.floor(e.y) + 8; y > Math.floor(e.y) - 16; y--) {
+        if (standable(this.m.w, x, y, z, 3)) {
+          const b = this.m.w.getBlock(x, y, z);
+          if (b > 0 && BLOCK_FLUID[b]) break;
+          this.m.host.fx('teleport', e.x, e.y + 1.5, e.z, e.type);
+          e.x = x + 0.5;
+          e.y = y;
+          e.z = z + 0.5;
+          e.vx = e.vy = e.vz = 0;
+          e.fallStart = e.y;
+          this.m.host.fx('teleport', e.x, e.y + 1.5, e.z, e.type);
+          return;
+        }
+      }
+    }
+  }
+}
