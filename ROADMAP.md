@@ -72,8 +72,8 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | --- | --- |
 | Vida, hambre, saturación, agotamiento, regeneración, inanición | ✅ |
 | Aire, ahogamiento, caída, lava, fuego, vacío, asfixia | ✅ |
-| Muerte, pérdida del inventario y reaparición | 🟡 (siempre en el punto de aparición del mundo) |
-| Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | ❌ |
+| Muerte, pérdida del inventario y reaparición | ✅ (en la cama o en el punto de aparición del mundo) |
+| Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (cama roja; faltan los otros colores y la de paja) |
 | Experiencia (orbes, niveles) | ❌ |
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | ❌ |
 | Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (críticos y enfriamiento) |
@@ -157,7 +157,8 @@ Minecraft tiene familias completas por material: bloque, escaleras, losa, muro, 
 trampilla, botón, placa de presión, cartel y cartel colgante (para cada madera y cada piedra), 16
 colores de lana, alfombra, cristal y paneles, terracota esmaltada, hormigón, velas y camas, además
 de faroles, cadenas, macetas, marcos, cuadros, estandartes, cabezas, cojines (26.3)… VoxelCraft
-tiene ~70 bloques cúbicos y sólo formas simples (cubo, planta en cruz, antorcha de suelo y cactus).
+tiene ~70 bloques cúbicos y, desde la fase 3, losas y escaleras (8 materiales), vallas, portillos,
+puertas, trampillas (3 maderas), escaleras de mano, paneles de cristal, antorchas en la pared y cama.
 **Las formas no cúbicas son la mayor carencia visual al construir.**
 
 ### 2.13 Multijugador, interfaz y opciones
@@ -178,12 +179,12 @@ tiene ~70 bloques cúbicos y sólo formas simples (cubo, planta en cruz, antorch
 
 Casi todo lo que falta depende de estas bases. Conviene hacerlas antes que el contenido:
 
-1. **Estados de bloque con identificadores de 16 bits.** Hoy cada bloque ocupa 1 byte (máximo 256
+1. ✅ **Estados de bloque con identificadores de 16 bits.** Hoy cada bloque ocupa 1 byte (máximo 256
    tipos) y las orientaciones son identificadores sueltos. Minecraft necesita propiedades por bloque:
    orientación, mitad superior o inferior, abierto o cerrado, edad del cultivo, potencia de redstone,
    anegado… Hay que pasar los chunks a `Uint16Array` con un registro de estados y migrar los mundos
    guardados (formato de ediciones, protocolo y mallado).
-2. **Modelos de bloque no cúbicos.** Escaleras, losas, vallas, muros, puertas, camas, paneles,
+2. ✅ **Modelos de bloque no cúbicos.** Escaleras, losas, vallas, muros, puertas, camas, paneles,
    carteles, antorchas en la pared, cofres con tapa… Necesita un sistema de modelos por estado (cajas
    con UV) en el mallado y cajas de colisión por estado en la física y el trazado de rayos.
 3. **Dimensiones.** Varios mundos por sala (normal, Nether, End), cada uno con su generador, su cielo
@@ -196,7 +197,7 @@ Casi todo lo que falta depende de estas bases. Conviene hacerlas antes que el co
    señal, con cuidado del coste de CPU del Durable Object.
 7. **Autoridad del servidor sobre inventario y vida**, si el juego se abre a desconocidos (hoy se
    confía en el navegador de cada jugador).
-8. **Pruebas dentro del repositorio** (servidor y navegador) y comprobación automática en GitHub
+8. ✅ **Pruebas dentro del repositorio** (servidor y navegador) y comprobación automática en GitHub
    Actions, para poder crecer sin romper lo que ya funciona.
 
 ## 4. Plan por fases
@@ -204,15 +205,24 @@ Casi todo lo que falta depende de estas bases. Conviene hacerlas antes que el co
 Tamaño aproximado para una persona con ayuda de IA: **S** horas · **M** 1–2 días · **L** varios días ·
 **XL** una semana o más.
 
-### Fase 3 — Base técnica (L)
+### Fase 3 — Base técnica (L) · ✅ hecha
 Estados de bloque de 16 bits con migración de mundos, modelos de bloque no cúbicos con colisión,
 pruebas en el repositorio y CI. *Desbloquea casi todo lo demás.*
 
+Hecho: ids de 16 bits (hasta 4096 estados; los mundos guardados se migran solos), familias de
+bloques con propiedades (orientación, mitad, abierto, bisagra, parte), modelos de cajas con
+selección y colisión reales, subida de escalones de 0,6, colocación compartida por cliente y
+servidor (autoritativa), `npm test` con `node:test` y GitHub Actions (tipos, pruebas y compilación).
+
 ### Fase 4 — Supervivencia completa (XL)
-Camas y punto de reaparición, armaduras (con modelo en el jugador), escudo, experiencia, efectos de
+Ya hecho: camas (dormir de noche con todos los jugadores, reaparición en la cama), puertas y puertas
+dobles, trampillas, portillos, vallas, escaleras y losas de 8 materiales, paneles de cristal,
+escaleras de mano y antorchas en la pared.
+
+Pendiente: armaduras (con modelo en el jugador), escudo, experiencia, efectos de
 estado; cultivos (azada, tierra de cultivo, trigo, zanahoria, patata, remolacha, calabaza, sandía),
-polvo de hueso y compostador; reproducción y crías, esquilar, ordeñar, huevos, pesca; puertas,
-trampillas, escaleras, losas, vallas, muros, paneles, escaleras de mano, carteles y cofres dobles;
+polvo de hueso y compostador; reproducción y crías, esquilar, ordeñar, huevos, pesca; muros,
+carteles, cofres dobles, camas de colores y puertas de hierro;
 ahumador, alto horno, fogata, cortapiedras.
 
 ### Fase 5 — Un mundo más rico (XL)

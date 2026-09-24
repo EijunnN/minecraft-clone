@@ -1,9 +1,11 @@
-// Registro de objetos. Los objetos de bloque comparten id con su bloque (1..255); el resto
-// empieza en 256 y usa un sprite 16x16 del atlas de objetos.
+// Registro de objetos. Los objetos de bloque comparten id con su bloque (1..255 y, para las familias
+// con estados como losas o puertas, el estado base a partir de 1024); el resto va de 256 a 1023 y usa
+// un sprite 16x16 del atlas de objetos.
 import {
   BLOCKS, BLOCK_COUNT, R_NONE, WATER, LAVA, FURNACE, CHEST, OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS,
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
-  OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, baseBlock,
+  OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
+  FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, baseBlock,
 } from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow';
@@ -50,6 +52,10 @@ for (let id = 1; id < BLOCK_COUNT; id++) {
   if (!b || b.render === R_NONE || b.level !== 0 || baseBlock(id) !== id) continue;
   ITEMS[id] = { id, key: b.key, name: b.name, stack: 64, block: id };
 }
+// Puertas y camas se ven como un dibujo plano (como en Minecraft); la cama no se apila.
+for (const [wood, id] of Object.entries(DOORS)) ITEMS[id].sprite = `${wood}_door`;
+ITEMS[RED_BED].sprite = 'red_bed';
+ITEMS[RED_BED].stack = 1;
 
 // ------------------------------------------------------------------ objetos
 let nextId = 256;
@@ -124,6 +130,7 @@ for (const [mat, matName, tier, speed, dur, dmg] of MATERIALS) {
 }
 
 export const ITEM_COUNT = nextId;
+if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
 // ------------------------------------------------------------------ combustibles y fundición
 const fuel = (id: number, s: number) => {
@@ -131,6 +138,13 @@ const fuel = (id: number, s: number) => {
 };
 for (const id of [OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, CHEST]) fuel(id, 15);
 for (const id of [OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING]) fuel(id, 5);
+// Bloques de madera con forma (como en Minecraft: vallas, portillos y escaleras 15 s; losas 7,5 s…).
+for (const wood of ['oak', 'birch', 'spruce']) {
+  for (const id of [FENCES[wood], FENCE_GATES[wood], STAIRS[wood], TRAPDOORS[wood]]) fuel(id, 15);
+  fuel(SLABS[wood], 7.5);
+  fuel(DOORS[wood], 10);
+}
+fuel(LADDER, 15);
 
 const smelt = (from: number, to: number) => {
   if (ITEMS[from]) ITEMS[from].smelt = to;
@@ -163,7 +177,7 @@ export function itemSpriteIndex(id: number): number {
 }
 
 export function isValidItem(id: number): boolean {
-  return Number.isInteger(id) && id > 0 && id < ITEM_COUNT && ITEMS[id] !== undefined;
+  return Number.isInteger(id) && id > 0 && id < ITEMS.length && ITEMS[id] !== undefined;
 }
 
 export function itemName(id: number): string {

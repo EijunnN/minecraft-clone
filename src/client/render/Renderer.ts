@@ -100,7 +100,7 @@ export interface FrameState {
   handUse: number;
   handUseKind: 'none' | 'bow' | 'eat';
   /** Bloque que se está minando y fase de la grieta (0..9). */
-  crack: { x: number; y: number; z: number; stage: number } | null;
+  crack: { x: number; y: number; z: number; stage: number; box?: number[] } | null;
   /** Criaturas y demás entidades (objetos, flechas, bloques que caen). */
   mobs: ClientEntity[];
   drops: ClientEntity[];
@@ -547,7 +547,10 @@ export class Renderer {
     this.terrain.draw(this.pTerrain, this.terrain.visibleOpaque, 'opaque', s.camX, s.camY, s.camZ);
     bindLighting(this.pTerrainCut.use());
     this.terrain.draw(this.pTerrainCut, this.terrain.visibleOpaque, 'cutout', s.camX, s.camY, s.camZ);
-    if (s.crack) this.items.drawCrack(s.crack.x, s.crack.y, s.crack.z, s.crack.stage, s.camX, s.camY, s.camZ, this.viewProj, bindLighting);
+    if (s.crack) {
+      const c = s.crack;
+      this.items.drawCrack(c.x, c.y, c.z, c.stage, s.camX, s.camY, s.camZ, this.viewProj, bindLighting, c.box);
+    }
     this.entities.drawPlayers(s.players, s.camX, s.camY, s.camZ, bindLighting);
     const lightOf = (x: number, y: number, z: number): [number, number] => {
       const l = s.lightAt(Math.floor(x), Math.floor(y), Math.floor(z));

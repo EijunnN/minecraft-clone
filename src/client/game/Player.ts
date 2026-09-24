@@ -1,5 +1,7 @@
-// Física del jugador: caminar, correr, agacharse (sin caer por los bordes), saltar, nadar y volar.
-import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, fluidHeight } from '../../shared/blocks';
+// Física del jugador: caminar, correr, agacharse (sin caer por los bordes), saltar, nadar, volar,
+// subir escalones bajos (losas, escaleras) y trepar por escaleras de mano.
+import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, fluidHeight } from '../../shared/blocks';
+import { moveBox, boxBlocked } from '../../shared/collide';
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
 
 export interface BlockSource {
@@ -58,26 +60,29 @@ export class Player {
   flowZ = 0;
   /** Multiplicador de velocidad (tensar el arco, comer). */
   slow = 1;
+  /** Agarrado a una escalera de mano. */
+  onLadder = false;
+  /** Chocó horizontalmente en el último movimiento. */
+  hitWall = false;
   private eyeOffset = PLAYER_EYE_HEIGHT;
 
   get eyeY(): number {
     return this.y + this.eyeOffset;
   }
 
-  private solid(x: number, y: number, z: number, world: BlockSource): boolean {
-    const b = world.getBlock(x, y, z);
-    return b < 0 || BLOCK_SOLID[b] === 1;
+  private collides(minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number, world: BlockSource): boolean {
+    return boxBlocked(world, minX, minY, minZ, maxX, maxY, maxZ);
   }
 
-  private collides(minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number, world: BlockSource): boolean {
-    const x0 = Math.floor(minX), x1 = Math.floor(maxX - EPS);
-    const y0 = Math.floor(minY), y1 = Math.floor(maxY - EPS);
-    const z0 = Math.floor(minZ), z1 = Math.floor(maxZ - EPS);
-    for (let y = y0; y <= y1; y++) {
-      if (y >= 256) continue;
+  /** ¿Toca alguna escalera de mano con el cuerpo? */
+  private checkLadder(world: BlockSource): boolean {
+    const x0 = Math.floor(this.x - HW - 0.02), x1 = Math.floor(this.x + HW + 0.02);
+    const z0 = Math.floor(this.z - HW - 0.02), z1 = Math.floor(this.z + HW + 0.02);
+    for (let y = Math.floor(this.y); y <= Math.floor(this.y + 1.2); y++) {
       for (let z = z0; z <= z1; z++) {
         for (let x = x0; x <= x1; x++) {
-          if (this.solid(x, y, z, world)) return true;
+          const b = world.getBlock(x, y, z);
+          if (b > 0 && BLOCK_CLIMB[b]) return true;
         }
       }
     }
@@ -87,38 +92,6 @@ export class Player {
   /** ¿Hay suelo bajo la caja si el jugador estuviera en (px, pz)? */
   private groundBelow(px: number, pz: number, world: BlockSource): boolean {
     return this.collides(px - HW, this.y - 0.6, pz - HW, px + HW, this.y - 0.01, pz + HW, world);
-  }
-
-  private moveAxis(axis: 0 | 1 | 2, d: number, world: BlockSource): boolean {
-    if (d === 0) return false;
-    let minX = this.x - HW, maxX = this.x + HW;
-    let minY = this.y, maxY = this.y + PLAYER_HEIGHT;
-    let minZ = this.z - HW, maxZ = this.z + HW;
-    if (axis === 0) { minX += d; maxX += d; }
-    else if (axis === 1) { minY += d; maxY += d; }
-    else { minZ += d; maxZ += d; }
-    if (!this.collides(minX, minY, minZ, maxX, maxY, maxZ, world)) {
-      if (axis === 0) this.x += d;
-      else if (axis === 1) this.y += d;
-      else this.z += d;
-      return false;
-    }
-    // Colisión: pegarse a la cara del bloque.
-    if (axis === 0) {
-      this.x = d > 0 ? Math.floor(maxX - EPS) - HW - EPS * 2 : Math.floor(minX) + 1 + HW + EPS * 2;
-      this.vx = 0;
-    } else if (axis === 1) {
-      if (d > 0) this.y = Math.floor(maxY - EPS) - PLAYER_HEIGHT - EPS * 2;
-      else {
-        this.y = Math.floor(minY) + 1 + EPS;
-        this.onGround = true;
-      }
-      this.vy = 0;
-    } else {
-      this.z = d > 0 ? Math.floor(maxZ - EPS) - HW - EPS * 2 : Math.floor(minZ) + 1 + HW + EPS * 2;
-      this.vz = 0;
-    }
-    return true;
   }
 
   /** Altura de la superficie de un fluido en la celda (1 si hay fluido encima). */
@@ -200,6 +173,7 @@ export class Player {
   update(dt: number, c: MoveControls, world: BlockSource): void {
     dt = Math.min(dt, 0.05);
     this.checkFluids(world);
+    this.onLadder = !this.flying && this.checkLadder(world);
     const wasGround = this.onGround;
     const fwd = (c.forward ? 1 : 0) - (c.back ? 1 : 0);
     const str = (c.right ? 1 : 0) - (c.left ? 1 : 0);
@@ -242,7 +216,14 @@ export class Player {
       this.vz += (wz * speed - this.vz) * k;
       this.vy -= GRAVITY * dt;
       if (this.vy < -78) this.vy = -78;
-      if (c.jump && this.onGround) {
+      if (this.onLadder) {
+        // Escalera de mano: se baja despacio, se sube saltando o empujando contra ella y
+        // agachado se queda quieto.
+        this.fallDistance = 0;
+        if (this.vy < -3) this.vy = -3;
+        if (c.jump || (this.hitWall && (c.forward || c.back || c.left || c.right))) this.vy = 2.4;
+        else if (c.sneak && this.vy < 0) this.vy = 0;
+      } else if (c.jump && this.onGround) {
         this.vy = JUMP_VELOCITY;
         this.onGround = false;
         if (this.sprinting) {
@@ -268,14 +249,23 @@ export class Player {
       if (dx !== 0 && dz !== 0 && !this.groundBelow(this.x + dx, this.z + dz, world)) { dz = 0; this.vz = 0; }
     }
     const prevVy = this.vy;
-    this.onGround = false;
-    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) / 0.4));
     const ox = this.x, oy = this.y, oz = this.z;
-    for (let i = 0; i < steps; i++) {
-      this.moveAxis(1, dy / steps, world);
-      if (this.moveAxis(0, dx / steps, world)) this.kx = 0;
-      if (this.moveAxis(2, dz / steps, world)) this.kz = 0;
+    // Colisión por cajas con subida automática de escalones de hasta 0,6 bloques.
+    const r = moveBox(world, this.x, this.y, this.z, PLAYER_WIDTH, PLAYER_HEIGHT, dx, dy, dz, this.flying ? 0 : 0.6, wasGround);
+    this.x += r.dx;
+    this.y += r.dy;
+    this.z += r.dz;
+    if (r.hitX) {
+      this.vx = 0;
+      this.kx = 0;
     }
+    if (r.hitZ) {
+      this.vz = 0;
+      this.kz = 0;
+    }
+    if (r.hitY) this.vy = 0;
+    this.onGround = r.onGround;
+    this.hitWall = r.hitX || r.hitZ;
     if (this.flying && this.onGround) this.flying = false;
     this.justLanded = this.onGround && !wasGround;
     this.landedSpeed = this.justLanded ? prevVy : 0;
@@ -294,11 +284,8 @@ export class Player {
   }
 
   private touchingWall(world: BlockSource): boolean {
-    const y = Math.floor(this.y + 0.5);
-    for (const [ox, oz] of [[HW + 0.05, 0], [-HW - 0.05, 0], [0, HW + 0.05], [0, -HW - 0.05]]) {
-      if (this.solid(Math.floor(this.x + ox), y, Math.floor(this.z + oz), world)) return true;
-    }
-    return false;
+    const y0 = this.y + 0.3, y1 = this.y + 0.9;
+    return this.collides(this.x - HW - 0.05, y0, this.z - HW - 0.05, this.x + HW + 0.05, y1, this.z + HW + 0.05, world);
   }
 
   /** ¿La caja del jugador ocupa la celda (bx, by, bz)? */

@@ -43,7 +43,7 @@ export interface ColumnInfo {
 }
 
 export interface GenResult {
-  blocks: Uint8Array;
+  blocks: Uint16Array;
   /** 4x4 muestras RGBA de color de hierba del bioma (sRGB) + temperatura en A. */
   tint: Uint8Array;
   /** Altura del bloque sólido más alto por columna (16x16, índice z*16+x). */
@@ -295,7 +295,7 @@ export class TerrainGenerator {
   }
 
   generate(cx: number, cz: number): GenResult {
-    const blocks = new Uint8Array(CHUNK_VOLUME);
+    const blocks = new Uint16Array(CHUNK_VOLUME);
     const heights = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
     const x0 = cx * CHUNK_SIZE;
     const z0 = cz * CHUNK_SIZE;

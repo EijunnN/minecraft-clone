@@ -2,7 +2,7 @@
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 4;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -12,6 +12,7 @@ export const STATE_SNEAK = 1;
 export const STATE_FLY = 2;
 export const STATE_SWIM = 4;
 export const STATE_DEAD = 8;
+export const STATE_SLEEP = 16;
 
 /** Bits de estado de las entidades. */
 export const EF_HURT = 1;
@@ -70,6 +71,11 @@ export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
   | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number }
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
+  /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
+  | { t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number }
+  /** Clic derecho sobre un bloque (abrir puertas, dormir en una cama). */
+  | { t: 'use'; x: number; y: number; z: number; yaw: number }
+  | { t: 'wake' }
   | { t: 'chat'; m: string }
   | { t: 'swing' }
   | { t: 'ping'; c: number }
@@ -90,6 +96,8 @@ export type ServerMsg =
   | {
     t: 'welcome'; id: string; seed: number; time: WorldTime; now: number; players: PlayerInfo[]; editCount: number;
     mode: GameMode; diff: number; save: PlayerSave | null; spawn: [number, number, number];
+    /** Reaparición en la cama (si tiene). */
+    bed?: [number, number, number] | null;
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
@@ -109,11 +117,16 @@ export type ServerMsg =
   | { t: 'cres'; q: number; cur?: ItemStack | null; give?: ItemStack | null }
   | { t: 'cclose' }
   | { t: 'gm'; m: GameMode }
-  | { t: 'diff'; d: number };
+  | { t: 'diff'; d: number }
+  /** Resultado de intentar dormir: p = posición en la cama, f = orientación; m = motivo si no. */
+  | { t: 'sleep'; ok: boolean; p?: [number, number, number]; f?: number; m?: string }
+  | { t: 'wake' }
+  /** Punto de reaparición del jugador (cama); null = el del mundo. */
+  | { t: 'spawn'; p: [number, number, number] | null };
 
-/** Mensaje binario de ediciones: [u8 tipo=1][u32 n] + n × ([i32 x][u8 y][i32 z][u8 b]). */
-export const BIN_EDITS = 1;
-export const EDIT_RECORD_BYTES = 10;
+/** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][u8 y][i32 z][u16 b]). */
+export const BIN_EDITS = 2;
+export const EDIT_RECORD_BYTES = 11;
 
 export function encodeEdits(edits: [number, number, number, number][]): ArrayBuffer {
   const buf = new ArrayBuffer(5 + edits.length * EDIT_RECORD_BYTES);
@@ -125,7 +138,7 @@ export function encodeEdits(edits: [number, number, number, number][]): ArrayBuf
     dv.setInt32(o, x, true);
     dv.setUint8(o + 4, y);
     dv.setInt32(o + 5, z, true);
-    dv.setUint8(o + 9, b);
+    dv.setUint16(o + 9, b, true);
     o += EDIT_RECORD_BYTES;
   }
   return buf;
@@ -138,7 +151,7 @@ export function decodeEdits(buf: ArrayBuffer): [number, number, number, number][
   const out: [number, number, number, number][] = new Array(n);
   let o = 5;
   for (let i = 0; i < n; i++) {
-    out[i] = [dv.getInt32(o, true), dv.getUint8(o + 4), dv.getInt32(o + 5, true), dv.getUint8(o + 9)];
+    out[i] = [dv.getInt32(o, true), dv.getUint8(o + 4), dv.getInt32(o + 5, true), dv.getUint16(o + 9, true)];
     o += EDIT_RECORD_BYTES;
   }
   return out;

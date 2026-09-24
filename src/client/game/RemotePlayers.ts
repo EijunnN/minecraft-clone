@@ -1,6 +1,6 @@
 // Jugadores remotos: interpolación de instantáneas y estado de animación.
 import type { PlayerInfo } from '../../shared/protocol';
-import { STATE_SNEAK } from '../../shared/protocol';
+import { STATE_SNEAK, STATE_SLEEP } from '../../shared/protocol';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 
 interface Snapshot {
@@ -96,6 +96,7 @@ export class RemotePlayer {
     v.headYaw = angleLerp(a.yaw, b.yaw, t);
     v.pitch = a.pitch + (b.pitch - a.pitch) * t;
     v.sneaking = (b.s & STATE_SNEAK) !== 0;
+    v.sleeping = (b.s & STATE_SLEEP) !== 0;
     // Animación de caminar según la velocidad horizontal.
     const mv = Math.hypot(v.x - this.lastX, v.z - this.lastZ);
     this.lastX = v.x;

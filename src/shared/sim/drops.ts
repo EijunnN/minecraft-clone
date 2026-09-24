@@ -2,7 +2,7 @@
 import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES, OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING,
-  SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, baseBlock,
+  SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
 } from '../blocks';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, type ItemStack,
@@ -17,6 +17,11 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (b.tier > 0 && !(tool && tool.kind === 'pickaxe' && tool.tier >= b.tier)) return [];
   const one = (id: number, n = 1): ItemStack[] => [{ id, count: n }];
   const rnd = (a: number, c: number) => a + Math.floor(rand() * (c - a + 1));
+  // Puertas y camas sueltan el objeto una sola vez (por la mitad de abajo / los pies).
+  if (isDoor(block)) return stateProps(block)!.half === 0 ? one(baseBlock(block)) : [];
+  if (isBed(block)) return stateProps(block)!.part === 0 ? one(baseBlock(block)) : [];
+  if (isSlab(block)) return one(baseBlock(block), stateProps(block)!.type === 2 ? 2 : 1);
+  if (block === GLASS_PANE) return [];
   switch (block) {
     case STONE:
       return one(COBBLESTONE);

@@ -25,6 +25,7 @@ import { WOOD_GENERATORS } from './genWood';
 import { PLANT_GENERATORS } from './genPlants';
 import { MISC_GENERATORS } from './genMisc';
 import { SURVIVAL_GENERATORS } from './genSurvival';
+import { BUILDING_GENERATORS } from './genBuilding';
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -44,6 +45,17 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...PLANT_GENERATORS,
   ...MISC_GENERATORS,
   ...SURVIVAL_GENERATORS,
+  ...BUILDING_GENERATORS,
+};
+
+/** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */
+const placeholder: Generator = (t) => {
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const on = ((x >> 2) + (y >> 2)) & 1;
+      t.setI(y * S + x, on ? [200, 40, 200] : [20, 20, 20]);
+    }
+  }
 };
 
 export function generateTextures(): GeneratedTextures {
@@ -54,8 +66,8 @@ export function generateTextures(): GeneratedTextures {
   const specular = new Uint8Array(count * layerBytes);
   for (let i = 0; i < count; i++) {
     const def = TEXTURE_DEFS[i];
-    const gen = Object.prototype.hasOwnProperty.call(GENERATORS, def.name) ? GENERATORS[def.name] : undefined;
-    if (!gen) throw new Error('Textura sin generador procedural: ' + def.name);
+    const gen = Object.prototype.hasOwnProperty.call(GENERATORS, def.name) ? GENERATORS[def.name] : placeholder;
+    if (gen === placeholder) console.warn('Textura sin generador procedural (se usa un marcador): ' + def.name);
     const t = new Tex(def.name);
     gen(t);
     bake(t, def, albedo, normal, specular, i * layerBytes);

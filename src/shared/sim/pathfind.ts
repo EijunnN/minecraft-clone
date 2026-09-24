@@ -1,5 +1,5 @@
 // Búsqueda de caminos A* para criaturas terrestres sobre la rejilla de bloques.
-import { BLOCK_SOLID, BLOCK_FLUID } from '../blocks';
+import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_WALKTHROUGH, BLOCK_TALL } from '../blocks';
 import type { BlockGetter } from './physics';
 import { posKey } from './posKey';
 
@@ -9,13 +9,16 @@ function passable(w: BlockGetter, x: number, y: number, z: number): boolean {
   const b = w.getBlock(x, y, z);
   if (b < 0) return false;
   if (BLOCK_FLUID[b] === 2) return false; // evitar la lava
-  return BLOCK_SOLID[b] === 0;
+  if (BLOCK_SOLID[b] === 1 && BLOCK_WALKTHROUGH[b] === 0) return false;
+  // Las vallas miden 1,5: la celda de encima tampoco se puede cruzar.
+  const below = w.getBlock(x, y - 1, z);
+  return below < 0 || BLOCK_TALL[below] === 0;
 }
 
 function floorAt(w: BlockGetter, x: number, y: number, z: number): boolean {
   const b = w.getBlock(x, y - 1, z);
   if (b < 0) return false;
-  if (BLOCK_SOLID[b] === 1) return true;
+  if (BLOCK_SOLID[b] === 1) return BLOCK_WALKTHROUGH[b] === 0 && BLOCK_TALL[b] === 0;
   // Nadando: la superficie del agua también sirve.
   return BLOCK_FLUID[b] === 1;
 }

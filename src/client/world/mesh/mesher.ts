@@ -9,8 +9,10 @@
 import {
   AIR, BEDROCK, ICE, GLASS, CACTUS, SUGAR_CANE,
   BLOCK_RENDER, BLOCK_OPAQUE, BLOCK_AO, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, BLOCK_TEX, BLOCK_FLUID, BLOCK_SOLID,
-  BLOCK_FLUID_LEVEL, R_NONE, R_CUBE, R_CUTOUT, R_CROSS, R_WATER, R_TRANSLUCENT, R_TORCH, R_CACTUS, R_LAVA, fluidHeight,
+  BLOCK_FLUID_LEVEL, R_NONE, R_CUBE, R_CUTOUT, R_CROSS, R_WATER, R_TRANSLUCENT, R_TORCH, R_CACTUS, R_LAVA, R_MODEL,
+  BLOCK_MODEL_CUTOUT, BLOCK_WALL, fluidHeight, blockModel,
 } from '../../../shared/blocks';
+import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2 } from '../../../shared/constants';
 
 const W = 48; // ancho del volumen de trabajo (3 chunks)
@@ -91,7 +93,7 @@ for (let f = 0; f < 6; f++) {
 }
 
 export class Mesher {
-  private vox = new Uint8Array(VOL);
+  private vox = new Uint16Array(VOL);
   private sky = new Uint8Array(VOL);
   private blk = new Uint8Array(VOL);
   private queue = new Int32Array(QUEUE_SIZE);
@@ -109,9 +111,9 @@ export class Mesher {
   }
 
   /**
-   * chunks: 9 columnas en orden (dz+1)*3 + (dx+1), cada una Uint8Array(65536) con índice (y<<8)|(z<<4)|x.
+   * chunks: 9 columnas en orden (dz+1)*3 + (dx+1), cada una Uint16Array(65536) con índice (y<<8)|(z<<4)|x.
    */
-  mesh(chunks: Uint8Array[], cx: number, cz: number): MeshResult {
+  mesh(chunks: Uint16Array[], cx: number, cz: number): MeshResult {
     const top = this.fillVolume(chunks);
     this.computeSkyLight(top);
     this.computeBlockLight(top);
@@ -123,7 +125,7 @@ export class Mesher {
    * (sólo las filas hasta su bloque más alto); el resto se considera aire.
    * Devuelve la fila de trabajo superior (completamente de aire).
    */
-  private fillVolume(chunks: Uint8Array[]): number {
+  private fillVolume(chunks: Uint16Array[]): number {
     const vox = this.vox;
     let maxY = 0;
     for (let c = 0; c < 9; c++) {
@@ -308,6 +310,9 @@ export class Mesher {
             case R_TORCH:
               this.emitTorch(i, id, x, y, z);
               emitted = true;
+              break;
+            case R_MODEL:
+              emitted = this.emitModel(i, id, x, y, z);
               break;
             case R_CACTUS:
               this.emitCactus(i, id, x, y, z);
@@ -541,8 +546,14 @@ export class Mesher {
     const bx = x * 16, by = y * 16, bz = z * 16;
     const buf = this.cutout;
     buf.ensure(40);
+    // Antorcha de pared: la base se acerca a la pared (5/16) y la punta se inclina hacia fuera.
+    const wall = BLOCK_WALL[id];
+    const wx = wall >= 0 ? -DIR_X[wall] : 0, wz = wall >= 0 ? -DIR_Z[wall] : 0;
     const P = (f: number, pts: number[][]) => {
-      for (const p of pts) this.pushVertex(buf, bx + p[0], by + p[1], bz + p[2], p[3], p[4], layer, f, 3, sl, bl);
+      for (const p of pts) {
+        const shift = wall >= 0 ? (p[1] <= 0 ? 6 : 2) : 0;
+        this.pushVertex(buf, bx + p[0] + wx * shift, by + p[1] + (wall >= 0 ? 3 : 0), bz + p[2] + wz * shift, p[3], p[4], layer, f, 3, sl, bl);
+      }
     };
     // +X (u = 16 - z), -X (u = z), +Z (u = x), -Z (u = 16 - x); v de 16 (abajo) a 6 (arriba)
     P(0, [[9, 0, 9, 7, 16], [9, 0, 7, 9, 16], [9, 10, 7, 9, 6], [9, 10, 9, 7, 6]]);
@@ -551,6 +562,53 @@ export class Mesher {
     P(5, [[9, 0, 7, 7, 16], [7, 0, 7, 9, 16], [7, 10, 7, 9, 6], [9, 10, 7, 7, 6]]);
     // tapa superior (llama)
     P(2, [[7, 10, 9, 7, 8], [9, 10, 9, 9, 8], [9, 10, 7, 9, 6], [7, 10, 7, 7, 6]]);
+  }
+
+  /**
+   * Bloque hecho de cajas: cada cara se dibuja salvo que esté en el borde del bloque y el vecino
+   * sea opaco. Las UV salen de la posición (como en los cubos) y la luz, de la celda a la que mira.
+   */
+  private emitModel(i: number, id: number, x: number, y: number, z: number): boolean {
+    const vox = this.vox;
+    const boxes = blockModel(id, (dx, dy, dz) => vox[i + dx + dz * SZ + dy * SY]);
+    if (!boxes || boxes.length === 0) return false;
+    const buf = BLOCK_MODEL_CUTOUT[id] ? this.cutout : this.opaque;
+    const bx = x * 16, by = y * 16, bz = z * 16;
+    let any = false;
+    for (const b of boxes) {
+      const lo = [b.x0, b.y0, b.z0], hi = [b.x1, b.y1, b.z1];
+      for (let f = 0; f < 6; f++) {
+        const layer = b.tex[f];
+        if (layer < 0) continue;
+        const onEdge = (f === 0 && b.x1 === 16) || (f === 1 && b.x0 === 0) || (f === 2 && b.y1 === 16) ||
+          (f === 3 && b.y0 === 0) || (f === 4 && b.z1 === 16) || (f === 5 && b.z0 === 0);
+        let li = i;
+        if (onEdge) {
+          const n = i + FACE_OFFSET[f];
+          if (BLOCK_OPAQUE[vox[n]]) continue;
+          li = n;
+        }
+        const sl = this.sky[li], bl = this.blk[li];
+        buf.ensure(8);
+        const corners = FACE_CORNERS[f];
+        for (let k = 0; k < 4; k++) {
+          const c = corners[k];
+          const px = c[0] ? hi[0] : lo[0], py = c[1] ? hi[1] : lo[1], pz = c[2] ? hi[2] : lo[2];
+          let u: number, v: number;
+          switch (f) {
+            case 0: u = 16 - pz; v = 16 - py; break;
+            case 1: u = pz; v = 16 - py; break;
+            case 2: u = px; v = pz; break;
+            case 3: u = px; v = 16 - pz; break;
+            case 4: u = px; v = 16 - py; break;
+            default: u = 16 - px; v = 16 - py; break;
+          }
+          this.pushVertex(buf, bx + px, by + py, bz + pz, u, v, layer, f, 3, sl, bl);
+        }
+        any = true;
+      }
+    }
+    return any;
   }
 
   private emitCactus(i: number, id: number, x: number, y: number, z: number): void {

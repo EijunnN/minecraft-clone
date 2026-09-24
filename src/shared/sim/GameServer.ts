@@ -3,7 +3,7 @@
 // los fluidos, las criaturas, los objetos, los hornos, la gravedad de arena/grava, el soporte de
 // plantas, la caída de hojas y el crecimiento de brotes; valida y difunde las ediciones.
 import {
-  PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
+  PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, STATE_SLEEP, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
   stackFromWire, type ClientMsg, type ServerMsg, type PlayerInfo, type WorldTime, type GameMode, type PlayerSave,
   type WireStack,
 } from '../protocol';
@@ -12,8 +12,10 @@ import {
   AIR, BEDROCK, SAND, GRAVEL, CACTUS, SUGAR_CANE, GRASS, DIRT, SNOWY_GRASS, OAK_LOG, BIRCH_LOG, SPRUCE_LOG,
   OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES, OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, FURNACE, FURNACE_LIT,
   BLOCKS, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, BLOCK_REPLACEABLE,
-  R_CROSS, R_TORCH, isValidBlockId, isContainer, isChest, isFurnace, blockFacing,
+  R_CROSS, R_TORCH, BLOCK_WALL, BLOCK_NEEDS_SUPPORT, isValidBlockId, isContainer, isChest, isFurnace, blockFacing,
+  blockSupported, isBed, stateProps,
 } from '../blocks';
+import { planPlacement, partnerOf, toggleEdits, isUsable, type Edit } from '../placement';
 import { ITEMS, isValidItem, maxStack, type ItemStack } from '../items';
 import { MOBS, MOB_TYPES, ENT_ITEM, ENT_FALLING } from '../mobs';
 import {
@@ -27,7 +29,7 @@ import { Entities, type Entity, type EntityHost, type PlayerView } from './entit
 import { blockDrops, leafDecayDrops } from './drops';
 import { standable } from './pathfind';
 import { posKey, keyX, keyY, keyZ } from './posKey';
-import type { ServerStore } from './store';
+import { migrateStore, type ServerStore } from './store';
 
 /** Conexión de un jugador (WebSocket del Durable Object o puerto del worker local). */
 export interface Conn {
@@ -57,11 +59,17 @@ interface Session {
   container: number | null;
   save: PlayerSave | null;
   saveDirty: boolean;
+  /** Cama en la que duerme (clave de posición) y ticks que lleva dormido. */
+  sleeping: number | null;
+  sleepTicks: number;
+  /** Cama donde reaparece (pies de la cama). */
+  bed: [number, number, number] | null;
 }
 
 interface PlayerRecord {
   mode: GameMode;
   save: PlayerSave | null;
+  bed?: [number, number, number] | null;
 }
 
 export const TICK_RATE = 20;
@@ -83,10 +91,21 @@ const SAPLINGS = new Map([[OAK_SAPLING, 0], [BIRCH_SAPLING, 1], [SPRUCE_SAPLING,
 const SOIL = new Set([GRASS, DIRT, SNOWY_GRASS]);
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
+const NEIGHBORS7 = [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 
+/** Plantas, antorchas de pie y cactus: necesitan el bloque de abajo. */
 function needsSupport(id: number): boolean {
   const r = BLOCK_RENDER[id];
-  return r === R_CROSS || r === R_TORCH || id === CACTUS;
+  return ((r === R_CROSS || r === R_TORCH) && BLOCK_WALL[id] < 0) || id === CACTUS;
+}
+
+/** Ticks durmiendo antes de que se haga de día (Minecraft: 100). */
+const SLEEP_TICKS = 100;
+
+/** ¿Se puede dormir a esta hora? (como en Minecraft: del anochecer hasta poco antes del amanecer). */
+export function canSleepAt(worldTime: number): boolean {
+  const d = worldTime - Math.floor(worldTime);
+  return d > 0.52 && d < 0.98;
 }
 
 function supportOk(id: number, below: number): boolean {
@@ -140,9 +159,15 @@ export class GameServer {
   private nextSessionId = 1;
   private collected = new Map<number, string>();
   private flushTicks: number;
+  /** Mientras se colocan varias celdas a la vez, las comprobaciones de apoyo se aplazan. */
+  private supportBatch: [number, number, number][] | null = null;
+  /** Romper sin soltar objetos (jugador en creativo). */
+  private silentDrops = false;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
+    // Mundos guardados con bloques de 1 byte: pasarlos al formato de 16 bits antes de leerlos.
+    migrateStore(store);
     this.now = opts.now ?? Date.now;
     this.local = !!opts.local;
     this.flushTicks = Math.max(1, Math.round((opts.flushSeconds ?? 30) * TICK_RATE));
@@ -310,7 +335,7 @@ export class GameServer {
       conn, id: (this.nextSessionId++).toString(36) + Math.random().toString(36).slice(2, 7), joined: false,
       joinedAt: now, lastMsg: now, name: '', shirt: '#3a7bd5', p: [0, 100, 0], r: [0, 0], s: 0, h: 0, mode: 's',
       lookAt: -1, lookUntil: 0, lastAttack: 0, tokens: 60, tokenTime: now, known: new Map(), container: null,
-      save: null, saveDirty: false,
+      save: null, saveDirty: false, sleeping: null, sleepTicks: 0, bed: null,
     });
   }
 
@@ -371,6 +396,15 @@ export class GameServer {
         break;
       case 'set':
         this.onSet(s, msg);
+        break;
+      case 'place':
+        this.onPlace(s, msg);
+        break;
+      case 'use':
+        if (this.allow(s, 1)) this.onUse(s, msg);
+        break;
+      case 'wake':
+        this.wake(s);
         break;
       case 'chat':
         this.onChat(s, msg.m);
@@ -454,6 +488,8 @@ export class GameServer {
     const rec = this.loadRecord(name);
     s.mode = rec?.mode ?? this.defaultMode;
     s.save = rec?.save ?? null;
+    const bed = rec?.bed;
+    s.bed = Array.isArray(bed) && bed.length === 3 && bed.every(Number.isInteger) ? bed : null;
     if (s.save?.pos && s.save.pos.every(Number.isFinite)) s.p = [s.save.pos[0], s.save.pos[1], s.save.pos[2]];
     s.joined = true;
     s.joinedAt = this.now();
@@ -466,7 +502,7 @@ export class GameServer {
     for (const o of this.sessions.values()) if (o.joined && o !== s) players.push(this.info(o));
     this.send(s, {
       t: 'welcome', id: s.id, seed: this.seed, time: this.time, now: this.now(), players, editCount: edits.length,
-      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawnPoint,
+      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawnPoint, bed: s.bed,
     });
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: this.info(s) }, s);
@@ -486,7 +522,7 @@ export class GameServer {
 
   private savePlayer(s: Session): void {
     if (!s.joined) return;
-    const rec: PlayerRecord = { mode: s.mode, save: s.save };
+    const rec: PlayerRecord = { mode: s.mode, save: s.save, bed: s.bed };
     this.store.savePlayer(s.name.toLowerCase(), JSON.stringify(rec));
     s.saveDirty = false;
   }
@@ -539,6 +575,7 @@ export class GameServer {
     const creative = s.mode === 'c';
     const tool = Number(msg.tool);
     this.actor = s.id;
+    this.silentDrops = creative;
     try {
       if (b === AIR) {
         if (cur === AIR) return;
@@ -556,7 +593,8 @@ export class GameServer {
         this.world.setBlock(x, y, z, AIR);
         this.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
       } else {
-        if (!BLOCK_REPLACEABLE[cur] && cur !== b) {
+        // Sólo cubos (fluidos); los bloques se colocan con 'place'.
+        if (!BLOCK_FLUID[b] || (!BLOCK_REPLACEABLE[cur] && cur !== b)) {
           this.reject(s, x, y, z);
           return;
         }
@@ -564,7 +602,156 @@ export class GameServer {
       }
     } finally {
       this.actor = null;
+      this.silentDrops = false;
     }
+  }
+
+  /** Aplica varias ediciones como una sola (las dos mitades de una puerta, una cama...). */
+  private applyEdits(edits: Edit[]): void {
+    this.supportBatch = [];
+    try {
+      for (const [x, y, z, id] of edits) this.world.setBlock(x, y, z, id);
+    } finally {
+      const batch = this.supportBatch;
+      this.supportBatch = null;
+      for (const [x, y, z] of batch) this.checkSupport(x, y, z, this.world.getBlock(x, y, z));
+    }
+  }
+
+  private onPlace(s: Session, msg: Extract<ClientMsg, { t: 'place' }>): void {
+    const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z), item = Number(msg.item), yaw = Number(msg.yaw);
+    const n = Array.isArray(msg.n) ? msg.n.map(Number) : [];
+    const p = Array.isArray(msg.p) ? msg.p.map(Number) : [];
+    if (![x, y, z, item].every(Number.isInteger) || !Number.isFinite(yaw) || n.length !== 3 || p.length !== 3) return;
+    if (!n.every((v) => v === -1 || v === 0 || v === 1) || Math.abs(n[0]) + Math.abs(n[1]) + Math.abs(n[2]) !== 1) return;
+    if (!p.every(Number.isFinite) || Math.abs(p[0] - x - 0.5) > 1 || Math.abs(p[1] - y - 0.5) > 1 || Math.abs(p[2] - z - 0.5) > 1) return;
+    if (Math.abs(x) > WORLD_LIMIT || Math.abs(z) > WORLD_LIMIT || y < 0 || y >= WORLD_HEIGHT) return;
+    // Deshacer la predicción del cliente en las celdas que pudo tocar.
+    const undo = (): void => {
+      const cells = [[0, 0, 0], [n[0], n[1], n[2]], [n[0], n[1] + 1, n[2]]];
+      for (let d = 0; d < 4; d++) cells.push([n[0] + [0, 1, 0, -1][d], n[1], n[2] + [-1, 0, 1, 0][d]]);
+      for (const [dx, dy, dz] of cells) this.reject(s, x + dx, y + dy, z + dz);
+    };
+    if (!isValidBlockId(item) || ITEMS[item]?.block !== item || BLOCK_FLUID[item] || item === BEDROCK) {
+      undo();
+      return;
+    }
+    if (!this.allow(s, 1) || s.s & STATE_DEAD || !this.reachOk(s, x, y, z, 8)) {
+      undo();
+      return;
+    }
+    this.world.ensureChunk(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE), this.now());
+    const hitId = this.world.getBlock(x, y, z);
+    if (hitId < 0) return;
+    const get = (bx: number, by: number, bz: number) => this.world.getBlock(bx, by, bz);
+    const edits = planPlacement(get, { x, y, z, nx: n[0], ny: n[1], nz: n[2], px: p[0], py: p[1], pz: p[2], id: hitId }, item, yaw);
+    if (!edits) {
+      undo();
+      return;
+    }
+    this.actor = s.id;
+    try {
+      this.applyEdits(edits);
+    } finally {
+      this.actor = null;
+    }
+  }
+
+  private onUse(s: Session, msg: Extract<ClientMsg, { t: 'use' }>): void {
+    const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z), yaw = Number(msg.yaw);
+    if (![x, y, z].every(Number.isInteger) || !Number.isFinite(yaw) || s.s & STATE_DEAD || !this.reachOk(s, x, y, z, 8)) return;
+    const id = this.world.getBlock(x, y, z);
+    if (id < 0) return;
+    if (!isUsable(id)) {
+      this.reject(s, x, y, z);
+      return;
+    }
+    if (isBed(id)) {
+      this.trySleep(s, x, y, z, id);
+      return;
+    }
+    const edits = toggleEdits((bx, by, bz) => this.world.getBlock(bx, by, bz), x, y, z, yaw);
+    if (!edits) return;
+    this.actor = s.id;
+    try {
+      this.applyEdits(edits);
+    } finally {
+      this.actor = null;
+    }
+  }
+
+  // ------------------------------------------------------------------ camas
+
+  private trySleep(s: Session, x: number, y: number, z: number, id: number): void {
+    // Siempre se duerme en los pies de la cama.
+    const st = stateProps(id)!;
+    const foot: [number, number, number] = st.part === 0 ? [x, y, z] : (partnerOf(x, y, z, id) as [number, number, number]);
+    const fail = (m: string) => this.send(s, { t: 'sleep', ok: false, m });
+    const footId = this.world.getBlock(foot[0], foot[1], foot[2]);
+    if (!isBed(footId)) return fail('La cama está rota.');
+    if (s.sleeping !== null) return;
+    // Punto de reaparición: al usar la cama, aunque no se pueda dormir (como en Minecraft).
+    const same = s.bed && s.bed[0] === foot[0] && s.bed[1] === foot[1] && s.bed[2] === foot[2];
+    if (!same) {
+      s.bed = foot;
+      this.savePlayer(s);
+      this.send(s, { t: 'spawn', p: foot });
+      this.send(s, { t: 'chat', id: null, name: '', m: 'Punto de reaparición establecido.' });
+    }
+    if (!canSleepAt(this.worldTime())) return fail('Sólo puedes dormir de noche.');
+    const key = posKey(foot[0], foot[1], foot[2]);
+    for (const o of this.sessions.values()) if (o !== s && o.sleeping === key) return fail('Esta cama está ocupada.');
+    if (s.mode !== 'c') {
+      for (const e of this.entities.list.values()) {
+        const def = MOBS[e.type];
+        if (!def || !def.hostile || e.dead) continue;
+        if (Math.abs(e.x - (foot[0] + 0.5)) <= 8 && Math.abs(e.z - (foot[2] + 0.5)) <= 8 && Math.abs(e.y - foot[1]) <= 5) {
+          return fail('No puedes descansar ahora: hay monstruos cerca.');
+        }
+      }
+    }
+    s.sleeping = key;
+    s.sleepTicks = 0;
+    s.s |= STATE_SLEEP;
+    this.send(s, { t: 'sleep', ok: true, p: [foot[0] + 0.5, foot[1] + 0.5625, foot[2] + 0.5], f: stateProps(footId)!.facing });
+    const n = this.playerCount;
+    let sleeping = 0;
+    for (const o of this.sessions.values()) if (o.joined && o.sleeping !== null) sleeping++;
+    if (n > 1) this.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} se fue a dormir (${sleeping}/${n}).` });
+  }
+
+  /** Levanta a un jugador de la cama. */
+  private wake(s: Session, notify = false): void {
+    if (s.sleeping === null) return;
+    s.sleeping = null;
+    s.sleepTicks = 0;
+    s.s &= ~STATE_SLEEP;
+    if (notify) this.send(s, { t: 'wake' });
+  }
+
+  /** Si todos los jugadores vivos duermen desde hace 5 s, se hace de día. */
+  private tickSleep(): void {
+    let any = false, all = true;
+    const night = canSleepAt(this.worldTime());
+    for (const s of this.sessions.values()) {
+      if (!s.joined || s.s & STATE_DEAD) continue;
+      if (s.sleeping === null) {
+        all = false;
+        continue;
+      }
+      if (!night || !isBed(this.world.getBlock(keyX(s.sleeping), keyY(s.sleeping), keyZ(s.sleeping)))) {
+        this.wake(s, true);
+        all = false;
+        continue;
+      }
+      any = true;
+      s.sleepTicks++;
+      if (s.sleepTicks < SLEEP_TICKS) all = false;
+    }
+    if (!any || !all) return;
+    this.setTime(Math.floor(this.worldTime()) + 1.01);
+    for (const s of this.sessions.values()) this.wake(s, true);
+    this.broadcast({ t: 'chat', id: null, name: '', m: 'Amaneció. ¡Buenos días!' });
   }
 
   // ------------------------------------------------------------------ cambios de bloques
@@ -576,12 +763,24 @@ export class GameServer {
     if (isContainer(old) && !isContainer(id)) this.destroyContainer(x, y, z);
     // Troncos quitados: las hojas sin tronco cercano se caerán.
     if (LOGS.has(old) && !LOGS.has(id)) this.scheduleLeafDecay(x, y, z);
-    // Bloques que necesitan apoyo encima.
-    const above = this.world.getBlock(x, y + 1, z);
-    if (above > 0 && needsSupport(above) && !supportOk(above, id)) this.breakWithDrops(x, y + 1, z, above);
-    // Este mismo bloque sin apoyo (por ejemplo, colocado por un fluido que arrastra).
-    if (id > 0 && needsSupport(id) && !supportOk(id, this.world.getBlock(x, y - 1, z))) this.breakWithDrops(x, y, z, id);
+    // Camas rotas: ya no sirven para reaparecer.
+    if (isBed(old) && !isBed(id)) {
+      const p = partnerOf(x, y, z, old);
+      for (const s of this.sessions.values()) {
+        if (!s.bed) continue;
+        const atFoot = s.bed[0] === x && s.bed[1] === y && s.bed[2] === z;
+        const atHead = !!p && s.bed[0] === p[0] && s.bed[1] === p[1] && s.bed[2] === p[2];
+        if (atFoot || atHead) {
+          s.bed = null;
+          this.savePlayer(s);
+          this.send(s, { t: 'spawn', p: null });
+        }
+      }
+    }
+    if (this.supportBatch) this.supportBatch.push([x, y, z]);
+    else this.checkSupport(x, y, z, id);
     // Arena y grava caen.
+    const above = this.world.getBlock(x, y + 1, z);
     if (above > 0 && isFalling(above) && fallsThrough(id)) this.startFall(x, y + 1, z, above);
     if (isFalling(id)) {
       const below = this.world.getBlock(x, y - 1, z);
@@ -589,9 +788,25 @@ export class GameServer {
     }
   }
 
+  /** Rompe lo que se quedó sin apoyo alrededor de un cambio en (x, y, z). */
+  private checkSupport(x: number, y: number, z: number, id: number): void {
+    // Plantas y antorchas de pie encima.
+    const above = this.world.getBlock(x, y + 1, z);
+    if (above > 0 && needsSupport(above) && !supportOk(above, id)) this.breakWithDrops(x, y + 1, z, above);
+    // Este mismo bloque sin apoyo (por ejemplo, colocado por un fluido que arrastra).
+    if (id > 0 && needsSupport(id) && !supportOk(id, this.world.getBlock(x, y - 1, z))) this.breakWithDrops(x, y, z, id);
+    // Antorchas de pared, escaleras de mano, puertas y camas: la celda y sus seis vecinas.
+    for (const [dx, dy, dz] of NEIGHBORS7) {
+      const nx = x + dx, ny = y + dy, nz = z + dz;
+      const n = this.world.getBlock(nx, ny, nz);
+      if (n <= 0 || !BLOCK_NEEDS_SUPPORT[n]) continue;
+      if (!blockSupported(n, (ax, ay, az) => this.world.getBlock(nx + ax, ny + ay, nz + az))) this.breakWithDrops(nx, ny, nz, n);
+    }
+  }
+
   private breakWithDrops(x: number, y: number, z: number, id: number): void {
     this.world.setBlock(x, y, z, AIR);
-    this.entities.dropStacks(blockDrops(id, 0, this.rand), x + 0.5, y + 0.3, z + 0.5);
+    if (!this.silentDrops) this.entities.dropStacks(blockDrops(id, 0, this.rand), x + 0.5, y + 0.3, z + 0.5);
   }
 
   private startFall(x: number, y: number, z: number, id: number): void {
@@ -994,6 +1209,7 @@ export class GameServer {
     this.processDecay();
     this.randomTicks();
     this.entities.tick(DT);
+    this.tickSleep();
     for (const [id, who] of this.entities.removed) if (!this.collected.has(id)) this.collected.set(id, who);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) this.tickFurnaces(DT * 4);
@@ -1089,8 +1305,8 @@ export class GameServer {
     }
   }
 
-  private loadedNearPlayers(): { cx: number; cz: number; blocks: Uint8Array }[] {
-    const out: { cx: number; cz: number; blocks: Uint8Array }[] = [];
+  private loadedNearPlayers(): { cx: number; cz: number; blocks: Uint16Array }[] {
+    const out: { cx: number; cz: number; blocks: Uint16Array }[] = [];
     const seen = new Set<string>();
     for (const s of this.sessions.values()) {
       if (!s.joined) continue;

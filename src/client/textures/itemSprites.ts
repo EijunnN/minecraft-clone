@@ -177,7 +177,104 @@ function toolSprite(material: string, kind: string): SpriteDef {
 // Sprites sueltos
 // ---------------------------------------------------------------------------
 
+
+/** Tintas de una puerta: tablas claras y normales, marco oscuro, ventanas y pomo de hierro. */
+function doorInks(light: RGB, base: RGB, dark: RGB, glass: RGB): Inks {
+  return { '1': ink(light), '2': ink(base), '3': ink(dark), w: ink(glass), k: ink([196, 196, 204], [70, 70, 76]) };
+}
+
 const SPRITES: Record<string, SpriteDef> = {
+  oak_door: {
+    rows: [
+      '................',
+      '....33333333....',
+      '....3ww33ww3....',
+      '....3ww33ww3....',
+      '....3ww33ww3....',
+      '....33333333....',
+      '....31122113....',
+      '....31222213....',
+      '....312222k3....',
+      '....31222213....',
+      '....31122113....',
+      '....33333333....',
+      '....31222213....',
+      '....31122113....',
+      '....33333333....',
+      '................',
+    ],
+    inks: doorInks([184, 148, 94], [162, 130, 78], [118, 92, 54], [96, 78, 52]),
+  },
+
+  birch_door: {
+    rows: [
+      '................',
+      '....33333333....',
+      '....3ww33ww3....',
+      '....3ww33ww3....',
+      '....3ww33ww3....',
+      '....33333333....',
+      '....31122113....',
+      '....31222213....',
+      '....312222k3....',
+      '....31222213....',
+      '....31122113....',
+      '....33333333....',
+      '....31222213....',
+      '....31122113....',
+      '....33333333....',
+      '................',
+    ],
+    inks: doorInks([222, 208, 158], [200, 182, 128], [160, 142, 94], [150, 150, 120]),
+  },
+
+  spruce_door: {
+    rows: [
+      '................',
+      '....33333333....',
+      '....3ww33ww3....',
+      '....3ww33ww3....',
+      '....3ww33ww3....',
+      '....33333333....',
+      '....31122113....',
+      '....31222213....',
+      '....312222k3....',
+      '....31222213....',
+      '....31122113....',
+      '....33333333....',
+      '....31222213....',
+      '....31122113....',
+      '....33333333....',
+      '................',
+    ],
+    inks: doorInks([134, 98, 62], [112, 80, 50], [72, 50, 30], [56, 40, 26]),
+  },
+
+  red_bed: {
+    rows: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '.pppp...........',
+      '.ppppRRRRRRRRRR.',
+      '.ppppRrrrrrrrrR.',
+      '.wwwwrrrrrrrrrr.',
+      '.ssssssssssssss.',
+      '.ssssssssssssss.',
+      '.l............l.',
+      '.l............l.',
+      '................',
+      '................',
+      '................',
+    ],
+    inks: {
+      p: ink([240, 240, 236]), R: ink([214, 60, 56]), r: ink([172, 36, 36]), w: ink([222, 222, 218]),
+      s: ink([162, 130, 78]), l: ink([118, 92, 54]),
+    },
+  },
+
   stick: {
     rows: [
       '................',
@@ -1087,11 +1184,22 @@ const SPRITES: Record<string, SpriteDef> = {
 
 const TOOL_RE = /^(wooden|stone|iron|golden|diamond)_(pickaxe|axe|shovel|sword)$/;
 
+/** Marcador para sprites que aún no tienen dibujo. */
+const PLACEHOLDER: SpriteDef = {
+  rows: Array.from({ length: S }, (_, y) =>
+    Array.from({ length: S }, (_, x) => (x < 2 || x > 13 || y < 2 || y > 13 ? '.' : ((x >> 2) + (y >> 2)) & 1 ? 'a' : 'b')).join(''),
+  ),
+  inks: { a: { c: [200, 40, 200] }, b: { c: [30, 30, 30] } },
+};
+
 function spriteDef(name: string): SpriteDef {
   const tool = TOOL_RE.exec(name);
   if (tool) return toolSprite(tool[1], tool[2]);
   const def = Object.prototype.hasOwnProperty.call(SPRITES, name) ? SPRITES[name] : undefined;
-  if (!def) throw new Error('Sprite de objeto sin dibujo: ' + name);
+  if (!def) {
+    console.warn('Sprite de objeto sin dibujo (se usa un marcador): ' + name);
+    return PLACEHOLDER;
+  }
   return def;
 }
 

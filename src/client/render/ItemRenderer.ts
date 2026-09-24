@@ -3,7 +3,10 @@
 import { mat4 } from 'gl-matrix';
 import { Program, type GL, type GLCaps } from '../engine/gl';
 import { ITEM3D_VS, ITEM3D_FS, ITEM3D_SHADOW_VS, ITEM3D_SHADOW_FS } from './shaders/items';
-import { BLOCK_RENDER, BLOCK_TEX, R_CROSS, R_TORCH, R_NONE } from '../../shared/blocks';
+import {
+  BLOCKS, BLOCK_RENDER, BLOCK_TEX, BLOCK_MODEL_CUTOUT, R_CROSS, R_TORCH, R_NONE, R_MODEL, blockItemModel,
+} from '../../shared/blocks';
+import { modelQuads } from '../../shared/blockModels';
 import { ITEMS, itemSpriteIndex } from '../../shared/items';
 import { TEXTURE_DEFS, textureLayer } from '../../shared/textureDefs';
 import type { BlockTextures } from './BlockTextures';
@@ -107,6 +110,20 @@ export class ItemRenderer {
     return out;
   }
 
+  /** Modelo de cajas (losas, escaleras, vallas…) centrado en el origen, con las UV de los cubos. */
+  private boxesData(block: number): number[] {
+    const out: number[] = [];
+    const NORMAL = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+    for (const q of modelQuads(blockItemModel(block))) {
+      const n = NORMAL[q.face];
+      for (let k = 0; k < 4; k++) {
+        out.push(q.p[k * 3] / 16 - 0.5, q.p[k * 3 + 1] / 16 - 0.5, q.p[k * 3 + 2] / 16 - 0.5, n[0], n[1], n[2],
+          q.uv[k * 2] / 16, q.uv[k * 2 + 1] / 16, q.layer);
+      }
+    }
+    return out;
+  }
+
   /** Sprite 16x16 extruido 1/16 de grosor: caras delantera y trasera más bordes por píxel. */
   private extrudeData(rgba: Uint8Array, offset: number, layer: number): number[] {
     const out: number[] = [];
@@ -144,10 +161,13 @@ export class ItemRenderer {
     if (def.block !== undefined && def.sprite === undefined) {
       const b = def.block;
       const r = BLOCK_RENDER[b];
+      const flat = BLOCKS[b]?.flatItem;
       if (r === R_NONE) return null;
-      if (r === R_CROSS || r === R_TORCH) {
-        const layer = BLOCK_TEX[b * 6];
+      if (r === R_CROSS || r === R_TORCH || flat) {
+        const layer = flat ? textureLayer(flat) : BLOCK_TEX[b * 6];
         m = this.upload(this.extrudeData(this.blocks.source.albedo, layer * 256 * 4, layer), true, true, true);
+      } else if (r === R_MODEL) {
+        m = this.upload(this.boxesData(b), true, BLOCK_MODEL_CUTOUT[b] === 1, false);
       } else {
         const layers = [0, 1, 2, 3, 4, 5].map((f) => BLOCK_TEX[b * 6 + f]);
         const cut = layers.some((l) => !!TEXTURE_DEFS[l]?.cutout);
@@ -232,13 +252,15 @@ export class ItemRenderer {
   /** Grietas sobre el bloque que se está minando (multiplican el color de la escena). */
   drawCrack(
     x: number, y: number, z: number, stage: number, camX: number, camY: number, camZ: number, viewProj: mat4,
-    bindLighting: (p: Program) => Program,
+    bindLighting: (p: Program) => Program, box: number[] = [0, 0, 0, 1, 1, 1],
   ): void {
     const gl = this.gl;
     const m = this.crackModel(Math.max(0, Math.min(9, stage)));
     const mm = mat4.create();
-    mat4.translate(mm, mm, [x + 0.5 - camX, y + 0.5 - camY, z + 0.5 - camZ]);
-    mat4.scale(mm, mm, [1.004, 1.004, 1.004]);
+    // El cubo de grietas se ajusta a la caja de selección (losas, puertas, vallas…).
+    const cx = (box[0] + box[3]) / 2, cy = (box[1] + box[4]) / 2, cz = (box[2] + box[5]) / 2;
+    mat4.translate(mm, mm, [x + cx - camX, y + cy - camY, z + cz - camZ]);
+    mat4.scale(mm, mm, [(box[3] - box[0]) + 0.004, (box[4] - box[1]) + 0.004, (box[5] - box[2]) + 0.004]);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.DST_COLOR, gl.ZERO);
     gl.depthMask(false);

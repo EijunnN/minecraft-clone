@@ -293,6 +293,14 @@ export class UI {
     el.style.opacity = '0';
   }
 
+  /** Capa de dormir: null la quita; si no, oscuridad 0..1. */
+  setSleep(dark: number | null): void {
+    const el = $('sleep-overlay');
+    el.classList.toggle('on', dark !== null);
+    el.style.opacity = dark === null ? '0' : '1';
+    el.style.background = `rgba(5, 6, 12, ${dark === null ? 0 : Math.max(0, Math.min(0.97, dark))})`;
+  }
+
   showDeath(message: string): void {
     $('death').classList.remove('hidden');
     $('death-msg').textContent = message;

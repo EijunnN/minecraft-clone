@@ -1,6 +1,7 @@
 // Iconos isométricos de bloques (Canvas 2D) a partir de las texturas generadas.
-import { BLOCKS, BLOCK_TEX, R_CROSS, R_TORCH, R_NONE } from '../../shared/blocks';
-import { TEXTURE_DEFS } from '../../shared/textureDefs';
+import { BLOCKS, BLOCK_TEX, R_CROSS, R_TORCH, R_NONE, R_MODEL, blockItemModel } from '../../shared/blocks';
+import { modelQuads } from '../../shared/blockModels';
+import { TEXTURE_DEFS, textureLayer } from '../../shared/textureDefs';
 import type { GeneratedTextures } from '../textures/generateTextures';
 
 const GRASS_TINT = [145, 189, 89];
@@ -57,8 +58,10 @@ export function buildIcons(tex: GeneratedTextures): Map<number, string> {
     cv.height = S;
     const g = cv.getContext('2d')!;
     g.imageSmoothingEnabled = false;
-    if (b.render === R_CROSS || b.render === R_TORCH) {
-      g.drawImage(L(BLOCK_TEX[b.id * 6]), 8, 8, 48, 48);
+    if (b.render === R_CROSS || b.render === R_TORCH || b.flatItem) {
+      g.drawImage(L(b.flatItem ? textureLayer(b.flatItem) : BLOCK_TEX[b.id * 6]), 8, 8, 48, 48);
+    } else if (b.render === R_MODEL) {
+      drawModelIcon(g, blockItemModel(b.id), L, tex.size);
     } else {
       const top = L(BLOCK_TEX[b.id * 6 + 2]);
       const left = L(BLOCK_TEX[b.id * 6 + 4]);
@@ -83,4 +86,51 @@ export function buildIcons(tex: GeneratedTextures): Map<number, string> {
     out.set(b.id, cv.toDataURL());
   }
   return out;
+}
+
+/** Proyección isométrica del icono (dieciseisavos → píxeles): vista desde el sureste y arriba. */
+const ISO_K = 26 / 16;
+function iso(x: number, y: number, z: number): [number, number] {
+  return [32 + (x - z) * ISO_K, 31.5 + ((x + z) / 2 - y) * ISO_K];
+}
+
+/**
+ * Icono de un bloque hecho de cajas: se pintan las caras visibles (+X, +Y, +Z) de la más lejana a la
+ * más cercana, cada una con su trozo de textura (las mismas UV que en el mundo).
+ */
+function drawModelIcon(
+  g: CanvasRenderingContext2D, boxes: ReturnType<typeof blockItemModel>, L: (i: number) => HTMLCanvasElement, size: number,
+): void {
+  const DARK = [0.4, 0, 0, 0, 0.22, 0];
+  const faces = modelQuads(boxes).filter((q) => q.face === 0 || q.face === 2 || q.face === 4);
+  const depth = (q: (typeof faces)[number]) => {
+    let d = 0;
+    for (let k = 0; k < 4; k++) d += q.p[k * 3] + q.p[k * 3 + 1] + q.p[k * 3 + 2];
+    return d;
+  };
+  faces.sort((a, b) => depth(a) - depth(b));
+  const px = size / 16;
+  for (const q of faces) {
+    // Esquinas con UV (0,1), (1,1) y (0,0) del cuadro: sirven para la transformación afín.
+    const u0 = Math.min(q.uv[0], q.uv[2], q.uv[4], q.uv[6]), u1 = Math.max(q.uv[0], q.uv[2], q.uv[4], q.uv[6]);
+    const v0 = Math.min(q.uv[1], q.uv[3], q.uv[5], q.uv[7]), v1 = Math.max(q.uv[1], q.uv[3], q.uv[5], q.uv[7]);
+    const sw = u1 - u0, sh = v1 - v0;
+    if (sw <= 0 || sh <= 0) continue;
+    const at = (u: number, v: number): [number, number] => {
+      // Punto de la cara con esas UV (interpolación bilineal de las esquinas).
+      const k = [0, 1, 2, 3].find((i) => q.uv[i * 2] === u && q.uv[i * 2 + 1] === v);
+      if (k !== undefined) return iso(q.p[k * 3], q.p[k * 3 + 1], q.p[k * 3 + 2]);
+      return [0, 0];
+    };
+    const A = at(u0, v0), B = at(u1, v0), C = at(u0, v1);
+    g.save();
+    g.setTransform((B[0] - A[0]) / (sw * px), (B[1] - A[1]) / (sw * px), (C[0] - A[0]) / (sh * px), (C[1] - A[1]) / (sh * px), A[0], A[1]);
+    g.drawImage(L(q.layer), u0 * px, v0 * px, sw * px, sh * px, 0, 0, sw * px, sh * px);
+    if (DARK[q.face] > 0) {
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = `rgba(0,0,0,${DARK[q.face]})`;
+      g.fillRect(0, 0, sw * px, sh * px);
+    }
+    g.restore();
+  }
 }

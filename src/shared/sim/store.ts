@@ -49,20 +49,44 @@ export class MemoryStore implements ServerStore {
   }
 }
 
+/** Versión del formato de las ediciones guardadas (clave `blockFormat` en meta). */
+export const BLOCK_FORMAT = '2';
+
+/** Ediciones de un chunk: n × [u16 índice][u16 bloque] (little endian). */
 export function encodeChunkEdits(m: Map<number, number>): Uint8Array {
-  const out = new Uint8Array(m.size * 3);
+  const out = new Uint8Array(m.size * 4);
   let o = 0;
   for (const [idx, b] of m) {
     out[o] = idx & 255;
     out[o + 1] = idx >> 8;
-    out[o + 2] = b;
-    o += 3;
+    out[o + 2] = b & 255;
+    out[o + 3] = b >> 8;
+    o += 4;
   }
   return out;
 }
 
 export function decodeChunkEdits(data: Uint8Array): Map<number, number> {
   const m = new Map<number, number>();
+  for (let o = 0; o + 4 <= data.length; o += 4) m.set(data[o] | (data[o + 1] << 8), data[o + 2] | (data[o + 3] << 8));
+  return m;
+}
+
+/** Formato antiguo (bloques de 1 byte): n × [u16 índice][u8 bloque]. */
+export function decodeLegacyChunkEdits(data: Uint8Array): Map<number, number> {
+  const m = new Map<number, number>();
   for (let o = 0; o + 3 <= data.length; o += 3) m.set(data[o] | (data[o + 1] << 8), data[o + 2]);
   return m;
+}
+
+/** Pasa las ediciones guardadas al formato de 16 bits (una sola vez por mundo). */
+export function migrateStore(store: ServerStore): number {
+  if (store.getMeta('blockFormat') === BLOCK_FORMAT) return 0;
+  let n = 0;
+  for (const [key, data] of store.loadAllChunkEdits()) {
+    store.saveChunkEdits(key, encodeChunkEdits(decodeLegacyChunkEdits(data)));
+    n++;
+  }
+  store.setMeta('blockFormat', BLOCK_FORMAT);
+  return n;
 }

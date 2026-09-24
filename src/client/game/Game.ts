@@ -18,17 +18,19 @@ import { Inventory, HOTBAR } from './Inventory';
 import { Survival, deathMessage } from './Survival';
 import { ClientEntities, type ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
+import { planPlacement, partnerOf, toggleEdits, isUsable } from '../../shared/placement';
 import {
   AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS,
   DEFAULT_HOTBAR, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SNOWY_GRASS, SAND,
-  OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, FURNACE_LIT, isValidBlockId, isContainer, orientedFor,
+  OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, FURNACE_LIT, isValidBlockId, isContainer,
+  BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase,
 } from '../../shared/blocks';
 import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, maxStack, isValidItem, type ItemStack } from '../../shared/items';
 import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN } from '../../shared/mobs';
 import { containerFromWire } from '../../shared/containers';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
 import {
-  STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, EF_PICKABLE, EF_FIRE, worldTimeAt, type PlayerInfo, type WorldTime,
+  STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, EF_PICKABLE, EF_FIRE, worldTimeAt, type PlayerInfo, type WorldTime,
   type ServerMsg, type GameMode, type PlayerSave,
 } from '../../shared/protocol';
 import { rainAt } from '../../shared/weather';
@@ -138,6 +140,10 @@ export class Game {
   private fluidTimer = 0;
   private shake = 0;
   private pendingOpen: [number, number, number] | null = null;
+  /** Durmiendo en una cama (t = segundos que lleva). */
+  private sleeping: { t: number } | null = null;
+  /** Cama donde reaparece (pies). */
+  private bed: [number, number, number] | null = null;
 
   constructor(cfg: GameConfig) {
     this.cfg = cfg;
@@ -218,6 +224,7 @@ export class Game {
     this.mode = w.mode;
     this.difficulty = w.diff;
     if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
+    this.bed = Array.isArray(w.bed) && w.bed.length === 3 && w.bed.every(Number.isInteger) ? w.bed : null;
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)));
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
@@ -407,7 +414,42 @@ export class Game {
       case 'diff':
         this.difficulty = msg.d;
         break;
+      case 'sleep':
+        if (msg.ok && msg.p) this.startSleeping(msg.p, Number(msg.f) || 0);
+        else if (msg.m) this.ui.toast(msg.m);
+        break;
+      case 'wake':
+        this.leaveBed(false);
+        break;
+      case 'spawn':
+        this.bed = Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isInteger) ? msg.p : null;
+        break;
     }
+  }
+
+  private startSleeping(pos: [number, number, number], facing: number): void {
+    const p = this.player;
+    [p.x, p.y, p.z] = pos;
+    // Mirando hacia la cabecera (0 N, 1 E, 2 S, 3 O).
+    p.yaw = [0, -Math.PI / 2, Math.PI, Math.PI / 2][facing & 3];
+    p.pitch = 0;
+    p.vx = p.vy = p.vz = 0;
+    p.kx = p.kz = 0;
+    p.flying = false;
+    this.mining = null;
+    this.use = null;
+    this.sleeping = { t: 0 };
+    this.ui.setSleep(0);
+    this.sendPos(true);
+  }
+
+  /** Levantarse de la cama (send: avisar al servidor). */
+  private leaveBed(send: boolean): void {
+    if (!this.sleeping) return;
+    this.sleeping = null;
+    this.ui.setSleep(null);
+    if (send) this.net?.send({ t: 'wake' });
+    this.sendPos(true);
   }
 
   private addRemote(p: PlayerInfo, announce: boolean): void {
@@ -431,7 +473,7 @@ export class Game {
     const old = world.getBlock(x, y, z);
     // El servidor reenvía también nuestras ediciones: su orden es el que vale para todos.
     world.setBlock(x, y, z, b);
-    if (BLOCK_SOLID[b] && this.player.intersectsBlock(x, y, z)) this.player.unstuck(world);
+    if (BLOCK_COLLIDE[b] === 1 && this.player.intersectsBlock(x, y, z)) this.player.unstuck(world);
     if (id === this.net?.id || old === b) return;
     this.remote.get(id)?.swing();
     const pos: [number, number, number] = [x + 0.5, y + 0.5, z + 0.5];
@@ -453,7 +495,7 @@ export class Game {
       const x = l[i], y = l[i + 1], z = l[i + 2], b = l[i + 3];
       if (!isValidBlockId(b)) continue;
       world.setBlock(x, y, z, b);
-      if (BLOCK_SOLID[b] && this.player.intersectsBlock(x, y, z)) this.player.unstuck(world);
+      if (BLOCK_COLLIDE[b] === 1 && this.player.intersectsBlock(x, y, z)) this.player.unstuck(world);
       const m = this.mining;
       if (m && m.x === x && m.y === y && m.z === z) this.mining = null;
     }
@@ -512,6 +554,7 @@ export class Game {
   // ------------------------------------------------------------------ daño, muerte y objetos
 
   private onHurt(amount: number, k: [number, number, number], cause: string): void {
+    this.leaveBed(true);
     if (this.survival.dead || (this.creative && cause !== 'kill')) return;
     const dmg = this.survival.damage(amount, cause, cause === 'kill');
     if (dmg <= 0) return;
@@ -527,6 +570,7 @@ export class Game {
   }
 
   private die(): void {
+    this.leaveBed(true);
     this.survival.dead = true;
     this.mining = null;
     this.use = null;
@@ -557,7 +601,17 @@ export class Game {
   private respawn(): void {
     this.survival.reset();
     const p = this.player;
-    [p.x, p.y, p.z] = [this.spawn[0], this.spawn[1] + 0.1, this.spawn[2]];
+    let sp: [number, number, number] = [this.spawn[0], this.spawn[1] + 0.1, this.spawn[2]];
+    if (this.bed) {
+      // En la cama si sigue ahí (si su chunk aún no está cargado, se confía en ella).
+      const b = this.world ? this.world.getBlock(this.bed[0], this.bed[1], this.bed[2]) : -1;
+      if (b < 0 || isBed(b)) sp = [this.bed[0] + 0.5, this.bed[1] + 0.5625, this.bed[2] + 0.5];
+      else {
+        this.bed = null;
+        this.ui.toast('No tenías cama o estaba obstruida');
+      }
+    }
+    [p.x, p.y, p.z] = sp;
     p.vx = p.vy = p.vz = 0;
     p.kx = p.kz = 0;
     p.fallDistance = 0;
@@ -757,7 +811,8 @@ export class Game {
 
   private sendPos(force: boolean): void {
     const p = this.player;
-    const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) | (this.survival.dead ? STATE_DEAD : 0);
+    const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
+      (this.survival.dead ? STATE_DEAD : 0) | (this.sleeping ? STATE_SLEEP : 0);
     const q = (v: number, step: number) => Math.round(v / step);
     const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId}`;
     if (!force && key === this.lastSentKey) return;
@@ -836,8 +891,15 @@ export class Game {
       p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch));
     }
 
+    // --- Cama: la pantalla se oscurece; Mayús para levantarse ---
+    if (this.sleeping) {
+      this.sleeping.t += dt;
+      ui.setSleep(Math.min(0.9, this.sleeping.t / 5));
+      if (input.locked && !ui.isChatOpen() && (input.wasPressed('ShiftLeft') || input.wasPressed('ShiftRight'))) this.leaveBed(true);
+    }
+
     // --- Movimiento ---
-    const active = input.locked && !ui.isChatOpen() && !surv.dead;
+    const active = input.locked && !ui.isChatOpen() && !surv.dead && !this.sleeping;
     if (active && this.creative && input.wasDoubleTapped('Space')) {
       p.flying = !p.flying;
       if (p.flying) p.vy = 0;
@@ -995,6 +1057,7 @@ export class Game {
     let camX = eyeX, camY = eyeY, camZ = eyeZ;
     let yaw = p.yaw, pitch = p.pitch;
     if (surv.dead) camY = p.y + 0.3;
+    else if (this.sleeping) camY = p.y + 0.2;
     if (settings.viewBobbing && this.thirdPerson === 0) {
       const ph = p.walkDistance * Math.PI * 0.62;
       camY += -Math.abs(Math.cos(ph)) * 0.06 * p.walkAmount;
@@ -1026,7 +1089,7 @@ export class Game {
       views.push({
         id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
         bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
-        swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, light: [skyAtEye, (le & 15) / 15],
+        swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.sleeping, light: [skyAtEye, (le & 15) / 15],
       });
     }
 
@@ -1071,7 +1134,11 @@ export class Game {
     }
     const m = this.mining;
     let crack: FrameState['crack'] = null;
-    if (m && m.progress > 0) crack = { x: m.x, y: m.y, z: m.z, stage: Math.min(9, Math.floor(m.progress * 10)) };
+    if (m && m.progress > 0) {
+      const h = this.hit;
+      const box = h && h.x === m.x && h.y === m.y && h.z === m.z ? h.box : undefined;
+      crack = { x: m.x, y: m.y, z: m.z, stage: Math.min(9, Math.floor(m.progress * 10)), box };
+    }
 
     this.renderer.entities.lightDir = this.renderer.sunDir[1] >= 0 ? this.renderer.sunDir : this.renderer.sunDir.map((v) => -v);
     const use = this.use;
@@ -1207,6 +1274,10 @@ export class Game {
     this.placeCooldown = 0.2;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.player.sneaking) {
+      if (isUsable(hit.id)) {
+        this.useBlock(hit);
+        return;
+      }
       if (isContainer(hit.id)) {
         this.pendingOpen = [hit.x, hit.y, hit.z];
         this.net?.send({ t: 'open', x: hit.x, y: hit.y, z: hit.z });
@@ -1237,6 +1308,19 @@ export class Game {
       return;
     }
     if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
+  }
+
+  /** Clic derecho en puertas, trampillas y portillos (se abren al momento) o en una cama. */
+  private useBlock(hit: RayHit): void {
+    const world = this.world!;
+    const yaw = this.player.yaw;
+    if (!isBed(hit.id)) {
+      const edits = toggleEdits((x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z, yaw);
+      if (edits) for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
+      this.audio.playPlace(BLOCKS[hit.id].sound, [hit.x + 0.5, hit.y + 0.5, hit.z + 0.5]);
+    }
+    this.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw });
+    this.swing(true);
   }
 
   private mineStep(dt: number, hit: RayHit, pressed: boolean): void {
@@ -1277,6 +1361,9 @@ export class Game {
     this.swing(false);
     if (id === BEDROCK || BLOCK_HARDNESS[id] < 0) return;
     world.setBlock(x, y, z, AIR);
+    // La otra mitad de una puerta o de una cama cae con ella (el servidor lo confirma).
+    const pp = partnerOf(x, y, z, id);
+    if (pp && familyBase(world.getBlock(pp[0], pp[1], pp[2])) === familyBase(id)) world.setBlock(pp[0], pp[1], pp[2], AIR);
     this.net?.sendSet(x, y, z, AIR, this.heldId);
     this.audio.playBreak(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     this.renderer.entities.spawnBreak(x, y, z, id, world.getLight(x, y + 1, z));
@@ -1369,48 +1456,55 @@ export class Game {
     if (!this.creative) this.inv.set(this.selected, { id: BUCKET, count: 1 });
   }
 
+  /** ¿Chocaría el bloque `id` en (x, y, z) con el jugador, otros jugadores o criaturas? */
+  private blockedByBodies(x: number, y: number, z: number, id: number): boolean {
+    const world = this.world!;
+    const boxes = BLOCK_COLLIDE[id] === 1 ? [0, 0, 0, 1, 1, 1] : blockCollisionBoxes(id, x, y, z, world, []);
+    const hits = (cx: number, cy: number, cz: number, hw: number, h: number) => {
+      for (let i = 0; i + 5 < boxes.length; i += 6) {
+        if (cx + hw > x + boxes[i] && cx - hw < x + boxes[i + 3] && cy + h > y + boxes[i + 1] && cy < y + boxes[i + 4] &&
+          cz + hw > z + boxes[i + 2] && cz - hw < z + boxes[i + 5]) return true;
+      }
+      return false;
+    };
+    const p = this.player;
+    if (hits(p.x, p.y, p.z, 0.3, 1.8)) return true;
+    for (const rp of this.remote.values()) if (hits(rp.view.x, rp.view.y, rp.view.z, 0.3, 1.8)) return true;
+    for (const e of this.ents.list.values()) {
+      const def = MOBS[e.type];
+      if (def && e.deathT < 0 && hits(e.x, e.y, e.z, def.width / 2, def.height)) return true;
+    }
+    return false;
+  }
+
   private placeBlock(hit: RayHit, base: number): void {
     const world = this.world!;
-    // Colocar en la celda vecina (o sustituir hierba/flores sustituibles).
-    let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
-    if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) {
-      x = hit.x;
-      y = hit.y;
-      z = hit.z;
-    }
-    if (y < 1 || y > 255) return;
-    const cur = world.getBlock(x, y, z);
-    if (cur < 0 || !BLOCK_REPLACEABLE[cur]) return;
-    const id = orientedFor(base, this.player.yaw);
-    if (BLOCK_SOLID[id]) {
-      if (this.player.intersectsBlock(x, y, z)) return;
-      for (const rp of this.remote.values()) {
-        const v = rp.view;
-        if (v.x + 0.3 > x && v.x - 0.3 < x + 1 && v.y + 1.8 > y && v.y < y + 1 && v.z + 0.3 > z && v.z - 0.3 < z + 1) return;
-      }
-      for (const e of this.ents.list.values()) {
-        const def = MOBS[e.type];
-        if (!def || e.deathT >= 0) continue;
-        const hw = def.width / 2;
-        if (e.x + hw > x && e.x - hw < x + 1 && e.y + def.height > y && e.y < y + 1 && e.z + hw > z && e.z - hw < z + 1) return;
+    const get = (x: number, y: number, z: number) => world.getBlock(x, y, z);
+    const edits = planPlacement(get, hit, base, this.player.yaw);
+    if (!edits) return;
+    for (const [x, y, z, id] of edits) {
+      if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return;
+      // Plantas, antorchas de pie, cactus y caña necesitan apoyo.
+      const r = BLOCK_RENDER[id];
+      if (r === R_CROSS || (r === R_TORCH && BLOCK_WALL[id] < 0) || id === CACTUS || id === SUGAR_CANE) {
+        const under = world.getBlock(x, y - 1, z);
+        if (SAPLINGS.has(id)) {
+          if (!SOIL.has(under)) return;
+        } else if (id === CACTUS) {
+          if (under !== CACTUS && under !== SAND) return;
+        } else {
+          const okSame = id === SUGAR_CANE && under === id;
+          if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return;
+        }
       }
     }
-    // Plantas, antorchas, cactus y caña necesitan apoyo.
-    const r = BLOCK_RENDER[id];
-    if (r === R_CROSS || r === R_TORCH || id === CACTUS || id === SUGAR_CANE) {
-      const under = world.getBlock(x, y - 1, z);
-      if (SAPLINGS.has(id)) {
-        if (!SOIL.has(under)) return;
-      } else if (id === CACTUS) {
-        if (under !== CACTUS && under !== SAND) return;
-      } else {
-        const okSame = id === SUGAR_CANE && under === id;
-        if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return;
-      }
-    }
-    world.setBlock(x, y, z, id);
-    this.net?.sendSet(x, y, z, id);
+    for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
+    this.net?.send({
+      t: 'place', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], p: [hit.px, hit.py, hit.pz], item: base,
+      yaw: this.player.yaw,
+    });
     this.swing(false);
+    const [x, y, z, id] = edits[0];
     this.audio.playPlace(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     if (!this.creative) this.inv.consume(this.selected, 1);
   }

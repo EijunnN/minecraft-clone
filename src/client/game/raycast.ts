@@ -1,6 +1,9 @@
 // Trazado de rayos por la rejilla de vóxeles (DDA de Amanatides & Woo) con formas reales
-// para plantas, antorchas y cactus.
-import { BLOCK_RENDER, BLOCK_FLUID_LEVEL, R_CROSS, R_TORCH, R_CACTUS, R_WATER, R_LAVA, AIR } from '../../shared/blocks';
+// para plantas, antorchas, cactus y bloques hechos de cajas (losas, escaleras, vallas, puertas…).
+import {
+  BLOCK_RENDER, BLOCK_FLUID_LEVEL, R_CUBE, R_CUTOUT, R_TRANSLUCENT, R_WATER, R_LAVA, AIR, blockSelectionBoxes,
+} from '../../shared/blocks';
+import { unionBox } from '../../shared/blockModels';
 
 export interface RayHit {
   x: number;
@@ -12,30 +15,24 @@ export interface RayHit {
   nz: number;
   id: number;
   dist: number;
-  /** Caja de selección local [minX, minY, minZ, maxX, maxY, maxZ]. */
+  /** Punto golpeado (coordenadas del mundo). */
+  px: number;
+  py: number;
+  pz: number;
+  /** Caja de selección local [minX, minY, minZ, maxX, maxY, maxZ] (envolvente). */
   box: number[];
 }
 
 const FULL = [0, 0, 0, 1, 1, 1];
-const CROSS_BOX = [0.12, 0, 0.12, 0.88, 0.85, 0.88];
-const TORCH_BOX = [0.4, 0, 0.4, 0.6, 0.65, 0.6];
-const CACTUS_BOX = [1 / 16, 0, 1 / 16, 15 / 16, 1, 15 / 16];
-
-export function selectionBox(id: number): number[] {
-  const r = BLOCK_RENDER[id];
-  if (r === R_CROSS) return CROSS_BOX;
-  if (r === R_TORCH) return TORCH_BOX;
-  if (r === R_CACTUS) return CACTUS_BOX;
-  return FULL;
-}
 
 /** Intersección rayo-caja (slab). Devuelve t de entrada y normal, o null. */
 function rayBox(
-  ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, b: number[], bx: number, by: number, bz: number,
+  ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, b: number[], k: number, bx: number, by: number, bz: number,
 ): { t: number; n: [number, number, number] } | null {
   let tmin = -Infinity, tmax = Infinity;
   let n: [number, number, number] = [0, 0, 0];
-  const o = [ox, oy, oz], d = [dx, dy, dz], mn = [bx + b[0], by + b[1], bz + b[2]], mx = [bx + b[3], by + b[4], bz + b[5]];
+  const o = [ox, oy, oz], d = [dx, dy, dz];
+  const mn = [bx + b[k], by + b[k + 1], bz + b[k + 2]], mx = [bx + b[k + 3], by + b[k + 4], bz + b[k + 5]];
   for (let a = 0; a < 3; a++) {
     if (Math.abs(d[a]) < 1e-9) {
       if (o[a] < mn[a] || o[a] > mx[a]) return null;
@@ -76,13 +73,27 @@ export function raycast(
     if (id > AIR) {
       const r = BLOCK_RENDER[id];
       if (fluids && (r === R_WATER || r === R_LAVA) && BLOCK_FLUID_LEVEL[id] === 0) {
-        return { x, y, z, nx, ny, nz, id, dist: t, box: FULL };
+        return { x, y, z, nx, ny, nz, id, dist: t, px: ox + dx * t, py: oy + dy * t, pz: oz + dz * t, box: FULL };
+      }
+      if (r === R_CUBE || r === R_CUTOUT || r === R_TRANSLUCENT) {
+        return { x, y, z, nx, ny, nz, id, dist: t, px: ox + dx * t, py: oy + dy * t, pz: oz + dz * t, box: FULL };
       }
       if (r !== R_WATER && r !== R_LAVA) {
-        const box = selectionBox(id);
-        if (box === FULL) return { x, y, z, nx, ny, nz, id, dist: t, box };
-        const h = rayBox(ox, oy, oz, dx, dy, dz, box, x, y, z);
-        if (h && h.t <= maxDist) return { x, y, z, nx: h.n[0], ny: h.n[1], nz: h.n[2], id, dist: h.t, box };
+        // Forma real: la caja más cercana que corte el rayo.
+        const cx = x, cy = y, cz = z;
+        const boxes = blockSelectionBoxes(id, (ddx, ddy, ddz) => getBlock(cx + ddx, cy + ddy, cz + ddz));
+        let best: { t: number; n: [number, number, number] } | null = null;
+        for (let k = 0; k + 5 < boxes.length; k += 6) {
+          const h = rayBox(ox, oy, oz, dx, dy, dz, boxes, k, x, y, z);
+          if (h && (!best || h.t < best.t)) best = h;
+        }
+        if (best && best.t <= maxDist) {
+          const bt = best.t;
+          return {
+            x, y, z, nx: best.n[0], ny: best.n[1], nz: best.n[2], id, dist: bt,
+            px: ox + dx * bt, py: oy + dy * bt, pz: oz + dz * bt, box: unionBox(boxes),
+          };
+        }
       }
     }
     if (tMX < tMY && tMX < tMZ) {

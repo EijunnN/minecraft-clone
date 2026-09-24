@@ -4,7 +4,7 @@ import {
   MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, type MobDef,
 } from '../mobs';
 import { ITEMS, ARROW, maxStack, type ItemStack } from '../items';
-import { GRASS, SNOWY_GRASS, AIR, BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER } from '../blocks';
+import { GRASS, SNOWY_GRASS, AIR, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER } from '../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_PICKABLE } from '../protocol';
 import { SEA_LEVEL } from '../constants';
 import { moveBody, lineOfSight, boxCollides, type Body } from './physics';
@@ -806,7 +806,7 @@ export class Entities {
     if (e.type === MOB_CHICKEN && !e.onGround && e.vy < -2 && !e.inWater) e.vy = -2; // aleteo
     const wasGround = e.onGround;
     const prevVy = e.vy;
-    moveBody(e, w, dt);
+    moveBody(e, w, dt, 0.6);
     // Daño por caída.
     if (!wasGround && e.onGround && !e.inWater && e.type !== MOB_CHICKEN) {
       const fall = e.fallStart - e.y;
@@ -976,7 +976,8 @@ export class Entities {
       const feet = w.getBlock(x, y, z);
       const floor = w.getBlock(x, y - 1, z);
       if (feet > 0 && BLOCK_FLUID[feet]) continue;
-      if (floor <= 0 || BLOCK_FLUID[floor] || floor === AIR) continue;
+      // Como en Minecraft: sólo sobre bloques opacos completos (no losas, cristal, hojas...).
+      if (floor <= 0 || !BLOCK_OPAQUE[floor]) continue;
       const exposed = y > top;
       if (exposed && !night) continue;
       if (w.isLitByBlocks(x, y, z)) continue;

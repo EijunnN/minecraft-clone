@@ -8,7 +8,7 @@ import { decodeChunkEdits, encodeChunkEdits, type ServerStore } from './store';
 export interface SimChunk {
   cx: number;
   cz: number;
-  blocks: Uint8Array;
+  blocks: Uint16Array;
   /** y del bloque más alto que tapa el cielo, por columna (z*16+x); -1 si ninguno. */
   top: Int16Array;
   /** Índices locales de bloques que emiten luz. */

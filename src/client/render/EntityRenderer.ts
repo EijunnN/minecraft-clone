@@ -23,6 +23,8 @@ export interface RemotePlayerView {
   walkAmount: number;
   swing: number;
   sneaking: boolean;
+  /** Tumbado en una cama (la cabeza hacia donde mira). */
+  sleeping?: boolean;
   light: [number, number];
 }
 
@@ -158,10 +160,15 @@ export class EntityRenderer {
 
   private forEachPart(p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (part: PartMesh, m: mat4) => void): void {
     const root = mat4.create();
-    const sneak = p.sneaking;
+    const sneak = p.sneaking && !p.sleeping;
     mat4.translate(root, root, [p.x - camX, p.y - camY - (sneak ? 0.12 : 0), p.z - camZ]);
-    mat4.rotateY(root, root, p.bodyYaw);
-    const legSwing = Math.sin(p.walkPhase) * 0.9 * p.walkAmount;
+    if (p.sleeping) {
+      // Boca arriba, con la cabeza hacia la cabecera de la cama.
+      mat4.rotateY(root, root, p.headYaw + Math.PI);
+      mat4.translate(root, root, [0, 0.15, -0.45]);
+      mat4.rotateX(root, root, Math.PI / 2);
+    } else mat4.rotateY(root, root, p.bodyYaw);
+    const legSwing = p.sleeping ? 0 : Math.sin(p.walkPhase) * 0.9 * p.walkAmount;
     const armSwing = legSwing * 0.8;
     const m = this.m;
     // Piernas
@@ -186,8 +193,10 @@ export class EntityRenderer {
       fn(this.parts[part], m);
     }
     mat4.translate(m, upper, [0, 12 * PX, 0]);
-    mat4.rotateY(m, m, p.headYaw - p.bodyYaw);
-    mat4.rotateX(m, m, p.pitch);
+    if (!p.sleeping) {
+      mat4.rotateY(m, m, p.headYaw - p.bodyYaw);
+      mat4.rotateX(m, m, p.pitch);
+    }
     fn(this.parts.head, m);
   }
 

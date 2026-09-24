@@ -21,6 +21,12 @@ export const PLAYER_SNEAK_EYE_HEIGHT = 1.32;
 /** Coordenada horizontal máxima permitida (en bloques) para ediciones. */
 export const WORLD_LIMIT = 1_000_000;
 
+/** Identificadores de bloque de 16 bits (estados incluidos). Los ids 256–1023 son objetos. */
+export type BlockArray = Uint16Array;
+export const MAX_BLOCK_ID = 4096;
+/** Primer id de los bloques nuevos (los 0–255 antiguos no cambian; 256–1023 son objetos). */
+export const FIRST_EXTENDED_BLOCK = 1024;
+
 /** Índice de un bloque dentro de una columna de chunk (x, z en 0..15, y en 0..255). */
 export function blockIndex(x: number, y: number, z: number): number {
   return (y << 8) | (z << 4) | x;

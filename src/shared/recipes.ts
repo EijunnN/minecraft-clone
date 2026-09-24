@@ -2,7 +2,8 @@
 import {
   OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, TORCH, CHEST, FURNACE,
   COBBLESTONE, STONE, STONE_BRICKS, SAND, SANDSTONE, BRICKS, CLAY, BOOKSHELF, IRON_BLOCK, GOLD_BLOCK, DIAMOND_BLOCK,
-  WHITE_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL, POPPY, DANDELION, CORNFLOWER, SUGAR_CANE,
+  WHITE_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL, POPPY, DANDELION, CORNFLOWER, SUGAR_CANE, GLASS, SLABS, STAIRS,
+  FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED,
 } from './blocks';
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
@@ -68,6 +69,25 @@ shape(['SS', 'SS'], { S: STONE }, STONE_BRICKS, 4);
 shape(['SS', 'SS'], { S: SAND }, SANDSTONE);
 shape(['BB', 'BB'], { B: BRICK }, BRICKS);
 shape(['CC', 'CC'], { C: CLAY_BALL }, CLAY);
+
+// --- Losas, escaleras, vallas, puertas... (como en Minecraft) ---
+const SHAPE_MATERIALS: [string, number][] = [
+  ['oak', OAK_PLANKS], ['birch', BIRCH_PLANKS], ['spruce', SPRUCE_PLANKS], ['cobblestone', COBBLESTONE], ['stone', STONE],
+  ['stone_brick', STONE_BRICKS], ['brick', BRICKS], ['sandstone', SANDSTONE],
+];
+for (const [key, block] of SHAPE_MATERIALS) {
+  shape(['MMM'], { M: block }, SLABS[key], 6);
+  shape(['M  ', 'MM ', 'MMM'], { M: block }, STAIRS[key], 4);
+}
+for (const [key, planks] of SHAPE_MATERIALS.slice(0, 3)) {
+  shape(['PSP', 'PSP'], { P: planks, S: STICK }, FENCES[key], 3);
+  shape(['SPS', 'SPS'], { P: planks, S: STICK }, FENCE_GATES[key]);
+  shape(['PP', 'PP', 'PP'], { P: planks }, DOORS[key], 3);
+  shape(['PPP', 'PPP'], { P: planks }, TRAPDOORS[key], 2);
+}
+shape(['S S', 'SSS', 'S S'], { S: STICK }, LADDER, 3);
+shape(['GGG', 'GGG'], { G: GLASS }, GLASS_PANE, 16);
+shape(['WWW', 'PPP'], { W: RED_WOOL, P: PLANKS }, RED_BED);
 
 // --- Herramientas ---
 const MATS: [string, number | readonly number[]][] = [

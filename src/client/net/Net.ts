@@ -15,6 +15,7 @@ export interface Welcome {
   diff: number;
   save: PlayerSave | null;
   spawn: [number, number, number];
+  bed?: [number, number, number] | null;
 }
 
 /** Lo mínimo de un WebSocket que usamos (el servidor local imita esta interfaz). */
@@ -188,6 +189,7 @@ export class Net {
         this.pendingWelcome = {
           id: msg.id, seed: msg.seed, time: msg.time, players: msg.players, mode: msg.mode === 'c' ? 'c' : 's',
           diff: Number.isInteger(msg.diff) ? msg.diff : 2, save: msg.save ?? null, spawn: msg.spawn,
+          bed: msg.bed ?? null,
         };
         return;
       case 'time':

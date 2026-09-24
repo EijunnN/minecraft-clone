@@ -13,7 +13,7 @@ export interface Column {
   cx: number;
   cz: number;
   key: string;
-  blocks: Uint8Array | null;
+  blocks: Uint16Array | null;
   light: Uint8Array | null;
   /** y máximo con bloques (para truncar las copias hacia los workers). */
   maxY: number;

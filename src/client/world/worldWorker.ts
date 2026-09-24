@@ -9,7 +9,7 @@ export type WorkerRequest =
   | { type: 'spawn'; id: number };
 
 export type WorkerResponse =
-  | { type: 'gen'; id: number; cx: number; cz: number; blocks: Uint8Array; tint: Uint8Array; heights: Uint8Array }
+  | { type: 'gen'; id: number; cx: number; cz: number; blocks: Uint16Array; tint: Uint8Array; heights: Uint8Array }
   | {
       type: 'mesh';
       id: number;
@@ -52,7 +52,7 @@ scope.onmessage = (e) => {
         break;
       }
       case 'mesh': {
-        const chunks = msg.chunks.map((b) => new Uint8Array(b));
+        const chunks = msg.chunks.map((b) => new Uint16Array(b));
         const r = mesher.mesh(chunks, msg.cx, msg.cz);
         scope.postMessage(
           {

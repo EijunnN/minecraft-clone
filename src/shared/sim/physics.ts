@@ -1,5 +1,6 @@
 // Física de cajas (AABB) contra la rejilla de bloques, compartida por criaturas, objetos y flechas.
 import { BLOCK_SOLID, BLOCK_FLUID } from '../blocks';
+import { moveBox, boxBlocked } from '../collide';
 
 export interface BlockGetter {
   /** Id del bloque o -1 si no está cargado (se trata como sólido). */
@@ -29,62 +30,27 @@ export function isSolidAt(w: BlockGetter, x: number, y: number, z: number): bool
   return b < 0 || BLOCK_SOLID[b] === 1;
 }
 
+/** ¿La caja se solapa con alguna caja de colisión? */
 export function boxCollides(
   w: BlockGetter, minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number,
 ): boolean {
-  const x0 = Math.floor(minX), x1 = Math.floor(maxX - EPS);
-  const y0 = Math.floor(minY), y1 = Math.floor(maxY - EPS);
-  const z0 = Math.floor(minZ), z1 = Math.floor(maxZ - EPS);
-  for (let y = y0; y <= y1; y++) {
-    if (y >= 256) continue;
-    for (let z = z0; z <= z1; z++) {
-      for (let x = x0; x <= x1; x++) if (isSolidAt(w, x, y, z)) return true;
-    }
-  }
-  return false;
+  return boxBlocked(w, minX, minY, minZ, maxX, maxY, maxZ);
 }
 
-function moveAxis(b: Body, w: BlockGetter, axis: 0 | 1 | 2, d: number): boolean {
-  if (d === 0) return false;
-  const hw = b.width / 2;
-  let minX = b.x - hw, maxX = b.x + hw, minY = b.y, maxY = b.y + b.height, minZ = b.z - hw, maxZ = b.z + hw;
-  if (axis === 0) { minX += d; maxX += d; }
-  else if (axis === 1) { minY += d; maxY += d; }
-  else { minZ += d; maxZ += d; }
-  if (!boxCollides(w, minX, minY, minZ, maxX, maxY, maxZ)) {
-    if (axis === 0) b.x += d;
-    else if (axis === 1) b.y += d;
-    else b.z += d;
-    return false;
-  }
-  if (axis === 0) {
-    b.x = d > 0 ? Math.floor(maxX - EPS) - hw - EPS * 2 : Math.floor(minX) + 1 + hw + EPS * 2;
-    b.vx = 0;
-  } else if (axis === 1) {
-    if (d > 0) b.y = Math.floor(maxY - EPS) - b.height - EPS * 2;
-    else {
-      b.y = Math.floor(minY) + 1 + EPS;
-      b.onGround = true;
-    }
-    b.vy = 0;
-  } else {
-    b.z = d > 0 ? Math.floor(maxZ - EPS) - hw - EPS * 2 : Math.floor(minZ) + 1 + hw + EPS * 2;
-    b.vz = 0;
-  }
-  return true;
-}
-
-/** Integra la velocidad durante dt con colisiones; actualiza onGround, hitWall y fluidos. */
-export function moveBody(b: Body, w: BlockGetter, dt: number): void {
-  const dx = b.vx * dt, dy = b.vy * dt, dz = b.vz * dt;
-  b.onGround = false;
-  b.hitWall = false;
-  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) / 0.4));
-  for (let i = 0; i < steps; i++) {
-    moveAxis(b, w, 1, dy / steps);
-    if (moveAxis(b, w, 0, dx / steps)) b.hitWall = true;
-    if (moveAxis(b, w, 2, dz / steps)) b.hitWall = true;
-  }
+/**
+ * Integra la velocidad durante dt con colisiones por cajas; actualiza onGround, hitWall y fluidos.
+ * `step` > 0 permite subir escalones bajos (las criaturas suben losas y escaleras).
+ */
+export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
+  const r = moveBox(w, b.x, b.y, b.z, b.width, b.height, b.vx * dt, b.vy * dt, b.vz * dt, step, b.onGround);
+  b.x += r.dx;
+  b.y += r.dy;
+  b.z += r.dz;
+  if (r.hitX) b.vx = 0;
+  if (r.hitZ) b.vz = 0;
+  if (r.hitY) b.vy = 0;
+  b.onGround = r.onGround;
+  b.hitWall = r.hitX || r.hitZ;
   updateFluids(b, w);
 }
 

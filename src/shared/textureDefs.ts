@@ -131,6 +131,17 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'destroy_7', cutout: true },
   { name: 'destroy_8', cutout: true },
   { name: 'destroy_9', cutout: true },
+  // Construcción: puertas (mitad superior e inferior), trampillas y escalera de mano.
+  { name: 'oak_door_top', cutout: true },
+  { name: 'oak_door_bottom', cutout: true },
+  { name: 'birch_door_top', cutout: true },
+  { name: 'birch_door_bottom', cutout: true },
+  { name: 'spruce_door_top', cutout: true },
+  { name: 'spruce_door_bottom', cutout: true },
+  { name: 'oak_trapdoor', cutout: true },
+  { name: 'birch_trapdoor', cutout: true },
+  { name: 'spruce_trapdoor', cutout: true },
+  { name: 'ladder', cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);
