@@ -76,7 +76,7 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (8 colores, los de la lana que hay; falta la de paja) |
 | Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
-| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento) |
+| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento, pero el mismo para todas las armas; ver 2.14) |
 | Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha y arco) |
 | Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (11 efectos: velocidad, lentitud, fuerza, debilidad, regeneración, veneno, hambre, resistencia al fuego, visión nocturna, respiración acuática y absorción; faltan las pociones) |
 | Modos: supervivencia, creativo, aventura, espectador, extremo (hardcore) | 🟡 (supervivencia y creativo) |
@@ -176,6 +176,54 @@ en la fase 4, muros (8 piedras), carteles (3 maderas, de pie y en la pared) y ca
 | Gráficos | ✅ (por encima del original: sombras, nubes volumétricas, agua con reflejos, TAA) |
 | Sonido y música | ✅ (procedural) |
 
+### 2.14 Experiencia de juego e interfaz (auditoría del 2026-09-24)
+
+Lo que se nota al jugar y no estaba en las tablas anteriores. Revisado en el código, no de memoria.
+El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcionen como en Minecraft.
+
+**Inventario y objetos**
+
+| Elemento | Estado |
+| --- | --- |
+| Descripción del objeto con sus datos (daño, velocidad de ataque, armadura, durabilidad, comida, efectos) | 🟡 (una línea: nombre y un dato) |
+| Mano secundaria (tecla F; escudo, antorcha o comida en la otra mano) | ❌ |
+| Clic central: coger el bloque que se mira (en supervivencia, si está en el inventario) | ❌ |
+| Arrastrar para repartir una pila entre huecos (izquierdo a partes iguales, derecho de uno en uno) | ❌ |
+| Doble clic para juntar en el cursor los objetos iguales | ❌ |
+| Mayúsculas + clic, 1–9, Q, Ctrl+Q, tirar fuera de la ventana, búsqueda en creativo | ✅ |
+
+**Combate**
+
+| Elemento | Estado |
+| --- | --- |
+| Velocidad de ataque propia de cada arma (espada 1,6, hacha 0,8, pico 1,2, pala 1, azada según material) | ❌ (0,625 s para todas) |
+| Indicador de recarga del ataque bajo la mira | ❌ |
+| El hacha deja el escudo del rival inútil unos segundos | ❌ |
+| Inclinación de la cámara hacia el lado del golpe | 🟡 (sacudida sin dirección) |
+
+**Movimiento y cuerpo**
+
+| Elemento | Estado |
+| --- | --- |
+| Nadar (correr bajo el agua en postura horizontal) y gatear por huecos de 1 bloque | ❌ (en el agua sólo se va más rápido) |
+| Menos daño al caer sobre fardos de heno (−80 %) y camas (−50 %) | ❌ |
+| Animaciones de los demás jugadores: comer, tensar el arco, cubrirse con el escudo | ❌ |
+
+**Controles, chat y menús**
+
+| Elemento | Estado |
+| --- | --- |
+| Cambiar las teclas; agacharse y correr con pulsación fija o mantenida | ❌ |
+| Chat: historial con flechas y autocompletar comandos y nombres con Tab | ❌ |
+| Lista de mundos recientes en el menú y semilla al crear un mundo | ❌ (se escribe el nombre a mano) |
+| Captura de pantalla (F2) | ❌ |
+
+**Técnico**
+
+| Elemento | Estado |
+| --- | --- |
+| El servidor manda sobre el inventario (hoy lo guarda el cliente: se puede hacer trampa desde la consola del navegador) | ❌ (da igual entre amigos; importa con desconocidos) |
+
 ## 3. Requisitos técnicos (el camino crítico)
 
 Casi todo lo que falta depende de estas bases. Conviene hacerlas antes que el contenido:
@@ -228,6 +276,13 @@ estado (manzana dorada, ojo de araña, carne podrida, leche y el comando `/efect
 cofres dobles, camas de colores, ahumador, alto horno, fogata (asa y quema) y cortapiedras.
 
 Fase 4 terminada. (Las puertas de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
+
+### Fase 4.5 — Experiencia de juego (M)
+Lo indispensable de 2.14 antes de seguir con contenido: descripción completa de los objetos, velocidad
+de ataque por arma con su indicador, mano secundaria, clic central, arrastrar y doble clic en el
+inventario, historial y autocompletado del chat, teclas configurables y agacharse/correr fijo, nadar y
+gatear, reducción de caídas, animaciones de los demás jugadores y lista de mundos. La autoridad del
+servidor sobre el inventario queda para cuando se juegue con desconocidos.
 
 ### Fase 5 — Un mundo más rico (XL)
 Más biomas (pantano, jungla, bosque oscuro, badlands, champiñonal, cerezal, prado, picos de hielo,
