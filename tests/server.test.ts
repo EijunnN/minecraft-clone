@@ -177,8 +177,10 @@ test('servidor de juego: simulación completa', () => {
   // --- Brote ---
   W.setBlock(bx + 6, by, bz + 6, DIRT);
   W.setBlock(bx + 6, by + 1, bz + 6, OAK_SAPLING);
+  // Un brote recibe de media un tick aleatorio cada ~70 s: se espera hasta 30 min simulados para que
+  // la prueba no falle por azar (normalmente crece en pocos minutos).
   let grown = false;
-  for (let i = 0; i < 400 && !grown; i++) {
+  for (let i = 0; i < 1600 && !grown; i++) {
     h.tick(20);
     grown = W.getBlock(bx + 6, by + 1, bz + 6) === OAK_LOG;
   }
