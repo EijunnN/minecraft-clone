@@ -1,5 +1,5 @@
 // Física de cajas (AABB) contra la rejilla de bloques, compartida por criaturas, objetos y flechas.
-import { BLOCK_SOLID, BLOCK_FLUID } from '../blocks';
+import { BLOCK_SOLID, BLOCK_FLUID, COBWEB } from '../blocks';
 import { moveBox, boxBlocked } from '../collide';
 
 export interface BlockGetter {
@@ -42,7 +42,11 @@ export function boxCollides(
  * `step` > 0 permite subir escalones bajos (las criaturas suben losas y escaleras).
  */
 export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
-  const r = moveBox(w, b.x, b.y, b.z, b.width, b.height, b.vx * dt, b.vy * dt, b.vz * dt, step, b.onGround);
+  // Telaraña: las criaturas también se quedan casi quietas.
+  const fx = Math.floor(b.x), fz = Math.floor(b.z);
+  const web = w.getBlock(fx, Math.floor(b.y + 0.1), fz) === COBWEB || w.getBlock(fx, Math.floor(b.y + b.height * 0.6), fz) === COBWEB;
+  const kh = web ? 0.25 : 1, kv = web ? 0.05 : 1;
+  const r = moveBox(w, b.x, b.y, b.z, b.width, b.height, b.vx * dt * kh, b.vy * dt * kv, b.vz * dt * kh, step, b.onGround);
   b.x += r.dx;
   b.y += r.dy;
   b.z += r.dz;

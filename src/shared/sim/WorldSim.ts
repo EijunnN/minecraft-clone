@@ -2,7 +2,8 @@
 // aplica y guarda las ediciones, y mantiene mapas de altura y fuentes de luz para la simulación.
 import { TerrainGenerator } from '../world/terrain';
 import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../constants';
-import { AIR, BLOCK_EMISSION, BLOCK_LIGHT_OPACITY, BLOCK_SOLID } from '../blocks';
+import { AIR, BLOCK_EMISSION, BLOCK_LIGHT_OPACITY, BLOCK_SOLID, MOB_SPAWNER, isChest } from '../blocks';
+import type { StructureChest } from '../world/structures';
 import { decodeChunkEdits, encodeChunkEdits, type ServerStore } from './store';
 
 export interface SimChunk {
@@ -13,6 +14,8 @@ export interface SimChunk {
   top: Int16Array;
   /** Índices locales de bloques que emiten luz. */
   emitters: Set<number>;
+  /** Índices locales de los generadores de monstruos. */
+  spawners: Set<number>;
   lastUsed: number;
 }
 
@@ -31,6 +34,8 @@ export class WorldSim {
   private allLoaded = false;
   private dirty = new Set<string>();
   onChange: ChangeListener | null = null;
+  /** Cofres de estructuras de un chunk recién generado por primera vez (para llenarlos de botín). */
+  onLoot: ((chests: StructureChest[]) => void) | null = null;
   generatedCount = 0;
 
   constructor(seed: number, store: ServerStore) {
@@ -101,7 +106,7 @@ export class WorldSim {
     const blocks = r.blocks;
     const ed = this.chunkEdits(key);
     for (const [idx, id] of ed) blocks[idx] = id;
-    c = { cx, cz, blocks, top: new Int16Array(256), emitters: new Set(), lastUsed: now };
+    c = { cx, cz, blocks, top: new Int16Array(256), emitters: new Set(), spawners: new Set(), lastUsed: now };
     for (let i = 0; i < 256; i++) {
       const lx = i & 15, lz = i >> 4;
       let t = MIN_Y - 1;
@@ -113,7 +118,15 @@ export class WorldSim {
       }
       c.top[i] = t;
     }
-    for (let i = 0; i < CHUNK_VOLUME; i++) if (BLOCK_EMISSION[blocks[i]]) c.emitters.add(i);
+    for (let i = 0; i < CHUNK_VOLUME; i++) {
+      if (BLOCK_EMISSION[blocks[i]]) c.emitters.add(i);
+      if (blocks[i] === MOB_SPAWNER) c.spawners.add(i);
+    }
+    // Cofres de estructuras: se llenan una sola vez por chunk (si siguen siendo cofres).
+    if (r.chests.length > 0 && this.onLoot && !this.store.getMeta(`loot:${key}`)) {
+      this.store.setMeta(`loot:${key}`, '1');
+      this.onLoot(r.chests.filter((ch) => isChest(blocks[blockIndex(ch.x - cx * CHUNK_SIZE, ch.y, ch.z - cz * CHUNK_SIZE)])));
+    }
     this.chunks.set(key, c);
     this.generatedCount++;
     return c;
@@ -178,6 +191,8 @@ export class WorldSim {
     }
     if (BLOCK_EMISSION[id]) c.emitters.add(idx);
     else c.emitters.delete(idx);
+    if (id === MOB_SPAWNER) c.spawners.add(idx);
+    else c.spawners.delete(idx);
     this.chunkEdits(key).set(idx, id);
     this.dirty.add(key);
     this.onChange?.(x, y, z, old, id);

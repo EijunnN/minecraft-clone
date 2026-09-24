@@ -14,6 +14,8 @@ import {
   FURNACE_OUT, CHEST_SLOTS, DOUBLE_CHEST_SLOTS, type ContainerState, type ContainerWire, type FurnaceVariant,
 } from '../../containers';
 import type { ServerStore } from '../store';
+import { LOOT_TABLES, rollLoot, scatterLoot } from '../../loot';
+import type { StructureChest } from '../../world/structures';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { ServerContext, Session } from './context';
 
@@ -35,6 +37,20 @@ export class ContainerSystem {
       } catch {
         /* ignorar */
       }
+    }
+  }
+
+  /** Llena los cofres de una estructura con su botín (al generarse su chunk). */
+  fillLoot(chests: StructureChest[]): void {
+    const rand = () => this.ctx.rand();
+    for (const ch of chests) {
+      const table = LOOT_TABLES[ch.table];
+      if (!table) continue;
+      const k = posKey(ch.x, ch.y, ch.z);
+      const c = newContainer('chest');
+      c.slots = scatterLoot(rollLoot(table, rand), CHEST_SLOTS, rand);
+      this.containers.set(k, c);
+      this.dirty.add(k);
     }
   }
 

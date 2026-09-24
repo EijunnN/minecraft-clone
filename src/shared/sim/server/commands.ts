@@ -6,6 +6,15 @@ import { MOBS, MOB_TYPES } from '../../mobs';
 import { standable } from '../pathfind';
 import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../../effects';
 import type { ServerContext, Session } from './context';
+import { locateStructure, STRUCTURE_NAMES } from '../../world/structures';
+
+/** Nombres que acepta /localizar (sin tildes, en minúsculas). */
+export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
+  templo_del_desierto: 'desert_pyramid', templo_desierto: 'desert_pyramid', piramide: 'desert_pyramid',
+  templo_de_la_jungla: 'jungle_temple', templo_jungla: 'jungle_temple', naufragio: 'shipwreck',
+  portal_en_ruinas: 'ruined_portal', portal: 'ruined_portal', iglu: 'igloo', pozo_del_desierto: 'desert_well',
+  pozo: 'desert_well', mina_abandonada: 'mineshaft', mina: 'mineshaft',
+};
 
 export class Commands {
   constructor(private ctx: ServerContext) {}
@@ -134,6 +143,21 @@ export class Commands {
         }
         return;
       }
+      case 'locate':
+      case 'localizar': {
+        // /localizar <estructura>: la más cercana de ese tipo.
+        const want = norm(args.join('_'));
+        const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
+        if (!key) {
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina>');
+          return;
+        }
+        const type = STRUCTURE_ALIASES[key];
+        const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]));
+        if (!p) reply(`No hay ningún ${STRUCTURE_NAMES[type].toLowerCase()} cerca.`);
+        else reply(`${STRUCTURE_NAMES[type]} más cercano: x ${p[0]}, y ${p[1]}, z ${p[2]} (a ${Math.round(Math.hypot(p[0] - s.p[0], p[2] - s.p[2]))} bloques).`);
+        return;
+      }
       case 'seed':
       case 'semilla':
         reply(`Semilla del mundo: ${ctx.seed}`);
@@ -147,7 +171,7 @@ export class Commands {
         reply(
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar, ' +
-          '/seed, /lista, /tp <jugador>',
+          '/seed, /lista, /tp <jugador>, /localizar <estructura>',
         );
         return;
       default:

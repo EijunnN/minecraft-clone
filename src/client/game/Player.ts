@@ -1,7 +1,7 @@
 // Física del jugador: caminar, correr, agacharse (sin caer por los bordes), saltar, nadar (y bucear
 // en postura horizontal corriendo bajo el agua), gatear por huecos de un bloque, volar, subir
 // escalones bajos (losas, escaleras) y trepar por escaleras de mano.
-import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, fluidHeight } from '../../shared/blocks';
+import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluidHeight } from '../../shared/blocks';
 import { moveBox, boxBlocked } from '../../shared/collide';
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
 
@@ -49,6 +49,8 @@ export class Player {
   inWater = false;
   eyeInWater = false;
   inLava = false;
+  /** Dentro de una telaraña: se mueve muy despacio. */
+  inWeb = false;
   /** Distancia horizontal recorrida en el suelo (para pasos y balanceo). */
   walkDistance = 0;
   /** 0..1: cuánto se está moviendo (para animaciones). */
@@ -122,6 +124,7 @@ export class Player {
     const wasInWater = this.inWater;
     let water = false;
     let lava = false;
+    let web = false;
     let fx = 0, fz = 0;
     const x0 = Math.floor(this.x - HW), x1 = Math.floor(this.x + HW - EPS);
     const z0 = Math.floor(this.z - HW), z1 = Math.floor(this.z + HW - EPS);
@@ -131,6 +134,7 @@ export class Player {
         for (let x = x0; x <= x1; x++) {
           const b = world.getBlock(x, y, z);
           if (b <= 0) continue;
+          if (b === COBWEB) web = true;
           const f = BLOCK_FLUID[b];
           if (!f || this.y + 0.05 >= this.fluidTop(world, x, y, z, b)) continue;
           if (f === 1) water = true;
@@ -145,6 +149,7 @@ export class Player {
     }
     this.inWater = water;
     this.inLava = lava;
+    this.inWeb = web;
     const fl = Math.hypot(fx, fz);
     this.flowX = fl > 0.01 ? fx / fl : 0;
     this.flowZ = fl > 0.01 ? fz / fl : 0;
@@ -269,8 +274,16 @@ export class Player {
     if (Math.abs(this.kx) < 0.01) this.kx = 0;
     if (Math.abs(this.kz) < 0.01) this.kz = 0;
     let dx = (this.vx + this.kx) * dt;
-    const dy = this.vy * dt;
+    let dy = this.vy * dt;
     let dz = (this.vz + this.kz) * dt;
+    // Telaraña: casi no se avanza y se cae muy despacio (como en Minecraft).
+    if (this.inWeb && !this.flying) {
+      dx *= 0.25;
+      dz *= 0.25;
+      dy *= 0.05;
+      this.vy = Math.max(this.vy, -2);
+      this.fallDistance = 0;
+    }
     // Agachado: no caer por los bordes.
     if (this.sneaking && this.onGround && !this.inWater) {
       if (dx !== 0 && !this.groundBelow(this.x + dx, this.z, world)) { dx = 0; this.vx = 0; }

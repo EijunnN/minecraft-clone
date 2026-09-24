@@ -234,6 +234,15 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'budding_amethyst' },
   ...['small_amethyst_bud', 'medium_amethyst_bud', 'large_amethyst_bud', 'amethyst_cluster'].map((k): TextureDef => ({ name: k, sss: 0.4, cutout: true })),
   { name: 'tinted_glass', special: 3 },
+  // Estructuras de la fase 5.
+  { name: 'spawner', cutout: true },
+  { name: 'cobweb', cutout: true },
+  { name: 'chiseled_sandstone' },
+  { name: 'cut_sandstone' },
+  { name: 'mossy_stone_bricks' },
+  { name: 'cracked_stone_bricks' },
+  { name: 'netherrack' },
+  { name: 'crying_obsidian' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

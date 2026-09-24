@@ -60,6 +60,10 @@ export class Effects {
         this.g.shake = Math.max(this.g.shake, Math.max(0, 1 - d / 24));
         break;
       }
+      case 'spawner':
+        // Criatura recién salida de un generador: humo oscuro.
+        fx.spawnSmoke(p[0], p[1], p[2], 14, 0.45, 0.2, 0.6, 1.2);
+        break;
       case 'burn_item':
         fx.spawnSmoke(p[0], p[1], p[2], 6, 0.2, 0.25, 0.2, 1);
         break;

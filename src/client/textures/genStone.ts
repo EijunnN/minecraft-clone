@@ -342,7 +342,7 @@ const SSEAM: RGB[] = [
   [76, 76, 80],
 ];
 
-function stoneBricks(t: Tex): void {
+export function stoneBricks(t: Tex): void {
   const r = t.rng();
   const n8 = new Noise(r, 8);
   const px = pixelNoise(r);
@@ -543,7 +543,7 @@ const OBSIDIAN: RGB[] = [
   [36, 26, 54],
 ];
 
-function obsidian(t: Tex): void {
+export function obsidian(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);

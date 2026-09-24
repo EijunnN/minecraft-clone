@@ -10,7 +10,7 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | --- | --- | --- |
 | Dimensiones | 3 (Mundo normal, Nether, End) | 1 |
 | Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
-| Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 0 |
+| Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 6 (y 3 elementos decorativos) |
 | Criaturas | más de 80, incluidos 2 jefes | 12 |
 | Bloques | ~1.100 contando colores y variantes | ~70 |
 | Objetos | ~1.500 | 56 objetos + bloques |
@@ -49,8 +49,11 @@ noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **c
 | Aldea (5 estilos), puesto de saqueadores, mansión del bosque, templo del desierto, templo de la jungla, cabaña de bruja, iglú, campamento abandonado (26.3), mina abandonada, fortaleza (stronghold), ciudad antigua, cámaras de desafío, ruinas de senderos, portal en ruinas, monumento oceánico, ruinas oceánicas, naufragio, tesoro enterrado | fortaleza del Nether, bastión, fósil del Nether, portal en ruinas | ciudad del End (con barco y élitros) |
 
 Elementos decorativos: geoda de amatista, mazmorra con generador de monstruos, fósil, pozo del
-desierto, cofre de bonificación, plataformas y pilares del End. **VoxelCraft: ninguno** ❌.
-Requieren un sistema de plantillas y tablas de botín.
+desierto, cofre de bonificación, plataformas y pilares del End.
+
+**VoxelCraft (fase 5)** 🟡: templo del desierto, templo de la jungla, iglú (con sótano la mitad de
+las veces), mina abandonada, portal en ruinas y naufragio; y geodas, mazmorras con generador y pozos
+del desierto. Todas con cofres de botín (tablas propias) y localizables con `/localizar`.
 
 ### 2.3 Criaturas
 
@@ -238,8 +241,9 @@ Casi todo lo que falta depende de estas bases. Conviene hacerlas antes que el co
    con UV) en el mallado y cajas de colisión por estado en la física y el trazado de rayos.
 3. **Dimensiones.** Varios mundos por sala (normal, Nether, End), cada uno con su generador, su cielo
    y su iluminación, y portales entre ellos.
-4. **Estructuras.** Plantillas y ensamblado por piezas (como las aldeas), deterministas para que
-   cliente y servidor las generen igual, y tablas de botín para sus cofres.
+4. ✅ **Estructuras.** Constructores deterministas que cada chunk dibuja por su parte (rejilla de
+   regiones para las de superficie, piezas encadenadas para las minas) y tablas de botín para sus
+   cofres, que el servidor llena la primera vez que genera el chunk.
 5. **Entidades más completas.** Equipamiento, montar, domesticar, crías, objetos arrojadizos y
    efectos de estado, con criaturas definidas por datos en lugar de código.
 6. **Redstone en el servidor.** Actualizaciones de bloques vecinos, ticks programados y propagación de
@@ -314,6 +318,15 @@ acumulación de nieve.
   debajo de un nivel de agua por zonas); y geodas de amatista (basalto liso, calcita, amatista y
   amatista con brotes que echa racimos; los racimos dan fragmentos para el cristal tintado). La pizarra
   profunda rocosa sirve para herramientas de piedra, hornos, losas y escaleras.
+- ✅ **Estructuras con botín.** Mazmorras (sala de roca musgosa junto a una cueva, generador de
+  monstruos y cofres), minas abandonadas (pasillos con soportes de madera, puentes, telarañas, cofres
+  y pasillos de arañas), templos del desierto (cámara del tesoro con cuatro cofres) y de la jungla
+  (sótano con dos cofres), naufragios (cofres de provisiones y de tesoro), portales en ruinas (obsidiana,
+  obsidiana llorosa, rocanegra y oro), iglús (con sótano y cofre la mitad de las veces) y pozos del
+  desierto. El generador de monstruos invoca zombis, esqueletos o arañas con un jugador cerca (una
+  antorcha al lado lo apaga) y las telarañas frenan. `/localizar <estructura>` dice dónde está la más
+  cercana. Faltan las trampas (necesitan redstone y TNT, fase 7), los raíles de las minas (fase 7) y
+  las aldeas (fase 6).
 
 ### Fase 6 — Criaturas (XL)
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y

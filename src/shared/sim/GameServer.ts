@@ -23,6 +23,7 @@ import { migrateStore, type ServerStore } from './store';
 import { TICK_RATE, DT, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type PlayerRecord, type ServerContext } from './server/context';
 import { BlockRules, fallsThrough } from './server/blockRules';
 import { Nature } from './server/nature';
+import { Spawners } from './server/spawners';
 import { Farming } from './server/farming';
 import { Beds } from './server/beds';
 import { Composters } from './server/composters';
@@ -78,6 +79,7 @@ export class GameServer {
   private ctx: ServerContext;
   private rules: BlockRules;
   private nature: Nature;
+  private spawners: Spawners;
   private farming: Farming;
   private beds: Beds;
   private composters: Composters;
@@ -131,6 +133,8 @@ export class GameServer {
     this.farming = new Farming(this.ctx, this.nature);
     this.beds = new Beds(this.ctx);
     this.containers = new ContainerSystem(this.ctx, store);
+    this.world.onLoot = (chests) => this.containers.fillLoot(chests);
+    this.spawners = new Spawners(this.ctx);
     this.composters = new Composters(this.ctx);
     this.fishing = new Fishing(this.ctx);
     this.campfires = new Campfires(this.ctx, store);
@@ -685,6 +689,7 @@ export class GameServer {
     this.beds.tick();
     this.composters.tick();
     this.fishing.tick();
+    if (this.tickCount % TICK_RATE === 0) this.spawners.tick();
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

@@ -3,7 +3,7 @@ import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, isLeaves, isVine, woodOf, MYCELIUM, PACKED_ICE,
   RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, RED_MUSHROOM, BROWN_MUSHROOM, DEEPSLATE, COBBLED_DEEPSLATE, SURFACE_ORE,
-  EMERALD_ORE, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES,
+  EMERALD_ORE, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, COBWEB, MOB_SPAWNER,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
   PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE,
@@ -11,7 +11,7 @@ import {
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
-  GLOW_BERRIES, type ItemStack,
+  GLOW_BERRIES, STRING, type ItemStack,
 } from '../items';
 
 /** Botín de un bloque roto con la herramienta `toolId` (0 = mano). */
@@ -46,6 +46,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
     return n > 0 ? one(block === RED_MUSHROOM_BLOCK ? RED_MUSHROOM : BROWN_MUSHROOM, n) : [];
   }
   if (block === MYCELIUM) return one(DIRT);
+  // Telaraña: con tijeras, la propia telaraña; con espada, hilo.
+  if (block === COBWEB) return tool?.kind === 'shears' ? one(COBWEB) : tool?.kind === 'sword' ? one(STRING) : [];
+  if (block === MOB_SPAWNER) return [];
   // Pizarra profunda: como la piedra; sus menas sueltan lo mismo que las normales.
   if (block === DEEPSLATE) return one(COBBLED_DEEPSLATE);
   if (SURFACE_ORE[block] !== undefined) {

@@ -12,7 +12,10 @@ Objects). Pensado para PC (teclado y ratón).
   picos de hielo, desiertos, tierras baldías de terracota, sabanas de acacias, junglas con árboles
   gigantes, pantanos, islas de champiñones y montañas con picos nevados; ríos, cuevas (frondosas con
   bayas luminosas, de goteo con estalactitas, inundadas), lagos de lava, geodas de amatista y las ocho
-  menas de Minecraft (también en pizarra profunda por debajo de 0). Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
+  menas de Minecraft (también en pizarra profunda por debajo de 0).
+- **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
+  templos del desierto y de la jungla, naufragios, portales en ruinas, iglús y pozos del desierto. Sus
+  cofres traen botín propio de cada estructura; `/localizar` indica dónde está la más cercana. Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
   de alto como en Minecraft actual: de y = −64 (lecho de roca) a 319.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
@@ -110,6 +113,8 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Pantano con nenúfares y orquídeas azules](docs/screenshots/swamp.png) | ![Picos de hielo compacto en la nieve](docs/screenshots/ice_spikes.png) |
 | ![Cueva frondosa con musgo y enredaderas de bayas luminosas](docs/screenshots/lush.png) | ![Cueva de goteo con estalactitas](docs/screenshots/dripstone.png) |
 | ![Geoda de amatista a oscuras](docs/screenshots/geode.png) | ![Pizarra profunda con menas](docs/screenshots/deepslate.png) |
+| ![Templo del desierto](docs/screenshots/desert_temple.png) | ![Mazmorra con generador de monstruos y cofre](docs/screenshots/dungeon.png) |
+| ![Naufragio en el fondo del mar](docs/screenshots/shipwreck.png) | ![Templo de la jungla entre cerezos](docs/screenshots/jungle_temple.png) |
 
 ## Controles
 
@@ -146,6 +151,7 @@ pulsación). Estas son las de por defecto:
 | `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
 | `/efecto <efecto> [segundos] [nivel]` | Da un efecto (`/efecto velocidad 60 2`); `/efecto quitar` los quita todos |
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
+| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`) |
 | `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
 
 ### Primeros pasos en supervivencia

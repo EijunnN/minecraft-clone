@@ -1,5 +1,5 @@
 // Tiempo de minado de un bloque según la herramienta (fórmula de Minecraft).
-import { BLOCKS, ALL_LEAVES, isVine } from '../../shared/blocks';
+import { BLOCKS, ALL_LEAVES, isVine, COBWEB } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
 
 const LEAVES = new Set(ALL_LEAVES);
@@ -19,12 +19,12 @@ export function toolSpeed(block: number, toolId: number): number {
   const t = toolId > 0 ? ITEMS[toolId]?.tool : undefined;
   if (!b || !t) return 1;
   if (t.kind === 'shears') {
-    if (LEAVES.has(block)) return 15;
+    if (LEAVES.has(block) || block === COBWEB) return 15;
     if (isVine(block)) return 2;
     if (b.sound === 'wool') return 5;
     return 1;
   }
-  if (t.kind === 'sword') return LEAVES.has(block) ? 1.5 : 1;
+  if (t.kind === 'sword') return block === COBWEB ? 15 : LEAVES.has(block) ? 1.5 : 1;
   return b.tool === t.kind ? t.speed : 1;
 }
 

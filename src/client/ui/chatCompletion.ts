@@ -20,11 +20,12 @@ function argOptions(cmd: string, n: number, players: string[]): string[] {
     case 'invocar': return MOB_TYPES.map((t) => norm(MOBS[t].name).replace(/\s+/g, '_'));
     case 'dar': return ITEMS.filter((i) => i).map((i) => i.key);
     case 'tp': return players;
+    case 'localizar': return ['templo_del_desierto', 'templo_de_la_jungla', 'naufragio', 'portal_en_ruinas', 'iglu', 'pozo', 'mina'];
     default: return [];
   }
 }
 
-const COMMANDS = ['ayuda', 'dar', 'dificultad', 'efecto', 'hora', 'invocar', 'lista', 'matar', 'modo', 'semilla', 'tp'];
+const COMMANDS = ['ayuda', 'dar', 'dificultad', 'efecto', 'hora', 'invocar', 'lista', 'localizar', 'matar', 'modo', 'semilla', 'tp'];
 
 export class ChatCompletion {
   private history: string[] = [];
