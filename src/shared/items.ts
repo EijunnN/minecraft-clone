@@ -24,6 +24,8 @@ export interface ToolInfo {
   durability: number;
   /** Daño al golpear (medios corazones). */
   damage: number;
+  /** Golpes por segundo con la barra de ataque llena (Minecraft 1.9+; sin él, 4 como la mano). */
+  attackSpeed?: number;
 }
 
 export interface FoodInfo {
@@ -122,32 +124,38 @@ export const BOW = item('bow', 'Arco', { stack: 1, fuel: 15, tool: { kind: 'bow'
 export const ARROW = item('arrow', 'Flecha');
 export const SHEARS = item('shears', 'Tijeras', { stack: 1, tool: { kind: 'shears', tier: 0, speed: 1.5, durability: 238, damage: 1 } });
 
-/** Materiales de herramienta: [prefijo, nombre, nivel, velocidad, durabilidad, daño de espada]. */
-const MATERIALS: [string, string, number, number, number, number][] = [
-  ['wooden', 'de madera', 1, 2, 59, 4],
-  ['stone', 'de piedra', 2, 4, 131, 5],
-  ['iron', 'de hierro', 3, 6, 250, 6],
-  ['golden', 'de oro', 1, 12, 32, 4],
-  ['diamond', 'de diamante', 4, 8, 1561, 7],
+/** Materiales de herramienta: [prefijo, nombre, nivel, velocidad de minado, durabilidad]. */
+const MATERIALS: [string, string, number, number, number][] = [
+  ['wooden', 'de madera', 1, 2, 59],
+  ['stone', 'de piedra', 2, 4, 131],
+  ['iron', 'de hierro', 3, 6, 250],
+  ['golden', 'de oro', 1, 12, 32],
+  ['diamond', 'de diamante', 4, 8, 1561],
 ];
-const KINDS: [ToolType, string, number][] = [
-  ['pickaxe', 'Pico', -2],
-  ['axe', 'Hacha', -1],
-  ['shovel', 'Pala', -3],
-  ['sword', 'Espada', 0],
-];
+const KINDS: [ToolType, string][] = [['pickaxe', 'Pico'], ['axe', 'Hacha'], ['shovel', 'Pala'], ['sword', 'Espada']];
+/**
+ * Daño por golpe y velocidad de ataque de Minecraft Java por tipo y material (madera, piedra,
+ * hierro, oro, diamante): la espada es rápida, el hacha pega fuerte pero lenta.
+ */
+const COMBAT: Record<string, [damage: number[], speed: number[]]> = {
+  sword: [[4, 5, 6, 4, 7], [1.6, 1.6, 1.6, 1.6, 1.6]],
+  axe: [[7, 9, 9, 7, 9], [0.8, 0.8, 0.9, 1, 1]],
+  pickaxe: [[2, 3, 4, 2, 5], [1.2, 1.2, 1.2, 1.2, 1.2]],
+  shovel: [[2.5, 3.5, 4.5, 2.5, 5.5], [1, 1, 1, 1, 1]],
+  hoe: [[1, 1, 1, 1, 1], [1, 2, 3, 1, 4]],
+};
 /** TOOLS[material][tipo] → id. */
 export const TOOLS: Record<string, Record<string, number>> = {};
-for (const [mat, matName, tier, speed, dur, dmg] of MATERIALS) {
+MATERIALS.forEach(([mat, matName, tier, speed, dur], m) => {
   TOOLS[mat] = {};
-  for (const [kind, kindName, dmgOffset] of KINDS) {
+  for (const [kind, kindName] of KINDS) {
     TOOLS[mat][kind] = item(`${mat}_${kind}`, `${kindName} ${matName}`, {
       stack: 1,
       fuel: mat === 'wooden' ? 10 : undefined,
-      tool: { kind, tier, speed, durability: dur, damage: Math.max(1, dmg + dmgOffset) },
+      tool: { kind, tier, speed, durability: dur, damage: COMBAT[kind][0][m], attackSpeed: COMBAT[kind][1][m] },
     });
   }
-}
+});
 
 // ------------------------------------------------------------------ granja
 // (Van al final para no cambiar los ids de los objetos guardados en inventarios y cofres.)
@@ -162,13 +170,13 @@ export const BONE_MEAL = item('bone_meal', 'Polvo de hueso');
 export const EGG = item('egg', 'Huevo', { stack: 16 });
 export const MILK_BUCKET = item('milk_bucket', 'Cubo de leche', { stack: 1, drink: true });
 export const SUGAR = item('sugar', 'Azúcar');
-for (const [mat, matName, tier, speed, dur] of MATERIALS) {
+MATERIALS.forEach(([mat, matName, tier, speed, dur], m) => {
   TOOLS[mat].hoe = item(`${mat}_hoe`, `Azada ${matName}`, {
     stack: 1,
     fuel: mat === 'wooden' ? 10 : undefined,
-    tool: { kind: 'hoe', tier, speed, durability: dur, damage: 1 },
+    tool: { kind: 'hoe', tier, speed, durability: dur, damage: COMBAT.hoe[0][m], attackSpeed: COMBAT.hoe[1][m] },
   });
-}
+});
 ITEMS[CAKE].stack = 1;
 
 // ------------------------------------------------------------------ armaduras (fase 4)

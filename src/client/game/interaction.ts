@@ -11,10 +11,12 @@ import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID,
 import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, type ItemStack } from '../../shared/items';
 import { COMPOSTER_READY, canCompost, composterLevel } from '../../shared/composting';
 import { variantSmelts } from '../../shared/containers';
+import { attackCooldown } from '../../shared/combat';
 import { MOBS, ENT_ITEM, ENT_ARROW, ENT_DISPLAY, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
 import { EF_BABY, EF_SHEARED, EF_PICKABLE, type ServerMsg } from '../../shared/protocol';
 import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use } from './gameTypes';
 import type { ArmorSource } from './Survival';
+import { OFFHAND } from './Inventory';
 import type { Game } from './Game';
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
@@ -25,6 +27,8 @@ export class Interaction {
 
   placeCooldown = 0;
   breakDelay = 0;
+  /** Momento (ms) del último golpe o manotazo al aire: de ahí sale la carga del siguiente ataque. */
+  lastSwing = 0;
   mining: Mining | null = null;
   use: Use | null = null;
   pickupAsk = new Map<number, number>();
@@ -79,7 +83,10 @@ export class Interaction {
       } else this.mineStep(dt, hit, input.mousePressed[0]);
     } else {
       this.mining = null;
-      if (input.mousePressed[0]) this.g.swing(true);
+      if (input.mousePressed[0]) {
+        this.g.swing(true);
+        this.resetAttack();
+      }
     }
 
     // --- Botón derecho: usar, colocar, abrir ---
@@ -87,7 +94,8 @@ export class Interaction {
     const def = held ? ITEMS[held.id] : undefined;
     if (this.use) {
       const u = this.use;
-      if (!input.mouseDown[2] || this.g.selected !== u.slot || this.g.heldId !== u.item) {
+      const stillHeld = (u.slot === OFFHAND || this.g.selected === u.slot) && this.g.inv.get(u.slot)?.id === u.item;
+      if (!input.mouseDown[2] || !stillHeld) {
         if (u.kind === 'bow') this.releaseBow(dir);
         this.use = null;
       } else {
@@ -130,6 +138,11 @@ export class Interaction {
       }
       // Comida cruda sobre una fogata encendida: a asar.
       if (familyBase(hit.id) === CAMPFIRE && held && this.cookOnCampfire(hit, held.id)) return;
+    }
+    // Si la mano principal no hace nada con el clic derecho, lo usa la secundaria.
+    if (!this.mainHandUses(held, hit)) {
+      this.useOffhand(pressed, hit);
+      return;
     }
     if (!held || !def) return;
     // Zanahorias y patatas se plantan en tierra de cultivo; si no, se comen.
@@ -181,6 +194,35 @@ export class Interaction {
     if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
   }
 
+  /** ¿Tiene la mano principal algo que hacer con el clic derecho? */
+  private mainHandUses(held: ItemStack | null, hit: RayHit | null): boolean {
+    if (!held) return false;
+    const def = ITEMS[held.id];
+    if (!def) return false;
+    if (def.block !== undefined || def.drink || def.armor) return true;
+    if (def.food) return def.food.always || this.g.survival.food < 20 || this.g.creative;
+    const kind = def.tool?.kind;
+    if (kind === 'hoe' || kind === 'shield' || kind === 'bow' || kind === 'fishing_rod') return true;
+    if (held.id === SHEARS) return hit?.id === PUMPKIN;
+    return held.id === EGG || held.id === BONE_MEAL || held.id === BUCKET;
+  }
+
+  /** Mano secundaria: cubrirse con el escudo, comer o colocar un bloque (antorchas…). */
+  private useOffhand(pressed: boolean, hit: RayHit | null): void {
+    const off = this.g.inv.offhand;
+    const def = off ? ITEMS[off.id] : undefined;
+    if (!off || !def) return;
+    if (def.tool?.kind === 'shield') {
+      if (pressed) this.use = { kind: 'block', t: 0, slot: OFFHAND, item: off.id, soundT: 0 };
+    } else if (def.food || def.drink) {
+      if (pressed && (def.drink || def.food?.always || this.g.survival.food < 20 || this.g.creative)) {
+        this.use = { kind: 'eat', t: 0, slot: OFFHAND, item: off.id, soundT: 0.3 };
+      }
+    } else if (def.block !== undefined && def.block !== WATER && def.block !== LAVA && hit) {
+      this.placeBlock(hit, def.block, OFFHAND);
+    }
+  }
+
   /** ¿Cubierto con el escudo? (como en Minecraft, tarda un cuarto de segundo en subir). */
   get blocking(): boolean {
     return this.use?.kind === 'block' && this.use.t >= 0.25;
@@ -200,8 +242,8 @@ export class Interaction {
     if (fx * (-k[0] / kl) + fz * (-k[2] / kl) <= 0) return false;
     this.g.audio.playBlockHit('wood', [p.x, p.eyeY, p.z]);
     p.impulse(k[0] * 0.3, 0, k[2] * 0.3);
-    // Desgaste de Minecraft: golpes de 3 o más gastan 1 + daño.
-    if (amount >= 3) this.wearHeld(1 + Math.floor(amount));
+    // Desgaste de Minecraft: golpes de 3 o más gastan 1 + daño (en la mano que lo lleve).
+    if (amount >= 3) this.wearSlot(this.use!.slot, 1 + Math.floor(amount));
     return true;
   }
 
@@ -297,16 +339,33 @@ export class Interaction {
   }
 
   wearHeld(amount: number): void {
+    this.wearSlot(this.g.selected, amount);
+  }
+
+  /** Desgasta lo que hay en una ranura (o en la mano secundaria). */
+  wearSlot(slot: number, amount: number): void {
     if (this.g.creative) return;
-    if (this.g.inv.wear(this.g.selected, amount)) {
+    if (this.g.inv.wear(slot, amount)) {
       this.g.audio.playBreak('stone', [this.g.player.x, this.g.player.eyeY, this.g.player.z]);
       this.g.ui.toast('¡Se rompió la herramienta!');
     }
   }
 
+  /** Carga del ataque (0..1) según el ritmo del arma en la mano. */
+  attackCharge(): number {
+    return Math.min(1, (performance.now() - this.lastSwing) / 1000 / attackCooldown(this.g.heldId));
+  }
+
+  /** Golpear o dar un manotazo al aire vacía la barra de ataque. */
+  resetAttack(): void {
+    this.lastSwing = performance.now();
+  }
+
   attack(e: ClientEntity): void {
     const p = this.g.player;
-    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying;
+    // Crítico: cayendo y con la barra casi llena (el servidor lo vuelve a comprobar).
+    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying && this.attackCharge() > 0.9;
+    this.resetAttack();
     const b = this.g.statusEffects.melee;
     this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}) });
     this.g.swing(false);
@@ -328,7 +387,7 @@ export class Interaction {
       // Cubo de leche: quita todos los efectos y queda el cubo vacío.
       this.g.statusEffects.clear(this.g.survival);
       this.g.audio.playBurp();
-      if (!this.g.creative) this.g.inv.set(this.g.selected, { id: BUCKET, count: 1 });
+      if (!this.g.creative) this.g.inv.set(u.slot, { id: BUCKET, count: 1 });
       return;
     }
     if (!food) return;
@@ -338,7 +397,7 @@ export class Interaction {
       if (Math.random() < chance) this.g.statusEffects.add(id, secs, amp, this.g.survival);
     }
     this.g.audio.playBurp();
-    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    if (!this.g.creative) this.g.inv.consume(u.slot, 1);
   }
 
   releaseBow(dir: number[]): void {
@@ -412,7 +471,7 @@ export class Interaction {
     return false;
   }
 
-  placeBlock(hit: RayHit, base: number): boolean {
+  placeBlock(hit: RayHit, base: number, slot = this.g.selected): boolean {
     const world = this.g.world!;
     const get = (x: number, y: number, z: number) => world.getBlock(x, y, z);
     const edits = planPlacement(get, hit, base, this.g.player.yaw);
@@ -441,7 +500,7 @@ export class Interaction {
     this.g.swing(false);
     const [x, y, z, id] = edits[0];
     this.g.audio.playPlace(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
-    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    if (!this.g.creative) this.g.inv.consume(slot, 1);
     // Cartel recién puesto: a escribir.
     if (isSign(id)) this.g.openSignEditor(x, y, z);
     return true;

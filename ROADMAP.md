@@ -76,7 +76,7 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (8 colores, los de la lana que hay; falta la de paja) |
 | Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
-| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento, pero el mismo para todas las armas; ver 2.14) |
+| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento por arma; falta el barrido) |
 | Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha y arco) |
 | Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (11 efectos: velocidad, lentitud, fuerza, debilidad, regeneración, veneno, hambre, resistencia al fuego, visión nocturna, respiración acuática y absorción; faltan las pociones) |
 | Modos: supervivencia, creativo, aventura, espectador, extremo (hardcore) | 🟡 (supervivencia y creativo) |
@@ -185,8 +185,8 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 
 | Elemento | Estado |
 | --- | --- |
-| Descripción del objeto con sus datos (daño, velocidad de ataque, armadura, durabilidad, comida, efectos) | 🟡 (una línea: nombre y un dato) |
-| Mano secundaria (tecla F; escudo, antorcha o comida en la otra mano) | ❌ |
+| Descripción del objeto con sus datos (daño, velocidad de ataque, armadura, durabilidad, comida, efectos) | ✅ |
+| Mano secundaria (tecla F; escudo, antorcha o comida en la otra mano) | ✅ |
 | Clic central: coger el bloque que se mira (en supervivencia, si está en el inventario) | ❌ |
 | Arrastrar para repartir una pila entre huecos (izquierdo a partes iguales, derecho de uno en uno) | ❌ |
 | Doble clic para juntar en el cursor los objetos iguales | ❌ |
@@ -196,9 +196,9 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 
 | Elemento | Estado |
 | --- | --- |
-| Velocidad de ataque propia de cada arma (espada 1,6, hacha 0,8, pico 1,2, pala 1, azada según material) | ❌ (0,625 s para todas) |
-| Indicador de recarga del ataque bajo la mira | ❌ |
-| El hacha deja el escudo del rival inútil unos segundos | ❌ |
+| Velocidad de ataque propia de cada arma (espada 1,6, hacha 0,8, pico 1,2, pala 1, azada según material) | ✅ (y el daño de Minecraft por arma) |
+| Indicador de recarga del ataque bajo la mira | ✅ |
+| El hacha deja el escudo del rival inútil unos segundos | — (sólo importa con PvP o vindicadores, que aún no hay) |
 | Inclinación de la cámara hacia el lado del golpe | 🟡 (sacudida sin dirección) |
 
 **Movimiento y cuerpo**

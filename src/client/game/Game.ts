@@ -15,7 +15,7 @@ import { InventoryScreen, type ScreenKind } from '../ui/InventoryScreen';
 import type { Settings } from './settings';
 import type { GeneratedTextures } from '../textures/generateTextures';
 import { AudioEngine } from '../audio/AudioEngine';
-import { Inventory, HOTBAR } from './Inventory';
+import { OFFHAND, Inventory, HOTBAR } from './Inventory';
 import { Survival } from './Survival';
 import { ClientEntities, type ClientEntity } from './ClientEntities';
 import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, DEFAULT_HOTBAR, WATER, R_CROSS, DIRT, isFarmland, R_CROP } from '../../shared/blocks';
@@ -35,6 +35,7 @@ import { SignEditor } from '../ui/SignEditor';
 import { renderArmorBar } from '../ui/armorBar';
 import { renderXpBar } from '../ui/xpBar';
 import { renderEffectsHud } from '../ui/effectsHud';
+import { renderAttackIndicator } from '../ui/attackIndicator';
 import { EFFECT_POISON, EFFECT_HUNGER } from '../../shared/effects';
 import { Effects } from './effects';
 import { LifeCycle } from './lifeCycle';
@@ -268,6 +269,7 @@ export class Game {
     if (save) {
       this.inv.fromWire(save.inv);
       this.inv.armorFromWire(save.armor);
+      this.inv.offhandFromWire(save.off);
       this.xp.total = Math.max(0, Math.floor(Number(save.xp) || 0));
       this.survival.reset();
       this.survival.health = Math.max(0, Math.min(20, save.hp));
@@ -473,6 +475,15 @@ export class Game {
     if (!force && key === this.hotbarKey) return;
     this.hotbarKey = key;
     this.ui.setHotbar(this.inv.slots.slice(0, HOTBAR), this.selected);
+    this.ui.setOffhand(this.inv.offhand);
+  }
+
+  /** Tecla F: intercambia lo de la mano con la mano secundaria. */
+  private swapHands(): void {
+    this.interaction.use = null;
+    this.inv.swapOffhand(this.selected);
+    this.audio.playUi('click');
+    this.refreshHotbar(true);
   }
 
   // ------------------------------------------------------------------ persistencia
@@ -488,7 +499,7 @@ export class Game {
       d: {
         inv: this.inv.toWire(), hp: s.health, food: s.food, sat: Math.round(s.saturation * 10) / 10, air: Math.round(s.air),
         pos: [p.x, p.y, p.z], rot: [p.yaw, p.pitch], fly: p.flying, sel: this.selected, dead: s.dead,
-        armor: this.inv.armorToWire(), xp: this.xp.total, fx: this.statusEffects.toWire(), abs: s.absorption,
+        armor: this.inv.armorToWire(), off: this.inv.offhandToWire(), xp: this.xp.total, fx: this.statusEffects.toWire(), abs: s.absorption,
       },
     });
   }
@@ -541,6 +552,7 @@ export class Game {
           if (input.wasPressed('Digit' + (i + 1))) this.selectSlot(i);
         }
         if (input.wheel !== 0) this.selectSlot((this.selected + (input.wheel > 0 ? 1 : -1) + 9) % 9);
+        if (input.wasPressed('KeyF')) this.swapHands();
         if (input.wasPressed('KeyQ')) this.interaction.dropHeld(input.wasPressedWithCtrl('KeyQ') || input.isDown('ControlLeft') || input.isDown('ControlRight'));
       }
     }
@@ -706,6 +718,7 @@ export class Game {
       fx.has(EFFECT_POISON), fx.has(EFFECT_HUNGER),
     );
     renderEffectsHud(fx, !surv.dead && !this.hudHidden);
+    renderAttackIndicator(this.interaction.attackCharge(), !surv.dead && !this.hudHidden && !this.anyScreenOpen());
     renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
     renderXpBar(this.xp, !this.creative && !surv.dead);
 
@@ -822,6 +835,8 @@ export class Game {
 
     this.renderer.entities.lightDir = this.renderer.sunDir[1] >= 0 ? this.renderer.sunDir : this.renderer.sunDir.map((v) => -v);
     const use = this.interaction.use;
+    const mainUse = use && use.slot !== OFFHAND ? use : null;
+    const offUse = use && use.slot === OFFHAND ? use : null;
     const state: FrameState = {
       camX, camY, camZ, yaw, pitch,
       time: performance.now() / 1000,
@@ -837,8 +852,11 @@ export class Game {
       mist,
       selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
       heldItem: surv.dead ? 0 : this.heldId,
-      handUse: use ? (use.kind === 'bow' ? Math.min(1, use.t) : use.kind === 'block' ? use.t : use.t / 1.6) : 0,
-      handUseKind: use ? use.kind : 'none',
+      handUse: mainUse ? (mainUse.kind === 'bow' ? Math.min(1, mainUse.t) : mainUse.kind === 'block' ? mainUse.t : mainUse.t / 1.6) : 0,
+      handUseKind: mainUse ? mainUse.kind : 'none',
+      offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
+      offhandUseKind: offUse ? (offUse.kind === 'block' ? 'block' : 'eat') : 'none',
+      offhandUse: offUse ? (offUse.kind === 'block' ? offUse.t : offUse.t / 1.6) : 0,
       crack,
       mobs,
       drops,
@@ -927,6 +945,8 @@ export class Game {
   private selectSlot(i: number): void {
     if (i === this.selected) return;
     this.selected = i;
+    // Cambiar de objeto vacía la barra de ataque (como en Minecraft).
+    this.interaction.resetAttack();
     this.equipT = 1;
     this.interaction.mining = null;
     this.refreshHotbar(true);

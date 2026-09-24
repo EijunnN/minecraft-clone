@@ -1,4 +1,5 @@
 // Interfaz de usuario en DOM: menú principal, HUD, chat, inventario, pausa, ajustes y carga.
+import { itemTooltipHtml } from './itemTooltip';
 import { BLOCKS, INVENTORY_ORDER, type BlockCategory } from '../../shared/blocks';
 import { CREATIVE_ITEMS, ITEMS, itemName, type ItemStack } from '../../shared/items';
 import type { GameMode } from '../../shared/protocol';
@@ -239,21 +240,36 @@ export class UI {
     this.hotbar = stacks;
     this.selected = selected;
     const bar = $('hotbar');
-    if (bar.children.length !== 9) {
+    if (bar.querySelectorAll('.slot.hb').length !== 9) {
       bar.innerHTML = '';
       for (let i = 0; i < 9; i++) {
         const s = document.createElement('div');
-        s.className = 'slot';
+        s.className = 'slot hb';
         s.innerHTML = `<span class="num">${i + 1}</span><div class="ico"></div><span class="cnt"></span><div class="dur"><i></i></div>`;
         bar.appendChild(s);
       }
     }
+    const hb = bar.querySelectorAll<HTMLDivElement>('.slot.hb');
     for (let i = 0; i < 9; i++) {
-      const s = bar.children[i] as HTMLDivElement;
+      const s = hb[i];
       s.classList.toggle('sel', i === selected);
       paintSlot(s, stacks[i] ?? null, this.icons);
     }
     if (this.isInventoryOpen()) this.renderInvHotbar();
+  }
+
+  /** Mano secundaria: un hueco a la izquierda de la barra (sólo si lleva algo). */
+  setOffhand(stack: ItemStack | null): void {
+    const bar = $('hotbar');
+    let el = bar.querySelector<HTMLDivElement>('.slot.offhand');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'slot offhand';
+      el.innerHTML = '<div class="ico"></div><span class="cnt"></span><div class="dur"><i></i></div>';
+      bar.appendChild(el);
+    }
+    el.classList.toggle('hidden', !stack);
+    paintSlot(el, stack, this.icons);
   }
 
   /** Corazones, hambre y aire (sólo en supervivencia). */
@@ -531,7 +547,7 @@ export class UI {
       });
       item.addEventListener('mouseenter', () => {
         this.hoveredItem = id;
-        this.tooltip.textContent = name;
+        this.tooltip.innerHTML = itemTooltipHtml({ id, count: 1 });
         this.tooltip.classList.remove('hidden');
       });
       item.addEventListener('mousemove', (e) => {

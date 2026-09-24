@@ -617,6 +617,10 @@ export class GameServer {
         return [[id, Math.max(0, Math.min(MAX_EFFECT_AMP, amp | 0)), Math.min(MAX_EFFECT_SECONDS, Math.round(secs * 10) / 10)] as [number, number, number]];
       });
     }
+    if (raw.off !== undefined) {
+      const st = sanitizeStack(stackFromWire(raw.off));
+      save.off = st ? (st.dmg ? [st.id, st.count, st.dmg] : [st.id, st.count]) : null;
+    }
     if (Array.isArray(raw.armor)) {
       // Cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies).
       save.armor = [0, 1, 2, 3].map((slot) => {

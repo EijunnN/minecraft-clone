@@ -2,6 +2,7 @@
 // lanzar huevos.
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { ITEMS, EGG } from '../../items';
+import { attackCooldown, attackDamage, chargeFactor } from '../../combat';
 import { sanitizeStack } from '../../containers';
 import type { PlayerView } from '../entities';
 import type { ServerContext, Session } from './context';
@@ -18,16 +19,18 @@ export class PlayerActions {
     const dx = e.x - s.p[0], dy = e.y + e.height / 2 - (s.p[1] + 1.6), dz = e.z - s.p[2];
     if (dx * dx + dy * dy + dz * dz > reach * reach) return;
     const now = ctx.now();
-    // Enfriamiento del ataque (como en Minecraft 1.9+): golpes seguidos hacen menos daño.
-    const charge = Math.min(1, (now - s.lastAttack) / 625);
-    s.lastAttack = now;
+    // Enfriamiento del ataque (como en Minecraft 1.9+): cada arma tiene su ritmo y golpear antes de
+    // tiempo hace menos daño.
     const item = Number(msg.item);
-    const tool = Number.isInteger(item) && item > 0 ? ITEMS[item]?.tool : undefined;
-    let dmg = tool ? tool.damage : 1;
+    const valid = Number.isInteger(item) && item > 0;
+    const tool = valid ? ITEMS[item]?.tool : undefined;
+    const charge = Math.min(1, (now - s.lastAttack) / (attackCooldown(valid ? item : 0) * 1000));
+    s.lastAttack = now;
+    let dmg = valid ? attackDamage(item) : 1;
     // Efectos del jugador (Fuerza, Debilidad): el cliente los manda y aquí se acotan.
     const bonus = Number(msg.b);
     if (Number.isFinite(bonus)) dmg = Math.max(0, dmg + Math.max(-20, Math.min(15, bonus)));
-    dmg *= 0.2 + 0.8 * charge * charge;
+    dmg *= chargeFactor(charge);
     if (msg.crit && charge > 0.9) dmg *= 1.5;
     ctx.entities.damage(e, Math.max(0.5, dmg), s.p[0], s.p[2], s.id, tool?.kind === 'sword' ? 1.2 : 1);
   }

@@ -70,6 +70,8 @@ export interface PlayerSave {
   dead?: boolean;
   /** Armadura puesta [cabeza, pecho, piernas, pies]. */
   armor?: (WireStack | null)[];
+  /** Mano secundaria. */
+  off?: WireStack | null;
   /** Efectos activos: [efecto, nivel, segundos restantes]. */
   fx?: [number, number, number][];
   /** Corazones dorados (absorción) que le quedan. */

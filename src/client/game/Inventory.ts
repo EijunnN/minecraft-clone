@@ -1,5 +1,5 @@
-// Inventario del jugador: 36 ranuras (0–8 barra rápida, 9–35 mochila), la pila del cursor y la
-// armadura puesta (4 ranuras).
+// Inventario del jugador: 36 ranuras (0–8 barra rápida, 9–35 mochila), la mano secundaria, la pila
+// del cursor y la armadura puesta (4 ranuras).
 import { ITEMS, maxStack, sameKind, isValidItem, type ItemStack } from '../../shared/items';
 import { stackToWire, stackFromWire, type WireStack } from '../../shared/protocol';
 import { cloneStack } from '../../shared/containers';
@@ -7,6 +7,8 @@ import { ARMOR_SLOTS } from '../../shared/armor';
 
 export const INV_SIZE = 36;
 export const HOTBAR = 9;
+/** Índice de la mano secundaria para get/set/consume/wear (no está en `slots`). */
+export const OFFHAND = 40;
 
 /** Ranura de armadura del objeto (−1 si no es armadura). */
 export function armorSlotOf(id: number): number {
@@ -24,6 +26,8 @@ export class Inventory {
   cursor: ItemStack | null = null;
   /** Armadura puesta: [cabeza, pecho, piernas, pies]. */
   armor: (ItemStack | null)[] = new Array(ARMOR_SLOTS).fill(null);
+  /** Mano secundaria (escudo, antorcha, comida…). */
+  offhand: ItemStack | null = null;
   /** Aumenta con cada cambio (para refrescar la interfaz y guardar). */
   version = 0;
 
@@ -32,11 +36,22 @@ export class Inventory {
   }
 
   get(i: number): ItemStack | null {
-    return this.slots[i] ?? null;
+    return i === OFFHAND ? this.offhand : this.slots[i] ?? null;
   }
 
   set(i: number, s: ItemStack | null): void {
-    this.slots[i] = s && s.count > 0 ? s : null;
+    const v = s && s.count > 0 ? s : null;
+    if (i === OFFHAND) this.offhand = v;
+    else this.slots[i] = v;
+    this.changed();
+  }
+
+  /** Intercambia la ranura i (barra o mochila) con la mano secundaria (tecla F). */
+  swapOffhand(i: number): void {
+    if (i < 0 || i >= INV_SIZE) return;
+    const s = this.slots[i];
+    this.slots[i] = this.offhand;
+    this.offhand = s;
     this.changed();
   }
 
@@ -108,14 +123,21 @@ export class Inventory {
   }
 
   count(id: number): number {
-    let n = 0;
+    let n = this.offhand?.id === id ? this.offhand.count : 0;
     for (const s of this.slots) if (s && s.id === id) n += s.count;
     return n;
   }
 
-  /** Quita n objetos del tipo id (primero de la mochila). Devuelve cuántos quitó. */
+  /** Quita n objetos del tipo id (primero de la mano secundaria y luego de la mochila). Devuelve cuántos quitó. */
   remove(id: number, n: number): number {
     let left = n;
+    const off = this.offhand;
+    if (off && off.id === id) {
+      const k = Math.min(left, off.count);
+      off.count -= k;
+      left -= k;
+      if (off.count <= 0) this.offhand = null;
+    }
     for (let i = INV_SIZE - 1; i >= 0 && left > 0; i--) {
       const s = this.slots[i];
       if (!s || s.id !== id) continue;
@@ -130,18 +152,18 @@ export class Inventory {
 
   /** Gasta objetos de una ranura. */
   consume(i: number, n = 1): void {
-    const s = this.slots[i];
+    const s = this.get(i);
     if (!s) return;
     s.count -= n;
-    if (s.count <= 0) this.slots[i] = null;
+    if (s.count <= 0) this.set(i, null);
     this.changed();
   }
 
   /** Desgasta la herramienta (o la pieza de armadura) de una ranura. Devuelve true si se rompió. */
   wear(i: number, amount = 1): boolean {
-    const s = this.slots[i];
+    const s = this.get(i);
     if (!s || !this.wearStack(s, amount)) return false;
-    this.slots[i] = null;
+    this.set(i, null);
     return true;
   }
 
@@ -163,6 +185,8 @@ export class Inventory {
     }
     if (this.cursor) out.push(this.cursor);
     this.cursor = null;
+    if (this.offhand) out.push(this.offhand);
+    this.offhand = null;
     for (let k = 0; k < ARMOR_SLOTS; k++) {
       if (this.armor[k]) out.push(this.armor[k]!);
       this.armor[k] = null;
@@ -265,6 +289,16 @@ export class Inventory {
         if (s && isValidItem(s.id) && ITEMS[s.id]?.armor?.slot === i) this.armor[i] = { ...s, count: 1 };
       }
     }
+    this.changed();
+  }
+
+  offhandToWire(): WireStack | null {
+    return stackToWire(this.offhand);
+  }
+
+  offhandFromWire(w: WireStack | null | undefined): void {
+    const s = w ? stackFromWire(w) : null;
+    this.offhand = s && isValidItem(s.id) && s.count > 0 ? { ...s, count: Math.min(s.count, maxStack(s.id)) } : null;
     this.changed();
   }
 

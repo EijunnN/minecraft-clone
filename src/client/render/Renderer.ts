@@ -105,6 +105,10 @@ export interface FrameState {
   /** Uso del objeto: 0..1 (tensar el arco, comer). */
   handUse: number;
   handUseKind: 'none' | 'bow' | 'eat' | 'block';
+  /** Mano secundaria: objeto y su uso (comer o cubrirse con el escudo). */
+  offhandItem?: number;
+  offhandUseKind?: 'none' | 'eat' | 'block';
+  offhandUse?: number;
   /** Bloque que se está minando y fase de la grieta (0..9). */
   crack: { x: number; y: number; z: number; stage: number; box?: number[] } | null;
   /** Criaturas y demás entidades (objetos, flechas, bloques que caen). */
@@ -675,7 +679,7 @@ export class Renderer {
     gl.generateMipmap(gl.TEXTURE_2D);
 
     // Objeto en la mano (con su propio buffer de profundidad).
-    if (s.showHand && s.heldItem > 0) {
+    if (s.showHand && (s.heldItem > 0 || (s.offhandItem ?? 0) > 0)) {
       this.post.bind();
       gl.clearDepth(1);
       gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -886,16 +890,25 @@ export class Renderer {
     this.items.drawWorld(list, this.viewProj, s.grassTint, bindLighting);
   }
 
+  /** Objetos en las manos: la principal a la derecha y la secundaria reflejada a la izquierda. */
   private drawHeld(s: FrameState, aspect: number, bindLighting: (p: Program) => Program): void {
-    const model = this.items.model(s.heldItem);
+    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false);
+    const off = s.offhandItem ?? 0;
+    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true);
+  }
+
+  private drawHand(
+    s: FrameState, aspect: number, bindLighting: (p: Program) => Program, item: number,
+    useKind: FrameState['handUseKind'], handUse: number, handSwing: number, equip: number, left: boolean,
+  ): void {
+    const model = this.items.model(item);
     if (!model) return;
     const proj = mat4.create();
     mat4.perspective(proj, (70 * Math.PI) / 180, aspect, 0.01, 10);
     const mv = mat4.create();
-    const swing = s.handSwing > 0 ? Math.sin(s.handSwing * Math.PI) : 0;
-    const swing2 = s.handSwing > 0 ? Math.sin(Math.sqrt(s.handSwing) * Math.PI) : 0;
-    const equip = s.handEquip;
-    const use = s.handUseKind !== 'none' ? s.handUse : 0;
+    const swing = handSwing > 0 ? Math.sin(handSwing * Math.PI) : 0;
+    const swing2 = handSwing > 0 ? Math.sin(Math.sqrt(handSwing) * Math.PI) : 0;
+    const use = useKind !== 'none' ? handUse : 0;
     if (!model.flat) {
       mat4.translate(mv, mv, [
         0.56 + s.handBob[0] - swing2 * 0.25,
@@ -907,25 +920,26 @@ export class Renderer {
       mat4.rotateX(mv, mv, -swing * 0.8);
       mat4.rotateZ(mv, mv, swing2 * 0.2);
       mat4.scale(mv, mv, [0.34, 0.34, 0.34]);
-    } else if (s.handUseKind === 'bow' && use > 0) {
+    } else if (useKind === 'bow' && use > 0) {
       // Arco tensado: al centro de la pantalla, con temblor al máximo.
       const shake = use >= 1 ? Math.sin(s.time * 60) * 0.004 : 0;
       mat4.translate(mv, mv, [0.28 - use * 0.18 + s.handBob[0], -0.3 + s.handBob[1] + shake, -0.62 + use * 0.08]);
       mat4.rotateY(mv, mv, -0.25);
       mat4.rotateZ(mv, mv, -Math.PI / 4 - 0.35);
       mat4.scale(mv, mv, [0.62, 0.62, 0.62]);
-    } else if (ITEMS[s.heldItem]?.tool?.kind === 'shield') {
+    } else if (ITEMS[item]?.tool?.kind === 'shield') {
       // Escudo derecho a un lado; al cubrirse sube hacia el centro, por debajo de la mira.
-      const k = s.handUseKind === 'block' ? Math.min(1, use / 0.25) : 0;
+      const k = useKind === 'block' ? Math.min(1, use / 0.25) : 0;
       mat4.translate(mv, mv, [
-        0.62 - k * 0.4 + s.handBob[0] - swing2 * 0.2,
-        -0.55 + k * 0.17 + s.handBob[1] - equip * 0.5 + swing2 * 0.1,
+        0.7 - k * 0.48 + s.handBob[0] - swing2 * 0.2,
+        -0.64 + k * 0.26 + s.handBob[1] - equip * 0.5 + swing2 * 0.1,
         -1.0 + k * 0.15 - swing * 0.2,
       ]);
       mat4.rotateY(mv, mv, -0.5 + k * 0.38 + swing2 * 0.3);
       mat4.rotateX(mv, mv, -swing * 0.6);
-      mat4.scale(mv, mv, [0.56, 0.56, 0.56]);
-    } else if (s.handUseKind === 'eat' && use > 0) {
+      const sc = 0.44 + k * 0.12;
+      mat4.scale(mv, mv, [sc, sc, sc]);
+    } else if (useKind === 'eat' && use > 0) {
       const chew = Math.abs(Math.sin(s.time * 14)) * 0.035;
       mat4.translate(mv, mv, [0.18 - Math.min(1, use * 4) * 0.12, -0.32 + chew, -0.55]);
       mat4.rotateY(mv, mv, -0.6);
@@ -933,7 +947,7 @@ export class Renderer {
       mat4.scale(mv, mv, [0.5, 0.5, 0.5]);
     } else {
       // Herramientas con la hoja hacia arriba y hacia el centro; el resto, algo inclinado.
-      const isTool = !!ITEMS[s.heldItem]?.tool;
+      const isTool = !!ITEMS[item]?.tool;
       mat4.translate(mv, mv, [
         0.6 + s.handBob[0] - swing2 * 0.32,
         -0.52 + s.handBob[1] - equip * 0.5 + swing2 * 0.14,
@@ -953,10 +967,17 @@ export class Renderer {
       vr[2] * ld[0] + vr[6] * ld[1] + vr[10] * ld[2],
     ];
     const gl = this.gl;
+    // Mano izquierda: la misma pose reflejada (las caras quedan del revés).
+    if (left) {
+      const mirror = mat4.fromScaling(mat4.create(), [-1, 1, 1]);
+      mat4.multiply(mv, mirror, mv);
+      gl.frontFace(gl.CW);
+    }
     if (model.flat) gl.disable(gl.CULL_FACE);
     else gl.enable(gl.CULL_FACE);
     this.items.drawHand(model, mv, proj, lv, s.lightAtEye, s.grassTint, bindLighting);
     gl.disable(gl.CULL_FACE);
+    gl.frontFace(gl.CCW);
   }
 
   /** Proyecta una posición del mundo a coordenadas CSS del canvas (o null si está detrás). */

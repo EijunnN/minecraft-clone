@@ -1238,3 +1238,16 @@ kbd {
 #sleep-overlay.on #sleep-hint {
   opacity: 1;
 }
+
+/* Mano secundaria: fuera de la barra, a su izquierda. */
+#hotbar .slot.offhand {
+  position: absolute;
+  right: calc(100% + 10px);
+  bottom: 5px;
+  background: rgba(8, 12, 20, 0.55);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+#hotbar .slot.offhand.hidden {
+  display: none;
+}

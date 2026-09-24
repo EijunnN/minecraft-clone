@@ -12,6 +12,7 @@ import type { Inventory } from '../game/Inventory';
 import { armorSilhouettes } from './armorBar';
 import { stonecutterOptions } from '../../shared/stonecutting';
 import './workstations.css';
+import { itemTooltipHtml } from './itemTooltip';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter';
 
@@ -25,7 +26,7 @@ export interface ScreenHost {
 
 type SlotRef =
   | { kind: 'inv'; i: number } | { kind: 'grid'; i: number } | { kind: 'out' } | { kind: 'cont'; i: number }
-  | { kind: 'armor'; i: number };
+  | { kind: 'armor'; i: number } | { kind: 'off'; i: number };
 
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 
@@ -196,7 +197,8 @@ export class InventoryScreen {
         `<div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
       // Inventario del jugador: la armadura en columna (cabeza arriba) a la izquierda.
       if (kind === 'player') {
-        top = `<div class="armor-col">${Array.from({ length: 4 }, (_, i) => `<div class="slot2 armor-slot" data-s="armor:${i}"></div>`).join('')}</div>` +
+        top = `<div class="armor-col">${Array.from({ length: 4 }, (_, i) => `<div class="slot2 armor-slot" data-s="armor:${i}"></div>`).join('')}` +
+          `<div class="slot2 off-slot" data-s="off:0" title="Mano secundaria (F)"></div></div>` +
           `<div class="armor-craft">${top}</div>`;
       }
     } else if (kind === 'chest') {
@@ -216,7 +218,7 @@ export class InventoryScreen {
       `<h3>Inventario</h3>` +
       `<div class="grid g9">${Array.from({ length: 27 }, (_, i) => `<div class="slot2" data-s="inv:${i + 9}"></div>`).join('')}</div>` +
       `<div class="grid g9 hotrow">${Array.from({ length: 9 }, (_, i) => `<div class="slot2" data-s="inv:${i}"></div>`).join('')}</div>` +
-      `<p class="hint">Clic: coger/dejar · Clic derecho: la mitad / de uno en uno · Mayús + clic: mover rápido · 1–9: a la barra · Q: tirar · E: cerrar</p>`;
+      `<p class="hint">Clic: coger/dejar · Clic derecho: la mitad / de uno en uno · Mayús + clic: mover rápido · 1–9: a la barra · F: a la otra mano · Q: tirar · E: cerrar</p>`;
     this.panel.querySelectorAll<HTMLElement>('[data-s]').forEach((el) => {
       const key = el.dataset.s!;
       this.slotEls.set(key, el);
@@ -241,7 +243,7 @@ export class InventoryScreen {
   private parseRef(key: string): SlotRef {
     if (key === 'out') return { kind: 'out' };
     const [k, n] = key.split(':');
-    return { kind: k as 'inv' | 'grid' | 'cont' | 'armor', i: Number(n) };
+    return { kind: k as 'inv' | 'grid' | 'cont' | 'armor' | 'off', i: Number(n) };
   }
 
   // ---------------------------------------------------------------- lectura de ranuras
@@ -258,6 +260,8 @@ export class InventoryScreen {
         return this.container?.slots[r.i] ?? null;
       case 'armor':
         return this.inv.armor[r.i];
+      case 'off':
+        return this.inv.offhand;
     }
   }
 
@@ -308,7 +312,15 @@ export class InventoryScreen {
     this.host.sound('click');
     if (r.kind === 'out') this.clickOutput(shift);
     else if (r.kind === 'cont') this.clickContainer(r.i, btn, shift);
-    else if (r.kind === 'armor') {
+    else if (r.kind === 'off') {
+      // Mano secundaria: coge/deja como un hueco más; con mayúsculas vuelve al inventario.
+      if (shift) this.inv.offhand = this.inv.add(this.inv.offhand);
+      else {
+        const fake: ContainerState = { kind: 'chest', slots: [this.inv.offhand], burn: 0, burnMax: 0, cook: 0 };
+        this.inv.cursor = clickSlot(fake, 0, btn, this.inv.cursor);
+        this.inv.offhand = fake.slots[0];
+      }
+    } else if (r.kind === 'armor') {
       // Mayúsculas: devolver la pieza al inventario; si no, coger, dejar o intercambiar.
       if (shift) this.inv.unequip(r.i);
       else this.inv.clickArmor(r.i);
@@ -407,7 +419,8 @@ export class InventoryScreen {
     if (r.kind !== 'inv' && r.kind !== 'grid') return;
     const arr = r.kind === 'inv' ? this.inv.slots : this.grid;
     const n = Number(e.key);
-    if (n >= 1 && n <= 9) {
+    if (e.code === 'KeyF' && r.kind === 'inv') this.inv.swapOffhand(r.i);
+    else if (n >= 1 && n <= 9) {
       const h = n - 1;
       if (r.kind === 'inv' && r.i === h) return;
       const tmp = arr[r.i];
@@ -514,14 +527,7 @@ export class InventoryScreen {
       this.tooltip.classList.add('hidden');
       return;
     }
-    const tool = ITEMS[s.id]?.tool;
-    const armor = ITEMS[s.id]?.armor;
-    const food = ITEMS[s.id]?.food;
-    let extra = '';
-    if (tool && tool.durability) extra = ` · ${tool.durability - (s.dmg ?? 0)}/${tool.durability}`;
-    else if (armor) extra = ` · +${armor.points} de armadura · ${armor.durability - (s.dmg ?? 0)}/${armor.durability}`;
-    else if (food) extra = ` · +${food.hunger / 2} 🍗`;
-    this.tooltip.textContent = itemName(s.id) + extra;
+    this.tooltip.innerHTML = itemTooltipHtml(s);
     this.tooltip.classList.remove('hidden');
     this.tooltip.style.left = `${this.mouse[0] + 14}px`;
     this.tooltip.style.top = `${this.mouse[1] + 14}px`;

@@ -56,3 +56,8 @@
     inset: 5px;
   }
 }
+
+/* Mano secundaria: bajo la armadura, algo separada. */
+.armor-col .off-slot {
+  margin-top: 8px;
+}
