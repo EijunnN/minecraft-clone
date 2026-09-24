@@ -26,6 +26,7 @@ import { EntityRenderer, type RemotePlayerView } from './EntityRenderer';
 import { Weather } from './Weather';
 import { ItemRenderer, type ItemDraw } from './ItemRenderer';
 import { MobRenderer, type MobTexture } from './MobRenderer';
+import { XpOrbRenderer } from './XpOrbRenderer';
 import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
@@ -139,6 +140,7 @@ export class Renderer {
   readonly weather: Weather;
   readonly items: ItemRenderer;
   readonly mobs: MobRenderer;
+  readonly xpOrbs: XpOrbRenderer;
   settings: RenderSettings;
 
   private tri: FullscreenTriangle;
@@ -224,6 +226,7 @@ export class Renderer {
     this.weather = new Weather(gl);
     this.items = new ItemRenderer(gl, caps, this.textures, sprites);
     this.mobs = new MobRenderer(gl, mobTextures);
+    this.xpOrbs = new XpOrbRenderer(gl);
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
     this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
@@ -561,6 +564,7 @@ export class Renderer {
     this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
     this.entities.drawParticles(s.camX, s.camY, s.camZ, this.atmosphere.irradiance.color);
     gl.disable(gl.CULL_FACE);
+    this.xpOrbs.draw(s.drops, s.camX, s.camY, s.camZ);
     this.atmosphere.drawSky();
 
     // --- 4. Agua ---

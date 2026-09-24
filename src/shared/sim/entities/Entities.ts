@@ -1,7 +1,7 @@
-// Entidades del servidor: criaturas (con IA), objetos tirados, flechas y bloques que caen.
-// Este gestor guarda la lista, crea y retira entidades, aplica daño y explosiones y reparte cada
-// tick entre sus comportamientos: itemPhysics, mobBrain, animalLife y spawner.
-import { MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, type MobDef } from '../../mobs';
+// Entidades del servidor: criaturas (con IA), objetos tirados, flechas, bloques que caen y orbes de
+// experiencia. Este gestor guarda la lista, crea y retira entidades, aplica daño y explosiones y
+// reparte cada tick entre sus comportamientos: itemPhysics, mobBrain, animalLife, spawner y xpOrbs.
+import { MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, type MobDef } from '../../mobs';
 import { ITEMS, ARROW, type ItemStack } from '../../items';
 import { WHITE_WOOL, BLOCK_FLUID, BLOCK_HARDNESS } from '../../blocks';
 import type { WorldSim } from '../WorldSim';
@@ -11,6 +11,7 @@ import { ItemPhysics } from './itemPhysics';
 import { MobBrain } from './mobBrain';
 import { AnimalLife } from './animalLife';
 import { Spawner } from './spawner';
+import { XpOrbs } from './xpOrbs';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -23,6 +24,7 @@ export class Entities {
   readonly mobs = new MobBrain(this);
   readonly animals = new AnimalLife(this);
   readonly spawner = new Spawner(this);
+  readonly xp = new XpOrbs(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -63,8 +65,15 @@ export class Entities {
     return e;
   }
 
+  /** Entidad sin comportamiento propio (el que la crea rellena sus datos). */
+  spawnBare(type: number, x: number, y: number, z: number, width: number, height: number): Entity {
+    const e = this.base(type, x, y, z, width, height, 1);
+    this.list.set(e.id, e);
+    return e;
+  }
+
   /** Retira la entidad más antigua de un tipo si se alcanzó su límite. */
-  private makeRoom(type: number, max: number): void {
+  makeRoom(type: number, max: number): void {
     let n = 0;
     let oldest: Entity | null = null;
     for (const e of this.list.values()) {
@@ -151,6 +160,10 @@ export class Entities {
     e.vx += (dx / d) * 5 * knock;
     e.vz += (dz / d) * 5 * knock;
     e.vy = Math.max(e.vy, 4 * knock);
+    if (typeof attacker === 'string') {
+      e.lastHurtBy = attacker;
+      e.lastHurtAt = e.age;
+    }
     const ai = e.ai;
     const def = MOBS[e.type];
     if (!def.hostile || def.neutral) {
@@ -189,6 +202,7 @@ export class Entities {
       if (e.fire > 0) for (const s of stacks) if (ITEMS[s.id]?.smelt && ITEMS[s.id]?.food) s.id = ITEMS[s.id].smelt!;
       this.dropStacks(stacks, e.x, e.y + 0.3, e.z);
     }
+    if (drops) this.xp.onMobKilled(e);
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -246,6 +260,7 @@ export class Entities {
   tick(dt: number): void {
     const players = this.host.players();
     this.items.buildItemGrid();
+    this.xp.beginTick(dt);
     const active: Entity[] = [];
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
@@ -270,6 +285,7 @@ export class Entities {
       if (e.type === ENT_ITEM) this.items.itemTick(e, dt, players);
       else if (e.type === ENT_ARROW) this.items.arrowTick(e, dt, players);
       else if (e.type === ENT_FALLING) this.items.fallingTick(e, dt);
+      else if (e.type === ENT_XP) this.xp.orbTick(e, dt, players);
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

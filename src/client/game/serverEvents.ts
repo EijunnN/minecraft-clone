@@ -90,6 +90,13 @@ export class ServerEvents {
       case 'ires':
         this.g.interaction.onInteractResult(msg);
         break;
+      case 'xp': {
+        const n = Number(msg.n);
+        if (!Number.isInteger(n) || n <= 0) break;
+        this.g.audio.playXpOrb();
+        if (this.g.xp.add(n)) this.g.audio.playLevelUp();
+        break;
+      }
     }
   }
 

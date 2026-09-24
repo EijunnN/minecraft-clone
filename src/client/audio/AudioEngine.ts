@@ -19,6 +19,7 @@ import {
   buildPlayerHurt,
 } from './combat';
 import { buildMobSound } from './creatures';
+import { buildLevelUp, buildXpOrb } from './experienceSounds';
 import { FluidAmbience } from './fluidAmbience';
 import { Heartbeat } from './heartbeat';
 import { buildMaterialSound, buildSplashSound, buildUiSound } from './materials';
@@ -351,6 +352,16 @@ export class AudioEngine {
   /** "Pop" suave con tono aleatorio: un objeto se recoge del suelo. */
   playPickup(): void {
     this.safe(() => this.spawnLocal(0.05, (ctx, _noise, dest, now) => buildPickup(ctx, dest, now)));
+  }
+
+  /** Tintineo de un orbe de experiencia recogido (tono aleatorio). */
+  playXpOrb(): void {
+    this.safe(() => this.spawnLocal(0.1, (ctx, _noise, dest, now) => buildXpOrb(ctx, dest, now)));
+  }
+
+  /** Fanfarria de subir de nivel. */
+  playLevelUp(): void {
+    this.safe(() => this.spawnLocal(0.2, (ctx, _noise, dest, now) => buildLevelUp(ctx, dest, now)));
   }
 
   /** Confirmación de crafteo (interfaz, no posicional). */
