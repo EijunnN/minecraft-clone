@@ -272,8 +272,16 @@ export class Game {
     this.input.requestLock();
   };
 
-  private onUnload = () => {
+  /**
+   * Al cerrar o recargar la pestaña: guardar el estado y, si se está jugando, pedir confirmación
+   * (Ctrl + W, el atajo de cerrar pestaña, está al lado de correr con Ctrl).
+   */
+  private onUnload = (e: BeforeUnloadEvent) => {
     this.sendState(true);
+    if (this.playing && !this.survival.dead) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
   };
 
   private anyScreenOpen(): boolean {
@@ -338,6 +346,12 @@ export class Game {
     ui.onQuit = () => {
       this.stop();
       this.onQuitCb?.();
+    };
+    ui.onFullscreen = () => {
+      void this.input.toggleFullscreen().then(() => {
+        ui.hidePause();
+        this.input.requestLock();
+      });
     };
     ui.onRespawn = () => this.life.respawn();
     ui.onChatSubmit = (t) => this.sendChat(t);

@@ -1,4 +1,4 @@
-// Servidor multijugador en Cloudflare: un Worker enruta cada sala a un Durable Object (WorldRoom)
+// Servidor multijugador en Cloudflare: un Worker enruta cada sala a un Durable Object (GameWorld)
 // que ejecuta el servidor de juego autoritativo (GameServer) a 20 ticks/s mientras haya jugadores
 // conectados, y guarda en SQLite las ediciones, los contenedores, los jugadores y los animales.
 import { DurableObject } from 'cloudflare:workers';
@@ -6,7 +6,7 @@ import { GameServer, TICK_RATE, type Conn } from '../shared/sim/GameServer';
 import type { ServerStore } from '../shared/sim/store';
 
 export interface Env {
-  WORLDS: DurableObjectNamespace<WorldRoom>;
+  GAME_WORLDS: DurableObjectNamespace<GameWorld>;
 }
 
 const ROOM_RE = /^\/api\/room\/([a-z0-9_-]{1,32})\/ws$/i;
@@ -19,7 +19,7 @@ export default {
       if (request.headers.get('Upgrade') !== 'websocket') {
         return new Response('Se esperaba una conexión WebSocket', { status: 426 });
       }
-      const stub = env.WORLDS.getByName(m[1].toLowerCase());
+      const stub = env.GAME_WORLDS.getByName(m[1].toLowerCase());
       return stub.fetch(request);
     }
     if (url.pathname === '/api/health') return Response.json({ ok: true });
@@ -90,7 +90,7 @@ class SqlStore implements ServerStore {
   }
 }
 
-export class WorldRoom extends DurableObject<Env> {
+export class GameWorld extends DurableObject<Env> {
   private game!: GameServer;
   private timer: ReturnType<typeof setInterval> | null = null;
 

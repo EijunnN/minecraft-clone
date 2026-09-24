@@ -24,6 +24,7 @@ export class Input {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
     document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    document.addEventListener('fullscreenchange', this.onFullscreenChange);
     canvas.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mouseup', this.onMouseUp);
     window.addEventListener('mousemove', this.onMouseMove);
@@ -36,6 +37,7 @@ export class Input {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
     document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
     this.canvas.removeEventListener('mousedown', this.onMouseDown);
     window.removeEventListener('mouseup', this.onMouseUp);
     window.removeEventListener('mousemove', this.onMouseMove);
@@ -71,6 +73,33 @@ export class Input {
   exitLock(): void {
     if (document.pointerLockElement) document.exitPointerLock();
   }
+
+  /** Teclado bloqueado (pantalla completa): Ctrl+W y compañía llegan al juego, no al navegador. */
+  keyboardLocked = false;
+
+  /**
+   * Pantalla completa con bloqueo de teclado (Chrome y Edge). Así correr con Ctrl + W no cierra la
+   * pestaña. Fuera de pantalla completa los navegadores no dejan bloquear Ctrl+W.
+   */
+  async toggleFullscreen(): Promise<void> {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    } catch (e) {
+      console.warn('Pantalla completa no disponible', e);
+    }
+  }
+
+  private onFullscreenChange = () => {
+    const kb = (navigator as Navigator & { keyboard?: { lock(keys?: string[]): Promise<void>; unlock(): void } }).keyboard;
+    if (!kb) return;
+    if (document.fullscreenElement) {
+      kb.lock().then(() => (this.keyboardLocked = true)).catch(() => (this.keyboardLocked = false));
+    } else {
+      kb.unlock();
+      this.keyboardLocked = false;
+    }
+  };
 
   isDown(code: string): boolean {
     return this.gameKeys && this.down.has(code);
@@ -122,6 +151,9 @@ export class Input {
       }
     }
     this.down.add(e.code);
+    // Con el teclado bloqueado, Esc llega al juego en vez de soltar el ratón: lo soltamos nosotros
+    // (y así se abre la pausa). Mantener Esc sigue saliendo de la pantalla completa.
+    if (e.code === 'Escape' && this.keyboardLocked && this.locked) this.exitLock();
     // Evita acciones del navegador en las teclas del juego.
     if (this.locked && ['Space', 'Tab', 'F1', 'F3', 'F5', 'Slash', 'ControlLeft', 'KeyW'].includes(e.code)) e.preventDefault();
     if (this.locked && (e.ctrlKey || e.metaKey) && ['KeyW', 'KeyS', 'KeyD', 'KeyA'].includes(e.code)) e.preventDefault();

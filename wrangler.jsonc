@@ -8,8 +8,12 @@
     "run_worker_first": ["/api/*"]
   },
   "durable_objects": {
-    "bindings": [{ "name": "WORLDS", "class_name": "WorldRoom" }]
+    "bindings": [{ "name": "GAME_WORLDS", "class_name": "GameWorld" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["WorldRoom"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["WorldRoom"] },
+    // 2026-09-24: borrar todos los mundos guardados (pedido por el dueño) y empezar de cero.
+    { "tag": "v2", "deleted_classes": ["WorldRoom"], "new_sqlite_classes": ["GameWorld"] }
+  ],
   "observability": { "enabled": true }
 }

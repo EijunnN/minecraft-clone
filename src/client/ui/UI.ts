@@ -42,6 +42,7 @@ export class UI {
   onInventoryPick: ((id: number, slot: number | null) => void) | null = null;
   onInventorySelectSlot: ((slot: number) => void) | null = null;
   onSettingsChanged: ((s: Settings) => void) | null = null;
+  onFullscreen: (() => void) | null = null;
   onUiSound: ((kind: 'click' | 'open' | 'close') => void) | null = null;
   /** Petición de cerrar el inventario desde la propia UI (Escape en el buscador). */
   onCloseInventory: (() => void) | null = null;
@@ -93,6 +94,10 @@ export class UI {
     $('btn-resume').addEventListener('click', () => {
       this.onUiSound?.('click');
       this.onResume?.();
+    });
+    $('btn-fullscreen').addEventListener('click', () => {
+      this.onUiSound?.('click');
+      this.onFullscreen?.();
     });
     $('btn-invite').addEventListener('click', () => {
       this.onUiSound?.('click');

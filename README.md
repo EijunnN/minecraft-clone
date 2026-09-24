@@ -84,7 +84,7 @@ Objects). Pensado para PC (teclado y ratón).
 | WASD | Moverse |
 | Espacio | Saltar · en creativo, doble pulsación para volar |
 | Shift | Agacharse (no caes por los bordes; permite colocar bloques sobre cofres, mesas y puertas; quieto en una escalera de mano; levantarse de la cama) |
-| Ctrl o doble W | Correr (en supervivencia hace falta tener algo de hambre saciada) |
+| Ctrl o doble W | Correr (en supervivencia hace falta tener algo de hambre saciada). En una ventana normal, Ctrl + W es el atajo de cerrar la pestaña: el juego pide confirmación antes de cerrar, y en **Pantalla completa** (botón de la pausa) Ctrl + W ya no cierra nada |
 | Clic izquierdo | Romper bloque (mantener) · atacar criaturas |
 | Clic derecho | Colocar · abrir cofres, hornos, mesas, puertas, trampillas y portillos · dormir · comer o beber (mantener) · tensar el arco · usar cubos · labrar con la azada · polvo de hueso · dar de comer, esquilar u ordeñar animales |
 | Clic central | Copiar el bloque apuntado a la mano |
@@ -164,7 +164,7 @@ npm run preview     # compila y sirve la versión de producción en local
    ```
 
    Wrangler te mostrará la URL pública (por ejemplo `https://voxelcraft.<tu-subdominio>.workers.dev`).
-   La primera vez crea el Durable Object `WorldRoom` con almacenamiento SQLite (incluido en el plan
+   La primera vez crea el Durable Object `GameWorld` con almacenamiento SQLite (incluido en el plan
    gratuito). Los mundos creados con la versión anterior siguen funcionando: sus construcciones se
    conservan.
 
@@ -222,7 +222,7 @@ escala de resolución.
 src/
   shared/          Bloques, objetos, criaturas, recetas, contenedores, protocolo y generación del mundo
     sim/           Servidor de juego: fluidos, criaturas (IA, A*), física, objetos, hornos, guardado
-  server/          Worker + Durable Object (WorldRoom) con almacenamiento SQLite
+  server/          Worker + Durable Object (GameWorld) con almacenamiento SQLite
   client/
     world/         Iluminación y mallado (Web Workers), gestión de chunks
     render/        Pipeline WebGL2 y shaders (cielo, terreno, agua, nubes, criaturas, objetos, post)
