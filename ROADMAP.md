@@ -87,10 +87,10 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Elemento | Estado |
 | --- | --- |
 | Herramientas de madera, piedra, hierro, oro y diamante (pico, hacha, pala, espada) | ✅ |
-| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | ❌ |
-| Tijeras | 🟡 (sólo para hojas) |
+| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | 🟡 (azadas) |
+| Tijeras | ✅ (hojas y ovejas) |
 | Cubos de agua y lava | ✅ |
-| Cubos de leche, de peces, de ajolote, de nieve polvo, de cubo de azufre | ❌ |
+| Cubos de leche, de peces, de ajolote, de nieve polvo, de cubo de azufre | 🟡 (leche) |
 | Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, rienda, silla | ❌ |
 | Mesa de trabajo 3×3 e inventario 2×2 | ✅ |
 | Recetas | 🟡 (~50 de más de 1.000) |
@@ -169,7 +169,7 @@ puertas, trampillas (3 maderas), escaleras de mano, paneles de cristal, antorcha
 | Comandos | 🟡 (10 de ~80: `/time`, `/tp`, `/modo`, `/dificultad`, `/invocar`, `/dar`, `/matar`…) |
 | Operadores y permisos (quién puede usar `/modo` o `/dar`) | ❌ |
 | Aspecto personalizado del jugador (skins) | 🟡 (color de camiseta) |
-| Objeto en la mano y armadura visibles en otros jugadores | ❌ |
+| Objeto en la mano y armadura visibles en otros jugadores | 🟡 (armadura sí; el objeto de la mano todavía no) |
 | Reglas del juego (gamerules), bloques de comandos | ❌ |
 | Subtítulos y opciones de accesibilidad | ❌ |
 | Gráficos | ✅ (por encima del original: sombras, nubes volumétricas, agua con reflejos, TAA) |
