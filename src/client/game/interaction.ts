@@ -134,11 +134,15 @@ export class Interaction {
       return;
     }
     if (def.food || def.drink) {
-      if (pressed && (def.drink || this.g.survival.food < 20 || this.g.creative)) this.use = { kind: 'eat', t: 0, slot: this.g.selected, item: held.id, soundT: 0.3 };
+      if (pressed && (def.drink || def.food?.always || this.g.survival.food < 20 || this.g.creative)) this.use = { kind: 'eat', t: 0, slot: this.g.selected, item: held.id, soundT: 0.3 };
       return;
     }
     if (def.armor) {
       if (pressed) this.equipHeld();
+      return;
+    }
+    if (def.tool?.kind === 'shield') {
+      if (pressed) this.use = { kind: 'block', t: 0, slot: this.g.selected, item: held.id, soundT: 0 };
       return;
     }
     if (def.tool?.kind === 'bow') {
@@ -154,6 +158,30 @@ export class Interaction {
       return;
     }
     if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
+  }
+
+  /** ¿Cubierto con el escudo? (como en Minecraft, tarda un cuarto de segundo en subir). */
+  get blocking(): boolean {
+    return this.use?.kind === 'block' && this.use.t >= 0.25;
+  }
+
+  /**
+   * Golpe recibido con el escudo levantado: si viene de frente (el empuje apunta hacia atrás), el
+   * escudo se lo come entero y se desgasta. Devuelve true si lo bloqueó.
+   */
+  blockHit(amount: number, k: [number, number, number]): boolean {
+    if (!this.blocking) return false;
+    const p = this.g.player;
+    const kl = Math.hypot(k[0], k[2]);
+    if (kl < 1e-3) return false;
+    // El atacante está en sentido contrario al empuje; se bloquea lo que llega por delante.
+    const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+    if (fx * (-k[0] / kl) + fz * (-k[2] / kl) <= 0) return false;
+    this.g.audio.playBlockHit('wood', [p.x, p.eyeY, p.z]);
+    p.impulse(k[0] * 0.3, 0, k[2] * 0.3);
+    // Desgaste de Minecraft: golpes de 3 o más gastan 1 + daño.
+    if (amount >= 3) this.wearHeld(1 + Math.floor(amount));
+    return true;
   }
 
   /** Clic derecho con una pieza de armadura: se la pone (intercambia con la puesta; en creativo no se gasta). */
@@ -234,7 +262,7 @@ export class Interaction {
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.005);
       const tool = ITEMS[this.g.heldId]?.tool;
-      if (tool && tool.kind !== 'bow' && BLOCK_HARDNESS[id] > 0) this.wearHeld(tool.kind === 'sword' ? 2 : 1);
+      if (tool && tool.kind !== 'bow' && tool.kind !== 'shield' && BLOCK_HARDNESS[id] > 0) this.wearHeld(tool.kind === 'sword' ? 2 : 1);
     }
   }
 
@@ -249,14 +277,15 @@ export class Interaction {
   attack(e: ClientEntity): void {
     const p = this.g.player;
     const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying;
-    this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit });
+    const b = this.g.statusEffects.melee;
+    this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}) });
     this.g.swing(false);
     this.g.net?.send({ t: 'swing' });
     if (crit) this.g.renderer.entities.spawnCrit(e.x, e.y + 1, e.z, 10);
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.1);
       const tool = ITEMS[this.g.heldId]?.tool;
-      if (tool && tool.kind !== 'bow') this.wearHeld(tool.kind === 'sword' ? 1 : 2);
+      if (tool && tool.kind !== 'bow' && tool.kind !== 'shield') this.wearHeld(tool.kind === 'sword' ? 1 : 2);
     }
   }
 
@@ -266,13 +295,18 @@ export class Interaction {
     const food = def?.food;
     this.use = null;
     if (def?.drink) {
-      // Cubo de leche: se bebe y queda el cubo vacío.
+      // Cubo de leche: quita todos los efectos y queda el cubo vacío.
+      this.g.statusEffects.clear(this.g.survival);
       this.g.audio.playBurp();
       if (!this.g.creative) this.g.inv.set(this.g.selected, { id: BUCKET, count: 1 });
       return;
     }
     if (!food) return;
     this.g.survival.eat(food.hunger, food.saturation);
+    // Efectos de la comida (carne podrida, pollo crudo, ojo de araña, manzana dorada).
+    for (const [id, secs, amp, chance] of food.effects ?? []) {
+      if (Math.random() < chance) this.g.statusEffects.add(id, secs, amp, this.g.survival);
+    }
     this.g.audio.playBurp();
     if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
   }

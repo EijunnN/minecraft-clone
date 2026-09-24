@@ -69,6 +69,15 @@ export interface HudIcons {
   foodHalf: string;
   foodEmpty: string;
   bubble: string;
+  /** Absorción (corazones dorados). */
+  heartGold: string;
+  heartGoldHalf: string;
+  /** Con veneno los corazones se vuelven verdes. */
+  heartPoison: string;
+  heartPoisonHalf: string;
+  /** Con el efecto Hambre la comida se vuelve verdosa. */
+  foodHunger: string;
+  foodHungerHalf: string;
 }
 
 export function buildHudIcons(): HudIcons {
@@ -78,6 +87,9 @@ export function buildHudIcons(): HudIcons {
   const foodPal: Pal = { K: '#1d1006', b: '#c07a3b', W: '#f0c48f', w: '#efe6d6' };
   const foodEmpty: Pal = { fill: '#2e2218', b: '#2e2218', W: '#2e2218', w: '#3a3129' };
   const bubPal: Pal = { K: '#0b2342', b: '#5fb4f0', W: '#e9f6ff' };
+  const goldPal: Pal = { K: '#2a1c02', r: '#f2c21b', W: '#fff4b0', d: '#c08a0c' };
+  const poisonPal: Pal = { K: '#0c1a05', r: '#8f9e2a', W: '#e2eca0', d: '#5d6b12' };
+  const hungerPal: Pal = { K: '#141d06', b: '#7a8a2b', W: '#c2d27a', w: '#c9d6a8' };
   return {
     heart: draw(HEART, heartPal, 'full', heartEmpty),
     heartHalf: draw(HEART, heartPal, 'left', heartEmpty),
@@ -87,6 +99,12 @@ export function buildHudIcons(): HudIcons {
     foodHalf: draw(FOOD, foodPal, 'left', foodEmpty),
     foodEmpty: draw(FOOD, foodPal, 'none', foodEmpty),
     bubble: draw(BUBBLE, bubPal, 'full', bubPal),
+    heartGold: draw(HEART, goldPal, 'full', heartEmpty),
+    heartGoldHalf: draw(HEART, goldPal, 'left', heartEmpty),
+    heartPoison: draw(HEART, poisonPal, 'full', heartEmpty),
+    heartPoisonHalf: draw(HEART, poisonPal, 'left', heartEmpty),
+    foodHunger: draw(FOOD, hungerPal, 'full', foodEmpty),
+    foodHungerHalf: draw(FOOD, hungerPal, 'left', foodEmpty),
   };
 }
 

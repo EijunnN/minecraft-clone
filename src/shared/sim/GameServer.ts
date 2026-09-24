@@ -13,6 +13,7 @@ import { WORLD_LIMIT, CHUNK_SIZE } from '../constants';
 import { AIR, isValidBlockId } from '../blocks';
 import { sanitizeStack } from '../containers';
 import { ITEMS, isValidItem } from '../items';
+import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS } from '../effects';
 import { sunHeightAt, rainAt } from '../weather';
 import { WorldSim } from './WorldSim';
 import { FluidSim, type FluidWorld } from './fluids';
@@ -583,7 +584,17 @@ export class GameServer {
       fly: !!raw.fly,
       dead: !!raw.dead,
       xp: Math.floor(num(raw.xp, 0, 10_000_000, 0)),
+      abs: num(raw.abs, 0, 20, 0),
     };
+    if (Array.isArray(raw.fx)) {
+      // Efectos activos: sólo los conocidos, con nivel y duración acotados.
+      save.fx = raw.fx.slice(0, 16).flatMap((f) => {
+        if (!Array.isArray(f)) return [];
+        const [id, amp, secs] = f.map(Number);
+        if (!EFFECTS[id] || !Number.isFinite(secs) || secs <= 0) return [];
+        return [[id, Math.max(0, Math.min(MAX_EFFECT_AMP, amp | 0)), Math.min(MAX_EFFECT_SECONDS, Math.round(secs * 10) / 10)] as [number, number, number]];
+      });
+    }
     if (Array.isArray(raw.armor)) {
       // Cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies).
       save.armor = [0, 1, 2, 3].map((slot) => {

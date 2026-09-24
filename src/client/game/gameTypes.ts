@@ -17,7 +17,8 @@ export interface Mining {
 }
 
 export interface Use {
-  kind: 'eat' | 'bow';
+  /** Comer o beber, tensar el arco o cubrirse con el escudo. */
+  kind: 'eat' | 'bow' | 'block';
   t: number;
   slot: number;
   item: number;

@@ -8,6 +8,7 @@ import {
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
   CLAY_BALL, BUCKET, BOW, ARROW, SHEARS, LAPIS, TOOLS, BONE, BREAD, WHEAT, SUGAR, EGG, MILK_BUCKET, BONE_MEAL,
+  APPLE, GOLDEN_APPLE, SHIELD,
   ARMOR, type ItemStack,
 } from './items';
 
@@ -125,6 +126,10 @@ shape(['MMM', 'SES', 'WWW'], { M: MILK_BUCKET, S: SUGAR, E: EGG, W: WHEAT }, CAK
 
 /** Lo que queda en la cuadrícula al fabricar (los cubos de leche de la tarta vuelven vacíos). */
 export const CRAFT_REMAINDER: Readonly<Record<number, number>> = { [MILK_BUCKET]: BUCKET };
+
+// --- Combate y estado ---
+shape(['GGG', 'GAG', 'GGG'], { G: GOLD_INGOT, A: APPLE }, GOLDEN_APPLE);
+shape(['PIP', 'PPP', ' P '], { P: PLANKS, I: IRON_INGOT }, SHIELD);
 
 // --- Papel y libros ---
 shape(['CCC'], { C: SUGAR_CANE }, PAPER, 3);

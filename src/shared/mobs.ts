@@ -2,7 +2,7 @@
 // El modelo mira hacia -Z; y crece hacia arriba desde los pies.
 import {
   RAW_PORKCHOP, RAW_BEEF, LEATHER, RAW_MUTTON, RAW_CHICKEN, FEATHER, ROTTEN_FLESH, BONE, ARROW, GUNPOWDER, STRING,
-  ENDER_PEARL,
+  ENDER_PEARL, SPIDER_EYE,
 } from './items';
 import { WHITE_WOOL } from './blocks';
 
@@ -192,7 +192,7 @@ mob({
 });
 mob({
   id: MOB_SPIDER, key: 'spider', name: 'Araña', hostile: true, neutral: true, health: 16, walk: 1.3, run: 3.0,
-  width: 1.4, height: 0.9, damage: 2, burnsInSun: false, drops: [[STRING, 0, 2]], atlas: [64, 64], anim: 'spider', scale: 1,
+  width: 1.4, height: 0.9, damage: 2, burnsInSun: false, drops: [[STRING, 0, 2], [SPIDER_EYE, 0, 1]], atlas: [64, 64], anim: 'spider', scale: 1,
   parts: [
     { name: 'thorax', pivot: [0, 9, 0], from: [-3, -3, -3], size: [6, 6, 6], uv: [0, 0] },
     { name: 'head', parent: 'thorax', pivot: [0, 0, -3], from: [-4, -4, -8], size: [8, 8, 8], uv: [32, 4] },

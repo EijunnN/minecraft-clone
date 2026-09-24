@@ -23,6 +23,9 @@ export class PlayerActions {
     const item = Number(msg.item);
     const tool = Number.isInteger(item) && item > 0 ? ITEMS[item]?.tool : undefined;
     let dmg = tool ? tool.damage : 1;
+    // Efectos del jugador (Fuerza, Debilidad): el cliente los manda y aquí se acotan.
+    const bonus = Number(msg.b);
+    if (Number.isFinite(bonus)) dmg = Math.max(0, dmg + Math.max(-20, Math.min(15, bonus)));
     dmg *= 0.2 + 0.8 * charge * charge;
     if (msg.crit && charge > 0.9) dmg *= 1.5;
     ctx.entities.damage(e, Math.max(0.5, dmg), s.p[0], s.p[2], s.id, tool?.kind === 'sword' ? 1.2 : 1);

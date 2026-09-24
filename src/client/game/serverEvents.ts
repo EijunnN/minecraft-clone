@@ -87,6 +87,11 @@ export class ServerEvents {
       case 'spawn':
         this.g.life.bed = Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isInteger) ? msg.p : null;
         break;
+      case 'effect':
+        // Del comando /efecto (id 0 = quitarlos todos).
+        if (msg.id === 0) this.g.statusEffects.clear(this.g.survival);
+        else this.g.statusEffects.add(Number(msg.id), Number(msg.s), Number(msg.a), this.g.survival);
+        break;
       case 'ires':
         this.g.interaction.onInteractResult(msg);
         break;

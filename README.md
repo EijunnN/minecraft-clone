@@ -42,6 +42,12 @@ Objects). Pensado para PC (teclado y ratón).
 - **Armaduras**: cuero, hierro, oro y diamante (casco, peto, grebas y botas) con la reducción de daño
   y el desgaste de Minecraft; se ponen con clic derecho o en las ranuras del inventario, se ven sobre
   los jugadores (también sobre los demás) y tienen su barra en el HUD.
+- **Escudo**: se levanta con clic derecho mantenido, frena el paso y para los golpes, flechas y
+  explosiones que llegan de frente (no por la espalda); se desgasta con cada golpe fuerte.
+- **Efectos de estado**: velocidad, lentitud, fuerza, debilidad, regeneración, veneno, hambre,
+  resistencia al fuego, visión nocturna, respiración acuática y absorción (corazones dorados), con
+  sus iconos y el tiempo restante en el HUD. Los dan la manzana dorada, el ojo de araña, la carne
+  podrida y el pollo crudo; la leche los quita.
 - **Experiencia**: orbes al matar criaturas, criar animales, minar menas y sacar lo fundido del horno;
   niveles con las fórmulas de Minecraft, barra con el nivel y al morir se suelta parte.
 - **Mundo vivo**: la arena y la grava caen, las plantas y antorchas necesitan apoyo, las hojas se
@@ -111,6 +117,7 @@ Objects). Pensado para PC (teclado y ratón).
 | `/time set dia\|mediodia\|atardecer\|noche\|medianoche\|amanecer` | Cambia la hora |
 | `/invocar <criatura>` | Hace aparecer una criatura delante (`cerdo`, `zombi`, `creeper`…) |
 | `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
+| `/efecto <efecto> [segundos] [nivel]` | Da un efecto (`/efecto velocidad 60 2`); `/efecto quitar` los quita todos |
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
 | `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
 

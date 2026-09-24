@@ -76,9 +76,9 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (cama roja; faltan los otros colores y la de paja) |
 | Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
-| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (críticos y enfriamiento) |
+| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento) |
 | Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha y arco) |
-| Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | ❌ |
+| Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (11 efectos: velocidad, lentitud, fuerza, debilidad, regeneración, veneno, hambre, resistencia al fuego, visión nocturna, respiración acuática y absorción; faltan las pociones) |
 | Modos: supervivencia, creativo, aventura, espectador, extremo (hardcore) | 🟡 (supervivencia y creativo) |
 | Dificultad pacífica, fácil, normal y difícil | ✅ |
 
@@ -220,9 +220,10 @@ dobles, trampillas, portillos, vallas, escaleras y losas de 8 materiales, panele
 escaleras de mano y antorchas en la pared. Granja: azadas, tierra de cultivo (humedad, pisoteo), trigo,
 zanahorias, patatas y remolachas, polvo de hueso, pan, patata asada, azúcar, fardo de heno y tarta;
 criar animales (crías que crecen, seguir la comida), esquilar, ordeñar y huevos. Armaduras de cuero,
-hierro, oro y diamante (con modelo en el jugador) y experiencia (orbes y niveles).
+hierro, oro y diamante (con modelo en el jugador) y experiencia (orbes y niveles). Escudo y efectos de
+estado (manzana dorada, ojo de araña, carne podrida, leche y el comando `/efecto`).
 
-Pendiente: escudo, efectos de estado; calabaza, sandía, compostador, lanzar huevos, pesca; muros,
+Pendiente: calabaza, sandía, compostador, lanzar huevos, pesca; muros,
 carteles, cofres dobles y camas de colores; ahumador, alto horno, fogata, cortapiedras. (Las puertas
 de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
 

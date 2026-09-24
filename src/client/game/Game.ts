@@ -28,8 +28,11 @@ import type { RemotePlayerView } from '../render/EntityRenderer';
 import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTypes';
 import { Interaction } from './interaction';
 import { Experience } from './experience';
+import { StatusEffects } from './statusEffects';
 import { renderArmorBar } from '../ui/armorBar';
 import { renderXpBar } from '../ui/xpBar';
+import { renderEffectsHud } from '../ui/effectsHud';
+import { EFFECT_POISON, EFFECT_HUNGER } from '../../shared/effects';
 import { Effects } from './effects';
 import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
@@ -61,6 +64,7 @@ export class Game {
   readonly network = new ServerEvents(this);
   readonly environment = new Environment(this);
   readonly xp = new Experience();
+  readonly statusEffects = new StatusEffects();
   cfg: GameConfig;
   renderer: Renderer;
   ui: UI;
@@ -256,6 +260,8 @@ export class Game {
       this.survival.food = Math.max(0, Math.min(20, save.food));
       this.survival.saturation = Math.max(0, Math.min(20, save.sat));
       this.survival.air = save.air ?? 15;
+      this.statusEffects.fromWire(save.fx, this.survival);
+      this.survival.absorption = Math.max(0, Math.min(20, Number(save.abs) || 0));
       this.survival.dead = !!save.dead || this.survival.health <= 0;
       if (this.survival.dead) this.survival.deathCause = '';
       this.selected = Math.max(0, Math.min(8, save.sel ?? 0));
@@ -449,7 +455,7 @@ export class Game {
   sendState(force: boolean): void {
     if (!this.net || !this.playing) return;
     const p = this.player, s = this.survival;
-    const key = `${this.inv.version}|${s.version}|${this.xp.version}|${Math.round(p.x)}|${Math.round(p.y)}|${Math.round(p.z)}|${this.selected}|${s.dead}`;
+    const key = `${this.inv.version}|${s.version}|${this.xp.version}|${this.statusEffects.version}|${Math.round(p.x)}|${Math.round(p.y)}|${Math.round(p.z)}|${this.selected}|${s.dead}`;
     if (!force && key === this.stateKey) return;
     this.stateKey = key;
     this.net.send({
@@ -457,7 +463,7 @@ export class Game {
       d: {
         inv: this.inv.toWire(), hp: s.health, food: s.food, sat: Math.round(s.saturation * 10) / 10, air: Math.round(s.air),
         pos: [p.x, p.y, p.z], rot: [p.yaw, p.pitch], fly: p.flying, sel: this.selected, dead: s.dead,
-        armor: this.inv.armorToWire(), xp: this.xp.total,
+        armor: this.inv.armorToWire(), xp: this.xp.total, fx: this.statusEffects.toWire(), abs: s.absorption,
       },
     });
   }
@@ -568,7 +574,9 @@ export class Game {
     if (!this.creative) p.flying = false;
     if (active && input.wasDoubleTapped('KeyW') && (this.creative || surv.canSprint())) p.sprinting = true;
     if (!this.creative && !surv.canSprint()) p.sprinting = false;
-    p.slow = this.interaction.use ? 0.25 : 1;
+    // Usar un objeto frena mucho; los efectos Velocidad y Lentitud multiplican.
+    p.usingItem = !!this.interaction.use;
+    p.slow = (this.interaction.use ? 0.25 : 1) * this.statusEffects.speed;
     world.renderDistance = settings.render.renderDistance;
     const wasInWater = p.inWater;
     const wasGround = p.onGround;
@@ -667,7 +675,12 @@ export class Game {
       this.sendState(false);
     }
     this.refreshHotbar();
-    ui.setSurvival(!this.creative && !surv.dead, surv.health, surv.food, surv.air, surv.hurtTime < 0.3);
+    const fx = this.statusEffects;
+    ui.setSurvival(
+      !this.creative && !surv.dead, surv.health, surv.food, surv.air, surv.hurtTime < 0.3, surv.absorption,
+      fx.has(EFFECT_POISON), fx.has(EFFECT_HUNGER),
+    );
+    renderEffectsHud(fx, !surv.dead && !this.hudHidden);
     renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
     renderXpBar(this.xp, !this.creative && !surv.dead);
 
@@ -793,12 +806,13 @@ export class Game {
       underwater,
       eyeSkyExposure: this.eyeSky,
       rain,
+      nightVision: this.statusEffects.nightVision,
       snow,
       cloudCoverage: (window as unknown as { __cloudCov?: number }).__cloudCov ?? Math.max(0.1, Math.min(0.9, coverage)),
       mist,
       selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
       heldItem: surv.dead ? 0 : this.heldId,
-      handUse: use ? (use.kind === 'bow' ? Math.min(1, use.t) : use.t / 1.6) : 0,
+      handUse: use ? (use.kind === 'bow' ? Math.min(1, use.t) : use.kind === 'block' ? use.t : use.t / 1.6) : 0,
       handUseKind: use ? use.kind : 'none',
       crack,
       mobs,

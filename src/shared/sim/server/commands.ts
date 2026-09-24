@@ -4,6 +4,7 @@ import type { GameMode } from '../../protocol';
 import { ITEMS, maxStack } from '../../items';
 import { MOBS, MOB_TYPES } from '../../mobs';
 import { standable } from '../pathfind';
+import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../../effects';
 import type { ServerContext, Session } from './context';
 
 export class Commands {
@@ -67,6 +68,24 @@ export class Commands {
         ctx.broadcast({ t: 'chat', id: null, name: '', m: `Dificultad: ${names[ctx.difficulty]}.` });
         return;
       }
+      case 'effect':
+      case 'efecto': {
+        // /efecto <efecto> [segundos] [nivel] · /efecto quitar
+        const v = norm(args[0] ?? '');
+        if (v === 'quitar' || v === 'clear') {
+          ctx.send(s, { t: 'effect', id: 0, s: 0, a: 0 });
+          return;
+        }
+        const def = effectByName(args[0] ?? '');
+        if (!def) {
+          reply('Uso: /efecto <' + Object.values(EFFECTS).map((e) => e.key).join('|') + '> [segundos] [nivel] · /efecto quitar');
+          return;
+        }
+        const secs = Math.max(1, Math.min(MAX_EFFECT_SECONDS, Math.floor(Number(args[1]) || 30)));
+        const amp = Math.max(0, Math.min(MAX_EFFECT_AMP, Math.floor(Number(args[2]) || 1) - 1));
+        ctx.send(s, { t: 'effect', id: def.id, s: secs, a: amp });
+        return;
+      }
       case 'kill':
       case 'matar':
         ctx.send(s, { t: 'hurt', a: 1000, k: [0, 0, 0], c: 'kill' });
@@ -127,7 +146,8 @@ export class Commands {
       case 'ayuda':
         reply(
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
-          '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /matar, /seed, /lista, /tp <jugador>',
+          '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar, ' +
+          '/seed, /lista, /tp <jugador>',
         );
         return;
       default:

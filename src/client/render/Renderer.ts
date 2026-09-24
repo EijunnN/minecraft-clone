@@ -90,6 +90,8 @@ export interface FrameState {
   underwater: boolean;
   eyeSkyExposure: number;
   rain: number;
+  /** Efecto Visión nocturna (0..1): la exposición sube para ver en la oscuridad. */
+  nightVision?: number;
   /** La precipitación es nieve (bioma frío). */
   snow: boolean;
   cloudCoverage: number;
@@ -99,7 +101,7 @@ export interface FrameState {
   heldItem: number;
   /** Uso del objeto: 0..1 (tensar el arco, comer). */
   handUse: number;
-  handUseKind: 'none' | 'bow' | 'eat';
+  handUseKind: 'none' | 'bow' | 'eat' | 'block';
   /** Bloque que se está minando y fase de la grieta (0..9). */
   crack: { x: number; y: number; z: number; stage: number; box?: number[] } | null;
   /** Criaturas y demás entidades (objetos, flechas, bloques que caen). */
@@ -679,7 +681,7 @@ export class Renderer {
       .tex2D('uLum', this.lumTex)
       .tex2D('uPrev', expPrev.color)
       .f1('uDt', Math.min(s.dt, 0.1))
-      .f1('uEV', set.brightness - s.rain * 0.7)
+      .f1('uEV', set.brightness - s.rain * 0.7 + (s.nightVision ?? 0) * 2.5)
       .f1('uLevels', 6)
       .f1('uReset', this.exposureReset ? 1 : 0);
     this.tri.draw();
@@ -845,6 +847,17 @@ export class Renderer {
       mat4.rotateY(mv, mv, -0.25);
       mat4.rotateZ(mv, mv, -Math.PI / 4 - 0.35);
       mat4.scale(mv, mv, [0.62, 0.62, 0.62]);
+    } else if (ITEMS[s.heldItem]?.tool?.kind === 'shield') {
+      // Escudo derecho a un lado; al cubrirse sube hacia el centro, por debajo de la mira.
+      const k = s.handUseKind === 'block' ? Math.min(1, use / 0.25) : 0;
+      mat4.translate(mv, mv, [
+        0.62 - k * 0.4 + s.handBob[0] - swing2 * 0.2,
+        -0.55 + k * 0.17 + s.handBob[1] - equip * 0.5 + swing2 * 0.1,
+        -1.0 + k * 0.15 - swing * 0.2,
+      ]);
+      mat4.rotateY(mv, mv, -0.5 + k * 0.38 + swing2 * 0.3);
+      mat4.rotateX(mv, mv, -swing * 0.6);
+      mat4.scale(mv, mv, [0.56, 0.56, 0.56]);
     } else if (s.handUseKind === 'eat' && use > 0) {
       const chew = Math.abs(Math.sin(s.time * 14)) * 0.035;
       mat4.translate(mv, mv, [0.18 - Math.min(1, use * 4) * 0.12, -0.32 + chew, -0.55]);

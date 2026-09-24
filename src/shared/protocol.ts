@@ -70,6 +70,10 @@ export interface PlayerSave {
   dead?: boolean;
   /** Armadura puesta [cabeza, pecho, piernas, pies]. */
   armor?: (WireStack | null)[];
+  /** Efectos activos: [efecto, nivel, segundos restantes]. */
+  fx?: [number, number, number][];
+  /** Corazones dorados (absorción) que le quedan. */
+  abs?: number;
   /** Experiencia total acumulada. */
   xp?: number;
 }
@@ -97,7 +101,8 @@ export type ClientMsg =
   | { t: 'chat'; m: string }
   | { t: 'swing' }
   | { t: 'ping'; c: number }
-  | { t: 'attack'; e: number; item: number; crit?: boolean }
+  /** b: daño extra por efectos (Fuerza +3 por nivel, Debilidad −4). */
+  | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number }
   | { t: 'pickup'; e: number }
   | { t: 'drop'; items: ItemStack[]; p: [number, number, number]; v?: [number, number, number] }
   | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number }
@@ -139,6 +144,8 @@ export type ServerMsg =
   /** Resultado de intentar dormir: p = posición en la cama, f = orientación; m = motivo si no. */
   | { t: 'sleep'; ok: boolean; p?: [number, number, number]; f?: number; m?: string }
   | { t: 'wake' }
+  /** Dar un efecto de estado (id 0 = quitarlos todos): s segundos, nivel a (0 = I). */
+  | { t: 'effect'; id: number; s: number; a: number }
   /** El jugador recogió orbes de experiencia por valor de `n`. */
   | { t: 'xp'; n: number }
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */

@@ -3,13 +3,16 @@
 // un sprite 16x16 del atlas de objetos.
 import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
 import {
+  EFFECT_HUNGER, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_ABSORPTION, type FoodEffect,
+} from './effects';
+import {
   BLOCKS, BLOCK_COUNT, R_NONE, WATER, LAVA, FURNACE, CHEST, OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS,
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
   OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
 } from './blocks';
 
-export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe';
+export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield';
 
 export interface ToolInfo {
   kind: ToolType;
@@ -25,6 +28,10 @@ export interface ToolInfo {
 export interface FoodInfo {
   hunger: number;
   saturation: number;
+  /** Efectos al comerlo: [efecto, segundos, nivel (0 = I), probabilidad]. */
+  effects?: FoodEffect[];
+  /** Se puede comer aunque no haya hambre (manzana dorada). */
+  always?: boolean;
 }
 
 export interface ItemDef {
@@ -174,6 +181,21 @@ for (const mat of ARMOR_MATERIALS) {
   });
 }
 
+// ------------------------------------------------------------------ combate y estado (fase 4)
+export const GOLDEN_APPLE = item('golden_apple', 'Manzana dorada', {
+  food: { hunger: 4, saturation: 9.6, always: true, effects: [[EFFECT_REGENERATION, 5, 1, 1], [EFFECT_ABSORPTION, 120, 0, 1]] },
+});
+export const SPIDER_EYE = item('spider_eye', 'Ojo de araña', {
+  food: { hunger: 2, saturation: 3.2, effects: [[EFFECT_POISON, 5, 0, 1]] },
+});
+/** Escudo: se levanta con clic derecho mantenido y bloquea lo que llega de frente. */
+export const SHIELD = item('shield', 'Escudo', {
+  stack: 1, fuel: 15, tool: { kind: 'shield', tier: 0, speed: 1, durability: 336, damage: 1 },
+});
+// Comida con efectos (valores de Minecraft).
+ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
+ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
+
 /** Comida que acepta cada animal para criar (y que le hace seguir al jugador). */
 export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   cow: [WHEAT],
@@ -262,6 +284,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   MILK_BUCKET,
   ...Object.values(TOOLS).flatMap((t) => Object.values(t)),
   ...Object.values(ARMOR).flatMap((a) => Object.values(a)),
+  GOLDEN_APPLE, SPIDER_EYE, SHIELD,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

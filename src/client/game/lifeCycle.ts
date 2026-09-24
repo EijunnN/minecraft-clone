@@ -3,7 +3,11 @@
 import { deathMessage } from './Survival';
 import { isBed, BLOCK_OPAQUE, BLOCK_SOLID } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
+import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
+
+/** Destino de los efectos en creativo: nada hace daño ni cura. */
+const CREATIVE_TARGET: EffectTarget = { health: 20, absorption: 0, heal: () => {}, damage: () => 0, addExhaustion: () => {} };
 
 export class LifeCycle {
   constructor(private g: Game) {}
@@ -42,6 +46,8 @@ export class LifeCycle {
   onHurt(amount: number, k: [number, number, number], cause: string): void {
     this.leaveBed(true);
     if (this.g.survival.dead || (this.g.creative && cause !== 'kill')) return;
+    // Escudo levantado: bloquea golpes, flechas y explosiones que llegan de frente.
+    if (cause !== 'kill' && Array.isArray(k) && k.every(Number.isFinite) && this.g.interaction.blockHit(amount, k)) return;
     const dmg = this.g.survival.damage(amount, cause, cause === 'kill');
     if (dmg <= 0) return;
     if (Array.isArray(k) && k.every(Number.isFinite)) this.g.player.impulse(k[0], k[1], k[2]);
@@ -58,6 +64,7 @@ export class LifeCycle {
   die(): void {
     this.leaveBed(true);
     this.g.survival.dead = true;
+    this.g.statusEffects.clear(this.g.survival);
     this.g.interaction.mining = null;
     this.g.interaction.use = null;
     // Cerrar antes las pantallas: lo que había en la cuadrícula de fabricación vuelve al inventario
@@ -150,13 +157,22 @@ export class LifeCycle {
         }
       } else this.suffocateTimer = 0;
       const hpBefore = surv.health;
+      const fx = g.statusEffects;
+      fx.tick(dt, surv);
       const exposed = g.world!.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) >> 4 >= 15;
-      surv.update(dt, { eyeInWater: p.eyeInWater, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty });
+      surv.update(dt, {
+        eyeInWater: p.eyeInWater, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
+        fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
+      });
       if (surv.health < hpBefore) this.hurtFeedback(hpBefore - surv.health);
       if (surv.dead) this.die();
-    } else if (g.creative && p.y < -64) {
-      p.y = 200;
-      p.vy = 0;
+    } else {
+      // En creativo los efectos siguen corriendo (Velocidad, Visión nocturna…) pero no hacen daño.
+      if (!surv.dead) g.statusEffects.tick(dt, CREATIVE_TARGET);
+      if (g.creative && p.y < -64) {
+        p.y = 200;
+        p.vy = 0;
+      }
     }
   }
 }

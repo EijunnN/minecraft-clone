@@ -257,13 +257,15 @@ export class UI {
   }
 
   /** Corazones, hambre y aire (sólo en supervivencia). */
-  setSurvival(show: boolean, health: number, food: number, air: number, flash: boolean): void {
+  setSurvival(
+    show: boolean, health: number, food: number, air: number, flash: boolean, absorption = 0, poisoned = false, hungry = false,
+  ): void {
     const el = $('survival-hud');
     el.classList.toggle('hidden', !show);
     const icons = this.hudIcons;
     if (!show || !icons) return;
     const bubbles = air >= 14.9 ? 10 : Math.ceil((air / 15) * 10);
-    const key = `${health}|${food}|${air >= 14.9 ? 'full' : bubbles}|${flash}`;
+    const key = `${health}|${food}|${air >= 14.9 ? 'full' : bubbles}|${flash}|${absorption}|${poisoned}|${hungry}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
     const row = (n: number, full: string, half: string, empty: string) => {
@@ -276,9 +278,21 @@ export class UI {
     };
     const hp = Math.ceil(health);
     const hearts = $('hearts');
-    hearts.innerHTML = row(hp, icons.heart, icons.heartHalf, flash ? icons.heartFlash : icons.heartEmpty);
+    hearts.innerHTML = poisoned
+      ? row(hp, icons.heartPoison, icons.heartPoisonHalf, flash ? icons.heartFlash : icons.heartEmpty)
+      : row(hp, icons.heart, icons.heartHalf, flash ? icons.heartFlash : icons.heartEmpty);
     hearts.classList.toggle('low', hp <= 4);
-    $('hunger').innerHTML = row(Math.ceil(food), icons.food, icons.foodHalf, icons.foodEmpty);
+    $('hunger').innerHTML = hungry
+      ? row(Math.ceil(food), icons.foodHunger, icons.foodHungerHalf, icons.foodEmpty)
+      : row(Math.ceil(food), icons.food, icons.foodHalf, icons.foodEmpty);
+    // Absorción: una fila de corazones dorados encima (la barra de armadura sube).
+    const ab = Math.ceil(absorption);
+    let gold = '';
+    for (let i = 0; i < 10 && i * 2 < ab; i++) {
+      gold += `<i style="background-image:url(${ab - i * 2 >= 2 ? icons.heartGold : icons.heartGoldHalf})"></i>`;
+    }
+    $('absorb').innerHTML = gold;
+    el.classList.toggle('absorbing', ab > 0);
     const airEl = $('air');
     if (air >= 14.9) airEl.innerHTML = '';
     else {

@@ -10,6 +10,10 @@ export interface SurvivalContext {
   inRain: boolean;
   /** 0 pacífico .. 3 difícil. */
   difficulty: number;
+  /** Efecto Resistencia al fuego: la lava y el fuego no hacen daño. */
+  fireResistant?: boolean;
+  /** Efecto Respiración acuática: no se gasta el aire. */
+  waterBreathing?: boolean;
 }
 
 /** Armadura puesta (la implementa el inventario). */
@@ -69,6 +73,8 @@ export class Survival {
   private lavaTimer = 0;
   /** Se ha curado o dañado (para refrescar el HUD). */
   version = 0;
+  /** Corazones dorados del efecto Absorción (vida extra que se gasta primero). */
+  absorption = 0;
   /** Armadura que reduce el daño (sin ella, el daño llega entero). */
   armor: ArmorSource | null = null;
 
@@ -79,6 +85,7 @@ export class Survival {
     this.exhaustion = 0;
     this.air = 15;
     this.fire = 0;
+    this.absorption = 0;
     this.dead = false;
     this.deathCause = '';
     this.hurtTime = 10;
@@ -110,7 +117,10 @@ export class Survival {
       dmg = armorReduce(raw, this.armor.armorPoints(), this.armor.armorToughness());
       this.armor.wearArmor(armorWear(raw));
     }
-    this.health = Math.max(0, this.health - dmg);
+    // Los corazones dorados (absorción) se gastan antes que la vida.
+    const absorbed = Math.min(this.absorption, dmg);
+    this.absorption -= absorbed;
+    this.health = Math.max(0, this.health - (dmg - absorbed));
     this.hurtTime = 0;
     this.addExhaustion(0.1);
     this.version++;
@@ -193,7 +203,7 @@ export class Survival {
       }
     } else this.starveTimer = 0;
     // Aire bajo el agua.
-    if (ctx.eyeInWater) {
+    if (ctx.eyeInWater && !ctx.waterBreathing) {
       this.air = Math.max(0, this.air - dt);
       if (this.air <= 0) {
         this.drownTimer += dt;
@@ -212,7 +222,7 @@ export class Survival {
       this.lavaTimer += dt;
       if (this.lavaTimer >= 0.5) {
         this.lavaTimer = 0;
-        this.damage(4, 'lava', true);
+        if (!ctx.fireResistant) this.damage(4, 'lava', true);
       }
     } else this.lavaTimer = 0.5;
     if (ctx.inWater || ctx.inRain) this.fire = 0;
@@ -221,7 +231,7 @@ export class Survival {
       this.fireTimer += dt;
       if (this.fireTimer >= 1 && !ctx.inLava) {
         this.fireTimer = 0;
-        this.damage(1, 'fire', true);
+        if (!ctx.fireResistant) this.damage(1, 'fire', true);
       }
     } else this.fireTimer = 0;
   }

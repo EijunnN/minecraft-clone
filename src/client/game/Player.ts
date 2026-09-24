@@ -60,6 +60,8 @@ export class Player {
   flowZ = 0;
   /** Multiplicador de velocidad (tensar el arco, comer). */
   slow = 1;
+  /** Usando un objeto (comer, tensar el arco, cubrirse con el escudo): no se puede correr. */
+  usingItem = false;
   /** Agarrado a una escalera de mano. */
   onLadder = false;
   /** Chocó horizontalmente en el último movimiento. */
@@ -184,7 +186,7 @@ export class Player {
     if (wl > 1) { wx /= wl; wz /= wl; }
 
     this.sneaking = c.sneak && !this.flying;
-    if (fwd <= 0 || this.sneaking || this.slow < 1) this.sprinting = false;
+    if (fwd <= 0 || this.sneaking || this.usingItem) this.sprinting = false;
     else if (c.sprint) this.sprinting = true;
     const targetEye = this.sneaking ? PLAYER_SNEAK_EYE_HEIGHT : PLAYER_EYE_HEIGHT;
     this.eyeOffset += (targetEye - this.eyeOffset) * (1 - Math.exp(-dt * 14));
