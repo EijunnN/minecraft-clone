@@ -227,6 +227,9 @@ export class GameServer {
         if (cur >= 0 && fallsThrough(cur) && isValidBlockId(block)) this.world.setBlock(x, y, z, block);
         else this.entities.dropStacks([{ id: block, count: 1 }], x + 0.5, y + 0.5, z + 0.5);
       },
+      giveXp: (id, n) => {
+        for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
+      },
     };
   }
 
@@ -427,6 +430,15 @@ export class GameServer {
       case 'state':
         if (this.allow(s, 2)) this.onState(s, msg.d);
         break;
+      case 'dropxp': {
+        // Al morir: n entero 1..100 (7 por nivel, como mucho 100), junto al jugador ya muerto.
+        const n = Number(msg.n);
+        const p = Array.isArray(msg.p) && msg.p.length === 3 ? msg.p.map(Number) : [];
+        if (!Number.isInteger(n) || n < 1 || n > 100 || p.length !== 3 || !p.every(Number.isFinite)) break;
+        if (!(s.s & STATE_DEAD) || s.mode === 'c' || Math.hypot(p[0] - s.p[0], p[1] - s.p[1], p[2] - s.p[2]) > 4) break;
+        if (this.allow(s, 5)) this.entities.xp.playerDrop(s.id, n, p[0], p[1], p[2], this.now());
+        break;
+      }
       case 'died':
         if (typeof msg.m === 'string' && this.allow(s, 5)) {
           const m = msg.m.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80);

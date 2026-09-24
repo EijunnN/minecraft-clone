@@ -3,6 +3,7 @@
 import { MOBS, MOB_COW, MOB_SHEEP, MOB_CHICKEN } from '../../mobs';
 import { EGG, BUCKET, MILK_BUCKET, SHEARS, BREED_FOOD } from '../../items';
 import { GRASS, DIRT, WHITE_WOOL } from '../../blocks';
+import { breedXp } from '../../experience';
 import { boxCollides } from '../physics';
 import { LOVE_SECONDS, BREED_COOLDOWN, type PlayerView, type InteractResult, type Entity } from './types';
 import type { Entities } from './Entities';
@@ -115,6 +116,7 @@ export class AnimalLife {
     const baby = this.m.spawnMob(a.type, x, y, z, true);
     if (baby) baby.yaw = baby.bodyYaw = a.bodyYaw;
     this.m.host.fx('breed', x, y + 0.6, z);
+    this.m.xp.spawn(breedXp(this.m.rand), x, y + 0.3, z);
   }
 
   /**

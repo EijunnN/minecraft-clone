@@ -35,6 +35,8 @@ export interface EntityHost {
   landBlock(x: number, y: number, z: number, block: number): void;
   /** Una criatura cae sobre tierra de cultivo y la pisotea. */
   trample(x: number, y: number, z: number): void;
+  /** Un jugador recoge orbes de experiencia por valor de `n`. */
+  giveXp(playerId: string, n: number): void;
 }
 
 /** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */
@@ -104,6 +106,11 @@ export interface Entity extends Body {
   stuck?: boolean;
   // Bloques que caen
   block?: number;
+  // Orbes de experiencia
+  xp?: number;
+  // Criaturas: último jugador que la hirió y cuándo (edad de la entidad), para la experiencia.
+  lastHurtBy?: string;
+  lastHurtAt?: number;
   // Animales
   /** Segundos que le faltan para ser adulto (> 0: cría). */
   growAge?: number;
@@ -124,6 +131,7 @@ export const TAU = Math.PI * 2;
 /** Límites globales (protegen la memoria y la CPU del servidor): se retiran los más viejos. */
 export const MAX_ITEMS = 800;
 export const MAX_ARROWS = 200;
+export const MAX_XP_ORBS = 400;
 /** Animales en todo el mundo; al llegar al límite se reciclan los que están lejos de todos. */
 export const MAX_PASSIVE = 300;
 /** Distancia a los jugadores a partir de la cual una entidad queda congelada (no se simula). */

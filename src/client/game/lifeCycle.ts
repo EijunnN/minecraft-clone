@@ -1,7 +1,8 @@
-// Vida del jugador: daño, muerte (suelta el inventario), reaparición (en la cama si la tiene) y
-// dormir.
+// Vida del jugador: daño, muerte (suelta el inventario y la experiencia), reaparición (en la cama si
+// la tiene) y dormir.
 import { deathMessage } from './Survival';
 import { isBed, BLOCK_OPAQUE, BLOCK_SOLID } from '../../shared/blocks';
+import { deathXp } from '../../shared/experience';
 import type { Game } from './Game';
 
 export class LifeCycle {
@@ -63,18 +64,25 @@ export class LifeCycle {
     // y se suelta con todo lo demás.
     this.g.screen.close();
     if (this.g.ui.isInventoryOpen()) this.g.toggleInventory();
+    let xp = 0;
     if (!this.g.creative) {
       const items = this.g.inv.takeAll();
       const p = this.g.player;
       for (let i = 0; i < items.length; i += 16) {
         this.g.net?.send({ t: 'drop', items: items.slice(i, i + 16), p: [p.x, p.y + 0.5, p.z] });
       }
+      // La experiencia se pierde: se suelta una parte en orbes (7 por nivel, como mucho 100).
+      xp = deathXp(this.g.xp.level);
+      this.g.xp.reset();
     }
     this.g.audio.playPlayerDeath();
     this.g.net?.send({ t: 'died', m: deathMessage(this.g.survival.deathCause) });
     this.showDeath();
     this.g.sendState(true);
     this.g.sendPos(true);
+    // Después de la posición (ya muerto): el servidor sólo acepta 'dropxp' de jugadores muertos.
+    const p = this.g.player;
+    if (xp > 0) this.g.net?.send({ t: 'dropxp', n: xp, p: [p.x, p.y + 0.5, p.z] });
   }
 
   showDeath(): void {

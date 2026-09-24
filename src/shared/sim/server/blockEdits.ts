@@ -10,6 +10,7 @@ import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { ITEMS, BONE_MEAL, PLACEABLE_BLOCKS } from '../../items';
 import { planPlacement, toggleEdits, isUsable } from '../../placement';
 import { blockDrops } from '../drops';
+import { oreXp } from '../../experience';
 import type { BlockRules } from './blockRules';
 import type { Farming } from './farming';
 import type { Beds } from './beds';
@@ -54,6 +55,9 @@ export class BlockEdits {
         const drops = !creative && !BLOCK_FLUID[cur] ? blockDrops(cur, Number.isInteger(tool) ? tool : 0, () => ctx.rand()) : [];
         ctx.world.setBlock(x, y, z, AIR);
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
+        // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
+        const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand());
+        if (xp > 0) ctx.entities.xp.spawn(xp, x + 0.5, y + 0.3, z + 0.5);
       } else {
         // Sólo cubos (fluidos); los bloques se colocan con 'place'.
         if (!BLOCK_FLUID[b] || (!BLOCK_REPLACEABLE[cur] && cur !== b)) {

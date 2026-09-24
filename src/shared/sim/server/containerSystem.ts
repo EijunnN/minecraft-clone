@@ -1,11 +1,12 @@
 // Cofres y hornos compartidos: estado por posición, operaciones de los jugadores (clic, meter,
 // sacar), hornos que funden solos, contenido que cae al romperlos y persistencia.
 import { FURNACE, FURNACE_LIT, isContainer, isChest, isFurnace, blockFacing } from '../../blocks';
+import { smeltXp } from '../../experience';
 import type { ClientMsg, ServerMsg } from '../../protocol';
 import type { ItemStack } from '../../items';
 import {
   newContainer, clickSlot, insertStack, takeFromSlot, furnaceTick, containerToWire, containerFromWire, sanitizeStack,
-  type ContainerState, type ContainerWire,
+  FURNACE_OUT, type ContainerState, type ContainerWire,
 } from '../../containers';
 import type { ServerStore } from '../store';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
@@ -98,6 +99,9 @@ export class ContainerSystem {
       ctx.send(s, { t: 'cclose' });
       return;
     }
+    // Lo que había en la salida del horno (para dar la experiencia de lo que se saque).
+    const out = c.kind === 'furnace' ? c.slots[FURNACE_OUT] : null;
+    const before = out ? { id: out.id, count: out.count } : null;
     if (msg.t === 'cclick') {
       const slot = Number(msg.slot), btn = Number(msg.btn) === 1 ? 1 : 0;
       const cur = sanitizeStack(msg.cur);
@@ -109,8 +113,16 @@ export class ContainerSystem {
       const slot = Number(msg.slot), max = Math.max(0, Math.min(64, Number(msg.max) | 0));
       ctx.send(s, { t: 'cres', q, give: Number.isInteger(slot) && slot >= 0 && slot < c.slots.length ? takeFromSlot(c, slot, max) : null });
     }
+    if (before) this.smeltReward(s, before.id, before.count - (c.slots[FURNACE_OUT]?.count ?? 0));
     this.dirty.add(k);
     this.sendContainer(k, c);
+  }
+
+  /** El jugador sacó `taken` objetos fundidos: orbes de experiencia a sus pies. */
+  private smeltReward(s: Session, item: number, taken: number): void {
+    if (taken <= 0) return;
+    const xp = smeltXp(item, taken, () => this.ctx.rand());
+    if (xp > 0) this.ctx.entities.xp.spawn(xp, s.p[0], s.p[1] + 0.5, s.p[2]);
   }
 
   /** Hornos: funden, se encienden y se apagan (cambian de bloque conservando la orientación). */

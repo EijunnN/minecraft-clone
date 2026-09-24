@@ -1,6 +1,7 @@
 // Entidades en el cliente: réplica de las del servidor (criaturas, objetos, flechas, bloques que
-// caen) con interpolación entre instantáneas (se dibujan ~110 ms en el pasado para suavizar).
-import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING } from '../../shared/mobs';
+// caen, orbes de experiencia) con interpolación entre instantáneas (se dibujan ~110 ms en el pasado
+// para suavizar).
+import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP } from '../../shared/mobs';
 import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd } from '../../shared/protocol';
 
 interface Snap {
@@ -24,7 +25,7 @@ export interface ClientEntity {
   bodyYaw: number;
   pitch: number;
   flags: number;
-  /** Objetos: id y cantidad. Bloques que caen: id del bloque. */
+  /** Objetos: id y cantidad. Bloques que caen: id del bloque. Orbes: valor en `count`. */
   item: number;
   count: number;
   health: number;
@@ -75,7 +76,7 @@ export class ClientEntities {
       const e: ClientEntity = {
         id, type, snaps: [{ t: now, x, y, z, yaw, body, pitch }], x, y, z, yaw, bodyYaw: body, pitch, flags,
         item: type === ENT_ITEM || type === ENT_FALLING ? e1 ?? 0 : 0,
-        count: type === ENT_ITEM ? e2 ?? 1 : 1,
+        count: type === ENT_ITEM ? e2 ?? 1 : type === ENT_XP ? e1 ?? 1 : 1,
         health: MOBS[type] ? e1 ?? MOBS[type].health : 1,
         walkPhase: 0, walkAmount: 0, age: 0, hurtT: flags & EF_HURT ? 0 : 99, deathT: flags & EF_DEAD ? 0 : -1,
         actionT: flags & EF_ACTION ? 0 : -1,
@@ -87,13 +88,13 @@ export class ClientEntities {
       const e = this.list.get(u[0]);
       if (!e || e.gone) continue;
       this.push(e, now, u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
-      if (e.type === ENT_ITEM && u.length > 8) e.count = u[8];
+      if ((e.type === ENT_ITEM || e.type === ENT_XP) && u.length > 8) e.count = u[8];
     }
     for (const r of msg.rm ?? []) {
       const id = Array.isArray(r) ? r[0] : r;
       const e = this.list.get(id);
       if (!e) continue;
-      if (Array.isArray(r) && r[1] && (e.type === ENT_ITEM || e.type === ENT_ARROW)) {
+      if (Array.isArray(r) && r[1] && (e.type === ENT_ITEM || e.type === ENT_ARROW || e.type === ENT_XP)) {
         e.collector = r[1];
         e.collectT = 0;
         e.gone = true;
