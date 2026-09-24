@@ -7,9 +7,12 @@ Un juego de bloques estilo Minecraft que corre en el navegador, con gráficos ti
 modo **supervivencia** completo y multijugador en tiempo real sobre Cloudflare (Workers + Durable
 Objects). Pensado para PC (teclado y ratón).
 
-- **Mundo infinito procedural**: océanos, playas, llanuras, bosques, abedulares, taiga, desiertos,
-  sabanas, montañas con picos nevados, ríos, cuevas, lagos de lava y minerales. 384 bloques de alto
-  como en Minecraft actual: de y = −64 (lecho de roca) a 319.
+- **Mundo infinito procedural** con 23 biomas: océanos (cálidos, fríos, helados y profundos), playas,
+  llanuras, praderas en flor, bosques, abedulares, bosques oscuros, arboledas de cerezos, taiga,
+  picos de hielo, desiertos, tierras baldías de terracota, sabanas de acacias, junglas con árboles
+  gigantes, pantanos, islas de champiñones y montañas con picos nevados; ríos, cuevas, lagos de lava
+  y minerales. Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
+  de alto como en Minecraft actual: de y = −64 (lecho de roca) a 319.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
   Minado con tiempos reales según la dureza del bloque y la herramienta (con grietas), desgaste de
@@ -101,6 +104,9 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Armadura de diamante y barra de experiencia](docs/screenshots/armor.png) | ![Espada y escudo, efectos de estado y corazones dorados al atardecer](docs/screenshots/combat.png) |
 | ![Huerto de calabazas y sandías con faroles y compostador](docs/screenshots/gourds.png) | ![Pescando en un estanque](docs/screenshots/fishing.png) |
 | ![Taller con cartel, cofre doble, ahumador, alto horno, cortapiedras y fogata](docs/screenshots/workshop.png) | ![Inventario con la mano secundaria y la descripción de un arma](docs/screenshots/inventory.png) |
+| ![Jungla con árboles gigantes y enredaderas](docs/screenshots/jungle.png) | ![Arboleda de cerezos al pie de una montaña](docs/screenshots/cherry.png) |
+| ![Tierras baldías con mesetas de terracota](docs/screenshots/badlands.png) | ![Isla de champiñones gigantes](docs/screenshots/mushroom.png) |
+| ![Pantano con nenúfares y orquídeas azules](docs/screenshots/swamp.png) | ![Picos de hielo compacto en la nieve](docs/screenshots/ice_spikes.png) |
 
 ## Controles
 

@@ -1,6 +1,6 @@
 // Recetas de fabricación (cuadrícula 2x2 del inventario y 3x3 de la mesa de trabajo).
 import {
-  OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, TORCH, CHEST, FURNACE,
+  CRAFTING_TABLE, TORCH, CHEST, FURNACE, WOOD_TYPES, ALL_LOGS, ALL_PLANKS, MATERIALS, WOODS, RED_SAND, RED_SANDSTONE,
   COBBLESTONE, STONE, STONE_BRICKS, SAND, SANDSTONE, BRICKS, CLAY, BOOKSHELF, IRON_BLOCK, GOLD_BLOCK, DIAMOND_BLOCK,
   WHITE_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL, POPPY, DANDELION, CORNFLOWER, SUGAR_CANE, GLASS, SLABS, STAIRS,
   FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED, HAY_BALE, CAKE, PUMPKIN, MELON, CARVED_PUMPKIN,
@@ -28,7 +28,8 @@ interface Shapeless {
   out: ItemStack;
 }
 
-const PLANKS = [OAK_PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS] as const;
+/** Cualquier tablón (palos, mesa, cofre, herramientas de madera…). */
+const PLANKS = ALL_PLANKS;
 const FUEL_COAL = [COAL, CHARCOAL] as const;
 
 const shaped: Shaped[] = [];
@@ -58,9 +59,7 @@ function mix(items: (number | readonly number[])[], id: number, count = 1): void
 }
 
 // --- Madera ---
-mix([OAK_LOG], OAK_PLANKS, 4);
-mix([BIRCH_LOG], BIRCH_PLANKS, 4);
-mix([SPRUCE_LOG], SPRUCE_PLANKS, 4);
+for (const w of WOOD_TYPES) mix([w.log], w.planks, 4);
 shape(['P', 'P'], { P: PLANKS }, STICK, 4);
 shape(['PP', 'PP'], { P: PLANKS }, CRAFTING_TABLE);
 shape(['C', 'S'], { C: FUEL_COAL, S: STICK }, TORCH, 4);
@@ -71,19 +70,16 @@ shape(['PPP', 'BBB', 'PPP'], { P: PLANKS, B: BOOK }, BOOKSHELF);
 shape(['CCC', 'C C', 'CCC'], { C: COBBLESTONE }, FURNACE);
 shape(['SS', 'SS'], { S: STONE }, STONE_BRICKS, 4);
 shape(['SS', 'SS'], { S: SAND }, SANDSTONE);
+shape(['SS', 'SS'], { S: RED_SAND }, RED_SANDSTONE);
 shape(['BB', 'BB'], { B: BRICK }, BRICKS);
 shape(['CC', 'CC'], { C: CLAY_BALL }, CLAY);
 
 // --- Losas, escaleras, vallas, puertas... (como en Minecraft) ---
-const SHAPE_MATERIALS: [string, number][] = [
-  ['oak', OAK_PLANKS], ['birch', BIRCH_PLANKS], ['spruce', SPRUCE_PLANKS], ['cobblestone', COBBLESTONE], ['stone', STONE],
-  ['stone_brick', STONE_BRICKS], ['brick', BRICKS], ['sandstone', SANDSTONE],
-];
-for (const [key, block] of SHAPE_MATERIALS) {
+for (const { key, block } of MATERIALS) {
   shape(['MMM'], { M: block }, SLABS[key], 6);
   shape(['M  ', 'MM ', 'MMM'], { M: block }, STAIRS[key], 4);
 }
-for (const [key, planks] of SHAPE_MATERIALS.slice(0, 3)) {
+for (const { key, block: planks } of WOODS) {
   shape(['PSP', 'PSP'], { P: planks, S: STICK }, FENCES[key], 3);
   shape(['SPS', 'SPS'], { P: planks, S: STICK }, FENCE_GATES[key]);
   shape(['PP', 'PP', 'PP'], { P: planks }, DOORS[key], 3);
@@ -135,7 +131,7 @@ mix([MELON_SLICE], MELON_SEEDS);
 shape(['MMM', 'MMM', 'MMM'], { M: MELON_SLICE }, MELON);
 mix([PUMPKIN, SUGAR, EGG], PUMPKIN_PIE);
 shape(['C', 'T'], { C: CARVED_PUMPKIN, T: TORCH }, JACK_O_LANTERN);
-shape(['S S', 'S S', 'SSS'], { S: [SLABS.oak, SLABS.birch, SLABS.spruce] }, COMPOSTER);
+shape(['S S', 'S S', 'SSS'], { S: WOODS.map((w) => SLABS[w.key]) }, COMPOSTER);
 shape(['  S', ' SW', 'S W'], { S: STICK, W: STRING }, FISHING_ROD);
 
 // --- Muros, camas de colores, carteles y bloques de trabajo ---
@@ -145,9 +141,8 @@ const WOOL_OF: Record<string, number> = {
   purple: PURPLE_WOOL,
 };
 for (const [color, bed] of Object.entries(BEDS)) if (WOOL_OF[color]) shape(['WWW', 'PPP'], { W: WOOL_OF[color], P: PLANKS }, bed);
-const PLANK_OF: Record<string, number> = { oak: OAK_PLANKS, birch: BIRCH_PLANKS, spruce: SPRUCE_PLANKS };
-for (const [wood, sign] of Object.entries(SIGNS)) shape(['PPP', 'PPP', ' S '], { P: PLANK_OF[wood], S: STICK }, sign, 3);
-const LOGS = [OAK_LOG, BIRCH_LOG, SPRUCE_LOG] as const;
+for (const w of WOOD_TYPES) shape(['PPP', 'PPP', ' S '], { P: w.planks, S: STICK }, SIGNS[w.key], 3);
+const LOGS = ALL_LOGS;
 shape([' L ', 'LFL', ' L '], { L: LOGS, F: FURNACE }, SMOKER);
 shape(['III', 'IFI', 'SSS'], { I: IRON_INGOT, F: FURNACE, S: STONE }, BLAST_FURNACE);
 shape([' S ', 'SCS', 'LLL'], { S: STICK, C: FUEL_COAL, L: LOGS }, CAMPFIRE);

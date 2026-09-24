@@ -366,8 +366,25 @@ const SIGN_WOOD: Record<string, [RGB, RGB, RGB]> = {
   oak: [[196, 160, 104], [170, 136, 84], [132, 102, 60]],
   birch: [[224, 208, 156], [202, 184, 130], [164, 146, 98]],
   spruce: [[136, 100, 64], [114, 82, 50], [84, 58, 34]],
+  jungle: [[178, 130, 94], [160, 115, 80], [118, 82, 56]],
+  acacia: [[200, 112, 62], [178, 96, 50], [130, 66, 32]],
+  dark_oak: [[92, 66, 36], [72, 50, 27], [48, 33, 17]],
+  cherry: [[238, 206, 196], [224, 184, 174], [184, 136, 128]],
 };
-const SIGN_RE = /^(oak|birch|spruce)_sign$/;
+const SIGN_RE = /^(oak|birch|spruce|jungle|acacia|dark_oak|cherry)_sign$/;
+
+/** Puerta de cada madera nueva (fase 5): [claro, base, oscuro, ventana]. */
+const DOOR_WOOD: Record<string, [RGB, RGB, RGB, RGB]> = {
+  jungle: [[176, 128, 92], [160, 115, 80], [112, 78, 52], [92, 66, 44]],
+  acacia: [[198, 110, 60], [178, 96, 50], [126, 62, 30], [104, 52, 26]],
+  dark_oak: [[88, 62, 34], [72, 50, 27], [44, 31, 15], [36, 25, 12]],
+  cherry: [[236, 202, 192], [224, 184, 174], [178, 130, 122], [160, 112, 104]],
+};
+const DOOR_RE = /^(jungle|acacia|dark_oak|cherry)_door$/;
+function doorSprite(wood: string): SpriteDef {
+  const [l, b, d, w] = DOOR_WOOD[wood];
+  return { rows: SPRITES.oak_door.rows, inks: doorInks(l, b, d, w) };
+}
 function signSprite(wood: string): SpriteDef {
   const [l, b, d] = SIGN_WOOD[wood];
   return {
@@ -2021,6 +2038,8 @@ function spriteDef(name: string): SpriteDef {
   if (armor) return armorSprite(armor[1], armor[2]);
   const sign = SIGN_RE.exec(name);
   if (sign) return signSprite(sign[1]);
+  const door = DOOR_RE.exec(name);
+  if (door) return doorSprite(door[1]);
   const bed = BED_RE.exec(name);
   if (bed && name !== 'red_bed') {
     const def = bedSprite(bed[1]);

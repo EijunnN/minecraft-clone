@@ -91,6 +91,8 @@ export interface BlockDef {
   flatItem?: string;
   /** No se obtiene como objeto (cultivos, tierra de cultivo). */
   noItem?: boolean;
+  /** Apoyo a medida (enredaderas, nenúfares): se rompe cuando deja de cumplirse. */
+  support?: (get: NeighborGet) => boolean;
 }
 
 export type ToolKind = 'pickaxe' | 'axe' | 'shovel';
@@ -142,6 +144,7 @@ export function def(id: number, key: string, name: string, o: Opts): void {
     walkThrough: o.walkThrough,
     flatItem: o.flatItem,
     noItem: o.noItem,
+    support: o.support,
   };
 }
 
@@ -259,7 +262,7 @@ export function finalizeBlocks(kindOf: ReadonlyMap<number, number>): void {
     BLOCK_KIND[b.id] = k;
     BLOCK_TALL[b.id] = k === KIND_FENCE || (k === KIND_GATE && b.solid) ? 1 : 0;
     BLOCK_NEEDS_SUPPORT[b.id] = k === KIND_DOOR || k === KIND_BED || k === KIND_CROP || k === KIND_CAKE ||
-      (b.wall !== undefined && b.wall >= 0) ? 1 : 0;
+      (b.wall !== undefined && b.wall >= 0) || !!b.support ? 1 : 0;
   }
   for (const b of defs) {
     if (!b) continue;

@@ -20,6 +20,10 @@ import {
 } from './farm';
 import { WALLS, BEDS, SIGNS } from './decoration';
 import { SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER } from './workstations';
+import {
+  WOOD_TYPES, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, RED_SANDSTONE,
+  COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS,
+} from './biomes';
 
 export * from './registry';
 export * from './classic';
@@ -27,6 +31,7 @@ export * from './building';
 export * from './farm';
 export * from './decoration';
 export * from './workstations';
+export * from './biomes';
 export * from './queries';
 
 {
@@ -68,6 +73,10 @@ export const INVENTORY_ORDER: readonly number[] = [
   LADDER, GLASS_PANE, RED_BED, MELON, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER,
   ...Object.values(WALLS), ...Object.values(BEDS).filter((b) => b !== RED_BED), ...Object.values(SIGNS),
   SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER,
+  // Fase 5: maderas y biomas nuevos.
+  ...WOOD_TYPES.slice(3).flatMap((w) => [w.log, w.planks, w.leaves, w.sapling]),
+  MYCELIUM, RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, RED_SANDSTONE, PACKED_ICE,
+  ...Object.values(COLORED_TERRACOTTA), VINE, LILY_PAD, ...Object.values(FLOWERS), PINK_PETALS,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [

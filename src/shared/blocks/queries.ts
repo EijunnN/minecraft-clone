@@ -67,6 +67,7 @@ export function blockSelectionBounds(id: number, get: NeighborGet): number[] {
 export function blockSupported(id: number, get: NeighborGet): boolean {
   const d = defs[id];
   if (!d) return true;
+  if (d.support) return d.support(get);
   if (d.wall !== undefined && d.wall >= 0) {
     const b = get(-DIR_X[d.wall], 0, -DIR_Z[d.wall]);
     return b < 0 || BLOCK_OPAQUE[b] === 1;

@@ -3,7 +3,7 @@
 // añaden sus propios manejadores de ticks aleatorios.
 import {
   AIR, GRASS, DIRT, SNOWY_GRASS, CACTUS, SUGAR_CANE, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_RENDER, BLOCK_REPLACEABLE,
-  R_CROSS,
+  R_CROSS, MYCELIUM, isVine,
 } from '../../blocks';
 import { MIN_Y, MAX_Y, CHUNK_SIZE, CHUNK_VOLUME, indexY } from '../../constants';
 import { leafDecayDrops } from '../drops';
@@ -14,6 +14,8 @@ import { SIM_RADIUS, type ServerContext } from './context';
 /** Ticks aleatorios por chunk y tick (Minecraft usa 3 por sección de 16³ = 48 por columna). */
 /** 48 por cada 256 de alto (la misma frecuencia por bloque que antes de subir la altura). */
 const RANDOM_TICKS_PER_CHUNK = 72;
+/** Tipos de árbol (posición en WOOD_TYPES) que pueden crecer desde 2×2 brotes. */
+const KIND_JUNGLE = 3, KIND_DARK_OAK = 5;
 
 /** Manejador de ticks aleatorios: devuelve true si el bloque era suyo. */
 export type RandomTickHandler = (id: number, x: number, y: number, z: number) => boolean;
@@ -103,12 +105,14 @@ export class Nature {
         const x = c.cx * 16 + (idx & 15), y = indexY(idx), z = c.cz * 16 + ((idx >> 4) & 15);
         if (SAPLINGS.has(id)) {
           this.growTree(x, y, z, SAPLINGS.get(id)!);
-        } else if (id === GRASS || id === SNOWY_GRASS) {
+        } else if (id === GRASS || id === SNOWY_GRASS || id === MYCELIUM) {
           const above = w.getBlock(x, y + 1, z);
           if (above > 0 && (BLOCK_OPAQUE[above] || BLOCK_FLUID[above])) {
             w.setBlock(x, y, z, DIRT);
             continue;
           }
+          // La hierba y el micelio se extienden por la tierra de alrededor.
+          const spread = id === MYCELIUM ? MYCELIUM : GRASS;
           for (let t = 0; t < 2; t++) {
             const nx = x + ((rand() * 3) | 0) - 1, ny = y + ((rand() * 5) | 0) - 3, nz = z + ((rand() * 3) | 0) - 1;
             if (w.getBlock(nx, ny, nz) !== DIRT) continue;
@@ -116,8 +120,11 @@ export class Nature {
             if (up < 0 || BLOCK_OPAQUE[up] || BLOCK_FLUID[up]) continue;
             // Sólo a la luz: cielo abierto encima o bajo la copa de un árbol.
             const top = w.skyTop(nx, nz);
-            if (top <= ny + 1 || LEAVES.has(w.getBlock(nx, top, nz))) w.setBlock(nx, ny, nz, GRASS);
+            if (top <= ny + 1 || LEAVES.has(w.getBlock(nx, top, nz))) w.setBlock(nx, ny, nz, spread);
           }
+        } else if (isVine(id)) {
+          // Las enredaderas bajan poco a poco hasta el suelo.
+          if (rand() < 0.25 && w.getBlock(x, y - 1, z) === AIR) w.setBlock(x, y - 1, z, id);
         } else if (id === CACTUS || id === SUGAR_CANE) {
           if (w.getBlock(x, y + 1, z) !== AIR || rand() > 0.25) continue;
           let h = 1;
@@ -149,26 +156,48 @@ export class Nature {
     return out;
   }
 
+  /**
+   * Esquina noroeste de un cuadrado de 2×2 brotes iguales que contenga (x, z), o null. El roble
+   * oscuro sólo crece así; la jungla, en 2×2, da un árbol gigante.
+   */
+  private square(x: number, y: number, z: number, id: number): [number, number] | null {
+    const w = this.ctx.world;
+    for (const [ox, oz] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
+      const x0 = x + ox, z0 = z + oz;
+      if (w.getBlock(x0, y, z0) === id && w.getBlock(x0 + 1, y, z0) === id && w.getBlock(x0, y, z0 + 1) === id && w.getBlock(x0 + 1, y, z0 + 1) === id) {
+        return [x0, z0];
+      }
+    }
+    return null;
+  }
+
   /** Hace crecer un árbol desde un brote si hay sitio. */
   growTree(x: number, y: number, z: number, kind: number): void {
     const w = this.ctx.world;
     const below = w.getBlock(x, y - 1, z);
     if (!SOIL.has(below)) return;
-    const need = kind === 2 ? 10 : 7;
-    for (let k = 1; k <= need; k++) {
-      const b = w.getBlock(x, y + k, z);
-      if (b < 0 || (b !== AIR && !LEAVES.has(b) && BLOCK_RENDER[b] !== R_CROSS)) return;
+    const sapling = w.getBlock(x, y, z);
+    const sq = kind === KIND_JUNGLE || kind === KIND_DARK_OAK ? this.square(x, y, z, sapling) : null;
+    if (kind === KIND_DARK_OAK && !sq) return;
+    const cells: [number, number][] = sq ? [[sq[0], sq[1]], [sq[0] + 1, sq[1]], [sq[0], sq[1] + 1], [sq[0] + 1, sq[1] + 1]] : [[x, z]];
+    const need = sq && kind === KIND_JUNGLE ? 20 : kind === 2 ? 10 : 7;
+    for (const [cx, cz] of cells) {
+      for (let k = 1; k <= need; k++) {
+        const b = w.getBlock(cx, y + k, cz);
+        if (b < 0 || (b !== AIR && !LEAVES.has(b) && BLOCK_RENDER[b] !== R_CROSS)) return;
+      }
     }
     const r = this.ctx.rand();
-    w.setBlock(x, y, z, AIR);
-    w.gen.growTree(kind, x, y, z, r, (bx, by, bz, id, force) => {
+    for (const [cx, cz] of cells) w.setBlock(cx, y, cz, AIR);
+    const [tx, tz] = cells[0];
+    w.gen.growTree(kind, tx, y, tz, r, (bx, by, bz, id, force) => {
       if (by <= MIN_Y || by >= MAX_Y) return;
       const cur = w.getBlock(bx, by, bz);
       if (cur < 0) return;
       if (cur === AIR || (force && (LEAVES.has(cur) || BLOCK_RENDER[cur] === R_CROSS || BLOCK_REPLACEABLE[cur]))) {
         w.setBlock(bx, by, bz, id);
       }
-    });
-    if (w.getBlock(x, y - 1, z) === GRASS) w.setBlock(x, y - 1, z, DIRT);
+    }, !!sq);
+    for (const [cx, cz] of cells) if (w.getBlock(cx, y - 1, cz) === GRASS) w.setBlock(cx, y - 1, cz, DIRT);
   }
 }

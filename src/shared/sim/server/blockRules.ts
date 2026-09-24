@@ -3,7 +3,7 @@
 // tierra de cultivo la aplasta. También agrupa ediciones de varias celdas (puertas, camas) para que
 // las comprobaciones de apoyo se hagan cuando ya están todas puestas.
 import {
-  AIR, SAND, GRAVEL, CACTUS, SUGAR_CANE, DIRT, BLOCK_FLUID, BLOCK_SOLID, BLOCK_RENDER, BLOCK_REPLACEABLE, BLOCK_WALL,
+  AIR, SAND, RED_SAND, GRAVEL, CACTUS, SUGAR_CANE, DIRT, BLOCK_FLUID, BLOCK_SOLID, BLOCK_RENDER, BLOCK_REPLACEABLE, BLOCK_WALL,
   BLOCK_NEEDS_SUPPORT, R_CROSS, R_TORCH, blockSupported, isFarmland,
 } from '../../blocks';
 import type { Edit } from '../../placement';
@@ -21,14 +21,14 @@ function needsSupport(id: number): boolean {
 
 function supportOk(id: number, below: number): boolean {
   if (below < 0) return true; // sin cargar: no tocar
-  if (id === CACTUS) return below === CACTUS || below === SAND;
-  if (id === SUGAR_CANE) return below === SUGAR_CANE || below === SAND || SOIL.has(below);
+  if (id === CACTUS) return below === CACTUS || below === SAND || below === RED_SAND;
+  if (id === SUGAR_CANE) return below === SUGAR_CANE || below === SAND || below === RED_SAND || SOIL.has(below);
   if (SAPLINGS.has(id)) return SOIL.has(below);
   return BLOCK_SOLID[below] === 1 && BLOCK_RENDER[below] !== R_CROSS;
 }
 
 function isFalling(id: number): boolean {
-  return id === SAND || id === GRAVEL;
+  return id === SAND || id === RED_SAND || id === GRAVEL;
 }
 
 /** ¿Puede ocupar una celda un bloque que cae (o se desplaza) sobre ella? */

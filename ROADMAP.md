@@ -9,7 +9,7 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | | Minecraft 26.3 | VoxelCraft hoy |
 | --- | --- | --- |
 | Dimensiones | 3 (Mundo normal, Nether, End) | 1 |
-| Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 12 |
+| Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
 | Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 0 |
 | Criaturas | más de 80, incluidos 2 jefes | 12 |
 | Bloques | ~1.100 contando colores y variantes | ~70 |
@@ -29,13 +29,13 @@ noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **c
 | Elemento | Minecraft | Estado |
 | --- | --- | --- |
 | Mundo infinito procedural, determinista por semilla | sí | ✅ |
-| Altura -64 a 320, capa de pizarra profunda (deepslate) por debajo de 0 | sí | ❌ (0 a 255) |
-| Biomas de superficie | llanura, llanura de girasoles, bosque, bosque de flores, abedular (y antiguo), bosque oscuro, jardín pálido, taiga (y antigua de pinos y de abetos), taiga nevada, arboleda, prado, cerezal, bosque moteado (26.3), sabana (y meseta y ventosa), desierto, badlands (3), jungla (3), pantano, manglar, colinas ventosas (3), llanura nevada, picos de hielo, laderas nevadas, picos (3), costa pedregosa, playas, ríos, champiñonal | 🟡 (llanura, bosque, abedular, taiga, nevado, desierto, sabana, montañas, picos nevados, playa) |
-| Océanos | cálido, templado, frío, helado, normal y sus versiones profundas | 🟡 (océano y océano helado) |
+| Altura -64 a 320, capa de pizarra profunda (deepslate) por debajo de 0 | sí | 🟡 (altura ✅; falta la pizarra profunda) |
+| Biomas de superficie | llanura, llanura de girasoles, bosque, bosque de flores, abedular (y antiguo), bosque oscuro, jardín pálido, taiga (y antigua de pinos y de abetos), taiga nevada, arboleda, prado, cerezal, bosque moteado (26.3), sabana (y meseta y ventosa), desierto, badlands (3), jungla (3), pantano, manglar, colinas ventosas (3), llanura nevada, picos de hielo, laderas nevadas, picos (3), costa pedregosa, playas, ríos, champiñonal | 🟡 (llanura, bosque, abedular, bosque oscuro, taiga, nevado, picos de hielo, pradera, cerezal, desierto, badlands, sabana, jungla, pantano, champiñonal, montañas, picos nevados, playa) |
+| Océanos | cálido, templado, frío, helado, normal y sus versiones profundas | 🟡 (normal, cálido, frío, helado y profundo) |
 | Biomas de cueva | cuevas frondosas, cuevas de goteo, oscuridad profunda, cuevas de azufre (26.2) | ❌ |
 | Cuevas | "queso", "espagueti", "fideos", acuíferos, lagos de lava subterráneos | 🟡 (cuevas y lagos de lava sencillos) |
 | Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, restos antiguos | 🟡 (6 de 8, sin cobre ni esmeralda) |
-| Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea | 🟡 (roble, abedul, abeto, acacia con madera de roble) |
+| Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea | 🟡 (roble, abedul, abeto, jungla —también gigante—, acacia, roble oscuro, cerezo y champiñones gigantes) |
 | Clima | lluvia, nieve, tormentas con rayos; la nieve se acumula y el agua se congela | 🟡 (lluvia y nieve visuales) |
 | Ciclo día/noche, fases lunares | sí | ✅ |
 | Fluidos (agua y lava que fluyen, obsidiana, roca) | sí | ✅ |
@@ -298,6 +298,15 @@ acumulación de nieve.
   se migran solos (ediciones, cofres, hornos, fogatas y carteles). Cuesta un 40 % más generar cada
   chunk y un 16 % más mallarlo. Cuando lleguen las dimensiones (fase 8), la altura será de cada una
   (Nether 128, End 256).
+- ✅ **Biomas nuevos y sus maderas.** 23 biomas: pantano (charcas, nenúfares, orquídeas y robles con
+  enredaderas), jungla (árboles gigantes de 2×2, arbustos y enredaderas), bosque oscuro (robles oscuros
+  y champiñones gigantes), tierras baldías (mesetas de terracota en franjas de colores y arena roja),
+  campos de champiñones (islas de micelio en alta mar), arboleda de cerezos (pétalos rosas), pradera
+  (flores), picos de hielo (hielo compacto), y océanos cálido, frío y profundo; la sabana tiene ya
+  acacias. Cuatro maderas nuevas (jungla, acacia, roble oscuro y cerezo) con tronco, tablones, hojas,
+  brote, losa, escaleras, valla, portillo, puerta, trampilla y carteles; el roble oscuro crece de 2×2
+  brotes y la jungla da un árbol gigante con 2×2. Nueve flores nuevas (tulipanes, allium, margarita…).
+  Faltan manglar, bosque de flores, arboleda nevada y las variantes (ventosas, antiguas…).
 
 ### Fase 6 — Criaturas (XL)
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y

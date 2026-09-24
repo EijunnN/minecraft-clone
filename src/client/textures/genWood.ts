@@ -26,7 +26,7 @@ import {
 // Corteza lateral (roble y abeto)
 // ---------------------------------------------------------------------------
 
-interface BarkStyle {
+export interface BarkStyle {
   /** 5 tonos: 0 = fondo de surco … 4 = cresta iluminada. */
   pal: RGB[];
   grooves: number;
@@ -35,7 +35,7 @@ interface BarkStyle {
   smooth: number;
 }
 
-function barkSide(t: Tex, st: BarkStyle): void {
+export function barkSide(t: Tex, st: BarkStyle): void {
   const r = t.rng();
   const gx: number[] = [];
   const off: Noise[] = [];
@@ -181,7 +181,7 @@ function birchSide(t: Tex): void {
 // Corte transversal del tronco
 // ---------------------------------------------------------------------------
 
-interface LogTopStyle {
+export interface LogTopStyle {
   bark: RGB[];
   /** 0 = anillo oscuro, 1 = anillo, 2 = madera, 3 = madera clara. */
   wood: RGB[];
@@ -189,7 +189,7 @@ interface LogTopStyle {
   birch?: boolean;
 }
 
-function logTop(t: Tex, st: LogTopStyle): void {
+export function logTop(t: Tex, st: LogTopStyle): void {
   const r = t.rng();
   const wob = new Noise(r, 4);
   const px = pixelNoise(r);
@@ -388,7 +388,7 @@ export function planks(t: Tex, st: PlankStyle, seed = 'planks'): void {
 // Hojas
 // ---------------------------------------------------------------------------
 
-interface LeafStyle {
+export interface LeafStyle {
   /** Tonos de oscuro a claro. */
   pal: RGB[];
   weights: number[];
@@ -396,7 +396,7 @@ interface LeafStyle {
   needles: boolean;
 }
 
-function leaves(t: Tex, st: LeafStyle): void {
+export function leaves(t: Tex, st: LeafStyle): void {
   const r = t.rng();
   const hole = new Uint8Array(N);
   const target = Math.round(st.holeFrac * N);

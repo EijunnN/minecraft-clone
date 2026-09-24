@@ -873,7 +873,7 @@ export class Game {
     const bobPh = p.walkDistance * Math.PI * 0.62;
     const gen = world.generator;
     const inf = gen.columnInfo(Math.floor(p.x), Math.floor(p.z));
-    TerrainGenerator.grassColor(inf.temp, inf.humid, this.tmpGrass);
+    TerrainGenerator.biomeGrass(inf, this.tmpGrass);
 
     // Entidades a dibujar.
     const mobs: ClientEntity[] = [];

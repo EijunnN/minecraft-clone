@@ -1,8 +1,8 @@
 // Tiempo de minado de un bloque según la herramienta (fórmula de Minecraft).
-import { BLOCKS, OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES } from '../../shared/blocks';
+import { BLOCKS, ALL_LEAVES, isVine } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
 
-const LEAVES = new Set([OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES]);
+const LEAVES = new Set(ALL_LEAVES);
 
 /** ¿Suelta algo este bloque con esta herramienta? */
 export function canHarvest(block: number, toolId: number): boolean {
@@ -20,6 +20,7 @@ export function toolSpeed(block: number, toolId: number): number {
   if (!b || !t) return 1;
   if (t.kind === 'shears') {
     if (LEAVES.has(block)) return 15;
+    if (isVine(block)) return 2;
     if (b.sound === 'wool') return 5;
     return 1;
   }

@@ -6,7 +6,7 @@ import { raycast, type RayHit } from './raycast';
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
-import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
+import { LILY_PAD, AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, RED_SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
   CAMPFIRE, stateProps } from '../../shared/blocks';
 import {
   ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, itemForBlock, maxStack,
@@ -195,6 +195,13 @@ export class Interaction {
     }
     if (held.id === WATER_BUCKET || held.id === LAVA_BUCKET) {
       if (pressed && hit) this.emptyBucket(hit, held.id === WATER_BUCKET ? WATER : LAVA);
+      return;
+    }
+    // El nenúfar se pone sobre el agua: el rayo se detiene en la primera fuente.
+    if (held.id === LILY_PAD) {
+      const p = this.g.player, world = this.g.world!;
+      const wet = raycast(p.x, p.eyeY, p.z, dir[0], dir[1], dir[2], this.g.creative ? REACH_CREATIVE : REACH_SURVIVAL, (x, y, z) => world.getBlock(x, y, z), true);
+      if (pressed && wet) this.placeBlock(wet, LILY_PAD);
       return;
     }
     if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
@@ -521,7 +528,7 @@ export class Interaction {
         if (SAPLINGS.has(id)) {
           if (!SOIL.has(under)) return false;
         } else if (id === CACTUS) {
-          if (under !== CACTUS && under !== SAND) return false;
+          if (under !== CACTUS && under !== SAND && under !== RED_SAND) return false;
         } else {
           const okSame = id === SUGAR_CANE && under === id;
           if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return false;

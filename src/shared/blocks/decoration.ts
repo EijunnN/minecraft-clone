@@ -105,7 +105,8 @@ export const WALL_SIGNS: Record<string, number> = {};
 export const SIGN_WALL_OF: Record<number, number> = {};
 const SIGN_BASES = new Set<number>();
 
-for (const [wood, name] of SIGN_WOODS) {
+/** Cartel de pie y de pared de una madera. */
+export function addSign(wood: string, name: string): void {
   const common: Opts = {
     render: R_MODEL, solid: false, opaque: false, lightOpacity: 0, hardness: 1, tool: 'axe', sound: 'wood',
     all: `${wood}_planks`, category: null,
@@ -134,6 +135,7 @@ for (const [wood, name] of SIGN_WOODS) {
   SIGN_BASES.add(SIGNS[wood]);
   SIGN_BASES.add(WALL_SIGNS[wood]);
 }
+for (const [wood, name] of SIGN_WOODS) addSign(wood, name);
 
 /** ¿Cartel (de pie o de pared)? */
 export function isSign(id: number): boolean {

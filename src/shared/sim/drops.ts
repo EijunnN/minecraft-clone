@@ -1,7 +1,8 @@
 // Qué suelta cada bloque al romperse en supervivencia (según la herramienta usada).
 import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
-  CLAY, GLASS, ICE, OAK_LEAVES, BIRCH_LEAVES, SPRUCE_LEAVES, OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING,
+  CLAY, GLASS, ICE, OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, isLeaves, isVine, woodOf, MYCELIUM, PACKED_ICE,
+  RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, RED_MUSHROOM, BROWN_MUSHROOM,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
   PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE,
@@ -26,6 +27,25 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (isSlab(block)) return one(baseBlock(block), stateProps(block)!.type === 2 ? 2 : 1);
   if (block === GLASS_PANE || isCake(block)) return [];
   if (isFarmland(block)) return one(DIRT);
+  if (isLeaves(block)) {
+    if (tool?.kind === 'shears') return one(block);
+    const out: ItemStack[] = [];
+    // Brote al 5 % (jungla, 2,5 %); manzana al 0,5 % en roble y roble oscuro; palos al 2 %.
+    if (rand() < (block === JUNGLE_LEAVES ? 0.025 : 0.05)) out.push({ id: woodOf(block)!.sapling, count: 1 });
+    if ((block === OAK_LEAVES || block === DARK_OAK_LEAVES) && rand() < 0.005) out.push({ id: APPLE, count: 1 });
+    if (rand() < 0.02) out.push({ id: STICK, count: rnd(1, 2) });
+    return out;
+  }
+  // Las enredaderas sólo se recogen con tijeras.
+  if (isVine(block)) return tool?.kind === 'shears' ? one(baseBlock(block)) : [];
+  // Champiñones gigantes: de 0 a 2 champiñones (como en Minecraft, casi siempre ninguno).
+  if (block === RED_MUSHROOM_BLOCK || block === BROWN_MUSHROOM_BLOCK) {
+    const n = Math.max(0, rnd(-7, 2));
+    return n > 0 ? one(block === RED_MUSHROOM_BLOCK ? RED_MUSHROOM : BROWN_MUSHROOM, n) : [];
+  }
+  if (block === MYCELIUM) return one(DIRT);
+  // El hielo compacto sólo se consigue con toque de seda.
+  if (block === PACKED_ICE) return [];
   if (isCrop(block)) {
     // Cosecha como en Minecraft: tres intentos al 57 % de sacar una semilla o fruto más.
     const extra = () => (rand() < 4 / 7 ? 1 : 0) + (rand() < 4 / 7 ? 1 : 0) + (rand() < 4 / 7 ? 1 : 0);
@@ -84,16 +104,6 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
       return rand() < 0.125 ? one(WHEAT_SEEDS) : [];
     case DEAD_BUSH:
       return rnd(0, 2) > 0 ? one(STICK, rnd(1, 2)) : [];
-    case OAK_LEAVES:
-    case BIRCH_LEAVES:
-    case SPRUCE_LEAVES: {
-      if (tool?.kind === 'shears') return one(block);
-      const out: ItemStack[] = [];
-      if (rand() < 0.05) out.push({ id: block === OAK_LEAVES ? OAK_SAPLING : block === BIRCH_LEAVES ? BIRCH_SAPLING : SPRUCE_SAPLING, count: 1 });
-      if (block === OAK_LEAVES && rand() < 0.005) out.push({ id: APPLE, count: 1 });
-      if (rand() < 0.02) out.push({ id: STICK, count: rnd(1, 2) });
-      return out;
-    }
   }
   // La fogata suelta carbón vegetal (como en Minecraft sin toque de seda).
   if (familyBase(block) === CAMPFIRE) return one(CHARCOAL, 2);

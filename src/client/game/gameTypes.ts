@@ -1,11 +1,11 @@
 // Constantes y tipos que comparten Game y sus controladores.
-import { GRASS, DIRT, SNOWY_GRASS, OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING } from '../../shared/blocks';
+import { GRASS, DIRT, SNOWY_GRASS, ALL_SAPLINGS } from '../../shared/blocks';
 
 export const REACH_CREATIVE = 5.5;
 export const REACH_SURVIVAL = 4.6;
 export const ATTACK_REACH = 3.4;
 export const SOIL = new Set([GRASS, DIRT, SNOWY_GRASS]);
-export const SAPLINGS = new Set([OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING]);
+export const SAPLINGS = new Set(ALL_SAPLINGS);
 
 export interface Mining {
   x: number;

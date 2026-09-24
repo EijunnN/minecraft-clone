@@ -35,7 +35,9 @@ const matOpts = (m: Material): Opts => ({ hardness: m.hardness, tool: m.tool, ti
 export const SLABS: Record<string, number> = {};
 /** Escaleras por material (orientación 0..3 hacia donde suben, mitad 0 normal / 1 invertida). */
 export const STAIRS: Record<string, number> = {};
-for (const m of MATERIALS) {
+/** Losa y escaleras de un material (los materiales nuevos se añaden al final: ids guardados). */
+export function addMaterialShapes(m: Material): void {
+  if (!MATERIALS.includes(m)) MATERIALS.push(m);
   const t = texOf(m.block);
   SLABS[m.key] = family(`${m.key}_slab`, `Losa ${m.name}`, [['type', 3]], (st) => {
     if (st.type === 2) return { ...matOpts(m), render: R_CUBE };
@@ -48,6 +50,7 @@ for (const m of MATERIALS) {
     return { ...matOpts(m), render: R_MODEL, model: rotateBoxes(boxes, st.facing) };
   });
 }
+for (const m of [...MATERIALS]) addMaterialShapes(m);
 
 export const FENCES: Record<string, number> = {};
 export const FENCE_GATES: Record<string, number> = {};
@@ -65,7 +68,9 @@ function fenceConnects(id: number): boolean {
   return id > 0 && (FENCE_IDS.has(id) || isGate(id) || BLOCK_OPAQUE[id] === 1);
 }
 
-for (const w of WOODS) {
+/** Valla, portillo, puerta y trampilla de una madera. */
+export function addWoodShapes(w: Material): void {
+  if (!WOODS.includes(w)) WOODS.push(w);
   const t = texOf(w.block);
   const post = mbox(6, 0, 6, 10, 16, 10, t);
   const arm = (d: number) => rotateBoxes([mbox(7, 6, 0, 9, 9, 6, t), mbox(7, 12, 0, 9, 15, 6, t)], d);
@@ -130,6 +135,7 @@ for (const w of WOODS) {
     return { hardness: 3, tool: 'axe', sound: 'wood', render: R_MODEL, model: box, tex: [name, name, name, name, name, name] };
   });
 }
+for (const w of [...WOODS]) addWoodShapes(w);
 
 export const LADDER = family('ladder', 'Escalera de mano', [['facing', 4]], (st) => {
   const tl = L('ladder');

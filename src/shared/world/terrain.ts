@@ -6,10 +6,15 @@ import {
   DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, SANDSTONE, SNOWY_GRASS, SNOW_BLOCK, ICE, CLAY, CACTUS,
   BIRCH_LOG, BIRCH_LEAVES, SPRUCE_LOG, SPRUCE_LEAVES, SHORT_GRASS, FERN, POPPY, DANDELION, CORNFLOWER,
   DEAD_BUSH, SUGAR_CANE, RED_MUSHROOM, BROWN_MUSHROOM, LAVA, BEDROCK, GRANITE, DIORITE, ANDESITE,
-  BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS, PUMPKIN, MELON,
+  BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS, PUMPKIN, MELON, TERRACOTTA, JUNGLE_LOG, JUNGLE_LEAVES, ACACIA_LOG,
+  ACACIA_LEAVES, DARK_OAK_LOG, DARK_OAK_LEAVES, CHERRY_LOG, CHERRY_LEAVES, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK,
+  BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, isLeaves,
 } from '../blocks';
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
+import { DIR_X, DIR_Z } from '../blockModels';
+
+type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
 export const BIOME_OCEAN = 0;
 export const BIOME_FROZEN_OCEAN = 1;
@@ -23,14 +28,54 @@ export const BIOME_DESERT = 8;
 export const BIOME_SAVANNA = 9;
 export const BIOME_MOUNTAINS = 10;
 export const BIOME_SNOWY_PEAKS = 11;
+// Fase 5.
+export const BIOME_SWAMP = 12;
+export const BIOME_JUNGLE = 13;
+export const BIOME_DARK_FOREST = 14;
+export const BIOME_BADLANDS = 15;
+export const BIOME_MUSHROOM_FIELDS = 16;
+export const BIOME_CHERRY_GROVE = 17;
+export const BIOME_MEADOW = 18;
+export const BIOME_ICE_SPIKES = 19;
+export const BIOME_WARM_OCEAN = 20;
+export const BIOME_COLD_OCEAN = 21;
+export const BIOME_DEEP_OCEAN = 22;
 
 export const BIOME_NAMES = [
   'Océano', 'Océano helado', 'Playa', 'Llanura', 'Bosque', 'Bosque de abedules', 'Taiga',
-  'Taiga nevada', 'Desierto', 'Sabana', 'Montañas', 'Picos nevados',
+  'Taiga nevada', 'Desierto', 'Sabana', 'Montañas', 'Picos nevados', 'Pantano', 'Jungla', 'Bosque oscuro',
+  'Tierras baldías', 'Campos de champiñones', 'Arboleda de cerezos', 'Pradera', 'Picos de hielo', 'Océano cálido',
+  'Océano frío', 'Océano profundo',
 ];
 
+/** ¿Es un océano (de cualquier tipo)? */
+export function isOceanBiome(b: number): boolean {
+  return b === BIOME_OCEAN || b === BIOME_FROZEN_OCEAN || b === BIOME_WARM_OCEAN || b === BIOME_COLD_OCEAN || b === BIOME_DEEP_OCEAN;
+}
+
 /** Densidad de árboles (probabilidad por celda de 4x4) por bioma. */
-const TREE_DENSITY = [0, 0, 0, 0.035, 0.55, 0.5, 0.42, 0.3, 0.05, 0.1, 0.06, 0];
+const TREE_DENSITY = [
+  0, 0, 0, 0.035, 0.55, 0.5, 0.42, 0.3, 0.05, 0.1, 0.06, 0,
+  0.16, 0.85, 0.8, 0.03, 0.035, 0.16, 0.012, 0.03, 0, 0, 0,
+];
+
+/** Color de la hierba de los biomas con color propio (sRGB); el resto sale del clima. */
+const BIOME_GRASS: Record<number, [number, number, number]> = {
+  [BIOME_SWAMP]: [106, 112, 57],
+  [BIOME_JUNGLE]: [89, 196, 60],
+  [BIOME_DARK_FOREST]: [80, 122, 50],
+  [BIOME_BADLANDS]: [144, 129, 77],
+  [BIOME_MUSHROOM_FIELDS]: [85, 190, 63],
+  [BIOME_CHERRY_GROVE]: [182, 219, 97],
+  [BIOME_MEADOW]: [131, 187, 109],
+};
+
+/** Terracotas de las franjas de las badlands, con su peso. */
+const BANDS: [number, number][] = [
+  [TERRACOTTA, 34], [COLORED_TERRACOTTA.orange, 20], [COLORED_TERRACOTTA.yellow, 10], [COLORED_TERRACOTTA.brown, 10],
+  [COLORED_TERRACOTTA.red, 10], [COLORED_TERRACOTTA.white, 7], [COLORED_TERRACOTTA.light_gray, 9],
+];
+const BAND_TOTAL = BANDS.reduce((a, [, w]) => a + w, 0);
 
 export interface ColumnInfo {
   height: number;
@@ -67,6 +112,8 @@ export class TerrainGenerator {
   private nSurface: Simplex;
   private nFlowers: Simplex;
   private nEntrance: Simplex;
+  private nWeird: Simplex;
+  private nMush: Simplex;
   private info: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
 
   constructor(seed: number) {
@@ -86,6 +133,9 @@ export class TerrainGenerator {
     this.nSurface = new Simplex(s());
     this.nFlowers = new Simplex(s());
     this.nEntrance = new Simplex(s());
+    // Añadidos al final: los ruidos anteriores no cambian.
+    this.nWeird = new Simplex(s());
+    this.nMush = new Simplex(s());
   }
 
   /** Parámetros 2D de una columna (altura base, amplitud 3D, clima y bioma). */
@@ -107,9 +157,24 @@ export class TerrainGenerator {
     const riverCut = smoothstep(0.94, 0.985, river) * smoothstep(-0.1, 0.15, c) * (1 - mount);
     height = lerp(height, Math.min(height, SEA_LEVEL - 3), riverCut);
 
-    const altCool = height > 100 ? (height - 100) / 140 : 0;
-    const temp = this.nTemp.fbm2(x / 1700, z / 1700, 3) * 1.45 - altCool;
+    const tempBase = this.nTemp.fbm2(x / 1700, z / 1700, 3) * 1.45;
     const humid = this.nHumid.fbm2(x / 1300 + 500, z / 1300 - 500, 3) * 1.5;
+    const weird = this.nWeird.fbm2(x / 520, z / 520, 2);
+    // Islas de champiñones en alta mar.
+    const mush = smoothstep(0.55, 0.68, this.nMush.noise2(x / 380, z / 380)) * smoothstep(-0.42, -0.62, c);
+    if (mush > 0) height = lerp(height, SEA_LEVEL + 2 + hills * 0.4 + 3 * mush, mush);
+    // Pantanos: tierras bajas, templadas y húmedas, casi a ras del agua (con charcas).
+    const swamp = smoothstep(0.28, 0.48, humid) * smoothstep(-0.32, -0.18, tempBase) * smoothstep(0.42, 0.3, tempBase) *
+      smoothstep(0.25, 0.1, mount) * smoothstep(SEA_LEVEL + 9, SEA_LEVEL + 3, height) * smoothstep(-0.1, 0.05, c);
+    if (swamp > 0) height = lerp(height, SEA_LEVEL - 0.6 + this.nDetail.noise2(x / 18, z / 18) * 1.6, swamp);
+    // Badlands: mesetas en escalones en las tierras cálidas y secas.
+    const mesa = smoothstep(0.35, 0.5, tempBase) * smoothstep(0.0, -0.15, humid) * smoothstep(0.1, 0.25, weird) * smoothstep(0.05, 0.2, c);
+    if (mesa > 0) {
+      const plateau = Math.max(0, this.nDetail.fbm2(x / 140 + 50, z / 140, 3)) * 48;
+      height += mesa * Math.floor(plateau / 6) * 6;
+    }
+    const altCool = height > 100 ? (height - 100) / 140 : 0;
+    const temp = tempBase - altCool;
 
     out.height = height;
     out.amp = 2.5 + 26 * mount * mount + 4 * mount;
@@ -117,21 +182,40 @@ export class TerrainGenerator {
     out.humid = humid;
     out.mount = mount;
     out.cont = c;
-    out.biome = this.pickBiome(height, temp, humid, mount, c);
+    out.biome = this.pickBiome(height, temp, humid, mount, c, weird, swamp, mush, mesa);
     return out;
   }
 
-  private pickBiome(h: number, t: number, hu: number, m: number, c: number): number {
-    if (h < SEA_LEVEL - 1.5) return t < -0.58 ? BIOME_FROZEN_OCEAN : BIOME_OCEAN;
+  private pickBiome(
+    h: number, t: number, hu: number, m: number, c: number, weird: number, swamp: number, mush: number, mesa: number,
+  ): number {
+    if (mush > 0.5 && h >= SEA_LEVEL - 1.5) return BIOME_MUSHROOM_FIELDS;
+    if (swamp > 0.5 && h > SEA_LEVEL - 4) return BIOME_SWAMP;
+    if (h < SEA_LEVEL - 1.5) {
+      if (t < -0.58) return BIOME_FROZEN_OCEAN;
+      if (h < 44) return BIOME_DEEP_OCEAN;
+      if (t < -0.3) return BIOME_COLD_OCEAN;
+      if (t > 0.42) return BIOME_WARM_OCEAN;
+      return BIOME_OCEAN;
+    }
     if (m > 0.45 && h > 105) return h > 150 || t < -0.35 ? BIOME_SNOWY_PEAKS : BIOME_MOUNTAINS;
+    // Faldas de las montañas: praderas y, a trechos, cerezales.
+    if (m > 0.2 && h > 84 && t > -0.26 && t < 0.38) return weird > 0.2 ? BIOME_CHERRY_GROVE : BIOME_MEADOW;
     if (h < SEA_LEVEL + 2.5 && c < 0.12 && m < 0.25) {
       if (t < -0.58) return BIOME_SNOWY;
       return t > 0.35 && hu < 0 ? BIOME_DESERT : BIOME_BEACH;
     }
-    if (t < -0.58) return BIOME_SNOWY;
+    if (t < -0.58) return weird > 0.35 ? BIOME_ICE_SPIKES : BIOME_SNOWY;
     if (t < -0.26) return BIOME_TAIGA;
-    if (t > 0.38) return hu < 0.05 ? BIOME_DESERT : BIOME_SAVANNA;
-    if (hu > 0.1) return t < 0.05 && hu > 0.32 ? BIOME_BIRCH_FOREST : BIOME_FOREST;
+    if (t > 0.38) {
+      if (hu > 0.3) return BIOME_JUNGLE;
+      if (hu < 0.05) return mesa > 0.5 ? BIOME_BADLANDS : BIOME_DESERT;
+      return BIOME_SAVANNA;
+    }
+    if (hu > 0.1) {
+      if (hu > 0.42 && t > -0.1) return BIOME_DARK_FOREST;
+      return t < 0.05 && hu > 0.32 ? BIOME_BIRCH_FOREST : BIOME_FOREST;
+    }
     return BIOME_PLAINS;
   }
 
@@ -214,6 +298,25 @@ export class TerrainGenerator {
     return out;
   }
 
+  /** Color de la hierba de una columna: el del bioma si tiene uno propio, mezclado con el del clima. */
+  static biomeGrass(inf: ColumnInfo, out: number[]): number[] {
+    TerrainGenerator.grassColor(inf.temp, inf.humid, out);
+    const g = BIOME_GRASS[inf.biome];
+    if (g) for (let k = 0; k < 3; k++) out[k] = lerp(out[k], g[k], 0.75);
+    return out;
+  }
+
+  /** Terracota de la franja de las badlands a la altura y (con una ligera ondulación por columna). */
+  private bandAt(x: number, y: number, z: number): number {
+    const wobble = Math.round(this.nSurface.noise2(x / 70, z / 70) * 2);
+    let h = hash2(Math.floor((y + wobble) / 2), 0, this.seed ^ 0xba7d) % BAND_TOTAL;
+    for (const [id, w] of BANDS) {
+      if (h < w) return id;
+      h -= w;
+    }
+    return TERRACOTTA;
+  }
+
   /** Bloques de superficie: out = [superior, relleno, profundo(-1 = ninguno), profundidad]. */
   surfaceRules(x: number, z: number, biome: number, top: number, slope: number, out: number[]): number[] {
     const sn = this.nSurface.noise2(x / 24, z / 24);
@@ -231,14 +334,35 @@ export class TerrainGenerator {
         if (slope > 3.5) { topBlock = STONE; filler = STONE; deep = -1; }
         break;
       case BIOME_OCEAN:
-      case BIOME_FROZEN_OCEAN: {
+      case BIOME_FROZEN_OCEAN:
+      case BIOME_DEEP_OCEAN:
+      case BIOME_WARM_OCEAN:
+      case BIOME_COLD_OCEAN: {
         const deepWater = SEA_LEVEL - top;
         topBlock = deepWater > 9 ? GRAVEL : SAND;
         if (sn > 0.55) topBlock = CLAY;
         else if (sn < -0.6) topBlock = GRAVEL;
+        // Los mares cálidos tienen fondo de arena; los fríos, sobre todo de grava.
+        if (biome === BIOME_WARM_OCEAN) topBlock = SAND;
+        else if (biome === BIOME_COLD_OCEAN && sn < 0.3) topBlock = GRAVEL;
         filler = topBlock;
         break;
       }
+      case BIOME_BADLANDS:
+        // Arena roja en lo llano; en las laderas asoman las franjas de terracota (ver generate).
+        if (slope > 3) { topBlock = STONE; filler = STONE; }
+        else { topBlock = RED_SAND; filler = RED_SAND; }
+        out[3] = 2;
+        out[0] = topBlock;
+        out[1] = filler;
+        out[2] = -1;
+        return out;
+      case BIOME_MUSHROOM_FIELDS:
+        topBlock = MYCELIUM;
+        break;
+      case BIOME_ICE_SPIKES:
+        topBlock = SNOW_BLOCK;
+        break;
       case BIOME_SNOWY:
         topBlock = SNOWY_GRASS;
         break;
@@ -255,8 +379,9 @@ export class TerrainGenerator {
       default:
         if (slope > 5.5) { topBlock = STONE; filler = STONE; }
     }
-    if (underwater && (topBlock === GRASS || topBlock === SNOWY_GRASS)) {
-      topBlock = sn > 0.2 ? SAND : sn < -0.3 ? GRAVEL : DIRT;
+    if (underwater && (topBlock === GRASS || topBlock === SNOWY_GRASS || topBlock === MYCELIUM)) {
+      if (biome === BIOME_SWAMP) topBlock = sn > 0.3 ? CLAY : DIRT;
+      else topBlock = sn > 0.2 ? SAND : sn < -0.3 ? GRAVEL : DIRT;
       filler = topBlock === GRAVEL ? GRAVEL : DIRT;
     }
     out[0] = topBlock;
@@ -288,7 +413,11 @@ export class TerrainGenerator {
     const slope = Math.max(Math.abs(hx1 - hx0), Math.abs(hz1 - hz0));
     const layers = this.surfaceRules(x, z, biome, sy, slope, [0, 0, 0, 0]);
     const g = layers[0];
-    const ok = biome === BIOME_DESERT ? g === SAND && sy >= SEA_LEVEL : g === GRASS || g === SNOWY_GRASS || g === DIRT;
+    let ok: boolean;
+    if (biome === BIOME_DESERT) ok = g === SAND && sy >= SEA_LEVEL;
+    else if (biome === BIOME_BADLANDS) ok = g === RED_SAND && sy >= SEA_LEVEL;
+    else if (biome === BIOME_ICE_SPIKES) ok = g === SNOW_BLOCK;
+    else ok = g === GRASS || g === SNOWY_GRASS || g === DIRT || g === MYCELIUM;
     void height;
     void amp;
     return ok ? sy : -1;
@@ -363,6 +492,13 @@ export class TerrainGenerator {
           else if (deep >= 0) blocks[i] = deep;
           else break;
           d++;
+        }
+        // Badlands: la piedra de las mesetas se vuelve terracota en franjas de colores.
+        if (inf.biome === BIOME_BADLANDS) {
+          for (let y = top; y > SEA_LEVEL - 8; y--) {
+            const i = blockIndex(lx, y, lz);
+            if (blocks[i] === STONE) blocks[i] = this.bandAt(x0 + lx, y, z0 + lz);
+          }
         }
       }
     }
@@ -476,7 +612,10 @@ export class TerrainGenerator {
         const wx = x0 + lx, wz = z0 + lz;
         const r = hashToFloat(hash2(wx, wz, seed ^ 0x9a5));
         const biome = infos[lz * 16 + lx].biome;
-        if (ground === GRASS) {
+        if (biome >= BIOME_SWAMP || (ground === GRASS && (biome === BIOME_PLAINS || biome === BIOME_FOREST))) {
+          const plant = this.newPlant(biome, ground, top, wx, wz, r);
+          if (plant > 0) blocks[above] = plant;
+        } else if (ground === GRASS) {
           const flowers = this.nFlowers.noise2(wx / 52, wz / 52);
           if (flowers > 0.45 && r < 0.3 && (biome === BIOME_PLAINS || biome === BIOME_FOREST || biome === BIOME_BIRCH_FOREST)) {
             const f = hashToFloat(hash2(wx, wz, seed ^ 0x77f));
@@ -517,7 +656,7 @@ export class TerrainGenerator {
       const clx = 3 + Math.floor(pr() * 10), clz = 3 + Math.floor(pr() * 10);
       const b0 = infos[clz * 16 + clx].biome;
       const okBiome = melon
-        ? b0 === BIOME_SAVANNA || b0 === BIOME_PLAINS
+        ? b0 === BIOME_SAVANNA || b0 === BIOME_PLAINS || b0 === BIOME_JUNGLE
         : b0 === BIOME_PLAINS || b0 === BIOME_FOREST || b0 === BIOME_TAIGA || b0 === BIOME_BIRCH_FOREST;
       for (let k = 0; okBiome && k < 10; k++) {
         const lx = clx + Math.floor(pr() * 7) - 3, lz = clz + Math.floor(pr() * 7) - 3;
@@ -537,12 +676,12 @@ export class TerrainGenerator {
       if (lx < 0 || lx >= 16 || lz < 0 || lz >= 16 || y <= MIN_Y || y >= MAX_Y) return;
       const i = blockIndex(lx, y, lz);
       const cur = blocks[i];
-      if (cur === AIR || (force && (BLOCK_REPLACEABLE[cur] || BLOCK_RENDER[cur] === R_CROSS || cur === OAK_LEAVES || cur === BIRCH_LEAVES || cur === SPRUCE_LEAVES))) {
+      if (cur === AIR || (force && (BLOCK_REPLACEABLE[cur] || BLOCK_RENDER[cur] === R_CROSS || isLeaves(cur)))) {
         blocks[i] = id;
       }
     };
     const tmpInfo: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
-    // Las copas llegan hasta 5 bloques del tronco (roble grande, acacia inclinada).
+    // Las copas llegan hasta 8 bloques del tronco (cerezos y jungla gigante).
     const cMin = Math.floor((x0 - 8) / 4), cMax = Math.floor((x0 + 23) / 4);
     const kMin = Math.floor((z0 - 8) / 4), kMax = Math.floor((z0 + 23) / 4);
     for (let ck = kMin; ck <= kMax; ck++) {
@@ -551,7 +690,7 @@ export class TerrainGenerator {
         const tx = cc * 4 + (h & 3);
         const tz = ck * 4 + ((h >>> 2) & 3);
         const r = ((h >>> 8) & 0xffff) / 65536;
-        if (tx < x0 - 5 || tx > x0 + 20 || tz < z0 - 5 || tz > z0 + 20) continue;
+        if (tx < x0 - 8 || tx > x0 + 23 || tz < z0 - 8 || tz > z0 + 23) continue;
         const inf = this.columnInfo(tx, tz, tmpInfo);
         const density = TREE_DENSITY[inf.biome];
         if (r >= density) continue;
@@ -561,9 +700,13 @@ export class TerrainGenerator {
         if (sy < 0) continue;
         const inside = tx >= x0 && tx < x0 + 16 && tz >= z0 && tz < z0 + 16;
         const tr = hashToFloat(hash2(tx, tz, seed ^ 0x3a7));
-        if (biome === BIOME_DESERT) {
+        if (biome === BIOME_DESERT || biome === BIOME_BADLANDS) {
           const hgt = 1 + Math.floor(tr * 3);
           for (let k = 1; k <= hgt; k++) set(tx, sy + k, tz, CACTUS, true);
+          continue;
+        }
+        if (biome === BIOME_ICE_SPIKES) {
+          this.iceSpike(tx, sy + 1, tz, tr, set);
           continue;
         }
         if (biome === BIOME_TAIGA || biome === BIOME_SNOWY || biome === BIOME_MOUNTAINS) {
@@ -577,6 +720,24 @@ export class TerrainGenerator {
           else this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
         } else if (biome === BIOME_SAVANNA) {
           this.savannaTree(tx, sy + 1, tz, tr, set);
+        } else if (biome === BIOME_SWAMP) {
+          this.swampOak(tx, sy + 1, tz, tr, set);
+        } else if (biome === BIOME_JUNGLE) {
+          if (tr < 0.12) this.megaJungle(tx, sy + 1, tz, tr, set);
+          else if (tr < 0.55) this.jungleTree(tx, sy + 1, tz, tr, set);
+          else this.jungleBush(tx, sy + 1, tz, set);
+        } else if (biome === BIOME_DARK_FOREST) {
+          if (tr < 0.06) this.hugeMushroom(tx, sy + 1, tz, tr, tr < 0.03, set);
+          else if (tr < 0.82) this.darkOak(tx, sy + 1, tz, tr, set);
+          else if (tr < 0.92) this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
+          else this.oak(tx, sy + 1, tz, tr, BIRCH_LOG, BIRCH_LEAVES, set);
+        } else if (biome === BIOME_MUSHROOM_FIELDS) {
+          this.hugeMushroom(tx, sy + 1, tz, tr, tr < 0.5, set);
+        } else if (biome === BIOME_CHERRY_GROVE) {
+          this.cherry(tx, sy + 1, tz, tr, set);
+        } else if (biome === BIOME_MEADOW) {
+          if (tr < 0.6) this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
+          else this.oak(tx, sy + 1, tz, tr, BIRCH_LOG, BIRCH_LEAVES, set);
         } else {
           if (tr > 0.8) this.bigOak(tx, sy + 1, tz, tr, set);
           else this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
@@ -612,7 +773,7 @@ export class TerrainGenerator {
     for (let j = 0; j < 4; j++) {
       for (let i = 0; i < 4; i++) {
         const inf = this.columnInfo(x0 + i * 4 + 2, z0 + j * 4 + 2, tmpInfo);
-        TerrainGenerator.grassColor(inf.temp, inf.humid, col);
+        TerrainGenerator.biomeGrass(inf, col);
         const o = (j * 4 + i) * 4;
         tint[o] = Math.round(col[0]);
         tint[o + 1] = Math.round(col[1]);
@@ -625,13 +786,21 @@ export class TerrainGenerator {
 
   // ---------------------------------------------------------------- árboles
   /**
-   * Hace crecer un árbol desde un brote (kind: 0 roble, 1 abedul, 2 abeto). `set` recibe los bloques
-   * con `force` = true para el tronco (puede sustituir plantas y hojas) y false para las hojas.
+   * Hace crecer un árbol desde un brote (kind: posición de su madera en WOOD_TYPES: 0 roble,
+   * 1 abedul, 2 abeto, 3 jungla, 4 acacia, 5 roble oscuro, 6 cerezo). `mega`: desde 2×2 brotes, con
+   * (x, z) en la esquina noroeste. `set` recibe los bloques con `force` = true para el tronco (puede
+   * sustituir plantas y hojas) y false para las hojas.
    */
-  growTree(kind: number, x: number, y: number, z: number, r: number, set: (x: number, y: number, z: number, id: number, force: boolean) => void): void {
-    if (kind === 1) this.oak(x, y, z, r, BIRCH_LOG, BIRCH_LEAVES, set);
-    else if (kind === 2) this.spruce(x, y, z, r, set);
-    else if (r > 0.9) this.bigOak(x, y, z, r, set);
+  growTree(kind: number, x: number, y: number, z: number, r: number, set: SetBlock, mega = false): void {
+    switch (kind) {
+      case 1: return this.oak(x, y, z, r, BIRCH_LOG, BIRCH_LEAVES, set);
+      case 2: return this.spruce(x, y, z, r, set);
+      case 3: return mega ? this.megaJungle(x, y, z, r, set) : this.jungleTree(x, y, z, r, set);
+      case 4: return this.savannaTree(x, y, z, r, set);
+      case 5: return this.darkOak(x, y, z, r, set);
+      case 6: return this.cherry(x, y, z, r, set);
+    }
+    if (r > 0.9) this.bigOak(x, y, z, r, set);
     else this.oak(x, y, z, r, OAK_LOG, OAK_LEAVES, set);
   }
 
@@ -716,29 +885,289 @@ export class TerrainGenerator {
     }
   }
 
-  private savannaTree(
-    x: number, y: number, z: number, r: number,
-    set: (x: number, y: number, z: number, id: number, force: boolean) => void,
-  ): void {
-    // Árbol inclinado de copa plana (estilo acacia) con madera de roble.
+  private savannaTree(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    // Acacia: tronco inclinado y copa plana.
+    const log = ACACIA_LOG, leaves = ACACIA_LEAVES;
     const h = 4 + Math.floor(r * 1000) % 2;
     const dirIdx = Math.floor(r * 4000) % 4;
     const ddx = [1, -1, 0, 0][dirIdx], ddz = [0, 0, 1, -1][dirIdx];
     let cx = x, cz = z;
     for (let k = 0; k < h; k++) {
       if (k >= 2) { cx += ddx; cz += ddz; }
-      set(cx, y + k, cz, OAK_LOG, true);
+      set(cx, y + k, cz, log, true);
     }
     const top = y + h;
+    this.acaciaCanopy(cx, top, cz, leaves, set);
+    // La acacia a veces abre una segunda rama hacia el otro lado, con su propia copa más baja.
+    if (Math.floor(r * 7919) % 2 === 0) {
+      let bx = x, bz = z;
+      const by = y + 1;
+      for (let k = 1; k <= 3; k++) {
+        bx -= ddx;
+        bz -= ddz;
+        set(bx, by + k, bz, log, true);
+      }
+      this.acaciaCanopy(bx, by + 4, bz, leaves, set);
+    }
+  }
+
+  private acaciaCanopy(cx: number, top: number, cz: number, leaves: number, set: SetBlock): void {
     for (let dz = -2; dz <= 2; dz++) {
       for (let dx = -2; dx <= 2; dx++) {
         if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
-        set(cx + dx, top, cz + dz, OAK_LEAVES, false);
+        set(cx + dx, top, cz + dz, leaves, false);
       }
     }
     for (let dz = -1; dz <= 1; dz++) {
-      for (let dx = -1; dx <= 1; dx++) set(cx + dx, top + 1, cz + dz, OAK_LEAVES, false);
+      for (let dx = -1; dx <= 1; dx++) set(cx + dx, top + 1, cz + dz, leaves, false);
     }
+  }
+
+  // ---------------------------------------------------------------- árboles de la fase 5
+
+  /** ¿Está (x, z) dentro del disco de hojas de radio `rad` centrado en (cx, cz)? (borde irregular) */
+  private inDisc(cx: number, cz: number, rad: number, x: number, y: number, z: number): boolean {
+    const dx = x + 0.5 - cx, dz = z + 0.5 - cz;
+    return dx * dx + dz * dz <= rad * rad + rad * 0.6 + (hash3(x, y, z, this.seed ^ 0x2ee) % 3) * 0.25;
+  }
+
+  /** Capa de hojas: centro (cx, cz) en coordenadas del mundo (x + 0,5 para un tronco, x + 1 para 2×2). */
+  private leafDisc(cx: number, y: number, cz: number, rad: number, leaves: number, set: SetBlock): void {
+    const r0 = Math.ceil(rad + 1);
+    const ix = Math.floor(cx), iz = Math.floor(cz);
+    for (let z = iz - r0; z <= iz + r0; z++) {
+      for (let x = ix - r0; x <= ix + r0; x++) if (this.inDisc(cx, cz, rad, x, y, z)) set(x, y, z, leaves, false);
+    }
+  }
+
+  /** Enredaderas colgando del borde de una capa de hojas (sólo donde el borde es hoja y fuera hay aire). */
+  private hangVines(cx: number, y: number, cz: number, rad: number, chance: number, set: SetBlock): void {
+    const ix = Math.floor(cx), iz = Math.floor(cz);
+    for (let d = 0; d < 4; d++) {
+      for (let k = -2; k <= 2; k++) {
+        let ex = ix + (DIR_X[d] === 0 ? k : 0), ez = iz + (DIR_Z[d] === 0 ? k : 0);
+        if (!this.inDisc(cx, cz, rad, ex, y, ez)) continue;
+        while (this.inDisc(cx, cz, rad, ex + DIR_X[d], y, ez + DIR_Z[d])) {
+          ex += DIR_X[d];
+          ez += DIR_Z[d];
+        }
+        const h = hash3(ex, y, ez, this.seed ^ 0x71e);
+        if ((h % 100) / 100 >= chance) continue;
+        const len = 1 + ((h >>> 8) % 4);
+        for (let j = 0; j < len; j++) set(ex + DIR_X[d], y - j, ez + DIR_Z[d], VINE + d, false);
+      }
+    }
+  }
+
+  /** Enredaderas pegadas a las caras de un tronco (celdas x0..x1 × z0..z1) entre y0 e y1. */
+  private trunkVines(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, chance: number, set: SetBlock): void {
+    const vine = (x: number, y: number, z: number, f: number) => {
+      if ((hash3(x, y, z, this.seed ^ 0x3c1) % 100) / 100 < chance) set(x, y, z, VINE + f, false);
+    };
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        vine(x, y, z0 - 1, 0);
+        vine(x, y, z1 + 1, 2);
+      }
+      for (let z = z0; z <= z1; z++) {
+        vine(x1 + 1, y, z, 1);
+        vine(x0 - 1, y, z, 3);
+      }
+    }
+  }
+
+  /** Roble de pantano: copa ancha y baja con enredaderas colgando. */
+  private swampOak(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 5 + Math.floor(r * 1000) % 3;
+    for (let k = 0; k < h; k++) set(x, y + k, z, OAK_LOG, true);
+    const top = y + h - 1;
+    const radii = [3, 3, 2, 1.2];
+    for (let k = 0; k < 4; k++) this.leafDisc(x + 0.5, top - 2 + k, z + 0.5, radii[k], OAK_LEAVES, set);
+    this.hangVines(x + 0.5, top - 2, z + 0.5, 3, 0.5, set);
+  }
+
+  /** Árbol de jungla pequeño, con alguna enredadera en el tronco. */
+  private jungleTree(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 5 + Math.floor(r * 1000) % 5;
+    for (let k = 0; k < h; k++) set(x, y + k, z, JUNGLE_LOG, true);
+    const top = y + h - 1;
+    const radii = [2.2, 2.2, 1.4, 0.8];
+    for (let k = 0; k < 4; k++) this.leafDisc(x + 0.5, top - 2 + k, z + 0.5, radii[k], JUNGLE_LEAVES, set);
+    this.trunkVines(x, z, x, z, y, top - 2, 0.3, set);
+    this.hangVines(x + 0.5, top - 2, z + 0.5, 2.2, 0.25, set);
+  }
+
+  /** Arbusto de jungla: un tronco con una bola de hojas de roble (como en Minecraft). */
+  private jungleBush(x: number, y: number, z: number, set: SetBlock): void {
+    set(x, y, z, JUNGLE_LOG, true);
+    this.leafDisc(x + 0.5, y, z + 0.5, 2.2, OAK_LEAVES, set);
+    this.leafDisc(x + 0.5, y + 1, z + 0.5, 1.3, OAK_LEAVES, set);
+    set(x, y + 2, z, OAK_LEAVES, false);
+  }
+
+  /** Árbol de jungla gigante: tronco de 2×2, ramas con copa propia y muchas enredaderas. */
+  private megaJungle(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 16 + Math.floor(r * 1000) % 12;
+    for (let k = 0; k < h; k++) {
+      for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) set(x + dx, y + k, z + dz, JUNGLE_LOG, true);
+    }
+    const top = y + h - 1;
+    const radii = [4.2, 4.8, 3.8, 2.2];
+    for (let k = 0; k < 4; k++) this.leafDisc(x + 1, top - 1 + k, z + 1, radii[k], JUNGLE_LEAVES, set);
+    // Ramas.
+    const n = 2 + Math.floor(r * 37) % 3;
+    for (let i = 0; i < n; i++) {
+      const d = (Math.floor(r * 97) + i) % 4;
+      const by = y + Math.floor(h * 0.45) + i * 3;
+      if (by > top - 4) break;
+      let bx = x + (DIR_X[d] > 0 ? 1 : 0), bz = z + (DIR_Z[d] > 0 ? 1 : 0);
+      let yy = by;
+      for (let s2 = 1; s2 <= 3; s2++) {
+        bx += DIR_X[d];
+        bz += DIR_Z[d];
+        if (s2 > 1) yy++;
+        set(bx, yy, bz, JUNGLE_LOG, true);
+      }
+      this.leafDisc(bx + 0.5, yy, bz + 0.5, 2, JUNGLE_LEAVES, set);
+      this.leafDisc(bx + 0.5, yy + 1, bz + 0.5, 1.2, JUNGLE_LEAVES, set);
+    }
+    this.trunkVines(x, z, x + 1, z + 1, y, top - 2, 0.55, set);
+    this.hangVines(x + 1, top - 1, z + 1, 4.2, 0.45, set);
+  }
+
+  /** Roble oscuro: tronco de 2×2 y una copa ancha y espesa. */
+  private darkOak(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 6 + Math.floor(r * 1000) % 3;
+    for (let k = 0; k < h; k++) {
+      for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) set(x + dx, y + k, z + dz, DARK_OAK_LOG, true);
+    }
+    const top = y + h - 1;
+    // Dos ramas cortas bajo la copa.
+    for (let i = 0; i < 2; i++) {
+      const d = (Math.floor(r * 131) + i * 2) % 4;
+      const bx = x + (DIR_X[d] > 0 ? 1 : 0) + DIR_X[d], bz = z + (DIR_Z[d] > 0 ? 1 : 0) + DIR_Z[d];
+      set(bx, top - 1, bz, DARK_OAK_LOG, true);
+      set(bx + DIR_X[d], top, bz + DIR_Z[d], DARK_OAK_LOG, true);
+      this.leafDisc(bx + DIR_X[d] + 0.5, top + 1, bz + DIR_Z[d] + 0.5, 1.8, DARK_OAK_LEAVES, set);
+    }
+    const radii = [3.2, 3.8, 3.2, 1.8];
+    for (let k = 0; k < 4; k++) this.leafDisc(x + 1, top - 1 + k, z + 1, radii[k], DARK_OAK_LEAVES, set);
+  }
+
+  /** Cerezo: tronco corto que se abre en dos o tres ramas con copas rosas que cuelgan. */
+  private cherry(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 4 + Math.floor(r * 1000) % 2;
+    for (let k = 0; k < h; k++) set(x, y + k, z, CHERRY_LOG, true);
+    const n = 2 + Math.floor(r * 53) % 2;
+    const a0 = r * Math.PI * 14;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i * Math.PI * 2) / n;
+      const len = 3 + (Math.floor(r * 91) + i) % 2;
+      let ex = x, ey = y + h - 1, ez = z;
+      for (let s2 = 1; s2 <= len; s2++) {
+        ex = x + Math.round(Math.cos(a) * s2);
+        ez = z + Math.round(Math.sin(a) * s2);
+        ey = y + h - 1 + Math.floor(s2 * 0.7);
+        set(ex, ey, ez, CHERRY_LOG, true);
+      }
+      const radii = [3.1, 2.7, 1.7];
+      for (let k = 0; k < 3; k++) this.leafDisc(ex + 0.5, ey + k, ez + 0.5, radii[k], CHERRY_LEAVES, set);
+      // Hojas que cuelgan bajo la copa.
+      for (let dz = -3; dz <= 3; dz++) {
+        for (let dx = -3; dx <= 3; dx++) {
+          if (!this.inDisc(ex + 0.5, ez + 0.5, 3.1, ex + dx, ey, ez + dz)) continue;
+          const hh = hash3(ex + dx, ey, ez + dz, this.seed ^ 0xc4e);
+          if (hh % 5 === 0) set(ex + dx, ey - 1, ez + dz, CHERRY_LEAVES, false);
+          if (hh % 13 === 0) set(ex + dx, ey - 2, ez + dz, CHERRY_LEAVES, false);
+        }
+      }
+    }
+  }
+
+  /** Champiñón gigante: rojo (sombrero en cúpula) o marrón (sombrero plano y ancho). */
+  private hugeMushroom(x: number, y: number, z: number, r: number, red: boolean, set: SetBlock): void {
+    const h = 5 + Math.floor(r * 1000) % 3;
+    for (let k = 0; k < h; k++) set(x, y + k, z, MUSHROOM_STEM, true);
+    const top = y + h;
+    if (red) {
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) set(x + dx, top, z + dz, RED_MUSHROOM_BLOCK, false);
+      for (let yy = top - 3; yy < top; yy++) {
+        for (let dz = -2; dz <= 2; dz++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) !== 2 || (Math.abs(dx) === 2 && Math.abs(dz) === 2)) continue;
+            set(x + dx, yy, z + dz, RED_MUSHROOM_BLOCK, false);
+          }
+        }
+      }
+    } else {
+      for (let dz = -3; dz <= 3; dz++) {
+        for (let dx = -3; dx <= 3; dx++) {
+          if (Math.abs(dx) === 3 && Math.abs(dz) === 3) continue;
+          set(x + dx, top, z + dz, BROWN_MUSHROOM_BLOCK, false);
+        }
+      }
+    }
+  }
+
+  /** Pico de hielo compacto; de vez en cuando, uno enorme. */
+  private iceSpike(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const huge = r < 0.004;
+    const h = huge ? 24 + Math.floor(r * 1e5) % 16 : 5 + Math.floor(r * 1000) % 9;
+    const base = huge ? 2.8 : 1.5;
+    for (let k = 0; k <= h; k++) {
+      const rad = Math.max(0.2, base * (1 - k / h));
+      const r0 = Math.ceil(rad);
+      for (let dz = -r0; dz <= r0; dz++) {
+        for (let dx = -r0; dx <= r0; dx++) if (dx * dx + dz * dz <= rad * rad + 0.3) set(x + dx, y + k, z + dz, PACKED_ICE, true);
+      }
+    }
+  }
+
+  /** Plantas de los biomas nuevos (y flores nuevas en llanuras y bosques): id o 0. */
+  private newPlant(biome: number, ground: number, top: number, wx: number, wz: number, r: number): number {
+    const seed = this.seed;
+    const flowers = this.nFlowers.noise2(wx / 52, wz / 52);
+    const kind = this.nFlowers.noise2(wx / 20 + 100, wz / 20);
+    const f = hashToFloat(hash2(wx, wz, seed ^ 0x77f));
+    const mushroom = r > 0.997 ? RED_MUSHROOM : BROWN_MUSHROOM;
+    if (ground === WATER) return biome === BIOME_SWAMP && top === SEA_LEVEL - 1 && r < 0.07 ? LILY_PAD : 0;
+    if (ground === MYCELIUM) return r < 0.015 ? mushroom : 0;
+    if (ground === RED_SAND) return biome === BIOME_BADLANDS && r < 0.012 ? DEAD_BUSH : 0;
+    if (ground !== GRASS) return 0;
+    switch (biome) {
+      case BIOME_PLAINS:
+      case BIOME_FOREST: {
+        if (flowers > 0.45 && r < 0.3) {
+          if (biome === BIOME_FOREST) return f < 0.3 ? POPPY : f < 0.55 ? FLOWERS.lily_of_the_valley : DANDELION;
+          // Llanuras: tulipanes en rodales, y margaritas, rubias azules y acianos.
+          if (kind > 0.3) return [FLOWERS.red_tulip, FLOWERS.orange_tulip, FLOWERS.white_tulip, FLOWERS.pink_tulip][Math.floor(f * 4)];
+          if (kind < -0.3) return f < 0.5 ? FLOWERS.oxeye_daisy : FLOWERS.azure_bluet;
+          return f < 0.4 ? POPPY : f < 0.8 ? DANDELION : CORNFLOWER;
+        }
+        if (biome === BIOME_FOREST && r > 0.994) return mushroom;
+        return r < (biome === BIOME_PLAINS ? 0.3 : 0.18) ? SHORT_GRASS : 0;
+      }
+      case BIOME_SWAMP:
+        if (r < 0.03) return FLOWERS.blue_orchid;
+        if (r > 0.99) return mushroom;
+        return r < 0.25 ? SHORT_GRASS : 0;
+      case BIOME_JUNGLE:
+        return r < 0.35 ? SHORT_GRASS : r < 0.55 ? FERN : 0;
+      case BIOME_DARK_FOREST:
+        if (r > 0.985) return mushroom;
+        if (flowers > 0.55 && r < 0.1) return f < 0.5 ? POPPY : FLOWERS.lily_of_the_valley;
+        return r < 0.25 ? SHORT_GRASS : 0;
+      case BIOME_MEADOW:
+        if (flowers > -0.1 && r < 0.35) {
+          return [FLOWERS.allium, FLOWERS.azure_bluet, FLOWERS.oxeye_daisy, CORNFLOWER, DANDELION, POPPY][Math.floor((kind * 0.5 + 0.5) * 5.99)];
+        }
+        return r < 0.65 ? SHORT_GRASS : 0;
+      case BIOME_CHERRY_GROVE:
+        return r < 0.28 ? PINK_PETALS : r < 0.42 ? SHORT_GRASS : 0;
+      case BIOME_SAVANNA:
+        return r < 0.42 ? SHORT_GRASS : 0;
+    }
+    return r < 0.18 ? SHORT_GRASS : 0;
   }
 
   /** Busca un punto de aparición en tierra firme cerca del origen. */

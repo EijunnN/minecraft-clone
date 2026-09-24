@@ -106,7 +106,7 @@ export function dirtBase(t: Tex): void {
 
 const GRASS_G = [116, 136, 154, 172, 192, 212];
 
-function grassTop(t: Tex): void {
+export function grassTop(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -150,7 +150,7 @@ function grassTop(t: Tex): void {
 }
 
 /** Profundidad irregular (en filas) de un borde que cuelga desde arriba. */
-function fringeDepths(r: Rng, base: readonly number[], drips: number, dripMin: number, dripMax: number): number[] {
+export function fringeDepths(r: Rng, base: readonly number[], drips: number, dripMin: number, dripMax: number): number[] {
   const d: number[] = [];
   for (let x = 0; x < 16; x++) d.push(r.pick(base));
   for (let k = 0; k < drips; k++) {
@@ -255,7 +255,7 @@ const ICE: RGB[] = [
 ];
 const ICE_A = [184, 174, 166, 160];
 
-function ice(t: Tex): void {
+export function ice(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -316,7 +316,7 @@ const SAND: RGB[] = [
   [228, 216, 172],
 ];
 
-function sand(t: Tex): void {
+export function sand(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -430,7 +430,7 @@ const SST: RGB[] = [
   [228, 217, 171],
 ];
 
-function sandstoneTop(t: Tex): void {
+export function sandstoneTop(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -447,7 +447,7 @@ function sandstoneTop(t: Tex): void {
   t.depth = 0.5;
 }
 
-function sandstoneSide(t: Tex): void {
+export function sandstoneSide(t: Tex): void {
   const r = t.rng();
   const n8 = new Noise(r, 8);
   const px = pixelNoise(r);
@@ -499,7 +499,7 @@ function sandstoneSide(t: Tex): void {
   t.depth = 1.1;
 }
 
-function sandstoneBottom(t: Tex): void {
+export function sandstoneBottom(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -529,7 +529,7 @@ const TERRACOTTA: RGB[] = [
   [161, 102, 75],
 ];
 
-function terracotta(t: Tex): void {
+export function terracotta(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);

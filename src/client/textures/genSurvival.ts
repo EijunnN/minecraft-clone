@@ -411,7 +411,7 @@ function chestFrontSeam(t: Tex, open: 'left' | 'right'): void {
 // Brotes (plantas en cruz ancladas a la fila inferior)
 // ---------------------------------------------------------------------------
 
-const OAK_SAPLING = [
+export const OAK_SAPLING = [
   '................',
   '.......1........',
   '.....1.12.......',
@@ -430,7 +430,7 @@ const OAK_SAPLING = [
   '......ssSS......',
 ];
 
-const BIRCH_SAPLING = [
+export const BIRCH_SAPLING = [
   '.......1........',
   '......122.......',
   '.....12233......',
@@ -449,7 +449,7 @@ const BIRCH_SAPLING = [
   '......ppPP......',
 ];
 
-const SPRUCE_SAPLING = [
+export const SPRUCE_SAPLING = [
   '................',
   '.......1........',
   '......123.......',
@@ -468,7 +468,7 @@ const SPRUCE_SAPLING = [
   '......ssSS......',
 ];
 
-function sapling(t: Tex, rows: readonly string[], leaves: readonly RGB[], stem: Record<string, Ink>, sss: number): void {
+export function sapling(t: Tex, rows: readonly string[], leaves: readonly RGB[], stem: Record<string, Ink>, sss: number): void {
   cutoutCanvas(t, 64, sss);
   const inks: Record<string, Ink> = { ...stem };
   leaves.forEach((c, k) => {

@@ -34,14 +34,14 @@ const SPRUCE_PLANKS: PlankStyle = {
   smooth: 56,
 };
 
-interface Wood {
+export interface Wood {
   p: PlankStyle;
   /** Marco: sombra, base y luz (derivados de la paleta de tablones, más oscuros). */
   frame: readonly [RGB, RGB, RGB];
 }
 
 /** `k`: cuánto se acerca el marco al color de junta (más alto = marco más oscuro). */
-function wood(p: PlankStyle, k: number): Wood {
+export function wood(p: PlankStyle, k: number): Wood {
   return { p, frame: [mix(p.joint, p.seam, 0.35 + k * 0.6), mix(p.dark, p.seam, k), mix(p.base, p.seam, k * 0.55)] };
 }
 
@@ -252,7 +252,7 @@ function shadePlan(rows: readonly string[], w: Wood, seed: string): Plan {
 const planCache = new Map<string, Plan>();
 
 /** Vuelca las filas [y0, y0 + 16) de un plano sobre el lienzo (recorte que no se repite). */
-function drawPlan(t: Tex, rows: readonly string[], y0: number, w: Wood, seed: string, tiling = false): void {
+export function drawPlan(t: Tex, rows: readonly string[], y0: number, w: Wood, seed: string, tiling = false): void {
   let plan = planCache.get(seed);
   if (!plan) {
     plan = shadePlan(rows, w, seed);
@@ -290,7 +290,7 @@ const IRON: Record<string, Ink> = {
 // ---------------------------------------------------------------------------
 
 // Roble: dos ventanas en arco arriba y tablas horizontales abajo.
-const OAK_DOOR = [
+export const OAK_DOOR = [
   'FFFFFFFFFFFFFFFF',
   'FFFFFFFFFFFFFFFF',
   'FFbbbbbbbbbbbbFF',
@@ -326,7 +326,7 @@ const OAK_DOOR = [
 ];
 
 // Abedul: cuadrícula de ventanitas arriba y tablas verticales abajo.
-const BIRCH_DOOR = [
+export const BIRCH_DOOR = [
   'FFFFFFFFFFFFFFFF',
   'FFFFFFFFFFFFFFFF',
   'FFvvvvvvvvvvvvFF',
@@ -362,7 +362,7 @@ const BIRCH_DOOR = [
 ];
 
 // Abeto: tablas verticales casi macizas con dos mirillas estrechas.
-const SPRUCE_DOOR = [
+export const SPRUCE_DOOR = [
   'FFFFFFFFFFFFFFFF',
   'FFFFFFFFFFFFFFFF',
   'FFvvv|vvvv|vvvFF',
@@ -400,7 +400,7 @@ const SPRUCE_DOOR = [
 // Tirador (filas 1–4 de la mitad inferior, junto al larguero derecho).
 const HANDLE = ['mh', 'dm', 'dm', 'kd'];
 
-function door(t: Tex, rows: readonly string[], w: Wood, seed: string, bottom: boolean): void {
+export function door(t: Tex, rows: readonly string[], w: Wood, seed: string, bottom: boolean): void {
   drawPlan(t, rows, bottom ? 16 : 0, w, seed);
   if (bottom) sprite(t, HANDLE, IRON, 11, 1);
 }
@@ -409,7 +409,7 @@ function door(t: Tex, rows: readonly string[], w: Wood, seed: string, bottom: bo
 // Trampillas (16×16, vistas desde arriba)
 // ---------------------------------------------------------------------------
 
-const OAK_TRAPDOOR = [
+export const OAK_TRAPDOOR = [
   'FFFFFFFFFFFFFFFF',
   'FFFFFFFFFFFFFFFF',
   'FFbbbbbFFbbbbbFF',
@@ -428,7 +428,7 @@ const OAK_TRAPDOOR = [
   'FFFFFFFFFFFFFFFF',
 ];
 
-const BIRCH_TRAPDOOR = [
+export const BIRCH_TRAPDOOR = [
   'FFFFFFFFFFFFFFFF',
   'FFFFFFFFFFFFFFFF',
   'FF.vv.vv.vv.vvFF',
@@ -447,7 +447,7 @@ const BIRCH_TRAPDOOR = [
   'FFFFFFFFFFFFFFFF',
 ];
 
-const SPRUCE_TRAPDOOR = [
+export const SPRUCE_TRAPDOOR = [
   'FFFFFFFFFFFFFFFF',
   'FFFFFFFFFFFFFFFF',
   'FFvv|vv|vv|vvvFF',

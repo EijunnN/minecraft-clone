@@ -8,7 +8,7 @@ import {
 import {
   BLOCKS, BLOCK_COUNT, R_NONE, WATER, LAVA, FURNACE, CHEST, OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS,
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
-  OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
+  WOOD_TYPES, ALL_LOGS, ALL_PLANKS, ALL_SAPLINGS, RED_SAND, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
   PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS, familyBase,
 } from './blocks';
@@ -246,10 +246,10 @@ if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 e
 const fuel = (id: number, s: number) => {
   if (ITEMS[id]) ITEMS[id].fuel = s;
 };
-for (const id of [OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, CHEST]) fuel(id, 15);
-for (const id of [OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING]) fuel(id, 5);
+for (const id of [...ALL_LOGS, ...ALL_PLANKS, CRAFTING_TABLE, BOOKSHELF, CHEST]) fuel(id, 15);
+for (const id of ALL_SAPLINGS) fuel(id, 5);
 // Bloques de madera con forma (como en Minecraft: vallas, portillos y escaleras 15 s; losas 7,5 s…).
-for (const wood of ['oak', 'birch', 'spruce']) {
+for (const { key: wood } of WOOD_TYPES) {
   for (const id of [FENCES[wood], FENCE_GATES[wood], STAIRS[wood], TRAPDOORS[wood]]) fuel(id, 15);
   fuel(SLABS[wood], 7.5);
   fuel(DOORS[wood], 10);
@@ -264,9 +264,8 @@ smelt(SAND, GLASS);
 smelt(COBBLESTONE, STONE);
 smelt(IRON_ORE, IRON_INGOT);
 smelt(GOLD_ORE, GOLD_INGOT);
-smelt(OAK_LOG, CHARCOAL);
-smelt(BIRCH_LOG, CHARCOAL);
-smelt(SPRUCE_LOG, CHARCOAL);
+for (const log of ALL_LOGS) smelt(log, CHARCOAL);
+smelt(RED_SAND, GLASS);
 smelt(CLAY_BALL, BRICK);
 smelt(CLAY, TERRACOTTA);
 smelt(CACTUS, LIME_WOOL);

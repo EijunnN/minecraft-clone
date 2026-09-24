@@ -4,7 +4,7 @@
 // carteles (de pie o en la pared), cofres que se unen en dobles y fogatas encendidas.
 import { MIN_Y, MAX_Y } from './constants';
 import {
-  BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
+  BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, LILY_PAD, VINE, isVine, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
   stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
   isFarmland, isMatureCrop, COMPOSTER, CHEST, CHEST_DOUBLE, CAMPFIRE, SIGN_WALL_OF, chestPartnerDir, isSign,
   blockSupported, orientedFor, type NeighborGet,
@@ -60,6 +60,15 @@ function rel(get: GetBlock, x: number, y: number, z: number): NeighborGet {
  */
 export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: number): Edit[] | null {
   const base = familyBase(item);
+  // Nenúfar: sobre una fuente de agua (el rayo del cliente se detiene en ella).
+  if (base === LILY_PAD) {
+    if (BLOCK_FLUID[hit.id] !== 1 || BLOCK_FLUID_LEVEL[hit.id] !== 0 || hit.y + 1 >= MAX_Y) return null;
+    return get(hit.x, hit.y + 1, hit.z) === 0 ? [[hit.x, hit.y + 1, hit.z, LILY_PAD]] : null;
+  }
+  // Enredadera colgando de otra (clic en su cara de abajo): la misma, en la celda de debajo.
+  if (base === VINE && isVine(hit.id) && hit.ny === -1) {
+    return hit.y - 1 > MIN_Y && get(hit.x, hit.y - 1, hit.z) === 0 ? [[hit.x, hit.y - 1, hit.z, hit.id]] : null;
+  }
   // Losa sobre la mitad libre de otra igual: losa doble.
   if (isSlab(base) && familyBase(hit.id) === base) {
     const t = stateProps(hit.id)!.type;
@@ -96,6 +105,12 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   if (base === LADDER) {
     const f = face === 'side' ? dirOfNormal(hit.nx, hit.nz) : (facing + 2) & 3;
     const id = stateOf(LADDER, { facing: f });
+    return blockSupported(id, rel(get, x, y, z)) ? one(id) : null;
+  }
+  if (base === VINE) {
+    // En una pared (colgar de otra enredadera se resuelve arriba).
+    if (face !== 'side') return null;
+    const id = stateOf(VINE, { facing: dirOfNormal(hit.nx, hit.nz) });
     return blockSupported(id, rel(get, x, y, z)) ? one(id) : null;
   }
   if (SIGN_WALL_OF[base] !== undefined) {

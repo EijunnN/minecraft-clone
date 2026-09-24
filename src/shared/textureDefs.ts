@@ -181,6 +181,37 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'stonecutter_side' },
   { name: 'stonecutter_bottom' },
   { name: 'stonecutter_saw', cutout: true },
+  // Maderas de la fase 5 (jungla, acacia, roble oscuro y cerezo).
+  ...['jungle', 'acacia', 'dark_oak', 'cherry'].flatMap((k): TextureDef[] => [
+    { name: `${k}_log_side` },
+    { name: `${k}_log_top` },
+    { name: `${k}_planks` },
+    k === 'cherry'
+      ? { name: `${k}_leaves`, wave: 1, sss: 0.9, cutout: true }
+      : { name: `${k}_leaves`, tint: 3, wave: 1, sss: 0.85, cutout: true },
+    { name: `${k}_sapling`, wave: 2, sss: 0.75, cutout: true },
+    { name: `${k}_door_top`, cutout: true },
+    { name: `${k}_door_bottom`, cutout: true },
+    { name: `${k}_trapdoor`, cutout: true },
+  ]),
+  // Biomas de la fase 5.
+  { name: 'vine', tint: 3, wave: 1, sss: 0.8, cutout: true },
+  { name: 'lily_pad', sss: 0.5, cutout: true },
+  { name: 'mycelium_top' },
+  { name: 'mycelium_side' },
+  { name: 'red_mushroom_block' },
+  { name: 'brown_mushroom_block' },
+  { name: 'mushroom_stem' },
+  { name: 'mushroom_block_inside' },
+  { name: 'red_sand' },
+  { name: 'red_sandstone_top' },
+  { name: 'red_sandstone_side' },
+  { name: 'red_sandstone_bottom' },
+  ...['white', 'orange', 'yellow', 'brown', 'red', 'light_gray'].map((c): TextureDef => ({ name: `${c}_terracotta` })),
+  { name: 'packed_ice' },
+  ...['blue_orchid', 'allium', 'azure_bluet', 'red_tulip', 'orange_tulip', 'white_tulip', 'pink_tulip', 'oxeye_daisy',
+    'lily_of_the_valley'].map((k): TextureDef => ({ name: k, wave: 2, sss: 0.7, cutout: true })),
+  { name: 'pink_petals', sss: 0.6, cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

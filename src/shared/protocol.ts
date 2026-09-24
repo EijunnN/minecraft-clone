@@ -2,7 +2,7 @@
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
