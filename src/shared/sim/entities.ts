@@ -897,7 +897,9 @@ export class Entities {
 
   /** Aparición de criaturas hostiles en la oscuridad. */
   private spawnHostiles(p: PlayerView, playerCount: number): void {
-    const cap = 8 + 4 * Math.min(4, playerCount);
+    // Límite de monstruos cerca del jugador según la dificultad (fácil 9, normal 12, difícil 15 para uno).
+    const d = this.host.difficulty();
+    const cap = (d <= 1 ? 6 : d === 2 ? 8 : 10) + (d <= 1 ? 3 : d === 2 ? 4 : 5) * Math.min(4, playerCount);
     if (this.counts(p.x, p.z, 96).hostile >= cap) return;
     const w = this.w;
     const night = this.host.sunHeight() < -0.02;

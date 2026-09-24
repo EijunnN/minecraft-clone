@@ -1,5 +1,8 @@
 # VoxelCraft
 
+**▶ Juega ahora: [voxelcraft.arturo97xd.workers.dev](https://voxelcraft.arturo97xd.workers.dev)** — pon
+el mismo nombre de mundo que tus amigos (o comparte el enlace de invitación) para jugar juntos.
+
 Un juego de bloques estilo Minecraft que corre en el navegador, con gráficos tipo *shader pack*,
 modo **supervivencia** completo y multijugador en tiempo real sobre Cloudflare (Workers + Durable
 Objects). Pensado para PC (teclado y ratón).
