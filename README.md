@@ -30,8 +30,13 @@ Objects). Pensado para PC (teclado y ratón).
   bisagra (y puertas dobles), trampillas, escaleras de mano para trepar, paneles de cristal y
   antorchas en la pared. Se colocan como en Minecraft (la mitad y la orientación dependen de dónde
   haces clic y hacia dónde miras), tienen colisiones reales y se suben losas y escalones sin saltar.
-- **Camas**: dormir de noche salta al amanecer cuando todos los jugadores del mundo están acostados
-  (no si hay monstruos cerca) y la cama pasa a ser tu punto de reaparición.
+  También muros de 8 piedras (se unen como las vallas) y carteles de pie o en la pared: al ponerlos
+  se escribe su texto (cuatro líneas) y lo ven todos los jugadores.
+- **Camas** de 8 colores: dormir de noche salta al amanecer cuando todos los jugadores del mundo
+  están acostados (no si hay monstruos cerca) y la cama pasa a ser tu punto de reaparición.
+- **Bloques de trabajo**: cofres que se unen en cofres grandes de 54 huecos; ahumador (comida) y alto
+  horno (minerales), el doble de rápidos que el horno; fogata que alumbra, echa humo, asa hasta
+  cuatro alimentos y quema al pisarla; cortapiedras para sacar losas, escaleras, muros y ladrillos.
 - **Granja**: azadas y tierra de cultivo (se hidrata con agua a 4 bloques o con la lluvia, se seca y
   se pisotea al saltar encima); semillas que salen de la hierba; trigo, zanahorias, patatas y
   remolachas que crecen con la velocidad de Minecraft; polvo de hueso; pan, patata asada, azúcar,

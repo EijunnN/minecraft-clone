@@ -6,10 +6,12 @@ import { raycast, type RayHit } from './raycast';
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
-import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor } from '../../shared/blocks';
+import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
+  CAMPFIRE, stateProps } from '../../shared/blocks';
 import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, type ItemStack } from '../../shared/items';
 import { COMPOSTER_READY, canCompost, composterLevel } from '../../shared/composting';
-import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
+import { variantSmelts } from '../../shared/containers';
+import { MOBS, ENT_ITEM, ENT_ARROW, ENT_DISPLAY, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
 import { EF_BABY, EF_SHEARED, EF_PICKABLE, type ServerMsg } from '../../shared/protocol';
 import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use } from './gameTypes';
 import type { ArmorSource } from './Survival';
@@ -121,11 +123,13 @@ export class Interaction {
         this.g.swing(true);
         return;
       }
-      if (hit.id === CRAFTING_TABLE) {
-        this.g.openScreen('table', null);
+      if (hit.id === CRAFTING_TABLE || familyBase(hit.id) === STONECUTTER) {
+        this.g.openScreen(hit.id === CRAFTING_TABLE ? 'table' : 'stonecutter', null);
         this.g.audio.playUi('open');
         return;
       }
+      // Comida cruda sobre una fogata encendida: a asar.
+      if (familyBase(hit.id) === CAMPFIRE && held && this.cookOnCampfire(hit, held.id)) return;
     }
     if (!held || !def) return;
     // Zanahorias y patatas se plantan en tierra de cultivo; si no, se comen.
@@ -220,6 +224,10 @@ export class Interaction {
     const level = composterLevel(hit.id);
     if (level >= 0) {
       this.compost(hit, level);
+      return;
+    }
+    if (isSign(hit.id)) {
+      this.g.openSignEditor(hit.x, hit.y, hit.z);
       return;
     }
     if (isCake(hit.id)) {
@@ -434,6 +442,8 @@ export class Interaction {
     const [x, y, z, id] = edits[0];
     this.g.audio.playPlace(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    // Cartel recién puesto: a escribir.
+    if (isSign(id)) this.g.openSignEditor(x, y, z);
     return true;
   }
 
@@ -449,6 +459,20 @@ export class Interaction {
     } else return;
     this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.g.player.yaw, item });
     this.g.swing(true);
+  }
+
+  /** Poner comida cruda a asar en una fogata (caben cuatro: se cuentan las que ya se ven encima). */
+  cookOnCampfire(hit: RayHit, item: number): boolean {
+    if (!stateProps(hit.id)?.lit || !variantSmelts(1, item)) return false;
+    let n = 0;
+    for (const e of this.g.ents.list.values()) {
+      if (e.type === ENT_DISPLAY && !e.gone && Math.floor(e.x) === hit.x && Math.floor(e.y) === hit.y && Math.floor(e.z) === hit.z) n++;
+    }
+    if (n >= 4) return false;
+    this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.g.player.yaw, item });
+    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    this.g.swing(true);
+    return true;
   }
 
   /** Tijeras sobre una calabaza: se talla la cara que mira al jugador (las semillas las suelta el servidor). */

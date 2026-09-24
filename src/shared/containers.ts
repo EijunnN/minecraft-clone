@@ -1,6 +1,7 @@
 // Contenedores (cofres y hornos): contenido, reglas de clic compartidas por cliente (predicción)
 // y servidor (autoridad), y la lógica del horno.
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
+import { IRON_ORE, GOLD_ORE } from './blocks';
 
 export const CHEST_SLOTS = 27;
 export const FURNACE_IN = 0;
@@ -21,8 +22,25 @@ export interface ContainerState {
   cook: number;
 }
 
-export function newContainer(kind: ContainerKind): ContainerState {
-  return { kind, slots: new Array(kind === 'chest' ? CHEST_SLOTS : 3).fill(null), burn: 0, burnMax: 0, cook: 0 };
+/** Cofre grande (dos mitades de cofre doble). */
+export const DOUBLE_CHEST_SLOTS = CHEST_SLOTS * 2;
+
+export function newContainer(kind: ContainerKind, size = kind === 'chest' ? CHEST_SLOTS : 3): ContainerState {
+  return { kind, slots: new Array(size).fill(null), burn: 0, burnMax: 0, cook: 0 };
+}
+
+/** Tipos de horno: 0 horno, 1 ahumador (sólo comida), 2 alto horno (sólo minerales). */
+export type FurnaceVariant = 0 | 1 | 2;
+/** Lo que funde el alto horno. */
+const BLAST_INPUTS = new Set([IRON_ORE, GOLD_ORE]);
+
+/** ¿Funde este horno lo que hay en la entrada? */
+export function variantSmelts(variant: FurnaceVariant, input: number): boolean {
+  const result = smeltResult(input);
+  if (result === undefined) return false;
+  if (variant === 1) return !!ITEMS[result]?.food;
+  if (variant === 2) return BLAST_INPUTS.has(input);
+  return true;
 }
 
 export function cloneStack(s: ItemStack | null | undefined): ItemStack | null {
@@ -174,14 +192,18 @@ export function takeFromSlot(c: ContainerState, slot: number, max: number): Item
   return out;
 }
 
-/** Avanza el horno dt segundos. Devuelve si cambió el contenido y si está encendido. */
-export function furnaceTick(c: ContainerState, dt: number): { changed: boolean; lit: boolean } {
+/**
+ * Avanza el horno dt segundos. Devuelve si cambió el contenido y si está encendido. El ahumador y el
+ * alto horno van al doble de velocidad (y gastan el combustible al doble), pero sólo con lo suyo.
+ */
+export function furnaceTick(c: ContainerState, dt: number, variant: FurnaceVariant = 0): { changed: boolean; lit: boolean } {
   const wasLit = c.burn > 0;
   let changed = false;
   const input = c.slots[FURNACE_IN];
   const out = c.slots[FURNACE_OUT];
-  const result = input ? smeltResult(input.id) : undefined;
+  const result = input && variantSmelts(variant, input.id) ? smeltResult(input.id) : undefined;
   const canSmelt = result !== undefined && (!out || (out.id === result && out.count < maxStack(result)));
+  if (variant !== 0) dt *= 2;
   if (c.burn > 0) c.burn -= dt;
   if (c.burn <= 0 && canSmelt) {
     const fuel = c.slots[FURNACE_FUEL];
@@ -236,7 +258,7 @@ export function containerToWire(c: ContainerState): ContainerWire {
 
 export function containerFromWire(w: ContainerWire): ContainerState | null {
   if (!w || (w.k !== 'c' && w.k !== 'f') || !Array.isArray(w.s)) return null;
-  const c = newContainer(w.k === 'c' ? 'chest' : 'furnace');
+  const c = newContainer(w.k === 'c' ? 'chest' : 'furnace', w.k === 'c' && w.s.length === DOUBLE_CHEST_SLOTS ? DOUBLE_CHEST_SLOTS : undefined);
   for (let i = 0; i < c.slots.length; i++) {
     const s = w.s[i];
     c.slots[i] = Array.isArray(s) ? sanitizeStack({ id: s[0], count: s[1], dmg: s[2] }) : null;

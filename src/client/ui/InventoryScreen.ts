@@ -1,5 +1,5 @@
 // Pantallas de inventario de supervivencia: inventario con armadura y fabricación 2x2, mesa de
-// trabajo (3x3), cofre y horno. Reglas de clic de Minecraft: clic izquierdo coge/deja/intercambia,
+// trabajo (3x3), cofre (y cofre grande), horno (y ahumador y alto horno) y cortapiedras. Reglas de clic de Minecraft: clic izquierdo coge/deja/intercambia,
 // derecho reparte o deja de uno en uno, mayúsculas mueve rápido, 1–9 intercambia con la barra
 // y Q suelta. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
@@ -10,8 +10,10 @@ import {
 import type { ClientMsg, ServerMsg } from '../../shared/protocol';
 import type { Inventory } from '../game/Inventory';
 import { armorSilhouettes } from './armorBar';
+import { stonecutterOptions } from '../../shared/stonecutting';
+import './workstations.css';
 
-export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace';
+export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter';
 
 export interface ScreenHost {
   icons: Map<number, string>;
@@ -36,6 +38,13 @@ export class InventoryScreen {
   containerPos: [number, number, number] | null = null;
   private grid: (ItemStack | null)[] = [];
   private gridSize = 2;
+  /** Título de la pantalla del horno (horno, ahumador o alto horno). */
+  private title = '';
+  /** Huecos del cofre dibujados (27 o 54 en el cofre grande). */
+  private chestSlots = 27;
+  /** Cortapiedras: opción elegida y la piedra para la que se eligió. */
+  private cut = -1;
+  private cutInput = 0;
   private root: HTMLElement;
   private panel: HTMLElement;
   private cursorEl: HTMLElement;
@@ -77,6 +86,15 @@ export class InventoryScreen {
         this.render();
       }
     });
+    // Cortapiedras: elegir qué cortar (los botones se rehacen al cambiar la piedra).
+    this.panel.addEventListener('mousedown', (e) => {
+      const b = (e.target as HTMLElement).closest('[data-cut]') as HTMLElement | null;
+      if (!b || this.kind !== 'stonecutter') return;
+      e.preventDefault();
+      this.cut = Number(b.dataset.cut);
+      this.host.sound('click');
+      this.render();
+    });
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {
       this.mouse = [e.clientX, e.clientY];
@@ -89,11 +107,14 @@ export class InventoryScreen {
     return this.kind !== null;
   }
 
-  open(kind: ScreenKind, pos: [number, number, number] | null = null): void {
+  open(kind: ScreenKind, pos: [number, number, number] | null = null, title = ''): void {
     this.kind = kind;
     this.containerPos = pos;
     this.container = null;
-    this.gridSize = kind === 'table' ? 3 : 2;
+    this.title = title;
+    this.chestSlots = 27;
+    this.cut = -1;
+    this.gridSize = kind === 'table' ? 3 : kind === 'stonecutter' ? 1 : 2;
     this.grid = new Array(this.gridSize * this.gridSize).fill(null);
     this.busy = 0;
     this.build();
@@ -154,6 +175,11 @@ export class InventoryScreen {
     // Esperando la confirmación de un clic: el servidor envía el estado nuevo justo después.
     if (this.isBusy()) return;
     this.container = c;
+    // El cofre grande tiene el doble de huecos: se vuelve a montar la pantalla.
+    if (this.kind === 'chest' && c.slots.length !== this.chestSlots) {
+      this.chestSlots = c.slots.length;
+      this.build();
+    }
     this.render();
   }
 
@@ -174,9 +200,13 @@ export class InventoryScreen {
           `<div class="armor-craft">${top}</div>`;
       }
     } else if (kind === 'chest') {
-      top = `<h3>Cofre</h3><div class="grid g9">${Array.from({ length: 27 }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
+      const n = this.chestSlots;
+      top = `<h3>${n > 27 ? 'Cofre grande' : 'Cofre'}</h3><div class="grid g9">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
+    } else if (kind === 'stonecutter') {
+      top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
+        `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
     } else {
-      top = `<h3>Horno</h3><div class="furnace">` +
+      top = `<h3>${this.title || 'Horno'}</h3><div class="furnace">` +
         `<div class="fcol"><div class="slot2" data-s="cont:${FURNACE_IN}"></div><div class="flame"><i></i></div>` +
         `<div class="slot2" data-s="cont:${FURNACE_FUEL}"></div></div>` +
         `<div class="arrow prog"><i></i></div><div class="slot2 big" data-s="cont:${FURNACE_OUT}"></div></div>`;
@@ -232,6 +262,10 @@ export class InventoryScreen {
   }
 
   private result(): ItemStack | null {
+    if (this.kind === 'stonecutter') {
+      const opt = this.cutOptions()[this.cut];
+      return opt ? { ...opt } : null;
+    }
     if (this.kind !== 'player' && this.kind !== 'table') return null;
     const m = matchRecipe(this.grid.map((s) => (s ? s.id : 0)), this.gridSize);
     return m ? m.out : null;
@@ -410,10 +444,36 @@ export class InventoryScreen {
       if (flame) flame.style.height = `${c && c.burnMax > 0 ? Math.round((c.burn / c.burnMax) * 100) : 0}%`;
       if (prog) prog.style.width = `${c ? Math.round((c.cook / COOK_TIME) * 100) : 0}%`;
     }
+    if (this.kind === 'stonecutter') this.renderCuts();
     const out = this.slotEls.get('out');
     if (out) out.classList.toggle('ready', !!this.result());
     this.placeCursor();
     if (this.hovered) this.showTooltip();
+  }
+
+  /** Opciones del cortapiedras para la piedra puesta (si cambia la piedra, se deselecciona). */
+  private cutOptions(): readonly ItemStack[] {
+    const id = this.grid[0]?.id ?? 0;
+    if (id !== this.cutInput) {
+      this.cutInput = id;
+      this.cut = -1;
+    }
+    return id ? stonecutterOptions(id) : [];
+  }
+
+  /** Botones de lo que se puede cortar (se eligen con clic). */
+  private renderCuts(): void {
+    const list = this.panel.querySelector('.cut-list') as HTMLElement | null;
+    if (!list) return;
+    const opts = this.cutOptions();
+    const key = opts.map((o) => o.id).join(',') + '|' + this.cut;
+    if (list.dataset.key === key) return;
+    list.dataset.key = key;
+    list.innerHTML = opts.map((o, i) => {
+      const url = this.host.icons.get(o.id);
+      return `<div class="cut${i === this.cut ? ' sel' : ''}" data-cut="${i}" title="${itemName(o.id)}">` +
+        `<i style="background-image:url(${url ?? ''})"></i>${o.count > 1 ? `<span>${o.count}</span>` : ''}</div>`;
+    }).join('');
   }
 
   private paint(el: HTMLElement, s: ItemStack | null): void {

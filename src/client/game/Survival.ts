@@ -14,6 +14,8 @@ export interface SurvivalContext {
   fireResistant?: boolean;
   /** Efecto Respiración acuática: no se gasta el aire. */
   waterBreathing?: boolean;
+  /** De pie sobre una fogata encendida (quema sin prender fuego). */
+  onCampfire?: boolean;
 }
 
 /** Armadura puesta (la implementa el inventario). */
@@ -38,6 +40,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'fall': return 'cayó desde muy alto';
     case 'lava': return 'intentó nadar en lava';
     case 'fire': return 'ardió hasta morir';
+    case 'campfire': return 'se quemó en una fogata';
     case 'drown': return 'se ahogó';
     case 'starve': return 'murió de hambre';
     case 'void': return 'cayó al vacío';
@@ -225,6 +228,8 @@ export class Survival {
         if (!ctx.fireResistant) this.damage(4, 'lava', true);
       }
     } else this.lavaTimer = 0.5;
+    // La fogata quema al pisarla (la invulnerabilidad deja un golpe cada medio segundo).
+    if (ctx.onCampfire && !ctx.fireResistant) this.damage(1, 'campfire');
     if (ctx.inWater || ctx.inRain) this.fire = 0;
     if (this.fire > 0) {
       this.fire -= dt;

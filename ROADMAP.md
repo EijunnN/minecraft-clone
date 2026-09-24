@@ -73,7 +73,7 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Vida, hambre, saturación, agotamiento, regeneración, inanición | ✅ |
 | Aire, ahogamiento, caída, lava, fuego, vacío, asfixia | ✅ |
 | Muerte, pérdida del inventario y reaparición | ✅ (en la cama o en el punto de aparición del mundo) |
-| Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (cama roja; faltan los otros colores y la de paja) |
+| Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (8 colores, los de la lana que hay; falta la de paja) |
 | Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
 | Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento) |
@@ -96,9 +96,9 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Recetas | 🟡 (~50 de más de 1.000) |
 | Libro de recetas | ❌ |
 | Horno | ✅ |
-| Ahumador, alto horno, fogata | ❌ |
-| Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | ❌ |
-| Cofre | 🟡 (sin cofre doble) |
+| Ahumador, alto horno, fogata | ✅ |
+| Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (cortapiedras) |
+| Cofre | ✅ (también doble) |
 | Barril, caja de shulker, cofre de ender, tolva, saco (bundle), cofre de cobre, estantería | ❌ |
 
 ### 2.6 Agricultura y ganadería
@@ -158,7 +158,8 @@ trampilla, botón, placa de presión, cartel y cartel colgante (para cada madera
 colores de lana, alfombra, cristal y paneles, terracota esmaltada, hormigón, velas y camas, además
 de faroles, cadenas, macetas, marcos, cuadros, estandartes, cabezas, cojines (26.3)… VoxelCraft
 tiene ~70 bloques cúbicos y, desde la fase 3, losas y escaleras (8 materiales), vallas, portillos,
-puertas, trampillas (3 maderas), escaleras de mano, paneles de cristal, antorchas en la pared y cama.
+puertas, trampillas (3 maderas), escaleras de mano, paneles de cristal, antorchas en la pared y cama;
+en la fase 4, muros (8 piedras), carteles (3 maderas, de pie y en la pared) y camas de 8 colores.
 **Las formas no cúbicas son la mayor carencia visual al construir.**
 
 ### 2.13 Multijugador, interfaz y opciones
@@ -214,7 +215,7 @@ bloques con propiedades (orientación, mitad, abierto, bisagra, parte), modelos 
 selección y colisión reales, subida de escalones de 0,6, colocación compartida por cliente y
 servidor (autoritativa), `npm test` con `node:test` y GitHub Actions (tipos, pruebas y compilación).
 
-### Fase 4 — Supervivencia completa (XL)
+### Fase 4 — Supervivencia completa (XL) · ✅ hecha
 Ya hecho: camas (dormir de noche con todos los jugadores, reaparición en la cama), puertas y puertas
 dobles, trampillas, portillos, vallas, escaleras y losas de 8 materiales, paneles de cristal,
 escaleras de mano y antorchas en la pared. Granja: azadas, tierra de cultivo (humedad, pisoteo), trigo,
@@ -223,10 +224,10 @@ criar animales (crías que crecen, seguir la comida), esquilar, ordeñar y huevo
 hierro, oro y diamante (con modelo en el jugador) y experiencia (orbes y niveles). Escudo y efectos de
 estado (manzana dorada, ojo de araña, carne podrida, leche y el comando `/efecto`). Calabazas y sandías
 (tallos que dan fruto, calabaza tallada, farol, tarta de calabaza), compostador, lanzar huevos
-(pollitos) y pesca (flotador, picada, peces, basura y tesoros).
+(pollitos) y pesca (flotador, picada, peces, basura y tesoros). Muros, carteles con texto para todos,
+cofres dobles, camas de colores, ahumador, alto horno, fogata (asa y quema) y cortapiedras.
 
-Pendiente: muros, carteles, cofres dobles y camas de colores; ahumador, alto horno, fogata, cortapiedras. (Las puertas
-de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
+Fase 4 terminada. (Las puertas de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
 
 ### Fase 5 — Un mundo más rico (XL)
 Más biomas (pantano, jungla, bosque oscuro, badlands, champiñonal, cerezal, prado, picos de hielo,

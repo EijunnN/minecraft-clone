@@ -1,16 +1,27 @@
-// Cofres y hornos compartidos: estado por posición, operaciones de los jugadores (clic, meter,
-// sacar), hornos que funden solos, contenido que cae al romperlos y persistencia.
-import { FURNACE, FURNACE_LIT, isContainer, isChest, isFurnace, blockFacing } from '../../blocks';
+// Cofres (sencillos y dobles) y hornos (horno, ahumador y alto horno) compartidos: estado por
+// posición, operaciones de los jugadores (clic, meter, sacar), hornos que funden solos, contenido
+// que cae al romperlos y persistencia.
+import {
+  CHEST, CHEST_DOUBLE, isContainer, isChest, isFurnace, furnaceVariant, isLitFurnace, furnaceWithLit, familyBase,
+  stateProps, chestPartnerDir,
+} from '../../blocks';
+import { DIR_X, DIR_Z } from '../../blockModels';
 import { smeltXp } from '../../experience';
 import type { ClientMsg, ServerMsg } from '../../protocol';
 import type { ItemStack } from '../../items';
 import {
   newContainer, clickSlot, insertStack, takeFromSlot, furnaceTick, containerToWire, containerFromWire, sanitizeStack,
-  FURNACE_OUT, type ContainerState, type ContainerWire,
+  FURNACE_OUT, CHEST_SLOTS, DOUBLE_CHEST_SLOTS, type ContainerState, type ContainerWire, type FurnaceVariant,
 } from '../../containers';
 import type { ServerStore } from '../store';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { ServerContext, Session } from './context';
+
+/** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
+interface View {
+  parts: [number, ContainerState][];
+  state: ContainerState;
+}
 
 export class ContainerSystem {
   private containers = new Map<number, ContainerState>();
@@ -44,8 +55,47 @@ export class ContainerSystem {
     return c;
   }
 
+  /** Pareja de una mitad de cofre doble: [x, y, z, lado de la mitad dada] o null. */
+  private partnerOf(x: number, y: number, z: number): [number, number, number, number] | null {
+    const id = this.ctx.world.getBlock(x, y, z);
+    if (familyBase(id) !== CHEST_DOUBLE) return null;
+    const st = stateProps(id)!;
+    const d = chestPartnerDir(st.facing, st.side);
+    const px = x + DIR_X[d], pz = z + DIR_Z[d];
+    return familyBase(this.ctx.world.getBlock(px, y, pz)) === CHEST_DOUBLE ? [px, y, pz, st.side] : null;
+  }
+
+  /** Lo que se ve al abrir (x, y, z): el contenedor o el cofre grande. */
+  private viewAt(x: number, y: number, z: number): View | null {
+    const c = this.containerAt(x, y, z);
+    if (!c) return null;
+    const k = posKey(x, y, z);
+    const p = this.partnerOf(x, y, z);
+    const other = p ? this.containerAt(p[0], p[1], p[2]) : null;
+    if (!p || !other || c.slots.length !== CHEST_SLOTS || other.slots.length !== CHEST_SLOTS) return { parts: [[k, c]], state: c };
+    const pk = posKey(p[0], p[1], p[2]);
+    const parts: [number, ContainerState][] = p[3] === 0 ? [[k, c], [pk, other]] : [[pk, other], [k, c]];
+    const state = newContainer('chest', DOUBLE_CHEST_SLOTS);
+    state.slots = [...parts[0][1].slots, ...parts[1][1].slots];
+    return { parts, state };
+  }
+
+  /** Reparte en las mitades lo que cambió en la vista combinada. */
+  private commit(v: View): void {
+    if (v.parts.length === 1) return;
+    v.parts[0][1].slots = v.state.slots.slice(0, CHEST_SLOTS);
+    v.parts[1][1].slots = v.state.slots.slice(CHEST_SLOTS);
+  }
+
   /** Contenedores destruidos: soltar su contenido y cerrar las ventanas abiertas. */
   onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
+    // Se rompe media cofre doble: la otra mitad vuelve a ser un cofre sencillo.
+    if (familyBase(old) === CHEST_DOUBLE && familyBase(id) !== CHEST_DOUBLE) {
+      const st = stateProps(old)!;
+      const d = chestPartnerDir(st.facing, st.side);
+      const px = x + DIR_X[d], pz = z + DIR_Z[d];
+      if (familyBase(this.ctx.world.getBlock(px, y, pz)) === CHEST_DOUBLE) this.ctx.world.setBlock(px, y, pz, CHEST + st.facing);
+    }
     if (!isContainer(old) || isContainer(id)) return;
     const k = posKey(x, y, z);
     const c = this.containers.get(k);
@@ -54,34 +104,42 @@ export class ContainerSystem {
     this.dirty.add(k);
     this.ctx.entities.dropStacks(c.slots.filter((s): s is ItemStack => !!s), x + 0.5, y + 0.5, z + 0.5);
     for (const s of this.ctx.sessions()) {
-      if (s.container === k) {
+      if (s.container === null) continue;
+      if (s.container === k || this.viewKeys(s.container).includes(k)) {
         s.container = null;
         this.ctx.send(s, { t: 'cclose' });
       }
     }
   }
 
-  private sendContainer(k: number, c: ContainerState, only?: Session): void {
-    const msg: ServerMsg = { t: 'cont', x: keyX(k), y: keyY(k), z: keyZ(k), c: containerToWire(c) };
-    if (only) {
-      this.ctx.send(only, msg);
-      return;
+  /** Posiciones que forman la vista abierta en `k`. */
+  private viewKeys(k: number): number[] {
+    const p = this.partnerOf(keyX(k), keyY(k), keyZ(k));
+    return p ? [k, posKey(p[0], p[1], p[2])] : [k];
+  }
+
+  /** Envía la vista a quien la tenga abierta (o sólo a `only`). */
+  private sendView(k: number, only?: Session): void {
+    for (const s of only ? [only] : this.ctx.sessions()) {
+      if (s.container === null || !this.viewKeys(s.container).includes(k)) continue;
+      const x = keyX(s.container), y = keyY(s.container), z = keyZ(s.container);
+      const v = this.viewAt(x, y, z);
+      if (!v) continue;
+      const msg: ServerMsg = { t: 'cont', x, y, z, c: containerToWire(v.state) };
+      this.ctx.send(s, msg);
     }
-    const data = JSON.stringify(msg);
-    for (const s of this.ctx.sessions()) if (s.container === k) this.ctx.sendRaw(s, data);
   }
 
   onOpen(s: Session, msg: Extract<ClientMsg, { t: 'open' }>): void {
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z);
     if (![x, y, z].every(Number.isInteger) || !this.ctx.reachOk(s, x, y, z, 8)) return;
-    const c = this.containerAt(x, y, z);
-    if (!c) {
+    if (!this.viewAt(x, y, z)) {
       this.ctx.send(s, { t: 'cclose' });
       return;
     }
     const k = posKey(x, y, z);
     s.container = k;
-    this.sendContainer(k, c, s);
+    this.sendView(k, s);
   }
 
   onOp(s: Session, msg: Extract<ClientMsg, { t: 'cclick' | 'cput' | 'ctake' }>): void {
@@ -90,8 +148,8 @@ export class ContainerSystem {
     const q = Number(msg.q) || 0;
     if (![x, y, z].every(Number.isInteger)) return;
     const k = posKey(x, y, z);
-    const c = s.container === k && ctx.allow(s, 1) ? this.containerAt(x, y, z) : null;
-    if (!c) {
+    const v = s.container === k && ctx.allow(s, 1) ? this.viewAt(x, y, z) : null;
+    if (!v) {
       // Contenedor cerrado o destruido: devolver al jugador lo que ofrecía.
       if (msg.t === 'cclick') ctx.send(s, { t: 'cres', q, cur: sanitizeStack(msg.cur) });
       else if (msg.t === 'cput') ctx.send(s, { t: 'cres', q, give: sanitizeStack(msg.stack) });
@@ -99,23 +157,25 @@ export class ContainerSystem {
       ctx.send(s, { t: 'cclose' });
       return;
     }
+    const c = v.state;
     // Lo que había en la salida del horno (para dar la experiencia de lo que se saque).
     const out = c.kind === 'furnace' ? c.slots[FURNACE_OUT] : null;
     const before = out ? { id: out.id, count: out.count } : null;
     if (msg.t === 'cclick') {
       const slot = Number(msg.slot), btn = Number(msg.btn) === 1 ? 1 : 0;
       const cur = sanitizeStack(msg.cur);
-      const out = Number.isInteger(slot) ? clickSlot(c, slot, btn, cur) : cur;
-      ctx.send(s, { t: 'cres', q, cur: out });
+      const res = Number.isInteger(slot) ? clickSlot(c, slot, btn, cur) : cur;
+      ctx.send(s, { t: 'cres', q, cur: res });
     } else if (msg.t === 'cput') {
       ctx.send(s, { t: 'cres', q, give: insertStack(c, sanitizeStack(msg.stack)) });
     } else {
       const slot = Number(msg.slot), max = Math.max(0, Math.min(64, Number(msg.max) | 0));
       ctx.send(s, { t: 'cres', q, give: Number.isInteger(slot) && slot >= 0 && slot < c.slots.length ? takeFromSlot(c, slot, max) : null });
     }
+    this.commit(v);
     if (before) this.smeltReward(s, before.id, before.count - (c.slots[FURNACE_OUT]?.count ?? 0));
-    this.dirty.add(k);
-    this.sendContainer(k, c);
+    for (const [pk] of v.parts) this.dirty.add(pk);
+    this.sendView(k);
   }
 
   /** El jugador sacó `taken` objetos fundidos: orbes de experiencia a sus pies. */
@@ -135,14 +195,10 @@ export class ContainerSystem {
       if (id < 0 || !isFurnace(id)) continue;
       const active = c.burn > 0 || c.slots[0] !== null;
       if (!active) continue;
-      const res = furnaceTick(c, dt);
+      const res = furnaceTick(c, dt, furnaceVariant(id) as FurnaceVariant);
       if (res.changed) this.dirty.add(k);
-      const lit = id >= FURNACE_LIT;
-      if (res.lit !== lit) {
-        const f = Math.max(0, blockFacing(id));
-        w.setBlock(x, y, z, (res.lit ? FURNACE_LIT : FURNACE) + f);
-      }
-      if (res.changed || c.burn > 0) this.sendContainer(k, c);
+      if (res.lit !== isLitFurnace(id)) w.setBlock(x, y, z, furnaceWithLit(id, res.lit));
+      if (res.changed || c.burn > 0) this.sendView(k);
     }
   }
 

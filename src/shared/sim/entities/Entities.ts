@@ -3,7 +3,8 @@
 // entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
 // projectiles, mobBrain, animalLife, spawner y xpOrbs.
 import {
-  MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, type MobDef,
+  MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY,
+  type MobDef,
 } from '../../mobs';
 import { ITEMS, ARROW, type ItemStack } from '../../items';
 import { WHITE_WOOL, BLOCK_FLUID, BLOCK_HARDNESS } from '../../blocks';
@@ -144,6 +145,15 @@ export class Entities {
     e.vy = vy;
     e.vz = vz;
     e.shooter = owner;
+    this.list.set(e.id, e);
+    return e;
+  }
+
+  /** Objeto quieto de adorno (no se mueve ni se recoge). */
+  spawnDisplay(stack: ItemStack, x: number, y: number, z: number, yaw: number): Entity {
+    const e = this.base(ENT_DISPLAY, x, y, z, 0.25, 0.05, 1);
+    e.stack = { id: stack.id, count: 1 };
+    e.yaw = yaw;
     this.list.set(e.id, e);
     return e;
   }
@@ -317,6 +327,7 @@ export class Entities {
       else if (e.type === ENT_XP) this.xp.orbTick(e, dt, players);
       else if (e.type === ENT_THROWN) this.projectiles.thrownTick(e, dt, players);
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
+      else if (e.type === ENT_DISPLAY) e.flags = 0;
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

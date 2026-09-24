@@ -18,11 +18,15 @@ import {
   FARMLAND, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM,
   ATTACHED_MELON_STEM, MELON, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER,
 } from './farm';
+import { WALLS, BEDS, SIGNS } from './decoration';
+import { SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER } from './workstations';
 
 export * from './registry';
 export * from './classic';
 export * from './building';
 export * from './farm';
+export * from './decoration';
+export * from './workstations';
 export * from './queries';
 
 {
@@ -34,6 +38,9 @@ export * from './queries';
   for (const v of Object.values(SLABS)) kindOf.set(v, KINDS.slab);
   for (const v of Object.values(STAIRS)) kindOf.set(v, KINDS.stairs);
   kindOf.set(RED_BED, KINDS.bed);
+  for (const v of Object.values(BEDS)) kindOf.set(v, KINDS.bed);
+  // Los muros son tan altos como las vallas (no se pueden saltar).
+  for (const v of Object.values(WALLS)) kindOf.set(v, KINDS.fence);
   for (const v of [WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM]) {
     kindOf.set(v, KINDS.crop);
   }
@@ -59,6 +66,8 @@ export const INVENTORY_ORDER: readonly number[] = [
   ...MATERIALS.flatMap((m) => [SLABS[m.key], STAIRS[m.key]]),
   ...WOODS.flatMap((w) => [FENCES[w.key], FENCE_GATES[w.key], DOORS[w.key], TRAPDOORS[w.key]]),
   LADDER, GLASS_PANE, RED_BED, MELON, CARVED_PUMPKIN, JACK_O_LANTERN, COMPOSTER,
+  ...Object.values(WALLS), ...Object.values(BEDS).filter((b) => b !== RED_BED), ...Object.values(SIGNS),
+  SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [

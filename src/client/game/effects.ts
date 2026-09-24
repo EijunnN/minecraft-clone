@@ -2,7 +2,7 @@
 // los fluidos cercanos.
 import type { MobSoundKind, MobSoundEvent } from '../audio/types';
 import type { ClientEntity } from './ClientEntities';
-import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, FURNACE_LIT, isValidBlockId } from '../../shared/blocks';
+import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, CAMPFIRE, isLitFurnace, isValidBlockId } from '../../shared/blocks';
 import { MOBS } from '../../shared/mobs';
 import { EF_LOVE, EF_BABY, EF_FIRE } from '../../shared/protocol';
 import type { Game } from './Game';
@@ -90,6 +90,13 @@ export class Effects {
       case 'bonemeal':
         this.g.audio.playPlace('grass', p);
         fx.spawnSparkles(p[0], p[1], p[2], 12, 0.5);
+        break;
+      case 'campfire_put':
+        this.g.audio.playPlace('wood', p);
+        break;
+      case 'campfire_done':
+        this.g.audio.playPickup();
+        fx.spawnSmoke(p[0], p[1], p[2], 6, 0.2, 0.7, 0.4, 1.2);
         break;
       // Huevos y pesca.
       case 'throw':
@@ -179,19 +186,21 @@ export class Effects {
     this.g.audio.playMob(kind, ev, [e.x, e.y + 1, e.z]);
   }
 
-  /** Cercanía de agua que fluye y de lava (para su sonido ambiente). */
+  /** Cercanía de agua que fluye y de lava (para su sonido ambiente), hornos y fogatas encendidos. */
   updateFluidSound(): void {
     const world = this.g.world!;
     const p = this.g.player;
     let water = 0, lava = 0;
     let furnace: [number, number, number] | null = null;
+    const fires: [number, number, number][] = [];
     const cx = Math.floor(p.x), cy = Math.floor(p.y), cz = Math.floor(p.z);
     for (let dy = -3; dy <= 3; dy++) {
       for (let dz = -6; dz <= 6; dz++) {
         for (let dx = -6; dx <= 6; dx++) {
           const b = world.getBlock(cx + dx, cy + dy, cz + dz);
           if (b <= 0) continue;
-          if (b >= FURNACE_LIT && b < FURNACE_LIT + 4) furnace = [cx + dx + 0.5, cy + dy + 0.5, cz + dz + 0.5];
+          if (isLitFurnace(b)) furnace = [cx + dx + 0.5, cy + dy + 0.5, cz + dz + 0.5];
+          else if (b === CAMPFIRE + 1 && fires.length < 6) fires.push([cx + dx + 0.5, cy + dy, cz + dz + 0.5]);
           const f = BLOCK_FLUID[b];
           if (!f || ((dx | dz) & 1)) continue;
           const w = 1 / (1 + Math.hypot(dx, dy, dz) * 0.5);
@@ -203,5 +212,10 @@ export class Effects {
     this.g.audio.setFluidProximity(Math.min(1, water / 4), Math.min(1, lava / 3));
     // Chisporroteo de un horno encendido cercano.
     if (furnace && Math.random() < 0.35) this.g.audio.playFurnace(furnace);
+    // Fogatas: columna de humo y chisporroteo.
+    for (const [x, y, z] of fires) {
+      this.g.renderer.entities.spawnSmoke(x, y + 0.7, z, 4, 0.1, 0.78, 0.2, 1.6);
+      if (Math.random() < 0.3) this.g.audio.playFurnace([x, y + 0.5, z]);
+    }
   }
 }

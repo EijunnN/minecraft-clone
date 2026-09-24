@@ -11,7 +11,7 @@ import { RemotePlayer } from './RemotePlayers';
 import { Net, type Welcome, type NetEvents } from '../net/Net';
 import { LocalServer } from '../net/LocalServer';
 import { UI } from '../ui/UI';
-import { InventoryScreen } from '../ui/InventoryScreen';
+import { InventoryScreen, type ScreenKind } from '../ui/InventoryScreen';
 import type { Settings } from './settings';
 import type { GeneratedTextures } from '../textures/generateTextures';
 import { AudioEngine } from '../audio/AudioEngine';
@@ -30,6 +30,8 @@ import { Interaction } from './interaction';
 import { Experience } from './experience';
 import { StatusEffects } from './statusEffects';
 import { fishingLines } from './fishingLines';
+import { SignTexts } from './signs';
+import { SignEditor } from '../ui/SignEditor';
 import { renderArmorBar } from '../ui/armorBar';
 import { renderXpBar } from '../ui/xpBar';
 import { renderEffectsHud } from '../ui/effectsHud';
@@ -79,6 +81,12 @@ export class Game {
   remote = new Map<string, RemotePlayer>();
   /** Flotadores de pesca fuera: jugador → entidad. */
   readonly bobbers = new Map<string, number>();
+  /** Texto de los carteles y su editor. */
+  readonly signs = new SignTexts();
+  readonly signEditor = new SignEditor((pos, lines) => {
+    this.net?.send({ t: 'sign', x: pos[0], y: pos[1], z: pos[2], l: lines });
+    this.afterScreenClosed();
+  });
   selected = 0;
   time: WorldTime = { base: 0.08, at: Date.now(), rate: 1 / DAY_LENGTH_SECONDS };
   private running = false;
@@ -199,6 +207,8 @@ export class Game {
     if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
     this.life.bed = Array.isArray(w.bed) && w.bed.length === 3 && w.bed.every(Number.isInteger) ? w.bed : null;
     for (const r of Array.isArray(w.rods) ? w.rods : []) if (Array.isArray(r) && typeof r[0] === 'string' && Number.isInteger(r[1])) this.bobbers.set(r[0], r[1]);
+    this.signs.clear();
+    for (const sg of Array.isArray(w.signs) ? w.signs : []) if (Array.isArray(sg) && sg.slice(0, 3).every(Number.isInteger)) this.signs.set(sg[0], sg[1], sg[2], sg[3]);
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)));
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
@@ -302,7 +312,8 @@ export class Game {
   };
 
   private anyScreenOpen(): boolean {
-    return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen();
+    return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen() ||
+      this.signEditor.isOpen();
   }
 
   stop(): void {
@@ -430,10 +441,20 @@ export class Game {
     this.input.exitLock();
   }
 
-  openScreen(kind: 'player' | 'table' | 'chest' | 'furnace', pos: [number, number, number] | null): void {
+  /** Editor del texto de un cartel (al colocarlo o con clic derecho). */
+  openSignEditor(x: number, y: number, z: number): void {
     this.interaction.mining = null;
     this.interaction.use = null;
-    this.screen.open(kind, pos);
+    this.input.gameKeys = false;
+    this.input.releaseAll();
+    this.input.exitLock();
+    this.signEditor.open([x, y, z], this.signs.get(x, y, z));
+  }
+
+  openScreen(kind: ScreenKind, pos: [number, number, number] | null, title = ''): void {
+    this.interaction.mining = null;
+    this.interaction.use = null;
+    this.screen.open(kind, pos, title);
     this.input.gameKeys = false;
     this.input.releaseAll();
     this.input.exitLock();
@@ -828,6 +849,7 @@ export class Game {
       lightAtEye: [skyAtEye, (le & 15) / 15],
       grassTint: [srgbToLin(this.tmpGrass[0]), srgbToLin(this.tmpGrass[1]), srgbToLin(this.tmpGrass[2])],
       players: views,
+      signs: this.signs.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ),
       fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, {
         cam: [camX, camY, camZ], yaw, pitch, firstPerson: this.thirdPerson === 0, feet: [p.x, p.y, p.z], bodyYaw: p.yaw,
       }, views),

@@ -110,6 +110,8 @@ export type ClientMsg =
   | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number }
   /** Caña de pescar: lanzar el flotador o, si ya está fuera, recogerlo. */
   | { t: 'fish'; p: [number, number, number]; d: [number, number, number] }
+  /** Escribir el texto de un cartel (cuatro líneas). */
+  | { t: 'sign'; x: number; y: number; z: number; l: string[] }
   | { t: 'open'; x: number; y: number; z: number }
   | { t: 'close' }
   | { t: 'cclick'; x: number; y: number; z: number; slot: number; btn: number; cur: ItemStack | null; q: number }
@@ -127,6 +129,8 @@ export type ServerMsg =
     bed?: [number, number, number] | null;
     /** Flotadores de pesca ya lanzados: [jugador, entidad]. */
     rods?: [string, number][];
+    /** Carteles con texto: [x, y, z, líneas]. */
+    signs?: [number, number, number, string[]][];
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
@@ -143,6 +147,8 @@ export type ServerMsg =
   | { t: 'picked'; e: number; s: ItemStack }
   | { t: 'fx'; k: string; p: [number, number, number]; a?: number; b?: number }
   | { t: 'cont'; x: number; y: number; z: number; c: ContainerWire }
+  /** Texto de un cartel (lista vacía: sin texto). */
+  | { t: 'sign'; x: number; y: number; z: number; l: string[] }
   | { t: 'cres'; q: number; cur?: ItemStack | null; give?: ItemStack | null }
   | { t: 'cclose' }
   | { t: 'gm'; m: GameMode }

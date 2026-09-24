@@ -67,7 +67,7 @@ function furnaceBand(t: Tex, px: Float32Array): void {
 }
 
 /** Lateral: roca bajo la banda de la losa y zócalo algo más oscuro. */
-function furnaceSide(t: Tex): void {
+export function furnaceSide(t: Tex): void {
   const L = cellLayout('furnace:cobble', 10, 3.9, 0.95, 0.85, 1.25);
   const r = new Rng('furnace:side');
   const n8 = new Noise(r, 8);
@@ -156,7 +156,7 @@ const MOUTH_INKS: Record<string, Ink> = {
   e: { c: [150, 48, 22], h: 0.11, smooth: 30, emit: 150 },
 };
 
-function furnaceFront(t: Tex, lit: boolean): void {
+export function furnaceFront(t: Tex, lit: boolean): void {
   const r = new Rng('furnace:front'); // misma sillería en las dos variantes
   const px = pixelNoise(r);
   const n8 = new Noise(r, 8);
@@ -230,7 +230,7 @@ function furnaceFront(t: Tex, lit: boolean): void {
 }
 
 /** Tapa: losa lisa con bisel exterior y una línea de borde grabada. */
-function furnaceTop(t: Tex): void {
+export function furnaceTop(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);
@@ -290,8 +290,11 @@ const CSEAM: RGB = [58, 36, 17];
 /** Fila de la junta de la tapa (≈ 1/3 desde arriba). */
 const LID_SEAM = 5;
 
-/** Base común de las caras del cofre: marco, tablas horizontales y (en los laterales) la junta de la tapa. */
-function chestBase(t: Tex, seam: boolean): void {
+/**
+ * Base común de las caras del cofre: marco, tablas horizontales y (en los laterales) la junta de la tapa.
+ * `open`: lado sin poste (la unión de un cofre doble).
+ */
+function chestBase(t: Tex, seam: boolean, open?: 'left' | 'right'): void {
   const r = t.rng();
   const px = pixelNoise(r);
   const grainN = new Noise(r, 4, 16);
@@ -313,7 +316,7 @@ function chestBase(t: Tex, seam: boolean): void {
     const x = i & 15;
     const y = i >> 4;
     // Marco: 1 px arriba/abajo y 2 px en los laterales (postes de las esquinas).
-    const frame = y === 0 || y === 15 || x <= 1 || x >= 14;
+    const frame = y === 0 || y === 15 || (x <= 1 && open !== 'left') || (x >= 14 && open !== 'right');
     if (frame) {
       let c = CF.base;
       if (y === 0 || x === 0) c = CF.light;
@@ -395,6 +398,13 @@ function chestSide(t: Tex): void {
 
 function chestTop(t: Tex): void {
   chestBase(t, false);
+}
+
+/** Frente de una mitad del cofre doble: sin el poste de la unión y con media cerradura en ella. */
+function chestFrontSeam(t: Tex, open: 'left' | 'right'): void {
+  chestBase(t, true, open);
+  const half = LATCH.map((row) => (open === 'right' ? row.slice(0, 2) : row.slice(2)));
+  sprite(t, half, LATCH_INKS, open === 'right' ? 14 : 0, 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -682,6 +692,10 @@ export const SURVIVAL_GENERATORS: Record<string, Generator> = {
   chest_front: chestFront,
   chest_side: chestSide,
   chest_top: chestTop,
+  chest_front_seam_right: (t) => chestFrontSeam(t, 'right'),
+  chest_front_seam_left: (t) => chestFrontSeam(t, 'left'),
+  chest_side_seam_right: (t) => chestBase(t, true, 'right'),
+  chest_side_seam_left: (t) => chestBase(t, true, 'left'),
   oak_sapling: (t) => sapling(t, OAK_SAPLING, OAK_LEAF, OAK_STEM, 215),
   birch_sapling: (t) => sapling(t, BIRCH_SAPLING, BIRCH_LEAF, BIRCH_STEM, 215),
   spruce_sapling: (t) => sapling(t, SPRUCE_SAPLING, SPRUCE_LEAF, SPRUCE_STEM, 200),

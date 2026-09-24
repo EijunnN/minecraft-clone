@@ -4,7 +4,8 @@ import {
   COBBLESTONE, STONE, STONE_BRICKS, SAND, SANDSTONE, BRICKS, CLAY, BOOKSHELF, IRON_BLOCK, GOLD_BLOCK, DIAMOND_BLOCK,
   WHITE_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL, POPPY, DANDELION, CORNFLOWER, SUGAR_CANE, GLASS, SLABS, STAIRS,
   FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED, HAY_BALE, CAKE, PUMPKIN, MELON, CARVED_PUMPKIN,
-  JACK_O_LANTERN, COMPOSTER,
+  JACK_O_LANTERN, COMPOSTER, WALLS, WALL_SOURCE, BEDS, SIGNS, SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER,
+  ORANGE_WOOL, BLACK_WOOL, LIME_WOOL, PURPLE_WOOL,
 } from './blocks';
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
@@ -136,6 +137,21 @@ mix([PUMPKIN, SUGAR, EGG], PUMPKIN_PIE);
 shape(['C', 'T'], { C: CARVED_PUMPKIN, T: TORCH }, JACK_O_LANTERN);
 shape(['S S', 'S S', 'SSS'], { S: [SLABS.oak, SLABS.birch, SLABS.spruce] }, COMPOSTER);
 shape(['  S', ' SW', 'S W'], { S: STICK, W: STRING }, FISHING_ROD);
+
+// --- Muros, camas de colores, carteles y bloques de trabajo ---
+for (const wall of Object.values(WALLS)) shape(['MMM', 'MMM'], { M: WALL_SOURCE[wall] }, wall, 6);
+const WOOL_OF: Record<string, number> = {
+  white: WHITE_WOOL, black: BLACK_WOOL, orange: ORANGE_WOOL, yellow: YELLOW_WOOL, lime: LIME_WOOL, blue: BLUE_WOOL,
+  purple: PURPLE_WOOL,
+};
+for (const [color, bed] of Object.entries(BEDS)) if (WOOL_OF[color]) shape(['WWW', 'PPP'], { W: WOOL_OF[color], P: PLANKS }, bed);
+const PLANK_OF: Record<string, number> = { oak: OAK_PLANKS, birch: BIRCH_PLANKS, spruce: SPRUCE_PLANKS };
+for (const [wood, sign] of Object.entries(SIGNS)) shape(['PPP', 'PPP', ' S '], { P: PLANK_OF[wood], S: STICK }, sign, 3);
+const LOGS = [OAK_LOG, BIRCH_LOG, SPRUCE_LOG] as const;
+shape([' L ', 'LFL', ' L '], { L: LOGS, F: FURNACE }, SMOKER);
+shape(['III', 'IFI', 'SSS'], { I: IRON_INGOT, F: FURNACE, S: STONE }, BLAST_FURNACE);
+shape([' S ', 'SCS', 'LLL'], { S: STICK, C: FUEL_COAL, L: LOGS }, CAMPFIRE);
+shape([' I ', 'SSS'], { I: IRON_INGOT, S: STONE }, STONECUTTER);
 
 // --- Combate y estado ---
 shape(['GGG', 'GAG', 'GGG'], { G: GOLD_INGOT, A: APPLE }, GOLDEN_APPLE);

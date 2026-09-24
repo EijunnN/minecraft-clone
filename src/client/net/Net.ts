@@ -18,6 +18,8 @@ export interface Welcome {
   bed?: [number, number, number] | null;
   /** Flotadores de pesca ya lanzados: [jugador, entidad]. */
   rods?: [string, number][];
+  /** Carteles con texto: [x, y, z, líneas]. */
+  signs?: [number, number, number, string[]][];
 }
 
 /** Lo mínimo de un WebSocket que usamos (el servidor local imita esta interfaz). */
@@ -192,6 +194,7 @@ export class Net {
           id: msg.id, seed: msg.seed, time: msg.time, players: msg.players, mode: msg.mode === 'c' ? 'c' : 's',
           diff: Number.isInteger(msg.diff) ? msg.diff : 2, save: msg.save ?? null, spawn: msg.spawn,
           bed: msg.bed ?? null, rods: Array.isArray(msg.rods) ? msg.rods : [],
+          signs: Array.isArray(msg.signs) ? msg.signs : [],
         };
         return;
       case 'time':

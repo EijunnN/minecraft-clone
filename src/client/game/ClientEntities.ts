@@ -1,7 +1,7 @@
 // Entidades en el cliente: réplica de las del servidor (criaturas, objetos, flechas, bloques que
 // caen, orbes de experiencia) con interpolación entre instantáneas (se dibujan ~110 ms en el pasado
 // para suavizar).
-import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN } from '../../shared/mobs';
+import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../shared/mobs';
 import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd } from '../../shared/protocol';
 
 interface Snap {
@@ -75,7 +75,7 @@ export class ClientEntities {
       }
       const e: ClientEntity = {
         id, type, snaps: [{ t: now, x, y, z, yaw, body, pitch }], x, y, z, yaw, bodyYaw: body, pitch, flags,
-        item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN ? e1 ?? 0 : 0,
+        item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN || type === ENT_DISPLAY ? e1 ?? 0 : 0,
         count: type === ENT_ITEM ? e2 ?? 1 : type === ENT_XP ? e1 ?? 1 : 1,
         health: MOBS[type] ? e1 ?? MOBS[type].health : 1,
         walkPhase: 0, walkAmount: 0, age: 0, hurtT: flags & EF_HURT ? 0 : 99, deathT: flags & EF_DEAD ? 0 : -1,

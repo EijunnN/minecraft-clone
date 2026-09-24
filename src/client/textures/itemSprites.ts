@@ -304,6 +304,82 @@ function armorSprite(material: string, piece: string): SpriteDef {
 }
 
 // ---------------------------------------------------------------------------
+// Camas de colores y carteles (el mismo dibujo con otras tintas)
+// ---------------------------------------------------------------------------
+
+const BED_ROWS = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '.pppp...........',
+  '.ppppRRRRRRRRRR.',
+  '.ppppRrrrrrrrrR.',
+  '.wwwwrrrrrrrrrr.',
+  '.ssssssssssssss.',
+  '.ssssssssssssss.',
+  '.l............l.',
+  '.l............l.',
+  '................',
+  '................',
+  '................',
+];
+/** Color de la manta de cada cama: [claro, oscuro]. */
+const BED_WOOL: Record<string, [RGB, RGB]> = {
+  white: [[242, 242, 238], [206, 206, 200]], black: [[58, 58, 64], [34, 34, 40]], orange: [[238, 130, 40], [196, 96, 24]],
+  yellow: [[246, 206, 60], [214, 170, 30]], lime: [[128, 196, 52], [94, 156, 34]], blue: [[66, 90, 196], [44, 62, 150]],
+  purple: [[146, 64, 186], [110, 42, 146]],
+};
+const BED_RE = /^(\w+)_bed$/;
+function bedSprite(color: string): SpriteDef | null {
+  const w = BED_WOOL[color];
+  if (!w) return null;
+  return {
+    rows: BED_ROWS,
+    inks: {
+      p: ink([240, 240, 236]), R: ink(w[0]), r: ink(w[1]), w: ink([222, 222, 218]), s: ink([162, 130, 78]), l: ink([118, 92, 54]),
+    },
+  };
+}
+
+const SIGN_ROWS = [
+  '................',
+  '..............:.',
+  '.bbbbbbbbbbbbbb.',
+  '.b111111111111c.',
+  '.b1k1kk1k1kk12c.',
+  '.b111111111112c.',
+  '.b1kk1k1kkk112c.',
+  '.b122222222222c.',
+  '.bccccccccccccc.',
+  '.......sS.......',
+  '.......sS.......',
+  '.......sS.......',
+  '.......sS.......',
+  '.......sS.......',
+  '.......sS.......',
+  '................',
+];
+/** Madera de cada cartel: [claro, base, oscuro]. */
+const SIGN_WOOD: Record<string, [RGB, RGB, RGB]> = {
+  oak: [[196, 160, 104], [170, 136, 84], [132, 102, 60]],
+  birch: [[224, 208, 156], [202, 184, 130], [164, 146, 98]],
+  spruce: [[136, 100, 64], [114, 82, 50], [84, 58, 34]],
+};
+const SIGN_RE = /^(oak|birch|spruce)_sign$/;
+function signSprite(wood: string): SpriteDef {
+  const [l, b, d] = SIGN_WOOD[wood];
+  return {
+    rows: SIGN_ROWS.map((r) => r.replace(':', '.')),
+    inks: {
+      '1': ink(l), '2': ink(b), b: ink(l), c: ink(d), k: ink([60, 46, 30]),
+      s: ink([120, 92, 56], [52, 36, 20]), S: ink([96, 72, 42], [52, 36, 20]),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Sprites sueltos
 // ---------------------------------------------------------------------------
 
@@ -1943,6 +2019,13 @@ function spriteDef(name: string): SpriteDef {
   if (tool) return toolSprite(tool[1], tool[2]);
   const armor = ARMOR_RE.exec(name);
   if (armor) return armorSprite(armor[1], armor[2]);
+  const sign = SIGN_RE.exec(name);
+  if (sign) return signSprite(sign[1]);
+  const bed = BED_RE.exec(name);
+  if (bed && name !== 'red_bed') {
+    const def = bedSprite(bed[1]);
+    if (def) return def;
+  }
   const def = Object.prototype.hasOwnProperty.call(SPRITES, name) ? SPRITES[name] : undefined;
   if (!def) {
     console.warn('Sprite de objeto sin dibujo (se usa un marcador): ' + name);

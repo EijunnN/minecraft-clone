@@ -10,7 +10,7 @@ import {
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
   OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
-  PUMPKIN_STEM, MELON_STEM,
+  PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS,
 } from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod';
@@ -67,8 +67,15 @@ for (let id = 1; id < BLOCK_COUNT; id++) {
 }
 // Puertas y camas se ven como un dibujo plano (como en Minecraft); la cama no se apila.
 for (const [wood, id] of Object.entries(DOORS)) ITEMS[id].sprite = `${wood}_door`;
-ITEMS[RED_BED].sprite = 'red_bed';
-ITEMS[RED_BED].stack = 1;
+// Camas y carteles también se ven planos; las camas no se apilan y los carteles, de 16 en 16.
+for (const [color, id] of Object.entries(BEDS)) {
+  ITEMS[id].sprite = `${color}_bed`;
+  ITEMS[id].stack = 1;
+}
+for (const [wood, id] of Object.entries(SIGNS)) {
+  ITEMS[id].sprite = `${wood}_sign`;
+  ITEMS[id].stack = 16;
+}
 
 // ------------------------------------------------------------------ objetos
 let nextId = 256;
@@ -240,6 +247,7 @@ for (const wood of ['oak', 'birch', 'spruce']) {
   fuel(DOORS[wood], 10);
 }
 fuel(LADDER, 15);
+for (const id of Object.values(SIGNS)) fuel(id, 10);
 
 const smelt = (from: number, to: number) => {
   if (ITEMS[from]) ITEMS[from].smelt = to;

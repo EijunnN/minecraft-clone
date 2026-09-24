@@ -30,7 +30,8 @@ import { XpOrbRenderer } from './XpOrbRenderer';
 import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
-import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER } from '../../shared/mobs';
+import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY } from '../../shared/mobs';
+import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
 import { WHITE_WOOL, RED_WOOL, BLACK_WOOL } from '../../shared/blocks';
@@ -120,6 +121,8 @@ export interface FrameState {
   showHand: boolean;
   /** Sedales de pesca: [punta de la caña, flotador]. */
   fishLines?: FishLine[];
+  /** Carteles con texto cercanos. */
+  signs?: SignDraw[];
 }
 
 const NEAR = 0.05;
@@ -147,6 +150,7 @@ export class Renderer {
   readonly items: ItemRenderer;
   readonly mobs: MobRenderer;
   readonly xpOrbs: XpOrbRenderer;
+  readonly signText: SignTextRenderer;
   settings: RenderSettings;
 
   private tri: FullscreenTriangle;
@@ -233,6 +237,7 @@ export class Renderer {
     this.items = new ItemRenderer(gl, caps, this.textures, sprites);
     this.mobs = new MobRenderer(gl, mobTextures);
     this.xpOrbs = new XpOrbRenderer(gl);
+    this.signText = new SignTextRenderer(gl);
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
     this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
@@ -568,6 +573,7 @@ export class Renderer {
     this.mobs.draw(s.mobs, s.camX, s.camY, s.camZ, s.time, (e) => lightOf(e.x, e.y + 0.6, e.z), bindLighting);
     this.drawMobHeldItems(s, lightOf, bindLighting);
     this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
+    this.signText.draw(s.signs ?? [], s.camX, s.camY, s.camZ);
     this.entities.drawParticles(s.camX, s.camY, s.camZ, this.atmosphere.irradiance.color);
     gl.disable(gl.CULL_FACE);
     this.xpOrbs.draw(s.drops, s.camX, s.camY, s.camZ);
@@ -800,6 +806,16 @@ export class Renderer {
         mat4.rotateY(m, m, Math.atan2(-rx, -rz));
         mat4.scale(m, m, [0.3, 0.3, 0.3]);
         out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
+      } else if (e.type === ENT_DISPLAY && e.item > 0) {
+        // Comida asándose en una fogata: tumbada encima.
+        const model = this.items.model(e.item);
+        if (!model) continue;
+        const m = mat4.create();
+        mat4.translate(m, m, [rx, ry + 0.02, rz]);
+        mat4.rotateY(m, m, e.yaw);
+        mat4.rotateX(m, m, -Math.PI / 2);
+        mat4.scale(m, m, [0.36, 0.36, 0.36]);
+        out.push({ model, m, light: lightOf(e.x, e.y + 0.3, e.z) });
       } else if (e.type === ENT_BOBBER) {
         // Flotador: mitad de abajo blanca y mitad de arriba roja.
         const light = lightOf(e.x, e.y + 0.1, e.z);

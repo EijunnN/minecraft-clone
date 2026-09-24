@@ -1,11 +1,12 @@
 // Consultas sobre bloques en tiempo de juego: modelos, colisión, selección, apoyo, fluidos y
 // orientación de hornos y cofres.
 import {
-  defs, stateProps, familyBase, isDoor, isBed, isCrop, isCake, isFarmland, BLOCK_BASE, BLOCK_SOLID, BLOCK_OPAQUE,
+  defs, stateProps, stateOf, familyBase, isDoor, isBed, isCrop, isCake, isFarmland, BLOCK_BASE, BLOCK_SOLID, BLOCK_OPAQUE,
   BLOCK_FLUID, BLOCK_FLUID_LEVEL, STATIC_COLLISION, R_MODEL, R_CROSS, R_TORCH, R_CACTUS, type NeighborGet,
 } from './registry';
 import { WATER, WATER_FLOW_1, WATER_FALL, LAVA, LAVA_FLOW_1, LAVA_FALL, FURNACE, FURNACE_LIT, CHEST } from './classic';
 import { CARVED_PUMPKIN, JACK_O_LANTERN } from './farm';
+import { CHEST_DOUBLE, SMOKER, BLAST_FURNACE, STONECUTTER } from './workstations';
 import { MAX_BLOCK_ID } from '../constants';
 import { flatBoxes, unionBox, DIR_X, DIR_Z, type ModelBox } from '../blockModels';
 
@@ -127,12 +128,17 @@ export function blockFacing(id: number): number {
   if (id >= FURNACE && id < FURNACE + 4) return id - FURNACE;
   if (id >= FURNACE_LIT && id < FURNACE_LIT + 4) return id - FURNACE_LIT;
   if (id >= CHEST && id < CHEST + 4) return id - CHEST;
+  const b = familyBase(id);
+  if (b === CHEST_DOUBLE || b === SMOKER || b === BLAST_FURNACE || b === STONECUTTER) return stateProps(id)!.facing;
   return -1;
 }
 
+/** Bases que se colocan mirando al jugador. */
+const ORIENTED = new Set([FURNACE, CHEST, FURNACE_LIT, CARVED_PUMPKIN, JACK_O_LANTERN, SMOKER, BLAST_FURNACE, STONECUTTER]);
+
 /** Variante orientada de un bloque base para un yaw del jugador (el frente mira al jugador). */
 export function orientedFor(base: number, yaw: number): number {
-  if (base !== FURNACE && base !== CHEST && base !== FURNACE_LIT && base !== CARVED_PUMPKIN && base !== JACK_O_LANTERN) return base;
+  if (!ORIENTED.has(base)) return base;
   // El jugador mira hacia (-sin yaw, -cos yaw); el frente del bloque apunta en sentido contrario.
   const fx = Math.sin(yaw), fz = Math.cos(yaw);
   let f: number;
@@ -141,12 +147,33 @@ export function orientedFor(base: number, yaw: number): number {
   return base + f;
 }
 
+/** Tipo de horno: 0 horno, 1 ahumador (comida), 2 alto horno (minerales); -1 si no es un horno. */
+export function furnaceVariant(id: number): number {
+  if (id >= FURNACE && id < FURNACE_LIT + 4) return 0;
+  const b = familyBase(id);
+  return b === SMOKER ? 1 : b === BLAST_FURNACE ? 2 : -1;
+}
+
 export function isFurnace(id: number): boolean {
-  return id >= FURNACE && id < FURNACE_LIT + 4;
+  return furnaceVariant(id) >= 0;
+}
+
+/** ¿Horno encendido? */
+export function isLitFurnace(id: number): boolean {
+  if (id >= FURNACE_LIT && id < FURNACE_LIT + 4) return true;
+  const v = furnaceVariant(id);
+  return v > 0 && stateProps(id)!.lit === 1;
+}
+
+/** El mismo horno (misma orientación) encendido o apagado. */
+export function furnaceWithLit(id: number, lit: boolean): number {
+  const f = Math.max(0, blockFacing(id));
+  if (furnaceVariant(id) === 0) return (lit ? FURNACE_LIT : FURNACE) + f;
+  return stateOf(familyBase(id), { facing: f, lit: lit ? 1 : 0 });
 }
 
 export function isChest(id: number): boolean {
-  return id >= CHEST && id < CHEST + 4;
+  return (id >= CHEST && id < CHEST + 4) || familyBase(id) === CHEST_DOUBLE;
 }
 
 export function isContainer(id: number): boolean {

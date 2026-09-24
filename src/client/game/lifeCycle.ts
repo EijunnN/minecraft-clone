@@ -1,7 +1,7 @@
 // Vida del jugador: daño, muerte (suelta el inventario y la experiencia), reaparición (en la cama si
 // la tiene) y dormir.
 import { deathMessage } from './Survival';
-import { isBed, BLOCK_OPAQUE, BLOCK_SOLID } from '../../shared/blocks';
+import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, familyBase, stateProps } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
@@ -160,9 +160,11 @@ export class LifeCycle {
       const fx = g.statusEffects;
       fx.tick(dt, surv);
       const exposed = g.world!.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) >> 4 >= 15;
+      const feet = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y + 0.05), Math.floor(p.z));
       surv.update(dt, {
         eyeInWater: p.eyeInWater, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
+        onCampfire: familyBase(feet) === CAMPFIRE && stateProps(feet)!.lit === 1,
       });
       if (surv.health < hpBefore) this.hurtFeedback(hpBefore - surv.health);
       if (surv.dead) this.die();

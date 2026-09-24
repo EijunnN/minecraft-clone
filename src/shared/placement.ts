@@ -1,10 +1,11 @@
 // Reglas de colocación y de uso de los bloques con estados (compartidas por el cliente, que las
 // predice, y el servidor, que las aplica): losas dobles, escaleras invertidas, puertas de dos
-// bloques con bisagra, trampillas, portillos, escaleras de mano y antorchas en la pared, camas.
+// bloques con bisagra, trampillas, portillos, escaleras de mano y antorchas en la pared, camas,
+// carteles (de pie o en la pared), cofres que se unen en dobles y fogatas encendidas.
 import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
-  RED_BED, stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
-  isFarmland, isMatureCrop, COMPOSTER,
+  stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
+  isFarmland, isMatureCrop, COMPOSTER, CHEST, CHEST_DOUBLE, CAMPFIRE, SIGN_WALL_OF, chestPartnerDir, isSign,
   blockSupported, orientedFor, type NeighborGet,
 } from './blocks';
 import { DIR_X, DIR_Z } from './blockModels';
@@ -96,6 +97,30 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     const id = stateOf(LADDER, { facing: f });
     return blockSupported(id, rel(get, x, y, z)) ? one(id) : null;
   }
+  if (SIGN_WALL_OF[base] !== undefined) {
+    if (face === 'down') return null;
+    if (face === 'side') {
+      const id = stateOf(SIGN_WALL_OF[base], { facing: dirOfNormal(hit.nx, hit.nz) });
+      if (blockSupported(id, rel(get, x, y, z))) return one(id);
+    }
+    // De pie, con el texto hacia el jugador.
+    return firm(get(x, y - 1, z)) ? one(stateOf(base, { facing: (facing + 2) & 3 })) : null;
+  }
+  if (base === CHEST) {
+    // Junto a un cofre sencillo con la misma orientación: los dos forman un cofre doble.
+    const f = orientedFor(CHEST, yaw) - CHEST;
+    for (const side of [0, 1]) {
+      const d = chestPartnerDir(f, side);
+      const nx = x + DIR_X[d], nz = z + DIR_Z[d];
+      if (get(nx, y, nz) !== CHEST + f) continue;
+      return [
+        [x, y, z, stateOf(CHEST_DOUBLE, { facing: f, side })],
+        [nx, y, nz, stateOf(CHEST_DOUBLE, { facing: f, side: 1 - side })],
+      ];
+    }
+    return one(CHEST + f);
+  }
+  if (base === CAMPFIRE) return one(stateOf(CAMPFIRE, { lit: 1 }));
   if (base === TORCH) {
     if (face === 'down') return null;
     if (face === 'side') {
@@ -138,8 +163,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     const hx = x + DIR_X[facing], hz = z + DIR_Z[facing];
     if (!replaceable(get(hx, y, hz)) || !firm(get(x, y - 1, z)) || !firm(get(hx, y - 1, hz))) return null;
     return [
-      [x, y, z, stateOf(RED_BED, { facing, part: 0 })],
-      [hx, y, hz, stateOf(RED_BED, { facing, part: 1 })],
+      [x, y, z, stateOf(base, { facing, part: 0 })],
+      [hx, y, hz, stateOf(base, { facing, part: 1 })],
     ];
   }
   return one(orientedFor(base, yaw));
@@ -157,9 +182,9 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
   return null;
 }
 
-/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores). */
+/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores, carteles). */
 export function isUsable(id: number): boolean {
-  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER;
+  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id);
 }
 
 /** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */

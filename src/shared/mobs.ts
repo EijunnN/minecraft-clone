@@ -29,6 +29,8 @@ export const ENT_XP = 103;
 export const ENT_THROWN = 104;
 /** Flotador de una caña de pescar. */
 export const ENT_BOBBER = 105;
+/** Objeto quieto de adorno (comida asándose en una fogata; extra: id del objeto). */
+export const ENT_DISPLAY = 106;
 
 export interface ModelPart {
   name: string;

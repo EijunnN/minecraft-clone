@@ -165,6 +165,22 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'composter_bottom' },
   { name: 'compost' },
   { name: 'compost_ready' },
+  // Cofre doble, ahumador, alto horno, fogata y cortapiedras (fase 4).
+  { name: 'chest_front_seam_right' },
+  { name: 'chest_front_seam_left' },
+  { name: 'chest_side_seam_right' },
+  { name: 'chest_side_seam_left' },
+  ...['smoker', 'blast_furnace'].flatMap((k): TextureDef[] => [
+    { name: `${k}_front` }, { name: `${k}_front_lit` }, { name: `${k}_side` }, { name: `${k}_top` },
+  ]),
+  { name: 'campfire_log_lit' },
+  { name: 'campfire_fire', wave: 2, cutout: true },
+  { name: 'campfire_embers' },
+  { name: 'campfire_ash' },
+  { name: 'stonecutter_top' },
+  { name: 'stonecutter_side' },
+  { name: 'stonecutter_bottom' },
+  { name: 'stonecutter_saw', cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

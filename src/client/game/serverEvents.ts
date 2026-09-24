@@ -2,7 +2,7 @@
 // modo de juego, camas y respuestas a las interacciones.
 import { RemotePlayer } from './RemotePlayers';
 import type { Welcome } from '../net/Net';
-import { AIR, BLOCKS, BLOCK_FLUID, isValidBlockId, BLOCK_COLLIDE } from '../../shared/blocks';
+import { AIR, BLOCKS, BLOCK_FLUID, isValidBlockId, BLOCK_COLLIDE, furnaceVariant } from '../../shared/blocks';
 import { containerFromWire } from '../../shared/containers';
 import { ITEMS } from '../../shared/items';
 import type { PlayerInfo, ServerMsg, GameMode } from '../../shared/protocol';
@@ -61,7 +61,8 @@ export class ServerEvents {
         const same = (a: [number, number, number] | null) => !!a && a[0] === pos[0] && a[1] === pos[1] && a[2] === pos[2];
         if (same(this.g.interaction.pendingOpen)) {
           this.g.interaction.pendingOpen = null;
-          this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos);
+          const variant = furnaceVariant(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
+          this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]);
           this.g.audio.playUi('open');
         }
         if (this.g.screen.isOpen() && same(this.g.screen.containerPos)) this.g.screen.setContainer(c);
@@ -95,6 +96,9 @@ export class ServerEvents {
         break;
       case 'ires':
         this.g.interaction.onInteractResult(msg);
+        break;
+      case 'sign':
+        if ([msg.x, msg.y, msg.z].every(Number.isInteger)) this.g.signs.set(msg.x, msg.y, msg.z, msg.l);
         break;
       case 'rod': {
         // Flotador lanzado o recogido; al dueño le llega además el desgaste de la caña.

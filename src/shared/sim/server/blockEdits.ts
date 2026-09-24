@@ -3,7 +3,7 @@
 // Todo se valida aquí; si algo no vale, se devuelve al jugador el bloque real.
 import {
   AIR, BEDROCK, FURNACE_LIT, BLOCKS, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, BLOCK_REPLACEABLE, isValidBlockId,
-  isBed, familyBase, COMPOSTER,
+  isBed, familyBase, COMPOSTER, CAMPFIRE,
 } from '../../blocks';
 import { WORLD_HEIGHT, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
@@ -15,12 +15,13 @@ import type { BlockRules } from './blockRules';
 import type { Farming } from './farming';
 import type { Beds } from './beds';
 import type { Composters } from './composters';
+import type { Campfires } from './campfires';
 import type { ServerContext, Session } from './context';
 
 export class BlockEdits {
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
-    private composters: Composters,
+    private composters: Composters, private campfires: Campfires,
   ) {}
 
   /** Romper un bloque o usar un cubo (colocar o recoger un fluido). */
@@ -120,6 +121,11 @@ export class BlockEdits {
     // El compostador acepta cualquier objeto (o la mano, para sacar el polvo de hueso).
     if (familyBase(id) === COMPOSTER) {
       this.composters.use(s, x, y, z, Number.isInteger(item) && item > 0 ? item : 0);
+      return;
+    }
+    // Comida cruda sobre una fogata: se pone a asar.
+    if (familyBase(id) === CAMPFIRE) {
+      if (!(Number.isInteger(item) && this.campfires.use(x, y, z, item))) ctx.reject(s, x, y, z);
       return;
     }
     // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
