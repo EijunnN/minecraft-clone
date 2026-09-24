@@ -3,8 +3,11 @@
 // añaden sus propios manejadores de ticks aleatorios.
 import {
   AIR, GRASS, DIRT, SNOWY_GRASS, CACTUS, SUGAR_CANE, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_RENDER, BLOCK_REPLACEABLE,
-  R_CROSS, MYCELIUM, isVine, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, familyBase,
+  R_CROSS, MYCELIUM, isVine, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, familyBase, WATER, ICE, PACKED_ICE,
+  SNOW_LAYER, isSnowLayer, BLOCK_FLUID_LEVEL,
 } from '../../blocks';
+import { rainAt } from '../../weather';
+import { BIOME_MUSHROOM_FIELDS } from '../../world/biomeIds';
 import { MIN_Y, MAX_Y, CHUNK_SIZE, CHUNK_VOLUME, indexY } from '../../constants';
 import { leafDecayDrops } from '../drops';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
@@ -39,6 +42,38 @@ export class Nature {
   tick(): void {
     this.processDecay();
     this.randomTicks();
+    this.weatherTicks();
+  }
+
+  /**
+   * Clima sobre la superficie (como los ticks de lluvia de Minecraft): de vez en cuando, en una
+   * columna al azar de cada chunk, el agua a la intemperie se congela donde hace frío y, si nieva,
+   * se posa una capa de nieve.
+   */
+  private weatherTicks(): void {
+    const ctx = this.ctx;
+    const snowing = rainAt(ctx.worldTime(), ctx.seed) > 0.2;
+    for (const c of this.loadedNearPlayers()) {
+      if (ctx.rand() > 1 / 16) continue;
+      this.weatherTickAt(c.cx * 16 + ((ctx.rand() * 16) | 0), c.cz * 16 + ((ctx.rand() * 16) | 0), snowing);
+    }
+  }
+
+  /** Clima en la columna (x, z): congela el agua a la intemperie y, si nieva, posa una capa de nieve. */
+  weatherTickAt(x: number, z: number, snowing: boolean): void {
+    const w = this.ctx.world;
+    const top = w.skyTop(x, z);
+    if (top < MIN_Y) return;
+    const inf = w.gen.columnInfo(x, z);
+    // Como en Minecraft, en los campos de champiñones nunca nieva ni se hiela el agua.
+    if ((inf.temp >= -0.5 && inf.height <= 150) || inf.biome === BIOME_MUSHROOM_FIELDS) return;
+    const b = w.getBlock(x, top, z);
+    if (b === WATER && BLOCK_FLUID_LEVEL[b] === 0) {
+      if (w.blockLightAt(x, top + 1, z) < 10) w.setBlock(x, top, z, ICE);
+      return;
+    }
+    if (!snowing || b === ICE || b === PACKED_ICE || !(BLOCK_OPAQUE[b] || LEAVES.has(b))) return;
+    if (w.getBlock(x, top + 1, z) === AIR && w.blockLightAt(x, top + 1, z) <= 11) w.setBlock(x, top + 1, z, SNOW_LAYER);
   }
 
   private scheduleLeafDecay(x: number, y: number, z: number): void {
@@ -144,6 +179,9 @@ export class Nature {
     } else if (id === CAVE_VINES) {
       // Las enredaderas de cueva dan bayas luminosas de vez en cuando.
       if (rand() < 0.1) w.setBlock(x, y, z, CAVE_VINES + 1);
+    } else if (id === ICE || isSnowLayer(id)) {
+      // Junto a una luz fuerte (más de 11) el hielo se derrite y la nieve desaparece.
+      if (w.blockLightAt(x, y, z) > 11) w.setBlock(x, y, z, id === ICE ? WATER : AIR);
     } else if (isVine(id)) {
       // Las enredaderas bajan poco a poco hasta el suelo.
       if (rand() < 0.25 && w.getBlock(x, y - 1, z) === AIR) w.setBlock(x, y - 1, z, id);

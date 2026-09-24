@@ -20,3 +20,14 @@ export function rainAt(worldTime: number, seed: number): number {
   };
   return s(0, 0.08, f) * (1 - s(0.9, 1, f)) * (0.65 + 0.35 * hashToFloat(hash2(k, 99, seed)));
 }
+
+/**
+ * Tormenta eléctrica (0..1): uno de cada tres episodios de lluvia es tormenta, y sólo truena
+ * mientras llueve con fuerza. Mismo cálculo en el cliente y en el servidor.
+ */
+export function thunderAt(worldTime: number, seed: number): number {
+  const k = Math.floor(worldTime / 0.35);
+  if (hashToFloat(hash2(k, 4242, seed)) >= 0.35) return 0;
+  const r = rainAt(worldTime, seed);
+  return r > 0.45 ? r : 0;
+}

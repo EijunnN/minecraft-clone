@@ -2,6 +2,8 @@
 // dibuja cada frame. El resto vive en controladores: interaction (minar, colocar, usar, comer...),
 // lifeCycle (daño, muerte, cama), serverEvents (mensajes del servidor), effects (sonidos y
 // partículas) y environment (lluvia y océano lejano).
+import { Navigation } from './navigation';
+import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
 import { Renderer, type FrameState } from '../render/Renderer';
 import { World } from '../world/World';
 import { Player } from './Player';
@@ -23,7 +25,7 @@ import { ITEMS, maxStack, type ItemStack } from '../../shared/items';
 import { MOBS } from '../../shared/mobs';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
 import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
-import { TerrainGenerator, BIOME_NAMES } from '../../shared/world/terrain';
+import { TerrainGenerator, BIOME_NAMES, BIOME_MUSHROOM_FIELDS } from '../../shared/world/terrain';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTypes';
 import { Interaction } from './interaction';
@@ -72,6 +74,7 @@ function useState(use: { kind: string } | null): number {
 export class Game {
   readonly interaction = new Interaction(this);
   readonly effects = new Effects(this);
+  readonly nav = new Navigation(this);
   readonly life = new LifeCycle(this);
   readonly network = new ServerEvents(this);
   readonly environment = new Environment(this);
@@ -142,6 +145,11 @@ export class Game {
   private stateKey = '';
   private hotbarKey = '';
   shake = 0;
+  /** Rayos de tormenta en pantalla. */
+  bolts: Bolt[] = [];
+  /** Destello de un rayo (0..1). */
+  flash = 0;
+  private flashEl: HTMLDivElement | null = null;
   constructor(cfg: GameConfig) {
     this.cfg = cfg;
     this.renderer = cfg.renderer;
@@ -791,7 +799,7 @@ export class Game {
     const dawn = Math.exp(-Math.pow(((dayTime + 0.5) % 1) - 0.5, 2) / 0.0035);
     const mist = 0.0022 + 0.011 * dawn + (sunHeight < 0 ? 0.002 : 0) + rain * 0.006;
     const climate = world.generator.columnInfo(Math.floor(p.x), Math.floor(p.z));
-    const snow = climate.temp < -0.5 || climate.height > 150;
+    const snow = (climate.temp < -0.5 || climate.height > 150) && climate.biome !== BIOME_MUSHROOM_FIELDS;
     this.environment.rainMapTimer -= dt;
     if (rain > 0.01 && this.environment.rainMapTimer <= 0) this.environment.updateRainMap();
 
@@ -925,6 +933,7 @@ export class Game {
       grassTint: [srgbToLin(this.tmpGrass[0]), srgbToLin(this.tmpGrass[1]), srgbToLin(this.tmpGrass[2])],
       players: views,
       signs: this.signs.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ),
+      bolts: this.bolts,
       fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, {
         cam: [camX, camY, camZ], yaw, pitch, firstPerson: this.thirdPerson === 0, feet: [p.x, p.y, p.z], bodyYaw: p.yaw,
       }, views),
@@ -932,6 +941,19 @@ export class Game {
     };
     this.renderer.render(state);
     this.hurtRoll *= Math.exp(-dt * 5);
+    this.nav.update();
+    // Rayos: envejecen y se retiran; el destello blanco de la pantalla se apaga rápido.
+    for (const b of this.bolts) b.age += dt;
+    if (this.bolts.length) this.bolts = this.bolts.filter((b) => b.age < BOLT_LIFE);
+    this.flash = Math.max(0, this.flash - dt * 3.5);
+    if (this.flash > 0 || this.flashEl) {
+      if (!this.flashEl) {
+        this.flashEl = document.createElement('div');
+        this.flashEl.id = 'lightning-flash';
+        document.body.appendChild(this.flashEl);
+      }
+      this.flashEl.style.opacity = String(Math.min(0.75, this.flash * 0.75));
+    }
     if (this.wantShot) {
       this.wantShot = false;
       this.saveScreenshot();

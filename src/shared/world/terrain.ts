@@ -11,7 +11,7 @@ import {
   BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, isLeaves,
   DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE, DEEPSLATE_ORE,
   MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, CAVE_VINES, AMETHYST_BLOCK, BUDDING_AMETHYST, AMETHYST_BUD,
-  BLOCK_OPAQUE,
+  BLOCK_OPAQUE, SNOW_LAYER,
 } from '../blocks';
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
@@ -770,6 +770,19 @@ export class TerrainGenerator {
 
     // --- 8b. Estructuras (mazmorras, minas, templos, naufragios…) ---
     const chests = placeStructures(this, blocks, cx, cz, tops);
+
+    // --- 8c. Nieve sobre todo lo que queda a la intemperie en las zonas frías ---
+    for (let lz = 0; lz < 16; lz++) {
+      for (let lx = 0; lx < 16; lx++) {
+        const ci = infos[lz * 16 + lx];
+        if (ci.temp >= -0.5 || ci.biome === BIOME_MUSHROOM_FIELDS) continue;
+        let y = Math.min(MAX_Y - 2, Math.max(maxTop, SEA_LEVEL) + 32);
+        while (y > MIN_Y && blocks[blockIndex(lx, y, lz)] === AIR) y--;
+        const b = blocks[blockIndex(lx, y, lz)];
+        if (b === ICE || b === PACKED_ICE || b === WATER || !(BLOCK_OPAQUE[b] || isLeaves(b))) continue;
+        blocks[blockIndex(lx, y + 1, lz)] = SNOW_LAYER;
+      }
+    }
 
     // --- 9. Lecho de roca (en y = −64 y salpicado hasta −60) ---
     for (let lz = 0; lz < 16; lz++) {

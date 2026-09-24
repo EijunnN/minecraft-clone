@@ -207,6 +207,25 @@ export class WorldSim {
     return c.top[(z - cz * CHUNK_SIZE) * 16 + (x - cx * CHUNK_SIZE)];
   }
 
+  /** Luz de bloques aproximada en (x, y, z): el máximo de (emisión − distancia Manhattan), sin paredes. */
+  blockLightAt(x: number, y: number, z: number): number {
+    let best = 0;
+    const cx0 = Math.floor((x - 15) / CHUNK_SIZE), cx1 = Math.floor((x + 15) / CHUNK_SIZE);
+    const cz0 = Math.floor((z - 15) / CHUNK_SIZE), cz1 = Math.floor((z + 15) / CHUNK_SIZE);
+    for (let cz = cz0; cz <= cz1; cz++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const c = this.chunks.get(chunkKey(cx, cz));
+        if (!c) continue;
+        for (const idx of c.emitters) {
+          const ex = cx * 16 + (idx & 15), ey = indexY(idx), ez = cz * 16 + ((idx >> 4) & 15);
+          const l = BLOCK_EMISSION[c.blocks[idx]] - (Math.abs(ex - x) + Math.abs(ey - y) + Math.abs(ez - z));
+          if (l > best) best = l;
+        }
+      }
+    }
+    return best;
+  }
+
   /** ¿Algún bloque emisor ilumina (x, y, z)? (distancia Manhattan menor que su nivel de luz). */
   isLitByBlocks(x: number, y: number, z: number): boolean {
     const cx0 = Math.floor((x - 15) / CHUNK_SIZE), cx1 = Math.floor((x + 15) / CHUNK_SIZE);

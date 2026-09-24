@@ -15,7 +15,11 @@ Objects). Pensado para PC (teclado y ratón).
   menas de Minecraft (también en pizarra profunda por debajo de 0).
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús y pozos del desierto. Sus
-  cofres traen botín propio de cada estructura; `/localizar` indica dónde está la más cercana. Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
+  cofres traen botín propio de cada estructura; `/localizar` indica dónde está la más cercana.
+- **Clima**: lluvia, nieve y tormentas con rayos (destello, trueno y daño). En las zonas frías la nieve
+  se acumula en capas y el agua se congela; junto a la luz se derriten.
+- **Mapas y brújula**: un mapa vacío se convierte en el mapa de la zona (128×128 bloques) y se ve al
+  llevarlo en la mano; la brújula apunta al punto de aparición. Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
   de alto como en Minecraft actual: de y = −64 (lecho de roca) a 319.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
@@ -115,6 +119,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Geoda de amatista a oscuras](docs/screenshots/geode.png) | ![Pizarra profunda con menas](docs/screenshots/deepslate.png) |
 | ![Templo del desierto](docs/screenshots/desert_temple.png) | ![Mazmorra con generador de monstruos y cofre](docs/screenshots/dungeon.png) |
 | ![Naufragio en el fondo del mar](docs/screenshots/shipwreck.png) | ![Templo de la jungla entre cerezos](docs/screenshots/jungle_temple.png) |
+| ![Mapa de la zona en la mano](docs/screenshots/map.png) | ![Rayo de tormenta sobre la costa, con la brújula](docs/screenshots/lightning.png) |
 
 ## Controles
 

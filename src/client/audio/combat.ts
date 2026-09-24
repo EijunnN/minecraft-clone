@@ -176,3 +176,28 @@ export function buildBlockHit(ctx: AudioContext, noise: NoiseBuffers, material: 
   }
   return sources;
 }
+
+/**
+ * Trueno: chasquido seco (sólo si cae cerca), retumbo grave largo y rodadas de ruido que se
+ * alejan. `delay` en segundos (la luz llega antes que el sonido) y `loud` 0..1 según la distancia.
+ */
+export function buildThunder(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number, delay: number, loud: number): AudioScheduledSourceNode[] {
+  const t0 = now + delay;
+  const timed: { src: AudioScheduledSourceNode; end: number }[] = [];
+  if (loud > 0.6) {
+    const crack = playNoiseBurst(ctx, { buffer: noise.white, destination, now: t0, filterType: 'highpass', freq: 1200, q: 0.4, attack: 0.002, decay: 0.25, gain: 0.5 * loud });
+    timed.push({ src: crack, end: delay + 0.25 });
+  }
+  const rumble = playNoiseBurst(ctx, { buffer: noise.brown, destination, now: t0, filterType: 'lowpass', freq: 260 + 300 * loud, freqEnd: 70, q: 0.6, attack: 0.05, decay: 3.2, gain: 0.7 * loud });
+  timed.push({ src: rumble, end: delay + 3.25 });
+  const boom = playTonalBlip(ctx, { destination, now: t0, freq: 55, freqEnd: 30, wave: 'sine', attack: 0.02, decay: 1.6, gain: 0.35 * loud });
+  timed.push({ src: boom, end: delay + 1.62 });
+  for (let i = 0; i < 5; i++) {
+    const off = delay + 0.3 + i * randRange(0.25, 0.6);
+    const d = randRange(0.5, 1.2);
+    const src = playNoiseBurst(ctx, { buffer: noise.brown, destination, now: now + off, filterType: 'lowpass', freq: randRange(120, 300), q: 0.8, attack: 0.08, decay: d, gain: 0.3 * loud * (1 - i / 6) });
+    timed.push({ src, end: off + d + 0.08 });
+  }
+  timed.sort((a, b) => a.end - b.end);
+  return timed.map((t) => t.src);
+}

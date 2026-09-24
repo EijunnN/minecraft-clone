@@ -5,7 +5,7 @@
 import { MIN_Y, MAX_Y } from './constants';
 import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, LILY_PAD, VINE, isVine, CAVE_VINES, isCaveVines,
-  POINTED_DRIPSTONE, BLOCK_NEEDS_SUPPORT, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
+  POINTED_DRIPSTONE, BLOCK_NEEDS_SUPPORT, SNOW_LAYER, isSnowLayer, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
   stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
   isFarmland, isMatureCrop, COMPOSTER, CHEST, CHEST_DOUBLE, CAMPFIRE, SIGN_WALL_OF, chestPartnerDir, isSign,
   blockSupported, orientedFor, type NeighborGet,
@@ -75,6 +75,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     if (hit.ny !== -1 || hit.y - 1 <= MIN_Y || get(hit.x, hit.y - 1, hit.z) !== 0) return null;
     return BLOCK_OPAQUE[hit.id] || isCaveVines(hit.id) ? [[hit.x, hit.y - 1, hit.z, CAVE_VINES]] : null;
   }
+  // Capa de nieve sobre otra: una capa más (hasta 8).
+  if (base === SNOW_LAYER && isSnowLayer(hit.id) && hit.ny === 1 && hit.id < SNOW_LAYER + 7) return [[hit.x, hit.y, hit.z, hit.id + 1]];
   // Losa sobre la mitad libre de otra igual: losa doble.
   if (isSlab(base) && familyBase(hit.id) === base) {
     const t = stateProps(hit.id)!.type;

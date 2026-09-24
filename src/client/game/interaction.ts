@@ -10,8 +10,9 @@ import { LILY_PAD, CAVE_VINES, BLOCK_NEEDS_SUPPORT, AIR, BLOCKS, BLOCK_RENDER, B
   CAMPFIRE, stateProps } from '../../shared/blocks';
 import {
   ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, itemForBlock, maxStack,
-  type ItemStack,
+  SNOWBALL, EMPTY_MAP, FILLED_MAP, type ItemStack,
 } from '../../shared/items';
+import { mapKeyAt } from '../../shared/maps';
 import { COMPOSTER_READY, canCompost, composterLevel } from '../../shared/composting';
 import { variantSmelts } from '../../shared/containers';
 import { attackCooldown } from '../../shared/combat';
@@ -163,8 +164,12 @@ export class Interaction {
       if (pressed && hit) this.till(hit);
       return;
     }
-    if (held.id === EGG) {
-      if (pressed) this.throwEgg(dir);
+    if (held.id === EGG || held.id === SNOWBALL) {
+      if (pressed) this.throwEgg(dir, held.id);
+      return;
+    }
+    if (held.id === EMPTY_MAP) {
+      if (pressed) this.fillMap();
       return;
     }
     if (def.tool?.kind === 'fishing_rod') {
@@ -254,7 +259,7 @@ export class Interaction {
     const kind = def.tool?.kind;
     if (kind === 'hoe' || kind === 'shield' || kind === 'bow' || kind === 'fishing_rod') return true;
     if (held.id === SHEARS) return hit?.id === PUMPKIN;
-    return held.id === EGG || held.id === BONE_MEAL || held.id === BUCKET;
+    return held.id === EGG || held.id === SNOWBALL || held.id === EMPTY_MAP || held.id === BONE_MEAL || held.id === BUCKET;
   }
 
   /** Mano secundaria: cubrirse con el escudo, comer o colocar un bloque (antorchas…). */
@@ -599,9 +604,23 @@ export class Interaction {
   }
 
   /** Lanzar un huevo hacia donde se mira (1 de cada 8 da un pollito). */
-  throwEgg(dir: number[]): void {
+  /** Mapa vacío: se convierte en el mapa de la zona en la que está el jugador. */
+  fillMap(): void {
     const p = this.g.player;
-    this.g.net?.send({ t: 'throw', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], item: EGG });
+    const map: ItemStack = { id: FILLED_MAP, count: 1, dmg: mapKeyAt(p.x, p.z) };
+    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    if (!this.g.inv.get(this.g.selected)) this.g.inv.set(this.g.selected, map);
+    else {
+      const rest = this.g.inv.add(map);
+      if (rest) this.throwStack(rest, false);
+    }
+    this.g.audio.playUi('open');
+    this.g.swing(false);
+  }
+
+  throwEgg(dir: number[], item = EGG): void {
+    const p = this.g.player;
+    this.g.net?.send({ t: 'throw', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], item });
     if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
     this.g.swing(false);
   }

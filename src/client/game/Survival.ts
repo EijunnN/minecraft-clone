@@ -46,6 +46,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'void': return 'cayó al vacío';
     case 'suffocate': return 'se asfixió dentro de un bloque';
     case 'explosion': return 'voló por los aires';
+    case 'lightning': return 'fue alcanzado por un rayo';
     case 'arrow': return 'fue abatido por una flecha';
     case 'kill': return 'abandonó este mundo';
     default: return mobs[cause] ?? 'murió';

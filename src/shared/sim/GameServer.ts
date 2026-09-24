@@ -24,6 +24,7 @@ import { TICK_RATE, DT, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type 
 import { BlockRules, fallsThrough } from './server/blockRules';
 import { Nature } from './server/nature';
 import { Spawners } from './server/spawners';
+import { Storms } from './server/storms';
 import { Farming } from './server/farming';
 import { Beds } from './server/beds';
 import { Composters } from './server/composters';
@@ -80,6 +81,7 @@ export class GameServer {
   private rules: BlockRules;
   private nature: Nature;
   private spawners: Spawners;
+  private storms: Storms;
   private farming: Farming;
   private beds: Beds;
   private composters: Composters;
@@ -135,6 +137,7 @@ export class GameServer {
     this.containers = new ContainerSystem(this.ctx, store);
     this.world.onLoot = (chests) => this.containers.fillLoot(chests);
     this.spawners = new Spawners(this.ctx);
+    this.storms = new Storms(this.ctx);
     this.composters = new Composters(this.ctx);
     this.fishing = new Fishing(this.ctx);
     this.campfires = new Campfires(this.ctx, store);
@@ -690,6 +693,7 @@ export class GameServer {
     this.composters.tick();
     this.fishing.tick();
     if (this.tickCount % TICK_RATE === 0) this.spawners.tick();
+    this.storms.tick(DT);
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

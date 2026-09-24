@@ -9,6 +9,7 @@ import { mobTextureSource } from './textures/mobTextureSource';
 import { Renderer } from './render/Renderer';
 import { UI, randomRoom, sanitizeRoomInput } from './ui/UI';
 import { buildIcons } from './ui/icons';
+import { setMapPalette } from './game/maps';
 import { MenuBackground } from './ui/menuBackground';
 import { AudioEngine } from './audio/AudioEngine';
 import { Game } from './game/Game';
@@ -65,6 +66,7 @@ async function boot(): Promise<void> {
 
   // Texturas procedurales e iconos (bloques y objetos).
   const textures = generateTextures();
+  setMapPalette(textures);
   const sprites = generateItemSprites();
   ui.icons = buildItemIcons(buildIcons(textures), sprites);
   ui.hudIcons = buildHudIcons();

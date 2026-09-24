@@ -1,7 +1,7 @@
 // Proyectiles que no son flechas: huevos lanzados (se rompen al chocar y a veces nace un pollito) y el
 // flotador de la caña de pescar (vuela, flota en el agua y avisa cuando pica un pez).
 import { MOB_CHICKEN } from '../../mobs';
-import { EGG, FISHING_ROD } from '../../items';
+import { EGG, FISHING_ROD, SNOWBALL } from '../../items';
 import { BLOCK_SOLID, BLOCK_FLUID, fluidHeight } from '../../blocks';
 import { EF_ACTION } from '../../protocol';
 import { FISH_WAIT, FISH_BITE } from '../../fishing';
@@ -65,7 +65,7 @@ export class Projectiles {
   private shatter(e: Entity, mob: Entity | null): void {
     const m = this.m;
     if (mob) m.damage(mob, 0, e.x - e.vx, e.z - e.vz, typeof e.shooter === 'string' ? e.shooter : null, 0.4);
-    m.host.fx('egg_break', e.x, e.y, e.z);
+    m.host.fx(e.stack?.id === SNOWBALL ? 'snowball_break' : 'egg_break', e.x, e.y, e.z);
     if (e.stack?.id === EGG && m.rand() < 1 / 8) {
       const n = m.rand() < 1 / 32 ? 4 : 1;
       for (let k = 0; k < n; k++) m.spawnMob(MOB_CHICKEN, e.x, e.y, e.z, true);

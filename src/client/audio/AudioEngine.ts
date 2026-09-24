@@ -12,7 +12,7 @@ import {
   buildBurp,
   buildCraft,
   buildEat,
-  buildExplosion,
+  buildExplosion, buildThunder,
   buildFurnaceCrackle,
   buildPickup,
   buildPlayerDeath,
@@ -374,6 +374,13 @@ export class AudioEngine {
   /** Explosión de creeper en `pos`; `power` ~1..4 (potencia/radio). */
   playExplosion(pos: Vec3, power: number): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildExplosion(ctx, noise, dest, now, power), 0.55));
+  }
+
+  /** Trueno de un rayo a `distance` bloques: llega con retraso (343 bloques/s) y más flojo de lejos. */
+  playThunder(distance: number): void {
+    const delay = Math.min(4, distance / 343);
+    const loud = Math.max(0.15, Math.min(1, 1 - distance / 260));
+    this.safe(() => this.spawnLocal(0.6, (ctx, noise, dest, now) => buildThunder(ctx, noise, dest, now, delay, loud)));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

@@ -32,6 +32,7 @@ import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
 import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY } from '../../shared/mobs';
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
+import { LightningRenderer, type Bolt } from './LightningRenderer';
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
 import { WHITE_WOOL, RED_WOOL, BLACK_WOOL } from '../../shared/blocks';
@@ -129,6 +130,8 @@ export interface FrameState {
   fishLines?: FishLine[];
   /** Carteles con texto cercanos. */
   signs?: SignDraw[];
+  /** Rayos de tormenta en pantalla. */
+  bolts?: Bolt[];
 }
 
 const NEAR = 0.05;
@@ -157,6 +160,7 @@ export class Renderer {
   readonly mobs: MobRenderer;
   readonly xpOrbs: XpOrbRenderer;
   readonly signText: SignTextRenderer;
+  readonly lightning: LightningRenderer;
   settings: RenderSettings;
 
   private tri: FullscreenTriangle;
@@ -244,6 +248,7 @@ export class Renderer {
     this.mobs = new MobRenderer(gl, mobTextures);
     this.xpOrbs = new XpOrbRenderer(gl);
     this.signText = new SignTextRenderer(gl);
+    this.lightning = new LightningRenderer(gl);
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
     this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
@@ -587,6 +592,7 @@ export class Renderer {
     gl.disable(gl.CULL_FACE);
     this.xpOrbs.draw(s.drops, s.camX, s.camY, s.camZ);
     this.atmosphere.drawSky();
+    this.lightning.draw(s.bolts ?? [], s.camX, s.camY, s.camZ);
 
     // --- 4. Agua ---
     if (this.terrain.visibleTranslucent.length > 0) {

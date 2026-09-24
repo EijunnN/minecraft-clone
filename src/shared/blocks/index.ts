@@ -33,6 +33,7 @@ import {
   MOB_SPAWNER, COBWEB, CHISELED_SANDSTONE, CUT_SANDSTONE, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, NETHERRACK,
   CRYING_OBSIDIAN,
 } from './structures';
+import { SNOW_LAYER } from './weather';
 
 export * from './registry';
 export * from './classic';
@@ -43,6 +44,7 @@ export * from './workstations';
 export * from './biomes';
 export * from './underground';
 export * from './structures';
+export * from './weather';
 export * from './queries';
 
 {
@@ -94,6 +96,7 @@ export const INVENTORY_ORDER: readonly number[] = [
   BUDDING_AMETHYST, AMETHYST_BUD + 3, TINTED_GLASS,
   // Fase 5: estructuras.
   MOB_SPAWNER, COBWEB, CHISELED_SANDSTONE, CUT_SANDSTONE, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, NETHERRACK, CRYING_OBSIDIAN,
+  SNOW_LAYER,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [

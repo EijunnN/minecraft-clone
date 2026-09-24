@@ -36,7 +36,7 @@ noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **c
 | Cuevas | "queso", "espagueti", "fideos", acuíferos, lagos de lava subterráneos | 🟡 (queso, espaguetis, acuíferos y lagos de lava) |
 | Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, restos antiguos | ✅ (las 8 del mundo normal, con sus versiones de pizarra profunda) |
 | Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea | 🟡 (roble, abedul, abeto, jungla —también gigante—, acacia, roble oscuro, cerezo y champiñones gigantes) |
-| Clima | lluvia, nieve, tormentas con rayos; la nieve se acumula y el agua se congela | 🟡 (lluvia y nieve visuales) |
+| Clima | lluvia, nieve, tormentas con rayos; la nieve se acumula y el agua se congela | ✅ |
 | Ciclo día/noche, fases lunares | sí | ✅ |
 | Fluidos (agua y lava que fluyen, obsidiana, roca) | sí | ✅ |
 | Gravedad (arena, grava), soporte de plantas, caída de hojas, crecimiento | sí | ✅ |
@@ -94,7 +94,7 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Tijeras | ✅ (hojas y ovejas) |
 | Cubos de agua y lava | ✅ |
 | Cubos de leche, de peces, de ajolote, de nieve polvo, de cubo de azufre | 🟡 (leche) |
-| Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, rienda, silla | ❌ |
+| Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, rienda, silla | 🟡 (brújula y mapas) |
 | Mesa de trabajo 3×3 e inventario 2×2 | ✅ |
 | Recetas | 🟡 (~50 de más de 1.000) |
 | Libro de recetas | ❌ |
@@ -144,7 +144,7 @@ existen como bloques y objetos.
 | Barcas (y con cofre, balsas de bambú), vagonetas y raíles | ❌ |
 | Élitros y cohetes, perla de ender (teletransporte al lanzarla) | ❌ |
 | Arqueología (cepillo, arena sospechosa, vasijas decoradas) | ❌ |
-| Mapas y brújulas, barra de localización | ❌ |
+| Mapas y brújulas, barra de localización | 🟡 (mapas y brújula) |
 | Logros (advancements) y estadísticas | ❌ |
 
 ### 2.11 Nether y End
@@ -288,7 +288,7 @@ inventario, historial y autocompletado del chat, teclas configurables y agachars
 gatear, reducción de caídas, animaciones de los demás jugadores y lista de mundos. La autoridad del
 servidor sobre el inventario queda para cuando se juegue con desconocidos.
 
-### Fase 5 — Un mundo más rico (XL)
+### Fase 5 — Un mundo más rico (XL) · ✅ hecha
 Más biomas (pantano, jungla, bosque oscuro, badlands, champiñonal, cerezal, prado, picos de hielo,
 océanos por temperatura) con sus árboles; cuevas y acuíferos mejores, cuevas frondosas y de goteo;
 cobre, esmeralda y pizarra profunda; primeras estructuras (mazmorras con generador, minas, templos,
@@ -327,6 +327,13 @@ acumulación de nieve.
   antorcha al lado lo apaga) y las telarañas frenan. `/localizar <estructura>` dice dónde está la más
   cercana. Faltan las trampas (necesitan redstone y TNT, fase 7), los raíles de las minas (fase 7) y
   las aldeas (fase 6).
+- ✅ **Clima, mapas y brújula.** Tormentas eléctricas (una de cada tres lluvias): los rayos caen en
+  lo más alto cerca de los jugadores, hacen 5 de daño y prenden a lo que haya a 3 bloques, con
+  destello, trueno que llega con retraso según la distancia y rayos quebrados que brillan. En las
+  zonas frías la nieve se posa en capas (se apilan a mano y dan bolas de nieve, que se lanzan) y el
+  agua a la intemperie se congela; junto a una luz fuerte, el hielo y la nieve se derriten. Brújula
+  que apunta al punto de aparición y mapas de 128×128 bloques (con un mapa vacío en la mano), que se
+  ven al llevarlos con la posición propia y la de los demás jugadores.
 
 ### Fase 6 — Criaturas (XL)
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y

@@ -22,6 +22,21 @@ export class Effects {
     const mk = mob?.key as MobSoundKind | undefined;
     const fx = this.g.renderer.entities;
     switch (kind) {
+      case 'lightning': {
+        // Rayo: se ve de lejos; el trueno llega con retraso y el destello depende de la distancia.
+        const pl = this.g.player;
+        const d = Math.hypot(p[0] - pl.x, p[2] - pl.z);
+        if (d > 300) break;
+        this.g.bolts.push({ x: p[0], y: p[1], z: p[2], age: 0, seed: (Math.random() * 2 ** 31) | 0 });
+        this.g.flash = Math.max(this.g.flash, Math.max(0.15, 1 - d / 200));
+        this.g.audio.playThunder(d);
+        if (d < 24) this.g.shake = Math.max(this.g.shake, 0.5 * (1 - d / 24));
+        break;
+      }
+      case 'snowball_break':
+        fx.spawnSmoke(p[0], p[1], p[2], 8, 0.15, 0.95, 0.35, 0.5);
+        this.g.audio.playBlockHit('snow', p);
+        break;
       case 'mob_hurt':
         if (mk) this.g.audio.playMob(mk, 'hurt', p);
         break;

@@ -234,6 +234,13 @@ export const AMETHYST_SHARD = item('amethyst_shard', 'Fragmento de amatista');
 /** Bayas luminosas: se comen o se plantan bajo un techo (enredaderas de cueva). */
 export const GLOW_BERRIES = item('glow_berries', 'Bayas luminosas', { block: CAVE_VINES, food: { hunger: 2, saturation: 0.4 } });
 
+// ------------------------------------------------------------------ mapas, brújula y nieve (fase 5)
+export const COMPASS = item('compass', 'Brújula');
+export const EMPTY_MAP = item('map', 'Mapa vacío');
+/** Mapa de una zona: la celda de 128×128 bloques va en `dmg` (ver maps.ts). */
+export const FILLED_MAP = item('filled_map', 'Mapa');
+export const SNOWBALL = item('snowball', 'Bola de nieve', { stack: 16 });
+
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
 ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
@@ -347,7 +354,8 @@ export const CREATIVE_ITEMS: readonly number[] = [
   ...Object.values(TOOLS).flatMap((t) => Object.values(t)),
   ...Object.values(ARMOR).flatMap((a) => Object.values(a)),
   GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD, COD, COOKED_COD,
-  SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES,
+  SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, COMPASS, EMPTY_MAP,
+  SNOWBALL,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

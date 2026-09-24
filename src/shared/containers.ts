@@ -1,5 +1,6 @@
 // Contenedores (cofres y hornos): contenido, reglas de clic compartidas por cliente (predicción)
 // y servidor (autoridad), y la lógica del horno.
+import { MAX_MAP_KEY } from './maps';
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
 import { IRON_ORE, GOLD_ORE } from './blocks';
 
@@ -57,7 +58,8 @@ export function sanitizeStack(raw: unknown): ItemStack | null {
   const id = Number(r.id), count = Number(r.count), dmg = r.dmg === undefined ? 0 : Number(r.dmg);
   if (!Number.isInteger(id) || !isValidItem(id)) return null;
   if (!Number.isInteger(count) || count < 1 || count > maxStack(id)) return null;
-  if (!Number.isInteger(dmg) || dmg < 0 || dmg > 10000) return null;
+  // El desgaste de las herramientas o, en los mapas, la celda del mundo que muestran.
+  if (!Number.isInteger(dmg) || dmg < 0 || dmg > MAX_MAP_KEY) return null;
   const s: ItemStack = { id, count };
   if (dmg > 0) s.dmg = dmg;
   return s;
