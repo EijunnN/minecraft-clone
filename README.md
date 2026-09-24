@@ -97,7 +97,9 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Bloques PBR sobre el agua](docs/screenshots/build.png) | ![Bajo el agua](docs/screenshots/underwater.png) |
 | ![Tormenta](docs/screenshots/rain.png) | ![Noche con antorchas](docs/screenshots/torches.png) |
 | ![Losas, escaleras, vallas, puerta y cama](docs/screenshots/building.png) | ![Granja con trigo, zanahorias, patatas y remolachas](docs/screenshots/farm.png) |
-| ![Armadura de diamante y barra de experiencia](docs/screenshots/armor.png) | |
+| ![Armadura de diamante y barra de experiencia](docs/screenshots/armor.png) | ![Espada y escudo, efectos de estado y corazones dorados al atardecer](docs/screenshots/combat.png) |
+| ![Huerto de calabazas y sandías con faroles y compostador](docs/screenshots/gourds.png) | ![Pescando en un estanque](docs/screenshots/fishing.png) |
+| ![Taller con cartel, cofre doble, ahumador, alto horno, cortapiedras y fogata](docs/screenshots/workshop.png) | ![Inventario con la mano secundaria y la descripción de un arma](docs/screenshots/inventory.png) |
 
 ## Controles
 

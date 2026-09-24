@@ -11,6 +11,8 @@ out vec2 vUV;
 void main() {
   vUV = aUV;
   gl_Position = uViewProj * vec4(aPos, 1.0);
+  // Un poco hacia la cámara: pegado al tablero, la profundidad no distingue a varios metros.
+  gl_Position.z -= 0.0004 * gl_Position.w;
 }
 `;
 
@@ -84,7 +86,7 @@ export class SignTextRenderer {
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.font = 'bold 15px "Courier New", monospace';
     lines.forEach((l, i) => ctx.fillText(l, TEX_W / 2, 8 + i * 16, TEX_W - 4));
     const tex = c?.tex ?? gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, tex);
