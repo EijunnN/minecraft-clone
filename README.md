@@ -8,7 +8,8 @@ modo **supervivencia** completo y multijugador en tiempo real sobre Cloudflare (
 Objects). Pensado para PC (teclado y ratón).
 
 - **Mundo infinito procedural**: océanos, playas, llanuras, bosques, abedulares, taiga, desiertos,
-  sabanas, montañas con picos nevados, ríos, cuevas, lagos de lava y minerales.
+  sabanas, montañas con picos nevados, ríos, cuevas, lagos de lava y minerales. 384 bloques de alto
+  como en Minecraft actual: de y = −64 (lecho de roca) a 319.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
   Minado con tiempos reales según la dureza del bloque y la herramienta (con grietas), desgaste de

@@ -32,8 +32,8 @@ void main() {
   vec3 world = rel + uCamPos.xyz;
   // Oclusión por techo: altura del bloque más alto de la columna.
   vec2 hp = floor(world.xz) - uRainOrigin;
-  float top = -1.0;
-  if (hp.x >= 0.0 && hp.y >= 0.0 && hp.x < 64.0 && hp.y < 64.0) top = texelFetch(uRainHeight, ivec2(hp), 0).r * 255.0;
+  float top = -1e4;
+  if (hp.x >= 0.0 && hp.y >= 0.0 && hp.x < 64.0 && hp.y < 64.0) top = texelFetch(uRainHeight, ivec2(hp), 0).r;
   if (world.y < top + 1.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   // Desvanecer en los bordes de la caja.
   float edge = 1.0 - smoothstep(0.35, 0.5, length(rel.xz / BOX.xz));

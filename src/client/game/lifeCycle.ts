@@ -1,5 +1,6 @@
 // Vida del jugador: daño, muerte (suelta el inventario y la experiencia), reaparición (en la cama si
 // la tiene) y dormir.
+import { VOID_Y } from '../../shared/constants';
 import { deathMessage } from './Survival';
 import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, stateProps } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
@@ -153,7 +154,7 @@ export class LifeCycle {
       else if (p.inWater) surv.addExhaustion(moved * 0.01);
       if (wasGround && !p.onGround && p.vy > 5) surv.addExhaustion(p.sprinting ? 0.2 : 0.05);
       // Vacío y asfixia.
-      if (p.y < -64) {
+      if (p.y < VOID_Y) {
         this.voidTimer += dt;
         if (this.voidTimer >= 0.5) {
           this.voidTimer = 0;
@@ -183,7 +184,7 @@ export class LifeCycle {
     } else {
       // En creativo los efectos siguen corriendo (Velocidad, Visión nocturna…) pero no hacen daño.
       if (!surv.dead) g.statusEffects.tick(dt, CREATIVE_TARGET);
-      if (g.creative && p.y < -64) {
+      if (g.creative && p.y < VOID_Y) {
         p.y = 200;
         p.vy = 0;
       }

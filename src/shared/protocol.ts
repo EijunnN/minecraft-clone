@@ -2,7 +2,7 @@
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -179,9 +179,9 @@ export type ServerMsg =
   /** Punto de reaparición del jugador (cama); null = el del mundo. */
   | { t: 'spawn'; p: [number, number, number] | null };
 
-/** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][u8 y][i32 z][u16 b]). */
+/** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;
-export const EDIT_RECORD_BYTES = 11;
+export const EDIT_RECORD_BYTES = 12;
 
 export function encodeEdits(edits: [number, number, number, number][]): ArrayBuffer {
   const buf = new ArrayBuffer(5 + edits.length * EDIT_RECORD_BYTES);
@@ -191,9 +191,9 @@ export function encodeEdits(edits: [number, number, number, number][]): ArrayBuf
   let o = 5;
   for (const [x, y, z, b] of edits) {
     dv.setInt32(o, x, true);
-    dv.setUint8(o + 4, y);
-    dv.setInt32(o + 5, z, true);
-    dv.setUint16(o + 9, b, true);
+    dv.setInt16(o + 4, y, true);
+    dv.setInt32(o + 6, z, true);
+    dv.setUint16(o + 10, b, true);
     o += EDIT_RECORD_BYTES;
   }
   return buf;
@@ -206,7 +206,7 @@ export function decodeEdits(buf: ArrayBuffer): [number, number, number, number][
   const out: [number, number, number, number][] = new Array(n);
   let o = 5;
   for (let i = 0; i < n; i++) {
-    out[i] = [dv.getInt32(o, true), dv.getUint8(o + 4), dv.getInt32(o + 5, true), dv.getUint16(o + 9, true)];
+    out[i] = [dv.getInt32(o, true), dv.getInt16(o + 4, true), dv.getInt32(o + 6, true), dv.getUint16(o + 10, true)];
     o += EDIT_RECORD_BYTES;
   }
   return out;

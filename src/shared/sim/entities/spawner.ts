@@ -2,7 +2,7 @@
 // calamares en el agua, con los límites de Minecraft por dificultad y jugadores.
 import { MOBS, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID } from '../../mobs';
 import { GRASS, SNOWY_GRASS, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, WATER } from '../../blocks';
-import { SEA_LEVEL } from '../../constants';
+import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
@@ -50,7 +50,7 @@ export class Spawner {
     for (let attempt = 0; attempt < 4; attempt++) {
       const [x, z] = this.ring(p, 22, 48);
       const top = w.skyTop(x, z);
-      if (top === -2) continue;
+      if (top === MIN_Y - 2) continue;
       let y: number;
       if (this.m.rand() < 0.5) y = top + 1;
       else {
@@ -64,7 +64,7 @@ export class Spawner {
         }
         if (!found) continue;
       }
-      if (y < 1 || !standable(w, x, y, z, 2)) continue;
+      if (y <= MIN_Y || !standable(w, x, y, z, 2)) continue;
       const feet = w.getBlock(x, y, z);
       const floor = w.getBlock(x, y - 1, z);
       if (feet > 0 && BLOCK_FLUID[feet]) continue;
@@ -104,7 +104,7 @@ export class Spawner {
     for (let attempt = 0; attempt < 6; attempt++) {
       const [x, z] = this.ring(p, force ? 12 : 24, 56);
       const top = w.skyTop(x, z);
-      if (top < 0) continue;
+      if (top < MIN_Y) continue;
       const floor = w.getBlock(x, top, z);
       if (floor !== GRASS && floor !== SNOWY_GRASS) continue;
       const y = top + 1;
@@ -115,7 +115,7 @@ export class Spawner {
       for (let i = 0; i < n; i++) {
         const ox = x + Math.floor((this.m.rand() - 0.5) * 5), oz = z + Math.floor((this.m.rand() - 0.5) * 5);
         const ot = w.skyTop(ox, oz);
-        if (ot < 0) continue;
+        if (ot < MIN_Y) continue;
         const f = w.getBlock(ox, ot, oz);
         if ((f === GRASS || f === SNOWY_GRASS) && standable(w, ox, ot + 1, oz, 2)) this.m.spawnMob(type, ox + 0.5, ot + 1, oz + 0.5);
       }

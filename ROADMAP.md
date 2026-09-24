@@ -15,7 +15,7 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | Bloques | ~1.100 contando colores y variantes | ~70 |
 | Objetos | ~1.500 | 56 objetos + bloques |
 | Recetas | más de 1.000 | ~50 |
-| Altura del mundo | 384 (y de -64 a 320) | 256 (y de 0 a 255) |
+| Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319) |
 | Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | supervivencia básica, fluidos, criaturas, cofres y hornos |
 
 Lo que ya tenemos cubre el bucle básico (talar, fabricar, minar, fundir, comer, sobrevivir a la
@@ -289,7 +289,15 @@ Más biomas (pantano, jungla, bosque oscuro, badlands, champiñonal, cerezal, pr
 océanos por temperatura) con sus árboles; cuevas y acuíferos mejores, cuevas frondosas y de goteo;
 cobre, esmeralda y pizarra profunda; primeras estructuras (mazmorras con generador, minas, templos,
 naufragios, portales en ruinas, iglús, pozos, geodas) con botín; mapas y brújula; tormentas y
-acumulación de nieve. Decidir si subimos la altura del mundo a 384.
+acumulación de nieve.
+
+- ✅ **Altura del mundo: 384 bloques, de y = −64 a 319** (coordenadas reales de Minecraft 1.18+).
+  El terreno de siempre queda igual de 0 hacia arriba; por debajo hay piedra hasta el lecho de roca
+  en −64, cuevas más hondas con lagos de lava desde −54, y el hierro, el oro, el redstone, el
+  lapislázuli y los diamantes bajan hasta el fondo. El vacío empieza en −128. Los mundos guardados
+  se migran solos (ediciones, cofres, hornos, fogatas y carteles). Cuesta un 40 % más generar cada
+  chunk y un 16 % más mallarlo. Cuando lleguen las dimensiones (fase 8), la altura será de cada una
+  (Nether 128, End 256).
 
 ### Fase 6 — Criaturas (XL)
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y
@@ -317,7 +325,6 @@ creaking, cámaras de desafío y breeze, arqueología, cuevas de azufre, bosque 
 
 - **¿Paridad total o lo esencial?** Recomiendo priorizar lo que más se usa jugando con amigos
   (fases 3 a 6) antes que redstone avanzada, el End o las novedades de los últimos años.
-- **Altura del mundo:** subir a 384 bloques cuesta un 50 % más de memoria y de mallado.
 - **Anti-trampas:** el inventario en el servidor sólo compensa si el juego se abre a desconocidos.
 - **Plan gratuito de Cloudflare:** más criaturas, redstone y dimensiones consumen más CPU del Durable
   Object; hay que medir en cada fase (hoy ~1,3 ms por tick con 4 jugadores).

@@ -2,7 +2,7 @@
 // culling por frustum y dibujado.
 import type { GL, Program } from '../engine/gl';
 import type { Column, MeshSink, ChunkMeshHandle } from '../world/World';
-import { CHUNK_SIZE } from '../../shared/constants';
+import { CHUNK_SIZE, MIN_Y } from '../../shared/constants';
 
 interface PassMesh {
   vao: WebGLVertexArrayObject;
@@ -225,7 +225,8 @@ export class TerrainRenderer implements MeshSink {
     for (const m of list) {
       const p = m[pass];
       if (!p) continue;
-      gl.uniform3f(loc, m.cx * CHUNK_SIZE - camX, -camY, m.cz * CHUNK_SIZE - camZ);
+      // Las alturas de los vértices son filas de columna (0 = MIN_Y).
+      gl.uniform3f(loc, m.cx * CHUNK_SIZE - camX, MIN_Y - camY, m.cz * CHUNK_SIZE - camZ);
       gl.bindVertexArray(p.vao);
       gl.drawElements(gl.TRIANGLES, p.quads * 6, gl.UNSIGNED_INT, 0);
       this.stats.drawCalls++;

@@ -13,10 +13,9 @@ import { moveBox, boxBlocked } from '../src/shared/collide';
 import { planPlacement, toggleEdits, facingFromYaw, type PlaceHit } from '../src/shared/placement';
 import { blockDrops } from '../src/shared/sim/drops';
 import { modelQuads } from '../src/shared/blockModels';
-import { MemoryStore } from '../src/shared/sim/store';
+import { MemoryStore, BLOCK_FORMAT } from '../src/shared/sim/store';
 import { GameServer, type Conn } from '../src/shared/sim/GameServer';
 import { PROTOCOL_VERSION, decodeEdits } from '../src/shared/protocol';
-import { blockIndex } from '../src/shared/constants';
 import { MOB_ZOMBIE, ENT_ITEM } from '../src/shared/mobs';
 import { makeServer, placeOnTop, type Client, type Harness } from './harness';
 
@@ -34,24 +33,27 @@ const topHit = (x: number, y: number, z: number, id = STONE): PlaceHit => ({ x, 
 test('bloques de 16 bits: los mundos antiguos se migran una sola vez', () => {
   const store = new MemoryStore();
   store.setMeta('seed', '777');
-  // Chunk 0,0 en el formato antiguo (u16 índice + u8 bloque): cofre (91), antorcha (38) y aire.
+  // Chunk 0,0 en el primer formato (u16 índice con la fila 0 en y = 0 + u8 bloque): cofre (91),
+  // antorcha (38) y aire.
   const legacy = new Uint8Array(9);
-  [[blockIndex(1, 70, 2), 91], [blockIndex(3, 71, 4), 38], [blockIndex(5, 72, 6), 0]].forEach(([idx, b], i) => {
+  const oldIndex = (x: number, y: number, z: number) => (y << 8) | (z << 4) | x;
+  [[oldIndex(1, 70, 2), 91], [oldIndex(3, 71, 4), 38], [oldIndex(5, 72, 6), 0]].forEach(([idx, b], i) => {
     legacy[i * 3] = idx & 255;
     legacy[i * 3 + 1] = idx >> 8;
     legacy[i * 3 + 2] = b;
   });
   store.chunks.set('0,0', legacy);
   const gs = new GameServer(store, { now: () => 1e6 });
-  assert.equal(store.getMeta('blockFormat'), '2');
-  assert.equal(store.chunks.get('0,0')!.length, 12);
+  assert.equal(store.getMeta('blockFormat'), BLOCK_FORMAT);
+  assert.equal(store.chunks.get('0,0')!.length, 15);
   let bin: ArrayBuffer | null = null;
   const c: Conn = { send: (d) => { if (typeof d !== 'string') bin = d; }, close: () => {} };
   gs.connect(c);
   gs.message(c, JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, name: 'A', shirt: '#ff0000' }));
   const edits = decodeEdits(bin!);
   assert.equal(edits.length, 3);
-  assert.ok(edits.some((e) => e[3] === 91) && edits.some((e) => e[3] === 38));
+  assert.ok(edits.some((e) => e[3] === 91 && e[0] === 1 && e[1] === 70 && e[2] === 2), 'el cofre sigue en y = 70');
+  assert.ok(edits.some((e) => e[3] === 38 && e[1] === 71));
   const before = store.chunks.get('0,0')!.slice();
   new GameServer(store, { now: () => 1e6 });
   assert.deepEqual(store.chunks.get('0,0'), before, 'no se migra dos veces');

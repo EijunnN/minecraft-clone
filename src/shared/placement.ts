@@ -2,6 +2,7 @@
 // predice, y el servidor, que las aplica): losas dobles, escaleras invertidas, puertas de dos
 // bloques con bisagra, trampillas, portillos, escaleras de mano y antorchas en la pared, camas,
 // carteles (de pie o en la pared), cofres que se unen en dobles y fogatas encendidas.
+import { MIN_Y, MAX_Y } from './constants';
 import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
   stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
@@ -70,7 +71,7 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     y = hit.y;
     z = hit.z;
   }
-  if (y < 1 || y > 255) return null;
+  if (y <= MIN_Y || y >= MAX_Y) return null;
   const cur = get(x, y, z);
   if (cur < 0) return null;
   if (isSlab(base) && familyBase(cur) === base && stateProps(cur)!.type !== 2) return [[x, y, z, stateOf(base, { type: 2 })]];
@@ -130,7 +131,7 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     return one(TORCH); // de pie: el apoyo de abajo lo comprueba quien llama
   }
   if (isDoor(base)) {
-    if (y + 1 > 255 || !replaceable(get(x, y + 1, z)) || !firm(get(x, y - 1, z))) return null;
+    if (y + 1 >= MAX_Y || !replaceable(get(x, y + 1, z)) || !firm(get(x, y - 1, z))) return null;
     const left = (facing + 3) & 3, right = (facing + 1) & 3;
     const lx = x + DIR_X[left], lz = z + DIR_Z[left], rx = x + DIR_X[right], rz = z + DIR_Z[right];
     const ln = get(lx, y, lz), rn = get(rx, y, rz);

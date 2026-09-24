@@ -1,7 +1,7 @@
 // Mundo del servidor: genera los mismos chunks que los clientes (generador determinista),
 // aplica y guarda las ediciones, y mantiene mapas de altura y fuentes de luz para la simulación.
 import { TerrainGenerator } from '../world/terrain';
-import { CHUNK_SIZE, CHUNK_VOLUME, WORLD_HEIGHT, blockIndex, chunkKey } from '../constants';
+import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../constants';
 import { AIR, BLOCK_EMISSION, BLOCK_LIGHT_OPACITY, BLOCK_SOLID } from '../blocks';
 import { decodeChunkEdits, encodeChunkEdits, type ServerStore } from './store';
 
@@ -9,7 +9,7 @@ export interface SimChunk {
   cx: number;
   cz: number;
   blocks: Uint16Array;
-  /** y del bloque más alto que tapa el cielo, por columna (z*16+x); -1 si ninguno. */
+  /** y del bloque más alto que tapa el cielo, por columna (z*16+x); MIN_Y − 1 si ninguno. */
   top: Int16Array;
   /** Índices locales de bloques que emiten luz. */
   emitters: Set<number>;
@@ -63,7 +63,7 @@ export class WorldSim {
     const out: [number, number, number, number][] = [];
     for (const [key, m] of this.edits) {
       const [cx, cz] = key.split(',').map(Number);
-      for (const [idx, b] of m) out.push([cx * 16 + (idx & 15), idx >> 8, cz * 16 + ((idx >> 4) & 15), b]);
+      for (const [idx, b] of m) out.push([cx * 16 + (idx & 15), indexY(idx), cz * 16 + ((idx >> 4) & 15), b]);
     }
     return out;
   }
@@ -104,8 +104,8 @@ export class WorldSim {
     c = { cx, cz, blocks, top: new Int16Array(256), emitters: new Set(), lastUsed: now };
     for (let i = 0; i < 256; i++) {
       const lx = i & 15, lz = i >> 4;
-      let t = -1;
-      for (let y = WORLD_HEIGHT - 1; y >= 0; y--) {
+      let t = MIN_Y - 1;
+      for (let y = MAX_Y - 1; y >= MIN_Y; y--) {
         if (blocksSky(blocks[blockIndex(lx, y, lz)])) {
           t = y;
           break;
@@ -139,8 +139,8 @@ export class WorldSim {
 
   /** Id del bloque, o -1 si el chunk no está cargado. */
   getBlock(x: number, y: number, z: number): number {
-    if (y < 0) return -1;
-    if (y >= WORLD_HEIGHT) return AIR;
+    if (y < MIN_Y) return -1;
+    if (y >= MAX_Y) return AIR;
     const cx = Math.floor(x / CHUNK_SIZE), cz = Math.floor(z / CHUNK_SIZE);
     const c = this.chunks.get(chunkKey(cx, cz));
     if (!c) return -1;
@@ -152,7 +152,7 @@ export class WorldSim {
    * Sólo en chunks cargados: así toda edición se difunde y dispara sus reacciones.
    */
   setBlock(x: number, y: number, z: number, id: number): number {
-    if (y < 0 || y >= WORLD_HEIGHT) return -1;
+    if (y < MIN_Y || y >= MAX_Y) return -1;
     const cx = Math.floor(x / CHUNK_SIZE), cz = Math.floor(z / CHUNK_SIZE);
     const key = chunkKey(cx, cz);
     const lx = x - cx * CHUNK_SIZE, lz = z - cz * CHUNK_SIZE;
@@ -167,8 +167,8 @@ export class WorldSim {
     if (blocksSky(id)) {
       if (y > c.top[col]) c.top[col] = y;
     } else if (y === c.top[col]) {
-      let t = -1;
-      for (let yy = y - 1; yy >= 0; yy--) {
+      let t = MIN_Y - 1;
+      for (let yy = y - 1; yy >= MIN_Y; yy--) {
         if (blocksSky(c.blocks[blockIndex(lx, yy, lz)])) {
           t = yy;
           break;
@@ -184,11 +184,11 @@ export class WorldSim {
     return old;
   }
 
-  /** y del bloque más alto que tapa el cielo en (x, z), o -2 si no está cargado. */
+  /** y del bloque más alto que tapa el cielo en (x, z), o MIN_Y − 2 si no está cargado. */
   skyTop(x: number, z: number): number {
     const cx = Math.floor(x / CHUNK_SIZE), cz = Math.floor(z / CHUNK_SIZE);
     const c = this.chunks.get(chunkKey(cx, cz));
-    if (!c) return -2;
+    if (!c) return MIN_Y - 2;
     return c.top[(z - cz * CHUNK_SIZE) * 16 + (x - cx * CHUNK_SIZE)];
   }
 
@@ -201,7 +201,7 @@ export class WorldSim {
         const c = this.chunks.get(chunkKey(cx, cz));
         if (!c) continue;
         for (const idx of c.emitters) {
-          const ex = cx * 16 + (idx & 15), ey = idx >> 8, ez = cz * 16 + ((idx >> 4) & 15);
+          const ex = cx * 16 + (idx & 15), ey = indexY(idx), ez = cz * 16 + ((idx >> 4) & 15);
           const d = Math.abs(ex - x) + Math.abs(ey - y) + Math.abs(ez - z);
           if (d < BLOCK_EMISSION[c.blocks[idx]]) return true;
         }

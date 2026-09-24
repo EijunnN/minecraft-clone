@@ -9,7 +9,7 @@ export type WorkerRequest =
   | { type: 'spawn'; id: number };
 
 export type WorkerResponse =
-  | { type: 'gen'; id: number; cx: number; cz: number; blocks: Uint16Array; tint: Uint8Array; heights: Uint8Array }
+  | { type: 'gen'; id: number; cx: number; cz: number; blocks: Uint16Array; tint: Uint8Array; heights: Int16Array }
   | {
       type: 'mesh';
       id: number;

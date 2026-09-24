@@ -1,7 +1,7 @@
 // Entorno alrededor del jugador: lluvia (mapa de alturas para no mojar bajo techo) y océano lejano
 // del horizonte.
 import { AIR, BLOCK_RENDER, R_CROSS, R_TORCH } from '../../shared/blocks';
-import { CHUNK_SIZE, SEA_LEVEL } from '../../shared/constants';
+import { CHUNK_SIZE, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex } from '../../shared/constants';
 import { rainAt } from '../../shared/weather';
 import type { Game } from './Game';
 
@@ -9,7 +9,7 @@ export class Environment {
   constructor(private g: Game) {}
 
   rainMapTimer = 0;
-  rainHeights = new Uint8Array(64 * 64);
+  rainHeights = new Float32Array(64 * 64);
 
   /** Intensidad de lluvia (0..1) determinista a partir del tiempo del mundo: igual para todos. */
   weatherAt(worldTime: number): number {
@@ -29,11 +29,11 @@ export class Environment {
       for (let dx = 0; dx < 64; dx++) {
         const x = x0 + dx, z = z0 + dz;
         const col = world.getColumn(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE));
-        let top = 0;
+        let top = MIN_Y;
         if (col && col.blocks) {
           const lx = x - col.cx * CHUNK_SIZE, lz = z - col.cz * CHUNK_SIZE;
-          for (let y = Math.min(255, col.maxY + 1); y > 0; y--) {
-            const b = col.blocks[(y << 8) | (lz << 4) | lx];
+          for (let y = Math.min(MAX_Y - 1, col.maxY + 1); y > MIN_Y; y--) {
+            const b = col.blocks[blockIndex(lx, y, lz)];
             if (b !== AIR && BLOCK_RENDER[b] !== R_CROSS && BLOCK_RENDER[b] !== R_TORCH) {
               top = y;
               break;

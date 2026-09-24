@@ -1,6 +1,7 @@
 // Simulación de fluidos al estilo de Minecraft: el agua avanza 7 bloques y la lava 3, caen,
 // buscan el hueco más cercano, se secan al quitar la fuente, dos fuentes de agua crean una
 // tercera y el contacto agua–lava produce obsidiana, roca o piedra.
+import { MIN_Y, MAX_Y } from '../constants';
 import {
   AIR, OBSIDIAN, COBBLESTONE, STONE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_TORCH, R_CROP,
   FLUID_MAX_LEVEL, fluidBlock,
@@ -34,7 +35,7 @@ export class FluidSim {
   }
 
   schedule(x: number, y: number, z: number, delay: number): void {
-    if (y < 0 || y > 255) return;
+    if (y < MIN_Y || y >= MAX_Y) return;
     const k = posKey(x, y, z);
     const at = this.tick + Math.max(1, delay);
     const prev = this.scheduled.get(k);

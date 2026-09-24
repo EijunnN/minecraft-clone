@@ -3,7 +3,7 @@
 // que llega desde los chunks vecinos (hasta 15 bloques) sea correcta.
 //
 // Formato de vértice (2 x uint32):
-//   A: x+16 (9 bits, 1/16 de bloque) | z+16 (9 bits) << 9 | y (13 bits) << 18
+//   A: x+16 (9 bits, 1/16 de bloque) | z+16 (9 bits) << 9 | y − MIN_Y (13 bits) << 18
 //   B: u (5) | v (5) << 5 | capa (9) << 10 | normal (3) << 19 | ao (2) << 22 | cielo (4) << 24 | bloque (4) << 28
 // Cada quad son 4 vértices; se dibujan con un buffer de índices compartido (0,1,2, 0,2,3).
 import {
@@ -13,10 +13,12 @@ import {
   BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland, isCrop,
 } from '../../../shared/blocks';
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
-import { hash2 } from '../../../shared/constants';
+import { hash2, MIN_Y, WORLD_HEIGHT, CHUNK_VOLUME } from '../../../shared/constants';
 
 const W = 48; // ancho del volumen de trabajo (3 chunks)
-const H = 258; // filas: y = -1 .. 256 (la fila 0 es "lecho de roca", la 257 aire)
+// Filas de trabajo: la 0 es sólida (bajo el fondo del mundo), la r es la fila de columna r − 1
+// (y = MIN_Y + r − 1) y la última, aire.
+const H = WORLD_HEIGHT + 2;
 const SZ = W; // paso en z
 const SY = W * W; // paso en y
 const VOL = W * W * H;
@@ -27,7 +29,7 @@ export interface MeshResult {
   opaque: Uint32Array;
   cutout: Uint32Array;
   translucent: Uint32Array;
-  /** Luz del chunk central: (cielo << 4) | bloque, índice (y << 8) | (z << 4) | x. */
+  /** Luz del chunk central: (cielo << 4) | bloque, con el índice de blockIndex. */
   light: Uint8Array;
   minY: number;
   maxY: number;
@@ -111,7 +113,8 @@ export class Mesher {
   }
 
   /**
-   * chunks: 9 columnas en orden (dz+1)*3 + (dx+1), cada una Uint16Array(65536) con índice (y<<8)|(z<<4)|x.
+   * chunks: 9 columnas en orden (dz+1)*3 + (dx+1), cada una Uint16Array(CHUNK_VOLUME) con el índice
+   * de blockIndex (fila = y − MIN_Y). Dentro del mallador las alturas son filas de columna.
    */
   mesh(chunks: Uint16Array[], cx: number, cz: number): MeshResult {
     const top = this.fillVolume(chunks);
@@ -148,7 +151,7 @@ export class Mesher {
     }
     const topRow = Math.min(H - 1, maxY + 2); // fila = y + 1
     vox.fill(0, 0, (topRow + 1) * SY);
-    // Fila 0 (y = -1): sólida para ocultar la cara inferior del mundo.
+    // Fila 0 (bajo el fondo del mundo): sólida para ocultar su cara inferior.
     vox.fill(BEDROCK, 0, SY);
     for (let c = 0; c < 9; c++) {
       const src = chunks[c];
@@ -283,7 +286,7 @@ export class Mesher {
     this.translucent.reset();
     let minY = 1e9;
     let maxY = -1e9;
-    const maxRow = Math.min(topRow, 256);
+    const maxRow = Math.min(topRow, WORLD_HEIGHT);
 
     for (let r = 1; r <= maxRow; r++) {
       const y = r - 1;
@@ -332,8 +335,8 @@ export class Mesher {
     }
 
     // Luz del chunk central para consultas en el hilo principal.
-    const light = new Uint8Array(65536);
-    for (let y = 0; y < 256 && y + 1 <= topRow; y++) {
+    const light = new Uint8Array(CHUNK_VOLUME);
+    for (let y = 0; y < WORLD_HEIGHT && y + 1 <= topRow; y++) {
       const r = y + 1;
       for (let z = 0; z < 16; z++) {
         const src = r * SY + (z + 16) * SZ + 16;
@@ -342,15 +345,16 @@ export class Mesher {
       }
     }
     // Por encima de la fila de trabajo todo es cielo abierto.
-    for (let y = Math.max(0, topRow); y < 256; y++) light.fill(0xf0, y << 8, (y + 1) << 8);
+    for (let y = Math.max(0, topRow); y < WORLD_HEIGHT; y++) light.fill(0xf0, y << 8, (y + 1) << 8);
 
     return {
       opaque: this.opaque.result(),
       cutout: this.cutout.result(),
       translucent: this.translucent.result(),
       light,
-      minY: minY === 1e9 ? 0 : minY,
-      maxY: maxY === -1e9 ? 0 : maxY + 1,
+      // En alturas del mundo (para el recorte por frustum).
+      minY: minY === 1e9 ? MIN_Y : minY + MIN_Y,
+      maxY: maxY === -1e9 ? MIN_Y : maxY + 1 + MIN_Y,
     };
   }
 

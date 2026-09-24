@@ -8,7 +8,7 @@ import {
   DEAD_BUSH, SUGAR_CANE, RED_MUSHROOM, BROWN_MUSHROOM, LAVA, BEDROCK, GRANITE, DIORITE, ANDESITE,
   BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS, PUMPKIN, MELON,
 } from '../blocks';
-import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, WORLD_HEIGHT, blockIndex, hash2, hash3, hashToFloat } from '../constants';
+import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
 
 export const BIOME_OCEAN = 0;
@@ -47,7 +47,7 @@ export interface GenResult {
   /** 4x4 muestras RGBA de color de hierba del bioma (sRGB) + temperatura en A. */
   tint: Uint8Array;
   /** Altura del bloque sólido más alto por columna (16x16, índice z*16+x). */
-  heights: Uint8Array;
+  heights: Int16Array;
 }
 
 const CAVE_GRID = 4;
@@ -151,8 +151,8 @@ export class TerrainGenerator {
 
   /** Altura del bloque sólido superior del terreno base de una columna. */
   surfaceAt(x: number, z: number, info: ColumnInfo): number {
-    const top = Math.min(WORLD_HEIGHT - 8, Math.ceil(info.height + info.amp));
-    const bottom = Math.max(1, Math.floor(info.height - info.amp));
+    const top = Math.min(MAX_Y - 8, Math.ceil(info.height + info.amp));
+    const bottom = Math.max(MIN_Y + 1, Math.floor(info.height - info.amp));
     for (let y = top; y >= bottom; y--) {
       if (this.solidAt(x, y, z, info.height, info.amp)) return y;
     }
@@ -278,7 +278,7 @@ export class TerrainGenerator {
     const biome = inf.biome;
     const height = inf.height, amp = inf.amp;
     const sy = this.surfaceAt(x, z, inf);
-    if (sy < SEA_LEVEL - 1 || sy > WORLD_HEIGHT - 20) return -1;
+    if (sy < SEA_LEVEL - 1 || sy > MAX_Y - 20) return -1;
     if (this.caveAt(x, sy, z) && sy <= this.caveCeiling(x, z, sy)) return -1;
     const t: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
     const hx1 = this.columnInfo(x + 1, z, t).height;
@@ -296,7 +296,7 @@ export class TerrainGenerator {
 
   generate(cx: number, cz: number): GenResult {
     const blocks = new Uint16Array(CHUNK_VOLUME);
-    const heights = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+    const heights = new Int16Array(CHUNK_SIZE * CHUNK_SIZE);
     const x0 = cx * CHUNK_SIZE;
     const z0 = cz * CHUNK_SIZE;
     const seed = this.seed;
@@ -325,9 +325,9 @@ export class TerrainGenerator {
       for (let lx = 0; lx < 16; lx++) {
         const inf = infos[lz * 16 + lx];
         const wx = x0 + lx, wz = z0 + lz;
-        const lo = Math.max(1, Math.floor(inf.height - inf.amp));
-        const hi = Math.min(WORLD_HEIGHT - 8, Math.ceil(inf.height + inf.amp));
-        for (let y = 0; y < lo; y++) blocks[blockIndex(lx, y, lz)] = STONE;
+        const lo = Math.max(MIN_Y + 1, Math.floor(inf.height - inf.amp));
+        const hi = Math.min(MAX_Y - 8, Math.ceil(inf.height + inf.amp));
+        for (let y = MIN_Y; y < lo; y++) blocks[blockIndex(lx, y, lz)] = STONE;
         let top = lo - 1;
         for (let y = lo; y <= hi; y++) {
           if (this.solidAt(wx, y, wz, inf.height, inf.amp)) {
@@ -355,7 +355,7 @@ export class TerrainGenerator {
         const topBlock = layers[0], filler = layers[1], deep = layers[2], depth = layers[3];
         // Recorremos hacia abajo desde la superficie aplicando las capas.
         let d = 0;
-        for (let y = top; y > 0 && d < depth + 3; y--) {
+        for (let y = top; y > MIN_Y && d < depth + 3; y--) {
           const i = blockIndex(lx, y, lz);
           if (blocks[i] !== STONE) break; // hueco (voladizo)
           if (d === 0) blocks[i] = topBlock;
@@ -368,12 +368,13 @@ export class TerrainGenerator {
     }
 
     // --- 4. Cuevas (rejilla gruesa + interpolación trilineal) ---
-    const gyCount = Math.ceil((maxTop + 2) / CAVE_GRID) + 1;
+    // La rejilla empieza en MIN_Y (múltiplo de CAVE_GRID, como la de caveAt).
+    const gyCount = Math.ceil((maxTop + 2 - MIN_Y) / CAVE_GRID) + 1;
     const grid = new Float64Array(5 * 5 * gyCount);
     for (let gy = 0; gy < gyCount; gy++) {
       for (let gz = 0; gz < 5; gz++) {
         for (let gx = 0; gx < 5; gx++) {
-          grid[(gy * 5 + gz) * 5 + gx] = this.caveGridValue(x0 + gx * CAVE_GRID, gy * CAVE_GRID, z0 + gz * CAVE_GRID);
+          grid[(gy * 5 + gz) * 5 + gx] = this.caveGridValue(x0 + gx * CAVE_GRID, MIN_Y + gy * CAVE_GRID, z0 + gz * CAVE_GRID);
         }
       }
     }
@@ -383,12 +384,12 @@ export class TerrainGenerator {
         const ceiling = this.caveCeiling(x0 + lx, z0 + lz, top);
         const gx = lx >> 2, gz = lz >> 2;
         const fx = (lx & 3) / 4, fz = (lz & 3) / 4;
-        for (let y = 5; y <= ceiling && y <= maxTop; y++) {
+        for (let y = MIN_Y + 5; y <= ceiling && y <= maxTop; y++) {
           const i = blockIndex(lx, y, lz);
           const b = blocks[i];
           if (b === AIR) continue;
-          const gy = y >> 2;
-          const fy = (y & 3) / 4;
+          const gy = (y - MIN_Y) >> 2;
+          const fy = ((y - MIN_Y) & 3) / 4;
           const b00 = (gy * 5 + gz) * 5 + gx;
           const b01 = b00 + 25; // gy + 1
           const v = lerp(
@@ -404,7 +405,8 @@ export class TerrainGenerator {
             ),
             fy,
           );
-          if (v > 0) blocks[i] = y <= 10 ? LAVA : AIR;
+          // Por debajo de y = −54 las cuevas se llenan de lava (como en Minecraft).
+          if (v > 0) blocks[i] = y <= MIN_Y + 10 ? LAVA : AIR;
         }
       }
     }
@@ -415,15 +417,15 @@ export class TerrainGenerator {
         const inf = infos[lz * 16 + lx];
         const baseTop = tops[lz * 16 + lx];
         if (baseTop < SEA_LEVEL - 1) {
-          for (let y = SEA_LEVEL - 1; y > 0; y--) {
+          for (let y = SEA_LEVEL - 1; y > MIN_Y; y--) {
             const i = blockIndex(lx, y, lz);
             if (blocks[i] !== AIR) break;
             blocks[i] = WATER;
           }
           if (inf.temp < -0.58) blocks[blockIndex(lx, SEA_LEVEL - 1, lz)] = ICE;
         }
-        let top = 0;
-        for (let y = Math.max(maxTop, SEA_LEVEL); y > 0; y--) {
+        let top = MIN_Y;
+        for (let y = Math.max(maxTop, SEA_LEVEL); y > MIN_Y; y--) {
           if (blocks[blockIndex(lx, y, lz)] !== AIR) { top = y; break; }
         }
         tops[lz * 16 + lx] = top;
@@ -436,7 +438,7 @@ export class TerrainGenerator {
       for (let n = 0; n < count; n++) {
         let x = Math.floor(rng() * 16), y = minY + Math.floor(rng() * (maxY - minY)), z = Math.floor(rng() * 16);
         for (let s = 0; s < size; s++) {
-          if (x >= 0 && x < 16 && z >= 0 && z < 16 && y > 0 && y < WORLD_HEIGHT) {
+          if (x >= 0 && x < 16 && z >= 0 && z < 16 && y > MIN_Y && y < MAX_Y) {
             const i = blockIndex(x, y, z);
             if (blocks[i] === replace) blocks[i] = id;
           }
@@ -449,21 +451,25 @@ export class TerrainGenerator {
     vein(GRANITE, 3, 5, 90, 28, STONE);
     vein(DIORITE, 3, 5, 90, 28, STONE);
     vein(ANDESITE, 3, 5, 90, 28, STONE);
-    vein(GRAVEL, 2, 5, 70, 20, STONE);
-    vein(DIRT, 2, 5, 80, 20, STONE);
+    // Rangos de Minecraft 1.18: el hierro, el oro, el redstone, el lapislázuli y los diamantes
+    // bajan hasta el fondo del mundo (los diamantes abundan más cerca del lecho de roca).
+    vein(GRAVEL, 3, MIN_Y + 5, 70, 20, STONE);
+    vein(DIRT, 3, MIN_Y + 5, 80, 20, STONE);
     vein(COAL_ORE, 22, 5, 130, 9, STONE);
-    vein(IRON_ORE, 16, 5, 72, 7, STONE);
-    vein(GOLD_ORE, 4, 5, 34, 6, STONE);
-    vein(REDSTONE_ORE, 6, 5, 18, 7, STONE);
-    vein(LAPIS_ORE, 2, 8, 32, 6, STONE);
-    vein(DIAMOND_ORE, 2, 5, 17, 5, STONE);
+    vein(IRON_ORE, 24, MIN_Y + 5, 72, 7, STONE);
+    vein(GOLD_ORE, 7, MIN_Y + 5, 32, 6, STONE);
+    vein(REDSTONE_ORE, 8, MIN_Y + 5, 16, 7, STONE);
+    vein(REDSTONE_ORE, 4, MIN_Y + 5, MIN_Y + 32, 7, STONE);
+    vein(LAPIS_ORE, 4, MIN_Y + 5, 32, 6, STONE);
+    vein(DIAMOND_ORE, 2, MIN_Y + 5, 16, 5, STONE);
+    vein(DIAMOND_ORE, 3, MIN_Y + 5, MIN_Y + 20, 5, STONE);
 
     // --- 7. Plantas y flores ---
     const col = [0, 0, 0];
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
         const top = tops[lz * 16 + lx];
-        if (top >= WORLD_HEIGHT - 2) continue;
+        if (top >= MAX_Y - 2) continue;
         const ground = blocks[blockIndex(lx, top, lz)];
         const above = blockIndex(lx, top + 1, lz);
         if (blocks[above] !== AIR) continue;
@@ -517,7 +523,7 @@ export class TerrainGenerator {
         const lx = clx + Math.floor(pr() * 7) - 3, lz = clz + Math.floor(pr() * 7) - 3;
         if (lx < 0 || lx > 15 || lz < 0 || lz > 15) continue;
         const top = tops[lz * 16 + lx];
-        if (top >= WORLD_HEIGHT - 2 || blocks[blockIndex(lx, top, lz)] !== GRASS) continue;
+        if (top >= MAX_Y - 2 || blocks[blockIndex(lx, top, lz)] !== GRASS) continue;
         const above = blockIndex(lx, top + 1, lz);
         const cur = blocks[above];
         if (cur !== AIR && cur !== SHORT_GRASS && cur !== FERN) continue;
@@ -528,7 +534,7 @@ export class TerrainGenerator {
     // --- 8. Árboles y cactus (rejilla de celdas 4x4; pueden cruzar bordes de chunk) ---
     const set = (x: number, y: number, z: number, id: number, force: boolean) => {
       const lx = x - x0, lz = z - z0;
-      if (lx < 0 || lx >= 16 || lz < 0 || lz >= 16 || y <= 0 || y >= WORLD_HEIGHT) return;
+      if (lx < 0 || lx >= 16 || lz < 0 || lz >= 16 || y <= MIN_Y || y >= MAX_Y) return;
       const i = blockIndex(lx, y, lz);
       const cur = blocks[i];
       if (cur === AIR || (force && (BLOCK_REPLACEABLE[cur] || BLOCK_RENDER[cur] === R_CROSS || cur === OAK_LEAVES || cur === BIRCH_LEAVES || cur === SPRUCE_LEAVES))) {
@@ -583,12 +589,13 @@ export class TerrainGenerator {
       }
     }
 
-    // --- 9. Lecho de roca ---
+    // --- 9. Lecho de roca (en y = −64 y salpicado hasta −60) ---
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
-        blocks[blockIndex(lx, 0, lz)] = BEDROCK;
-        for (let y = 1; y < 4; y++) {
-          if (hashToFloat(hash3(x0 + lx, y, z0 + lz, seed ^ 0xbed)) < (4 - y) / 5) blocks[blockIndex(lx, y, lz)] = BEDROCK;
+        blocks[blockIndex(lx, MIN_Y, lz)] = BEDROCK;
+        for (let k = 1; k < 4; k++) {
+          const y = MIN_Y + k;
+          if (hashToFloat(hash3(x0 + lx, y, z0 + lz, seed ^ 0xbed)) < (4 - k) / 5) blocks[blockIndex(lx, y, lz)] = BEDROCK;
         }
       }
     }
@@ -596,8 +603,8 @@ export class TerrainGenerator {
     // --- 10. Alturas finales y tinte del bioma ---
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
-        let y = WORLD_HEIGHT - 1;
-        while (y > 0 && blocks[blockIndex(lx, y, lz)] === AIR) y--;
+        let y = MAX_Y - 1;
+        while (y > MIN_Y && blocks[blockIndex(lx, y, lz)] === AIR) y--;
         heights[lz * 16 + lx] = y;
       }
     }

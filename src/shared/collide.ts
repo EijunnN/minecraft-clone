@@ -1,6 +1,7 @@
 // Colisiones con cajas (AABB) al estilo de Minecraft: se recogen las cajas de colisión de los
 // bloques cercanos (cubos completos o formas: losas, escaleras, vallas, puertas…) y el movimiento
 // se recorta eje a eje, con subida automática de escalones bajos (step-up).
+import { MAX_Y } from './constants';
 import { BLOCK_COLLIDE, blockCollisionBoxes } from './blocks';
 
 export interface BlockGetter {
@@ -24,7 +25,7 @@ export function gatherBoxes(
   const y0 = Math.floor(minY) - 1, y1 = Math.floor(maxY);
   const z0 = Math.floor(minZ), z1 = Math.floor(maxZ);
   for (let y = y0; y <= y1; y++) {
-    if (y >= 256) continue;
+    if (y >= MAX_Y) continue;
     for (let z = z0; z <= z1; z++) {
       for (let x = x0; x <= x1; x++) {
         const id = w.getBlock(x, y, z);

@@ -5,7 +5,7 @@ import {
   AIR, BEDROCK, FURNACE_LIT, BLOCKS, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, BLOCK_REPLACEABLE, isValidBlockId,
   isBed, familyBase, COMPOSTER, CAMPFIRE,
 } from '../../blocks';
-import { WORLD_HEIGHT, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
+import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { ITEMS, BONE_MEAL, PLACEABLE_BLOCKS } from '../../items';
 import { planPlacement, toggleEdits, isUsable } from '../../placement';
@@ -29,7 +29,7 @@ export class BlockEdits {
     const ctx = this.ctx;
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z), b = Number(msg.b);
     if (![x, y, z, b].every(Number.isInteger)) return;
-    if (Math.abs(x) > WORLD_LIMIT || Math.abs(z) > WORLD_LIMIT || y < 1 || y >= WORLD_HEIGHT) return;
+    if (Math.abs(x) > WORLD_LIMIT || Math.abs(z) > WORLD_LIMIT || y <= MIN_Y || y >= MAX_Y) return;
     if (!isValidBlockId(b) || b === BEDROCK || BLOCK_FLUID_LEVEL[b] !== 0 || (b >= FURNACE_LIT && b < FURNACE_LIT + 4)) {
       ctx.reject(s, x, y, z);
       return;
@@ -83,7 +83,7 @@ export class BlockEdits {
     if (![x, y, z, item].every(Number.isInteger) || !Number.isFinite(yaw) || n.length !== 3 || p.length !== 3) return;
     if (!n.every((v) => v === -1 || v === 0 || v === 1) || Math.abs(n[0]) + Math.abs(n[1]) + Math.abs(n[2]) !== 1) return;
     if (!p.every(Number.isFinite) || Math.abs(p[0] - x - 0.5) > 1 || Math.abs(p[1] - y - 0.5) > 1 || Math.abs(p[2] - z - 0.5) > 1) return;
-    if (Math.abs(x) > WORLD_LIMIT || Math.abs(z) > WORLD_LIMIT || y < 0 || y >= WORLD_HEIGHT) return;
+    if (Math.abs(x) > WORLD_LIMIT || Math.abs(z) > WORLD_LIMIT || y < MIN_Y || y >= MAX_Y) return;
     // Deshacer la predicción del cliente en las celdas que pudo tocar.
     const undo = (): void => {
       const cells = [[0, 0, 0], [n[0], n[1], n[2]], [n[0], n[1] + 1, n[2]]];

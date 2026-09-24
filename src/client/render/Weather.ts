@@ -28,18 +28,18 @@ export class Weather {
     gl.bindVertexArray(null);
     this.heightTex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, this.heightTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 64, 64, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array(64 * 64));
+    // Alturas del mundo tal cual (pueden ser negativas o pasar de 255).
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, 64, 64, 0, gl.RED, gl.FLOAT, new Float32Array(64 * 64).fill(-1e4));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
 
   /** Alturas (bloque sólido más alto) de un área de 64x64 con esquina en (x0, z0). */
-  setHeights(x0: number, z0: number, heights: Uint8Array): void {
+  setHeights(x0: number, z0: number, heights: Float32Array): void {
     const gl = this.gl;
     this.origin = [x0, z0];
     gl.bindTexture(gl.TEXTURE_2D, this.heightTex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 64, gl.RED, gl.UNSIGNED_BYTE, heights);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 64, gl.RED, gl.FLOAT, heights);
   }
 
   draw(camX: number, camY: number, camZ: number, intensity: number, snow: boolean, time: number, irradiance: WebGLTexture): void {

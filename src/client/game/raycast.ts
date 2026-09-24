@@ -1,5 +1,6 @@
 // Trazado de rayos por la rejilla de vóxeles (DDA de Amanatides & Woo) con formas reales
 // para plantas, antorchas, cactus y bloques hechos de cajas (losas, escaleras, vallas, puertas…).
+import { MIN_Y, MAX_Y } from '../../shared/constants';
 import {
   BLOCK_RENDER, BLOCK_FLUID_LEVEL, R_CUBE, R_CUTOUT, R_TRANSLUCENT, R_WATER, R_LAVA, AIR, blockSelectionBoxes,
 } from '../../shared/blocks';
@@ -103,9 +104,7 @@ export function raycast(
     } else {
       z += stepZ; t = tMZ; tMZ += tDZ; nx = 0; ny = 0; nz = -stepZ;
     }
-    if (y < 0 || y > 255) {
-      if ((y < 0 && stepY < 0) || (y > 255 && stepY > 0)) break;
-    }
+    if ((y < MIN_Y && stepY < 0) || (y >= MAX_Y && stepY > 0)) break;
   }
   return null;
 }

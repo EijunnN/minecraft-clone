@@ -9,7 +9,7 @@ import {
   PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, STATE_MASK, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
   stackFromWire, type ClientMsg, type ServerMsg, type PlayerInfo, type WorldTime, type PlayerSave, type WireStack,
 } from '../protocol';
-import { WORLD_LIMIT, CHUNK_SIZE } from '../constants';
+import { WORLD_LIMIT, CHUNK_SIZE, VOID_Y } from '../constants';
 import { AIR, isValidBlockId } from '../blocks';
 import { sanitizeStack } from '../containers';
 import { ITEMS, isValidItem } from '../items';
@@ -555,7 +555,7 @@ export class GameServer {
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     const TAU = Math.PI * 2;
     const yaw = ((r[0] % TAU) + TAU) % TAU;
-    s.p = [r2(clamp(p[0], -WORLD_LIMIT, WORLD_LIMIT)), r2(clamp(p[1], -128, 1024)), r2(clamp(p[2], -WORLD_LIMIT, WORLD_LIMIT))];
+    s.p = [r2(clamp(p[0], -WORLD_LIMIT, WORLD_LIMIT)), r2(clamp(p[1], VOID_Y - 64, 1024)), r2(clamp(p[2], -WORLD_LIMIT, WORLD_LIMIT))];
     s.r = [Math.round(yaw * 1000) / 1000, Math.round(clamp(r[1], -Math.PI / 2, Math.PI / 2) * 1000) / 1000];
     s.s = (Number(msg.s) | 0) & STATE_MASK;
     const h = Number(msg.h), o = Number(msg.o);

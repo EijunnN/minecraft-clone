@@ -5,14 +5,15 @@ import {
   AIR, GRASS, DIRT, SNOWY_GRASS, CACTUS, SUGAR_CANE, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_RENDER, BLOCK_REPLACEABLE,
   R_CROSS,
 } from '../../blocks';
-import { WORLD_HEIGHT, CHUNK_SIZE } from '../../constants';
+import { MIN_Y, MAX_Y, CHUNK_SIZE, CHUNK_VOLUME, indexY } from '../../constants';
 import { leafDecayDrops } from '../drops';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import { LOGS, LEAVES, SAPLINGS, SOIL } from './plants';
 import { SIM_RADIUS, type ServerContext } from './context';
 
 /** Ticks aleatorios por chunk y tick (Minecraft usa 3 por sección de 16³ = 48 por columna). */
-const RANDOM_TICKS_PER_CHUNK = 48;
+/** 48 por cada 256 de alto (la misma frecuencia por bloque que antes de subir la altura). */
+const RANDOM_TICKS_PER_CHUNK = 72;
 
 /** Manejador de ticks aleatorios: devuelve true si el bloque era suyo. */
 export type RandomTickHandler = (id: number, x: number, y: number, z: number) => boolean;
@@ -96,10 +97,10 @@ export class Nature {
     const rand = () => this.ctx.rand();
     for (const c of this.loadedNearPlayers()) {
       for (let k = 0; k < RANDOM_TICKS_PER_CHUNK; k++) {
-        const idx = (rand() * 65536) | 0;
+        const idx = (rand() * CHUNK_VOLUME) | 0;
         const id = c.blocks[idx];
         if (id === AIR) continue;
-        const x = c.cx * 16 + (idx & 15), y = idx >> 8, z = c.cz * 16 + ((idx >> 4) & 15);
+        const x = c.cx * 16 + (idx & 15), y = indexY(idx), z = c.cz * 16 + ((idx >> 4) & 15);
         if (SAPLINGS.has(id)) {
           this.growTree(x, y, z, SAPLINGS.get(id)!);
         } else if (id === GRASS || id === SNOWY_GRASS) {
@@ -161,7 +162,7 @@ export class Nature {
     const r = this.ctx.rand();
     w.setBlock(x, y, z, AIR);
     w.gen.growTree(kind, x, y, z, r, (bx, by, bz, id, force) => {
-      if (by <= 0 || by >= WORLD_HEIGHT) return;
+      if (by <= MIN_Y || by >= MAX_Y) return;
       const cur = w.getBlock(bx, by, bz);
       if (cur < 0) return;
       if (cur === AIR || (force && (LEAVES.has(cur) || BLOCK_RENDER[cur] === R_CROSS || BLOCK_REPLACEABLE[cur]))) {

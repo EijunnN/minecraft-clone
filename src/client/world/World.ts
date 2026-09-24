@@ -1,6 +1,6 @@
 // Mundo en el hilo principal: almacena columnas de chunk, planifica generación/mallado en
 // un pool de Web Workers y aplica las ediciones (locales y de la red).
-import { CHUNK_SIZE, WORLD_HEIGHT, blockIndex, chunkKey } from '../../shared/constants';
+import { CHUNK_SIZE, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../../shared/constants';
 import { AIR, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, isValidBlockId } from '../../shared/blocks';
 import type { WorkerRequest, WorkerResponse } from './worldWorker';
 import { TerrainGenerator } from '../../shared/world/terrain';
@@ -105,8 +105,8 @@ export class World {
 
   /** Id del bloque, o -1 si la columna no está cargada. */
   getBlock(x: number, y: number, z: number): number {
-    if (y < 0) return -1;
-    if (y >= WORLD_HEIGHT) return AIR;
+    if (y < MIN_Y) return -1;
+    if (y >= MAX_Y) return AIR;
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
     const col = this.columns.get(chunkKey(cx, cz));
@@ -116,8 +116,8 @@ export class World {
 
   /** Luz empaquetada (cielo << 4 | bloque); 0xf0 si no hay datos. */
   getLight(x: number, y: number, z: number): number {
-    if (y >= WORLD_HEIGHT) return 0xf0;
-    if (y < 0) return 0;
+    if (y >= MAX_Y) return 0xf0;
+    if (y < MIN_Y) return 0;
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
     const col = this.columns.get(chunkKey(cx, cz));
@@ -189,7 +189,7 @@ export class World {
 
   /** Cambia un bloque. Devuelve el id anterior (o -1 si no se pudo). */
   setBlock(x: number, y: number, z: number, id: number): number {
-    if (y < 0 || y >= WORLD_HEIGHT || !isValidBlockId(id)) return -1;
+    if (y < MIN_Y || y >= MAX_Y || !isValidBlockId(id)) return -1;
     this.recordEdit(x, y, z, id);
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
@@ -300,7 +300,7 @@ export class World {
       if (!col) {
         if (d2 > (R + 2) * (R + 2)) continue;
         col = {
-          cx, cz, key, blocks: null, light: null, maxY: 0, genPending: false, meshPending: false,
+          cx, cz, key, blocks: null, light: null, maxY: MIN_Y, genPending: false, meshPending: false,
           dirty: true, meshed: false, version: 0, mesh: null,
         };
         this.columns.set(key, col);
@@ -359,7 +359,8 @@ export class World {
     col.dirty = false;
     this.jobs.set(id, { kind: 'mesh', col, version: col.version });
     slot.inFlight++;
-    const chunks: ArrayBuffer[] = nb.map((n) => n.blocks!.slice(0, (Math.min(255, n.maxY + 1) + 1) << 8).buffer);
+    // Sólo las filas hasta el bloque más alto (+1); el mallador toma el resto como aire.
+    const chunks: ArrayBuffer[] = nb.map((n) => n.blocks!.slice(0, (Math.min(MAX_Y - 1, n.maxY + 1) - MIN_Y + 1) << 8).buffer);
     const req: WorkerRequest = { type: 'mesh', id, cx: col.cx, cz: col.cz, chunks };
     slot.worker.postMessage(req, chunks);
   }
@@ -399,7 +400,7 @@ export class World {
     if (msg.type === 'gen') {
       col.genPending = false;
       col.blocks = msg.blocks;
-      let maxY = 0;
+      let maxY = MIN_Y;
       for (let i = 0; i < 256; i++) if (msg.heights[i] > maxY) maxY = msg.heights[i];
       col.maxY = maxY;
       // Aplicar ediciones guardadas de este chunk.
@@ -407,7 +408,7 @@ export class World {
       if (ed) {
         for (const [idx, id] of ed) {
           col.blocks[idx] = id;
-          const y = idx >> 8;
+          const y = indexY(idx);
           if (id !== AIR && y > col.maxY) col.maxY = y;
         }
       }

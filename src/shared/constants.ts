@@ -3,7 +3,15 @@
 export const CHUNK_SIZE = 16;
 export const CHUNK_SHIFT = 4;
 export const CHUNK_MASK = 15;
-export const WORLD_HEIGHT = 256;
+/**
+ * Altura del mundo como en Minecraft 1.18+: de y = −64 (lecho de roca) a y = 319. Las columnas de
+ * chunk guardan WORLD_HEIGHT filas; la fila 0 es y = MIN_Y.
+ */
+export const MIN_Y = -64;
+export const MAX_Y = 320;
+export const WORLD_HEIGHT = MAX_Y - MIN_Y;
+/** Por debajo de esta altura el vacío hace daño (y las criaturas desaparecen). */
+export const VOID_Y = MIN_Y - 64;
 export const CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE;
 export const CHUNK_VOLUME = CHUNK_AREA * WORLD_HEIGHT;
 
@@ -27,9 +35,19 @@ export const MAX_BLOCK_ID = 4096;
 /** Primer id de los bloques nuevos (los 0–255 antiguos no cambian; 256–1023 son objetos). */
 export const FIRST_EXTENDED_BLOCK = 1024;
 
-/** Índice de un bloque dentro de una columna de chunk (x, z en 0..15, y en 0..255). */
+/** Índice de un bloque dentro de una columna de chunk (x, z en 0..15, y la altura del mundo). */
 export function blockIndex(x: number, y: number, z: number): number {
-  return (y << 8) | (z << 4) | x;
+  return ((y - MIN_Y) << 8) | (z << 4) | x;
+}
+
+/** Altura del mundo de un índice de columna. */
+export function indexY(i: number): number {
+  return (i >> 8) + MIN_Y;
+}
+
+/** ¿Está la altura dentro del mundo? */
+export function inWorldY(y: number): boolean {
+  return y >= MIN_Y && y < MAX_Y;
 }
 
 export function chunkKey(cx: number, cz: number): string {

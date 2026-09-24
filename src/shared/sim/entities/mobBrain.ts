@@ -7,6 +7,7 @@ import { moveBody, lineOfSight } from '../physics';
 import { findPath, standable } from '../pathfind';
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type AI, type Entity } from './types';
 import type { Entities } from './Entities';
+import { MIN_Y, VOID_Y } from '../../constants';
 
 export class MobBrain {
   constructor(private m: Entities) {}
@@ -29,7 +30,7 @@ export class MobBrain {
   isSunlit(e: Entity): boolean {
     if (this.m.host.sunHeight() < 0.05 || this.m.host.raining() > 0.3 || e.inWater) return false;
     const top = this.m.w.skyTop(Math.floor(e.x), Math.floor(e.z));
-    return top >= -1 && e.y + e.height > top + 1;
+    return top >= MIN_Y - 1 && e.y + e.height > top + 1;
   }
 
   mobTick(e: Entity, dt: number, players: PlayerView[]): void {
@@ -52,7 +53,7 @@ export class MobBrain {
       e.invuln = 0;
       if (this.m.damage(e, 1, e.x, e.z, null, 0)) return;
     }
-    if (e.y < -64) {
+    if (e.y < VOID_Y) {
       this.m.kill(e, false);
       return;
     }
