@@ -194,6 +194,116 @@ function toolSprite(material: string, kind: string): SpriteDef {
 }
 
 // ---------------------------------------------------------------------------
+// Armaduras (formas compartidas; '1'–'4' = material, 'k' = brillo o costura)
+// ---------------------------------------------------------------------------
+
+/** Rampas de armadura: las de las herramientas y el cuero. */
+const ARMOR_INKS: Record<string, Record<string, Ink>> = {
+  leather: ramp([204, 142, 90], [170, 108, 62], [138, 82, 44], [104, 58, 30], [56, 30, 14]),
+  iron: TOOL_MATERIALS.iron,
+  golden: TOOL_MATERIALS.golden,
+  diamond: TOOL_MATERIALS.diamond,
+};
+
+/** Detalle claro: costuras en el cuero, destello en el metal. */
+const ARMOR_ACCENT: Record<string, Ink> = {
+  leather: ink([226, 184, 132], [56, 30, 14]),
+  iron: ink([255, 255, 255], [64, 64, 70]),
+  golden: ink([255, 255, 226], [92, 54, 8]),
+  diamond: ink([246, 255, 255], [12, 66, 66]),
+};
+
+const HELMET = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '.....11k122.....',
+  '....11222223....',
+  '...1122222233...',
+  '...1222222233...',
+  '...1233333334...',
+  '...124....234...',
+  '...124....234...',
+  '...334....344...',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+const CHESTPLATE = [
+  '................',
+  '................',
+  '..1122....2233..',
+  '.112222..222233.',
+  '.11k22222222233.',
+  '.12222k32222233.',
+  '.12.22233222.34.',
+  '.23.12222223.44.',
+  '....1k233223....',
+  '....12222223....',
+  '....12233223....',
+  '....12222233....',
+  '....12222333....',
+  '....33333334....',
+  '................',
+  '................',
+];
+
+const LEGGINGS = [
+  '................',
+  '................',
+  '...1112222223...',
+  '...1233k33334...',
+  '...1222222233...',
+  '...1222..2223...',
+  '...1223..2233...',
+  '...1k23..1k33...',
+  '...1223..2233...',
+  '...1223..2233...',
+  '...1223..2233...',
+  '...1223..2234...',
+  '...1223..2234...',
+  '...3344..3344...',
+  '................',
+  '................',
+];
+
+const BOOTS = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '...1111..1122...',
+  '...1223..2233...',
+  '...1223..2234...',
+  '...1k23..1k34...',
+  '...1223..2234...',
+  '..11223..22334..',
+  '.1k2223..22k334.',
+  '.333334..333344.',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+const ARMOR_SHAPES: Record<string, readonly string[]> = {
+  helmet: HELMET,
+  chestplate: CHESTPLATE,
+  leggings: LEGGINGS,
+  boots: BOOTS,
+};
+
+function armorSprite(material: string, piece: string): SpriteDef {
+  const m = ARMOR_INKS[material];
+  const rows = ARMOR_SHAPES[piece];
+  if (!m || !rows) throw new Error('Armadura desconocida: ' + material + '_' + piece);
+  return { rows, inks: { ...m, k: ARMOR_ACCENT[material] } };
+}
+
+// ---------------------------------------------------------------------------
 // Sprites sueltos
 // ---------------------------------------------------------------------------
 
@@ -1467,6 +1577,7 @@ const SPRITES: Record<string, SpriteDef> = {
 // ---------------------------------------------------------------------------
 
 const TOOL_RE = /^(wooden|stone|iron|golden|diamond)_(pickaxe|axe|shovel|sword|hoe)$/;
+const ARMOR_RE = /^(leather|iron|golden|diamond)_(helmet|chestplate|leggings|boots)$/;
 
 /** Marcador para sprites que aún no tienen dibujo. */
 const PLACEHOLDER: SpriteDef = {
@@ -1479,6 +1590,8 @@ const PLACEHOLDER: SpriteDef = {
 function spriteDef(name: string): SpriteDef {
   const tool = TOOL_RE.exec(name);
   if (tool) return toolSprite(tool[1], tool[2]);
+  const armor = ARMOR_RE.exec(name);
+  if (armor) return armorSprite(armor[1], armor[2]);
   const def = Object.prototype.hasOwnProperty.call(SPRITES, name) ? SPRITES[name] : undefined;
   if (!def) {
     console.warn('Sprite de objeto sin dibujo (se usa un marcador): ' + name);

@@ -282,7 +282,7 @@ export class GameServer {
   }
 
   private info(s: Session): PlayerInfo {
-    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h };
+    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, a: s.a };
   }
 
   /** Envía las ediciones pendientes respetando el orden en que se aplicaron. */
@@ -310,7 +310,7 @@ export class GameServer {
     const now = this.now();
     this.sessions.set(conn, {
       conn, id: (this.nextSessionId++).toString(36) + Math.random().toString(36).slice(2, 7), joined: false,
-      joinedAt: now, lastMsg: now, name: '', shirt: '#3a7bd5', p: [0, 100, 0], r: [0, 0], s: 0, h: 0, mode: 's',
+      joinedAt: now, lastMsg: now, name: '', shirt: '#3a7bd5', p: [0, 100, 0], r: [0, 0], s: 0, h: 0, a: [0, 0, 0, 0], mode: 's',
       lookAt: -1, lookUntil: 0, lastAttack: 0, tokens: 60, tokenTime: now, known: new Map(), container: null,
       save: null, saveDirty: false, sleeping: null, sleepTicks: 0, bed: null,
     });
@@ -537,7 +537,13 @@ export class GameServer {
     s.s = (Number(msg.s) | 0) & 0xff;
     const h = Number(msg.h);
     s.h = Number.isInteger(h) && isValidItem(h) ? h : 0;
-    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h }, s);
+    // Armadura visible: cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies); lo demás es 0.
+    const a = Array.isArray(msg.a) ? msg.a : [];
+    s.a = [0, 1, 2, 3].map((slot) => {
+      const id = Number(a[slot]);
+      return Number.isInteger(id) && isValidItem(id) && ITEMS[id]?.armor?.slot === slot ? id : 0;
+    });
+    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, a: s.a }, s);
   }
 
   /** Distancia del ojo del jugador al centro del bloque. */

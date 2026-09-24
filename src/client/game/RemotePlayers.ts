@@ -31,6 +31,12 @@ function wrapAngle(a: number): number {
   return Number.isFinite(a) ? ((a % TAU) + TAU) % TAU : 0;
 }
 
+/** Armadura que llega de la red: 4 ids enteros (el servidor ya valida cada ranura). */
+function armorFrom(a: unknown): number[] {
+  const src = Array.isArray(a) ? a : [];
+  return [0, 1, 2, 3].map((i) => (Number.isInteger(src[i]) && src[i] > 0 ? src[i] : 0));
+}
+
 export class RemotePlayer {
   readonly id: string;
   name: string;
@@ -51,14 +57,16 @@ export class RemotePlayer {
     this.view = {
       id: info.id, name: info.name, shirt: info.shirt, x: info.p[0], y: info.p[1], z: info.p[2],
       bodyYaw: info.r[0], headYaw: info.r[0], pitch: info.r[1], walkPhase: 0, walkAmount: 0, swing: 0,
-      sneaking: false, light: [1, 0],
+      sneaking: false, light: [1, 0], armor: armorFrom(info.a),
     };
     this.lastX = info.p[0];
     this.lastZ = info.p[2];
   }
 
-  push(p: [number, number, number], r: [number, number], s: number): void {
+  push(p: [number, number, number], r: [number, number], s: number, a?: number[]): void {
     if (!Array.isArray(p) || !Array.isArray(r) || ![p[0], p[1], p[2], r[0], r[1]].every(Number.isFinite)) return;
+    // La armadura se cambia al instante (no se interpola).
+    if (a !== undefined) this.view.armor = armorFrom(a);
     const now = performance.now();
     const pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, r[1]));
     this.snaps.push({ t: now, x: p[0], y: p[1], z: p[2], yaw: wrapAngle(r[0]), pitch, s: s | 0 });
