@@ -219,12 +219,12 @@ Ya hecho: camas (dormir de noche con todos los jugadores, reaparición en la cam
 dobles, trampillas, portillos, vallas, escaleras y losas de 8 materiales, paneles de cristal,
 escaleras de mano y antorchas en la pared. Granja: azadas, tierra de cultivo (humedad, pisoteo), trigo,
 zanahorias, patatas y remolachas, polvo de hueso, pan, patata asada, azúcar, fardo de heno y tarta;
-criar animales (crías que crecen, seguir la comida), esquilar, ordeñar y huevos.
+criar animales (crías que crecen, seguir la comida), esquilar, ordeñar y huevos. Armaduras de cuero,
+hierro, oro y diamante (con modelo en el jugador) y experiencia (orbes y niveles).
 
-Pendiente: armaduras (con modelo en el jugador), escudo, experiencia, efectos de
-estado; calabaza, sandía, compostador, lanzar huevos, pesca; muros,
-carteles, cofres dobles, camas de colores y puertas de hierro;
-ahumador, alto horno, fogata, cortapiedras.
+Pendiente: escudo, efectos de estado; calabaza, sandía, compostador, lanzar huevos, pesca; muros,
+carteles, cofres dobles y camas de colores; ahumador, alto horno, fogata, cortapiedras. (Las puertas
+de hierro pasan a la fase 7: sin redstone no se pueden abrir.)
 
 ### Fase 5 — Un mundo más rico (XL)
 Más biomas (pantano, jungla, bosque oscuro, badlands, champiñonal, cerezal, prado, picos de hielo,
