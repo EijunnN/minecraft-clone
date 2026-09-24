@@ -251,6 +251,9 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   sheep: [WHEAT],
   pig: [CARROT, POTATO, BEETROOT],
   chicken: [WHEAT_SEEDS, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS],
+  goat: [WHEAT],
+  rabbit: [CARROT],
+  fox: [GLOW_BERRIES],
 };
 
 export const ITEM_COUNT = nextId;

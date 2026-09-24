@@ -12,7 +12,10 @@
 // trata alpha 128–250 como brillo propio). Las zonas del atlas sin uso quedan
 // transparentes (alpha 0).
 
-import { MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID } from '../../shared/mobs';
+import {
+  MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
+  MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
+} from '../../shared/mobs';
 
 export interface MobTexture {
   width: number;
@@ -1012,6 +1015,263 @@ function squid(t: Texel): Paint {
 }
 
 // ---------------------------------------------------------------------------
+// Animales salvajes (fase 6): pelaje común
+// ---------------------------------------------------------------------------
+
+/** Pelaje: ruido suave más grano fino, lomo algo más claro y vientre/bajos más oscuros. */
+function fur(t: Texel, pal: readonly RGB[], seed: number, streak = 1): RGB {
+  let v = 0.55 * vnoise(t.x * streak, t.y / streak, t.z * streak, 2.4, seed) + 0.25 * vnoise(t.x, t.y, t.z, 1.1, seed + 1) + 0.2 * rnd(t, seed + 2);
+  if (t.f === TOP) v += 0.1;
+  if (t.f === BOTTOM) v -= 0.2;
+  else if (side(t) && t.y < 1.2) v -= 0.1;
+  return tone(pal, clamp01((v - 0.15) / 0.7));
+}
+
+// ---------------------------------------------------------------------------
+// Zorro
+// ---------------------------------------------------------------------------
+
+const FOX_ORANGE: RGB[] = [
+  [184, 88, 32],
+  [204, 106, 42],
+  [222, 124, 54],
+  [234, 142, 70],
+];
+const FOX_WHITE: RGB = [238, 230, 216];
+const FOX_WHITE_D: RGB = [214, 204, 190];
+const FOX_DARK: RGB = [50, 36, 32];
+const FOX_FACE = [
+  '........',
+  '........',
+  '.KK..KK.',
+  'ww....ww',
+  'wwwwwwww',
+  'wwwwwwww',
+];
+
+function fox(t: Texel): Paint {
+  const seed = 1313;
+  const orange = (): RGB => fur(t, FOX_ORANGE, seed);
+  const white = (): RGB => (rnd(t, seed + 3) > 0.8 ? FOX_WHITE_D : FOX_WHITE);
+  switch (t.g) {
+    case 'head':
+      if (t.f === FRONT) return mapAt(FOX_FACE, t, { K: FOX_DARK, w: white() }) ?? orange();
+      if (t.f === BOTTOM) return white();
+      if ((t.f === PX || t.f === NX) && t.y < 3) return white();
+      return orange();
+    case 'snout':
+      if (t.f === FRONT) return mapAt(['.KK.', 'wwww'], t, { K: FOX_DARK, w: white() }) ?? orange();
+      if (t.f === BOTTOM || ((t.f === PX || t.f === NX) && t.y < 1)) return white();
+      return orange();
+    case 'ear':
+      if (t.y > 1.2 || t.f === TOP) return FOX_DARK;
+      return t.f === FRONT ? [60, 44, 40] : orange();
+    case 'tail':
+      // Punta blanca de la cola.
+      if (t.z > 6.5 + (rnd(t, seed + 4) > 0.5 ? 0.6 : 0)) return white();
+      return orange();
+    case 'leg':
+      // Calcetines oscuros.
+      if (t.f === BOTTOM) return [34, 26, 24];
+      if (t.y < 3.5 + (rnd(t, seed + 5) > 0.6 ? 0.6 : 0)) return FOX_DARK;
+      return orange();
+    default:
+      if (t.f === BOTTOM) return white();
+      if (t.f === FRONT && t.y < 4) return white(); // pecho
+      return orange();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lobo
+// ---------------------------------------------------------------------------
+
+const WOLF_GREY: RGB[] = [
+  [112, 106, 100],
+  [138, 132, 126],
+  [164, 158, 152],
+  [190, 186, 180],
+  [212, 208, 202],
+];
+const WOLF_DARK: RGB = [44, 40, 38];
+const WOLF_LIGHT: RGB = [214, 208, 198];
+const WOLF_FACE = [
+  '......',
+  '......',
+  'EK..KE',
+  '......',
+  'll..ll',
+  '......',
+];
+
+function wolf(t: Texel): Paint {
+  const seed = 1717;
+  const grey = (k = 1): RGB => scale(fur(t, WOLF_GREY, seed), k);
+  switch (t.g) {
+    case 'head':
+      if (t.f === FRONT) return mapAt(WOLF_FACE, t, { E: [236, 232, 224], K: WOLF_DARK, l: WOLF_LIGHT }) ?? grey();
+      if (t.f === BOTTOM) return WOLF_LIGHT;
+      return grey();
+    case 'snout':
+      if (t.f === FRONT) return mapAt(['.K.'], t, { K: WOLF_DARK }) ?? WOLF_LIGHT;
+      if (t.f === TOP) return grey(0.95);
+      return WOLF_LIGHT;
+    case 'ear':
+      return t.y > 1.2 || t.f === TOP ? grey(0.75) : grey();
+    case 'tail':
+      return t.z > 6.5 ? grey(0.7) : grey();
+    case 'leg':
+      if (t.f === BOTTOM || t.y < 1) return [96, 90, 86];
+      return side(t) && t.i === t.fw - 1 ? grey(0.92) : grey(1.04);
+    case 'mane': {
+      // Melena desgreñada: mechones verticales y el cuello claro por delante.
+      if (t.f === FRONT && t.y < 3) return WOLF_LIGHT;
+      const c = fur(t, WOLF_GREY, seed + 9, 1.8);
+      return t.f === TOP ? scale(c, 0.92) : c;
+    }
+    default:
+      // Lomo más oscuro (silla) sobre el cuerpo.
+      if (t.f === TOP) return grey(0.8);
+      if (t.f === BOTTOM) return WOLF_LIGHT;
+      if (side(t) && t.y > 4.5) return grey(0.88);
+      return grey();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cabra
+// ---------------------------------------------------------------------------
+
+const GOAT_FUR: RGB[] = [
+  [178, 170, 156],
+  [204, 198, 184],
+  [224, 220, 208],
+  [238, 236, 226],
+  [248, 246, 238],
+];
+const GOAT_FACE = [
+  '.....',
+  'YK.KY',
+  '.....',
+  '.....',
+  '.nnn.',
+  '.nNn.',
+];
+
+function goat(t: Texel): Paint {
+  const seed = 1414;
+  // Pelo largo: vetas verticales.
+  const hair = (): RGB => fur(t, GOAT_FUR, seed, 2.2);
+  switch (t.g) {
+    case 'head':
+      if (t.f === FRONT) {
+        return mapAt(GOAT_FACE, t, { Y: [206, 170, 60], K: [30, 26, 22], n: [196, 184, 170], N: [120, 96, 90] }) ?? hair();
+      }
+      return hair();
+    case 'horn': {
+      // Cuerno estriado, más claro hacia la punta.
+      const ring = Math.floor(t.y) % 2 === 0 ? 0.92 : 1;
+      const base: RGB = t.y > 3.5 ? [196, 186, 164] : [150, 140, 122];
+      return scale(base, ring);
+    }
+    case 'beard':
+      return tone(GOAT_FUR, 0.3 + 0.3 * rnd(t, seed + 3));
+    case 'ear':
+      if (t.f === FRONT || t.f === BOTTOM) return [212, 168, 156];
+      return hair();
+    case 'leg':
+      if (t.f === BOTTOM) return [52, 46, 42];
+      if (t.y < 1.5) return [74, 66, 60];
+      return hair();
+    default:
+      if (t.f === BOTTOM) return tone(GOAT_FUR, 0.15);
+      // Faldón de pelo más largo y oscuro en los bajos.
+      if (side(t) && t.y < 2.5 + (rnd(t, seed + 4) > 0.5 ? 1 : 0)) return tone(GOAT_FUR, 0.1 + 0.2 * rnd(t, seed + 5));
+      return hair();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Oso polar
+// ---------------------------------------------------------------------------
+
+const BEAR_FUR: RGB[] = [
+  [204, 204, 196],
+  [222, 222, 214],
+  [236, 236, 230],
+  [246, 246, 240],
+  [252, 252, 248],
+];
+const BEAR_MUZZLE: RGB = [226, 222, 208];
+const BEAR_FACE = [
+  '........',
+  '........',
+  '........',
+  '.KK..KK.',
+  '........',
+  '........',
+  '........',
+  '........',
+];
+
+function polarBear(t: Texel): Paint {
+  const seed = 1515;
+  const white = (): RGB => fur(t, BEAR_FUR, seed);
+  switch (t.g) {
+    case 'head':
+      if (t.f === FRONT) return mapAt(BEAR_FACE, t, { K: [24, 22, 24] }) ?? white();
+      return white();
+    case 'snout':
+      if (t.f === FRONT) return mapAt(['.KKK.', '..K..', '.....'], t, { K: [30, 28, 30] }) ?? BEAR_MUZZLE;
+      return t.f === TOP ? white() : BEAR_MUZZLE;
+    case 'ear':
+      return t.f === FRONT ? [190, 186, 180] : white();
+    case 'leg':
+      // Almohadillas negras bajo las patas y garras claras por delante.
+      if (t.f === BOTTOM) return [40, 38, 40];
+      if (t.f === FRONT && t.y < 1 && t.i % 2 === 1) return [120, 116, 110];
+      return white();
+    default:
+      return white();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Conejo
+// ---------------------------------------------------------------------------
+
+const RABBIT_BROWN: RGB[] = [
+  [104, 76, 52],
+  [124, 92, 64],
+  [146, 110, 78],
+  [166, 130, 94],
+];
+const RABBIT_CREAM: RGB = [222, 204, 176];
+const RABBIT_FACE = ['....', 'K..K', '.nn.', 'cccc'];
+
+function rabbit(t: Texel): Paint {
+  const seed = 1616;
+  const brown = (): RGB => fur(t, RABBIT_BROWN, seed);
+  switch (t.g) {
+    case 'head':
+      if (t.f === FRONT) return mapAt(RABBIT_FACE, t, { K: [26, 20, 18], n: [214, 136, 140], c: RABBIT_CREAM }) ?? brown();
+      if (t.f === BOTTOM) return RABBIT_CREAM;
+      return brown();
+    case 'ear':
+      // Interior rosado en la cara delantera.
+      if (t.f === FRONT && t.x > 0.5 && t.x < 1.5 && t.y < 3.5) return [218, 150, 150];
+      return t.y > 3 ? scale(brown(), 0.85) : brown();
+    case 'tail':
+      return t.f === BOTTOM ? [226, 222, 214] : [246, 244, 238];
+    case 'leg':
+      return t.f === BOTTOM || t.y < 1 ? RABBIT_CREAM : brown();
+    default:
+      if (t.f === BOTTOM) return RABBIT_CREAM;
+      return brown();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Entrada
 // ---------------------------------------------------------------------------
 
@@ -1028,6 +1288,11 @@ const PAINTERS: Record<number, Painter> = {
   [MOB_SPIDER]: spider,
   [MOB_ENDERMAN]: enderman,
   [MOB_SQUID]: squid,
+  [MOB_FOX]: fox,
+  [MOB_GOAT]: goat,
+  [MOB_POLAR_BEAR]: polarBear,
+  [MOB_RABBIT]: rabbit,
+  [MOB_WOLF]: wolf,
 };
 
 /** Genera el atlas de una criatura (tamaño MOBS[id].atlas). */

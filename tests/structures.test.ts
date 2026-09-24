@@ -41,6 +41,7 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     igloo: (c) => (c.get(SNOW_BLOCK) ?? 0) > 20,
     desert_well: (c) => (c.get(SANDSTONE) ?? 0) > 8,
     mineshaft: (c) => (c.get(FENCES.oak) ?? 0) + (c.get(OAK_PLANKS) ?? 0) > 3,
+    village: (_c, ch) => ch.includes('village'),
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);

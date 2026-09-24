@@ -14,6 +14,7 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   templo_de_la_jungla: 'jungle_temple', templo_jungla: 'jungle_temple', naufragio: 'shipwreck',
   portal_en_ruinas: 'ruined_portal', portal: 'ruined_portal', iglu: 'igloo', pozo_del_desierto: 'desert_well',
   pozo: 'desert_well', mina_abandonada: 'mineshaft', mina: 'mineshaft',
+  aldea: 'village',
 };
 
 export class Commands {
@@ -149,7 +150,7 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];

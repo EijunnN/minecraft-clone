@@ -3,7 +3,7 @@
 import { TORCH, OBSIDIAN, GOLD_BLOCK, SNOW_BLOCK, CRYING_OBSIDIAN, PUMPKIN } from './blocks';
 import {
   COAL, IRON_INGOT, GOLD_INGOT, DIAMOND, EMERALD, LAPIS, REDSTONE, BREAD, WHEAT, BONE, ROTTEN_FLESH, STRING, GUNPOWDER,
-  GOLDEN_APPLE, BUCKET, MELON_SEEDS, PUMPKIN_SEEDS, BEETROOT_SEEDS, APPLE, PAPER, CARROT, POTATO,
+  GOLDEN_APPLE, BUCKET, WHEAT_SEEDS, MELON_SEEDS, PUMPKIN_SEEDS, BEETROOT_SEEDS, APPLE, PAPER, CARROT, POTATO,
   FLINT, SPIDER_EYE, LEATHER, COD, SALMON, COPPER_INGOT, BOOK, ARMOR, TOOLS, type ItemStack,
 } from './items';
 
@@ -62,6 +62,12 @@ export const LOOT_TABLES: Readonly<Record<string, LootTable>> = {
   igloo: T(2, 8, [
     [APPLE, 15, 1, 3], [COAL, 15, 1, 4], [GOLD_INGOT, 10, 1, 3], [STRING, 10, 1, 1], [WHEAT, 10, 2, 3],
     [ROTTEN_FLESH, 10, 1, 1], [GOLDEN_APPLE, 1, 1, 1], [SNOW_BLOCK, 5, 1, 4],
+  ]),
+  // Aldea: la despensa de una casa (pan, manzanas, cosecha, semillas, antorchas y algo de hierro).
+  village: T(3, 7, [
+    [BREAD, 20, 1, 4], [APPLE, 15, 1, 5], [WHEAT, 15, 2, 7], [WHEAT_SEEDS, 12, 2, 6], [CARROT, 10, 1, 4],
+    [POTATO, 10, 1, 4], [TORCH, 10, 2, 8], [IRON_INGOT, 6, 1, 3], [COAL, 8, 1, 4], [EMERALD, 2, 1, 2],
+    [BEETROOT_SEEDS, 5, 1, 4], [BOOK, 2, 1, 1],
   ]),
 };
 

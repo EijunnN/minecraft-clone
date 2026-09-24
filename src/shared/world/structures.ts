@@ -18,6 +18,7 @@ import type { TerrainGenerator, ColumnInfo } from './terrain';
 import {
   BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN,
 } from './biomeIds';
+import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -178,12 +179,22 @@ const GRID: GridType[] = [
     },
     build: buildDesertWell,
   },
+  {
+    key: 'village', spacing: 34, separation: 8, salt: 10387312, radius: VILLAGE_RADIUS,
+    site: (gen, x, z, inf) => {
+      if (!isVillageBiome(inf.biome)) return null;
+      const [h, slope] = flatness(gen, x, z, 14);
+      return slope <= 6 && h >= SEA_LEVEL + 1 ? h : null;
+    },
+    build: buildVillage,
+  },
 ];
 
 /** Nombres en español de las estructuras (y las claves que acepta /localizar). */
 export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   desert_pyramid: 'Templo del desierto', jungle_temple: 'Templo de la jungla', shipwreck: 'Naufragio',
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
+  village: 'Aldea',
 };
 
 const startCache = new Map<string, Start | null>();

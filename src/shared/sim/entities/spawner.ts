@@ -1,7 +1,16 @@
 // Aparición natural de criaturas: monstruos en la oscuridad, animales en praderas iluminadas y
 // calamares en el agua, con los límites de Minecraft por dificultad y jugadores.
-import { MOBS, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID } from '../../mobs';
-import { GRASS, SNOWY_GRASS, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, WATER } from '../../blocks';
+import {
+  MOBS, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
+  MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
+} from '../../mobs';
+import {
+  GRASS, SNOWY_GRASS, SNOW_BLOCK, SAND, STONE, GRAVEL, ICE, PACKED_ICE, SNOW_LAYER, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, WATER,
+} from '../../blocks';
+import {
+  BIOME_PLAINS, BIOME_TAIGA, BIOME_SNOWY, BIOME_DESERT, BIOME_MOUNTAINS, BIOME_SNOWY_PEAKS, BIOME_MEADOW, BIOME_ICE_SPIKES,
+  BIOME_FROZEN_OCEAN, BIOME_CHERRY_GROVE,
+} from '../../world/biomeIds';
 import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
@@ -95,7 +104,7 @@ export class Spawner {
     return true;
   }
 
-  /** Animales en praderas iluminadas por el cielo. */
+  /** Animales en praderas iluminadas por el cielo (los salvajes, según el bioma). */
   spawnPassive(p: PlayerView, force = false): void {
     const c = this.m.counts(p.x, p.z, 72);
     if (!force && c.passive >= 10) return;
@@ -105,21 +114,55 @@ export class Spawner {
       const [x, z] = this.ring(p, force ? 12 : 24, 56);
       const top = w.skyTop(x, z);
       if (top < MIN_Y) continue;
+      const type = this.passiveFor(w.gen.columnInfo(x, z).biome);
+      if (type === 0) continue;
       const floor = w.getBlock(x, top, z);
-      if (floor !== GRASS && floor !== SNOWY_GRASS) continue;
+      if (!floorFor(type, floor)) continue;
+      const h = Math.ceil(MOBS[type].height);
       const y = top + 1;
-      if (!standable(w, x, y, z, 2)) continue;
-      const r = this.m.rand();
-      const type = r < 0.3 ? MOB_PIG : r < 0.55 ? MOB_COW : r < 0.85 ? MOB_SHEEP : MOB_CHICKEN;
-      const n = 2 + Math.floor(this.m.rand() * 3);
+      if (!standable(w, x, y, z, h)) continue;
+      const [lo, hi] = GROUP[type] ?? [2, 4];
+      const n = lo + Math.floor(this.m.rand() * (hi - lo + 1));
       for (let i = 0; i < n; i++) {
         const ox = x + Math.floor((this.m.rand() - 0.5) * 5), oz = z + Math.floor((this.m.rand() - 0.5) * 5);
         const ot = w.skyTop(ox, oz);
         if (ot < MIN_Y) continue;
         const f = w.getBlock(ox, ot, oz);
-        if ((f === GRASS || f === SNOWY_GRASS) && standable(w, ox, ot + 1, oz, 2)) this.m.spawnMob(type, ox + 0.5, ot + 1, oz + 0.5);
+        if (floorFor(type, f) && standable(w, ox, ot + 1, oz, h)) this.m.spawnMob(type, ox + 0.5, ot + 1, oz + 0.5);
       }
       return;
+    }
+  }
+
+  /** Animal que aparece en un bioma (0: ninguno). Los de granja salen en casi todos. */
+  passiveFor(biome: number): number {
+    const r = this.m.rand();
+    const farm = (): number => {
+      const q = this.m.rand();
+      return q < 0.3 ? MOB_PIG : q < 0.55 ? MOB_COW : q < 0.85 ? MOB_SHEEP : MOB_CHICKEN;
+    };
+    switch (biome) {
+      case BIOME_TAIGA:
+        return r < 0.25 ? MOB_WOLF : r < 0.5 ? MOB_FOX : farm();
+      case BIOME_SNOWY:
+        return r < 0.2 ? MOB_FOX : r < 0.35 ? MOB_WOLF : r < 0.5 ? MOB_POLAR_BEAR : r < 0.75 ? MOB_RABBIT : farm();
+      case BIOME_ICE_SPIKES:
+        return r < 0.5 ? MOB_POLAR_BEAR : MOB_RABBIT;
+      case BIOME_FROZEN_OCEAN:
+        return MOB_POLAR_BEAR;
+      case BIOME_MOUNTAINS:
+        return r < 0.5 ? MOB_GOAT : farm();
+      case BIOME_SNOWY_PEAKS:
+        return MOB_GOAT;
+      case BIOME_MEADOW:
+        return r < 0.3 ? MOB_GOAT : r < 0.55 ? MOB_RABBIT : farm();
+      case BIOME_DESERT:
+        return MOB_RABBIT;
+      case BIOME_PLAINS:
+      case BIOME_CHERRY_GROVE:
+        return r < 0.15 ? MOB_RABBIT : farm();
+      default:
+        return farm();
     }
   }
 
@@ -154,4 +197,23 @@ export class Spawner {
       }
     }
   }
+}
+
+/** Tamaño de grupo [mín, máx] de los animales salvajes (los de granja, 2–4). */
+const GROUP: Record<number, [number, number]> = {
+  [MOB_FOX]: [1, 2],
+  [MOB_GOAT]: [1, 3],
+  [MOB_POLAR_BEAR]: [1, 2],
+  [MOB_RABBIT]: [2, 3],
+  [MOB_WOLF]: [2, 4],
+};
+
+/** Suelo natural de los animales salvajes (nieve, roca de montaña, arena del desierto, hielo). */
+const WILD_FLOORS = new Set<number>([GRASS, SNOWY_GRASS, SNOW_BLOCK, SAND, STONE, GRAVEL, ICE, PACKED_ICE]);
+for (let i = 0; i < 8; i++) WILD_FLOORS.add(SNOW_LAYER + i);
+
+/** ¿Puede aparecer este animal sobre ese bloque? Los de granja sólo sobre hierba. */
+function floorFor(type: number, floor: number): boolean {
+  if (type in GROUP) return WILD_FLOORS.has(floor);
+  return floor === GRASS || floor === SNOWY_GRASS;
 }

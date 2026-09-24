@@ -2,7 +2,7 @@
 // El modelo mira hacia -Z; y crece hacia arriba desde los pies.
 import {
   RAW_PORKCHOP, RAW_BEEF, LEATHER, RAW_MUTTON, RAW_CHICKEN, FEATHER, ROTTEN_FLESH, BONE, ARROW, GUNPOWDER, STRING,
-  ENDER_PEARL, SPIDER_EYE,
+  ENDER_PEARL, SPIDER_EYE, COD, SALMON,
 } from './items';
 import { WHITE_WOOL } from './blocks';
 
@@ -18,6 +18,12 @@ export const MOB_CREEPER = 9;
 export const MOB_SPIDER = 10;
 export const MOB_ENDERMAN = 11;
 export const MOB_SQUID = 12;
+// Fase 6: animales salvajes.
+export const MOB_FOX = 13;
+export const MOB_GOAT = 14;
+export const MOB_POLAR_BEAR = 15;
+export const MOB_RABBIT = 16;
+export const MOB_WOLF = 17;
 /** Entidades que no son criaturas. */
 export const ENT_ITEM = 100;
 export const ENT_ARROW = 101;
@@ -223,6 +229,74 @@ mob({
   id: MOB_SQUID, key: 'squid', name: 'Calamar', hostile: false, health: 10, walk: 1.2, run: 2.5, width: 0.8, height: 0.8,
   damage: 0, burnsInSun: false, drops: [], atlas: [64, 32], anim: 'squid', scale: 0.8, aquatic: true,
   parts: [{ name: 'body', pivot: [0, 18, 0], from: [-6, -8, -6], size: [12, 16, 12], uv: [0, 0] }, ...squidTentacles()],
+});
+
+// ---------------------------------------------------------------- fase 6: animales salvajes
+mob({
+  id: MOB_FOX, key: 'fox', name: 'Zorro', hostile: false, health: 10, walk: 1.3, run: 3.2, width: 0.6, height: 0.7,
+  damage: 0, burnsInSun: false, drops: [], atlas: [64, 48], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 6, 0], from: [-3, 0, -6], size: [6, 6, 11], uv: [0, 12] },
+    { name: 'head', pivot: [0, 10, -6], from: [-4, -3, -6], size: [8, 6, 6], uv: [0, 0] },
+    { name: 'snout', parent: 'head', pivot: [0, 0, 0], from: [-2, -3, -9], size: [4, 2, 3], uv: [28, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [1, 3, -4], size: [2, 2, 1], uv: [44, 0] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-3, 3, -4], size: [2, 2, 1], uv: [44, 0] },
+    { name: 'tail', pivot: [0, 10, 5], from: [-2, -2, 0], size: [4, 4, 9], uv: [34, 12], rot: [0.7, 0, 0] },
+    ...quadLegs(6, 2, [-4, 3], [0, 30], 2),
+  ],
+});
+mob({
+  id: MOB_GOAT, key: 'goat', name: 'Cabra', hostile: false, health: 10, walk: 1.2, run: 2.8, width: 0.9, height: 1.3,
+  damage: 0, burnsInSun: false, drops: [], atlas: [64, 64], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 10, 0], from: [-4, 0, -7], size: [8, 8, 14], uv: [0, 20] },
+    { name: 'head', pivot: [0, 17, -7], from: [-2.5, -2, -6], size: [5, 6, 6], uv: [0, 0] },
+    { name: 'hornR', parent: 'head', pivot: [0, 0, 0], from: [1, 4, -2], size: [1, 5, 1], uv: [28, 0] },
+    { name: 'hornL', parent: 'head', pivot: [0, 0, 0], from: [-2, 4, -2], size: [1, 5, 1], uv: [28, 0] },
+    { name: 'beard', parent: 'head', pivot: [0, 0, 0], from: [-0.5, -5, -6], size: [1, 3, 1], uv: [34, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [2.5, 2, -2], size: [3, 1, 2], uv: [40, 0] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-5.5, 2, -2], size: [3, 1, 2], uv: [40, 0] },
+    ...quadLegs(10, 2.5, [-5, 5], [0, 44], 3),
+  ],
+});
+mob({
+  id: MOB_POLAR_BEAR, key: 'polar_bear', name: 'Oso polar', hostile: false, neutral: true, health: 30, walk: 1.0, run: 2.6,
+  width: 1.4, height: 1.4, damage: 6, burnsInSun: false, drops: [[COD, 0, 2], [SALMON, 0, 2]], atlas: [128, 64],
+  anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 10, 0], from: [-6, 0, -11], size: [12, 12, 22], uv: [0, 20] },
+    { name: 'head', pivot: [0, 19, -11], from: [-4, -4, -7], size: [8, 8, 7], uv: [0, 0] },
+    { name: 'snout', parent: 'head', pivot: [0, 0, 0], from: [-2.5, -4, -10], size: [5, 3, 3], uv: [32, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [2, 4, -3], size: [2, 2, 1], uv: [50, 0] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-4, 4, -3], size: [2, 2, 1], uv: [50, 0] },
+    ...quadLegs(10, 4, [-8, 8], [70, 20], 5),
+  ],
+});
+mob({
+  id: MOB_RABBIT, key: 'rabbit', name: 'Conejo', hostile: false, health: 3, walk: 1.6, run: 3.6, width: 0.4, height: 0.5,
+  damage: 0, burnsInSun: false, drops: [], atlas: [32, 32], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 3, 0], from: [-2, 0, -3], size: [4, 4, 6], uv: [0, 0] },
+    { name: 'head', pivot: [0, 6, -3], from: [-2, -1, -4], size: [4, 4, 4], uv: [0, 10] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [0, 3, -2], size: [2, 4, 1], uv: [16, 10] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-2, 3, -2], size: [2, 4, 1], uv: [16, 10] },
+    { name: 'tail', pivot: [0, 5, 3], from: [-1, -1, 0], size: [2, 2, 2], uv: [22, 10] },
+    ...quadLegs(3, 1.5, [-2, 2], [0, 18], 2),
+  ],
+});
+mob({
+  id: MOB_WOLF, key: 'wolf', name: 'Lobo', hostile: false, neutral: true, health: 8, walk: 1.2, run: 3.4, width: 0.6, height: 0.85,
+  damage: 4, burnsInSun: false, drops: [], atlas: [64, 48], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 8, 0], from: [-3, 0, -2], size: [6, 6, 9], uv: [30, 10] },
+    { name: 'mane', pivot: [0, 8, -2], from: [-4, -0.5, -6], size: [8, 7, 6], uv: [0, 10] },
+    { name: 'head', pivot: [0, 13, -8], from: [-3, -3, -4], size: [6, 6, 4], uv: [0, 0] },
+    { name: 'snout', parent: 'head', pivot: [0, 0, 0], from: [-1.5, -3, -7], size: [3, 3, 3], uv: [20, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [1, 3, -2], size: [2, 2, 1], uv: [36, 0] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-3, 3, -2], size: [2, 2, 1], uv: [36, 0] },
+    { name: 'tail', pivot: [0, 13, 7], from: [-1, -1, 0], size: [2, 2, 8], uv: [0, 26], rot: [0.9, 0, 0] },
+    ...quadLegs(8, 2, [-5, 5], [24, 26], 2),
+  ],
 });
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);

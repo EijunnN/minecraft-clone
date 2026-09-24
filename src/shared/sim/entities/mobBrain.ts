@@ -1,6 +1,6 @@
 // Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
 // disparos, teletransporte del enderman, paseo y movimiento con física.
-import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN } from '../../mobs';
+import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF } from '../../mobs';
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
 import { moveBody, lineOfSight } from '../physics';
@@ -85,11 +85,13 @@ export class MobBrain {
     ai.think -= dt;
     if (ai.angry > 0) ai.angry -= dt;
     if (ai.panic > 0) ai.panic -= dt;
+    // Animales neutrales (lobo, oso polar): si un jugador les pega, en vez de huir se enfadan.
+    if (!def.hostile && def.neutral && ai.panic > 0 && e.lastHurtBy && e.age - (e.lastHurtAt ?? -99) < 0.5) this.provoke(e, e.lastHurtBy);
 
     // --- Decisión ---
     let moveX = 0, moveZ = 0, speed = 0, jump = false;
     let lookAt: [number, number, number] | null = null;
-    const hostileNow = def.hostile && (
+    const hostileNow = (def.hostile || !!def.neutral) && (
       !def.neutral || ai.angry > 0 ||
       (e.type === MOB_SPIDER && (this.m.host.sunHeight() < 0.05 || w.skyTop(Math.floor(e.x), Math.floor(e.z)) > e.y + 2))
     );
@@ -273,7 +275,7 @@ export class MobBrain {
     }
     if (e.onGround && (jump || (e.hitWall && wantMove && speed > 0))) {
       if (e.type === MOB_CHICKEN || e.type === MOB_SPIDER || ai.stuck > 0.1 || jump || e.hitWall) e.vy = 8.6;
-    }
+    } else if (e.type === MOB_RABBIT && e.onGround && wantMove && speed > 0) e.vy = 5.2; // el conejo va a saltitos
     if (e.type === MOB_SPIDER && e.hitWall && wantMove) e.vy = Math.max(e.vy, 3.2);
     if (e.type === MOB_CHICKEN && !e.onGround && e.vy < -2 && !e.inWater) e.vy = -2; // aleteo
     const wasGround = e.onGround;
@@ -313,6 +315,17 @@ export class MobBrain {
       e.pitch *= 1 - Math.min(1, dt * 3);
     }
     this.updateFlags(e, ai);
+  }
+
+  /** Enfada a un animal neutral contra un jugador (los lobos cercanos acuden en manada). */
+  provoke(e: Entity, player: string): void {
+    const pack = e.type === MOB_WOLF ? [...this.m.list.values()].filter((o) => o.type === MOB_WOLF && !o.dead && o.ai && Math.hypot(o.x - e.x, o.z - e.z) < 16) : [e];
+    for (const o of pack) {
+      const a = o.ai!;
+      a.panic = 0;
+      a.angry = 25;
+      a.target = player;
+    }
   }
 
   updateFlags(e: Entity, ai: AI): void {
