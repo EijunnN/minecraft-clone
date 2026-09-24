@@ -1,13 +1,17 @@
-// Entidades: jugadores (modelo de cajas con skin procedural), partículas de bloques,
+// Entidades: jugadores (modelo de cajas con skin procedural y armadura), partículas de bloques,
 // contorno de selección y bloque sostenido en primera persona.
 import { mat4 } from 'gl-matrix';
 import { Program, type GL } from '../engine/gl';
 import {
   ENTITY_VS, ENTITY_FS, ENTITY_SHADOW_VS, ENTITY_SHADOW_FS, OUTLINE_VS, OUTLINE_FS, PARTICLE_VS, PARTICLE_FS,
 } from './shaders/entity';
+import { ARMOR_FS } from './shaders/armor';
 import { buildBox, drawSkin, skinColorsFor, PART_LAYOUT } from './PlayerSkin';
 import type { BlockTextures } from './BlockTextures';
 import { BLOCK_TEX } from '../../shared/blocks';
+import { ITEMS } from '../../shared/items';
+import { ARMOR_MATERIALS, type ArmorMaterial } from '../../shared/armor';
+import { ARMOR_BOXES, ARMOR_SHINE, generateArmorTexture, type BodyPart } from '../textures/armorTextures';
 
 export interface RemotePlayerView {
   id: string;
@@ -26,11 +30,19 @@ export interface RemotePlayerView {
   /** Tumbado en una cama (la cabeza hacia donde mira). */
   sleeping?: boolean;
   light: [number, number];
+  /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
+  armor?: number[];
 }
 
 interface PartMesh {
   vao: WebGLVertexArrayObject;
   count: number;
+}
+
+/** Caja de armadura de una parte del cuerpo y la ranura que la muestra. */
+interface ArmorMesh {
+  mesh: PartMesh;
+  slot: number;
 }
 
 const PX = 1.8 / 32;
@@ -51,7 +63,11 @@ export class EntityRenderer {
   private pEntityShadow: Program;
   private pOutline: Program;
   private pParticle: Program;
-  private parts: Record<keyof typeof PART_LAYOUT, PartMesh>;
+  private pArmor: Program;
+  private parts: Record<BodyPart, PartMesh>;
+  /** Cajas de armadura de cada parte del cuerpo. */
+  private armorParts = new Map<BodyPart, ArmorMesh[]>();
+  private armorTex = new Map<ArmorMaterial, WebGLTexture>();
   private skins = new Map<string, { key: string; tex: WebGLTexture }>();
   private outlineVao: WebGLVertexArrayObject;
   private particles: Particle[] = [];
@@ -68,8 +84,9 @@ export class EntityRenderer {
     this.pEntityShadow = new Program(gl, { name: 'entity-shadow', vs: ENTITY_SHADOW_VS, fs: ENTITY_SHADOW_FS });
     this.pOutline = new Program(gl, { name: 'outline', vs: OUTLINE_VS, fs: OUTLINE_FS });
     this.pParticle = new Program(gl, { name: 'particle', vs: PARTICLE_VS, fs: PARTICLE_FS });
+    this.pArmor = new Program(gl, { name: 'armor', vs: ENTITY_VS, fs: ARMOR_FS });
 
-    const mk = (min: [number, number, number], max: [number, number, number], layout: (typeof PART_LAYOUT)[keyof typeof PART_LAYOUT]) => {
+    const mk = (min: [number, number, number], max: [number, number, number], layout: { u: number; v: number; w: number; h: number; d: number }) => {
       const b = buildBox(min, max, layout, PX);
       const vao = gl.createVertexArray()!;
       gl.bindVertexArray(vao);
@@ -97,6 +114,28 @@ export class EntityRenderer {
       rightLeg: mk([-2, -12, -2], [2, 0, 2], PART_LAYOUT.rightLeg),
       leftLeg: mk([-2, -12, -2], [2, 0, 2], PART_LAYOUT.leftLeg),
     };
+
+    // Armadura: las cajas (brazos y piernas comparten malla) y una textura por material.
+    for (const box of ARMOR_BOXES) {
+      const mesh = mk(box.min, box.max, box.layout);
+      for (const part of box.parts) {
+        const list = this.armorParts.get(part) ?? [];
+        list.push({ mesh, slot: box.slot });
+        this.armorParts.set(part, list);
+      }
+    }
+    for (const mat of ARMOR_MATERIALS) {
+      const t = generateArmorTexture(mat);
+      const tex = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, t.width, t.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, t.rgba);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      this.armorTex.set(mat, tex);
+    }
 
     // Contorno: 12 aristas de un cubo unitario.
     const e: number[] = [];
@@ -158,7 +197,7 @@ export class EntityRenderer {
     }
   }
 
-  private forEachPart(p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (part: PartMesh, m: mat4) => void): void {
+  private forEachPart(p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (part: BodyPart, m: mat4) => void): void {
     const root = mat4.create();
     const sneak = p.sneaking && !p.sleeping;
     mat4.translate(root, root, [p.x - camX, p.y - camY - (sneak ? 0.12 : 0), p.z - camZ]);
@@ -175,14 +214,14 @@ export class EntityRenderer {
     for (const [part, sx, ang] of [['rightLeg', 2, legSwing], ['leftLeg', -2, -legSwing]] as const) {
       mat4.translate(m, root, [sx * PX, 12 * PX, 0]);
       mat4.rotateX(m, m, ang);
-      fn(this.parts[part], m);
+      fn(part, m);
     }
     // Parte superior (inclinada al agacharse).
     const upper = this.tmp;
     mat4.translate(upper, root, [0, 12 * PX, 0]);
     if (sneak) mat4.rotateX(upper, upper, -0.4);
     mat4.translate(m, upper, [0, 0, 0]);
-    fn(this.parts.body, m);
+    fn('body', m);
     const swing = p.swing > 0 ? Math.sin(p.swing * Math.PI) : 0;
     for (const [part, sx, ang] of [['rightArm', 6, -legSwing * 0.8], ['leftArm', -6, legSwing * 0.8]] as const) {
       mat4.translate(m, upper, [sx * PX, 10 * PX, 0]);
@@ -190,14 +229,49 @@ export class EntityRenderer {
       if (part === 'rightArm' && swing > 0) a -= swing * 1.3 + 0.2;
       mat4.rotateX(m, m, a);
       mat4.rotateZ(m, m, sx > 0 ? -0.06 : 0.06);
-      fn(this.parts[part], m);
+      fn(part, m);
     }
     mat4.translate(m, upper, [0, 12 * PX, 0]);
     if (!p.sleeping) {
       mat4.rotateY(m, m, p.headYaw - p.bodyYaw);
       mat4.rotateX(m, m, p.pitch);
     }
-    fn(this.parts.head, m);
+    fn('head', m);
+  }
+
+  /** Material de la pieza de cada ranura (null = nada o id que no encaja), o null sin armadura. */
+  private armorOf(p: RemotePlayerView): (ArmorMaterial | null)[] | null {
+    const a = p.armor;
+    if (!a) return null;
+    let any = false;
+    const mats = [0, 1, 2, 3].map((slot) => {
+      const info = ITEMS[a[slot]]?.armor;
+      if (!info || info.slot !== slot) return null;
+      any = true;
+      return info.material;
+    });
+    return any ? mats : null;
+  }
+
+  /** Cajas de armadura de un jugador con la matriz de su parte del cuerpo (misma animación que la piel). */
+  private forEachArmor(
+    p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (mesh: PartMesh, mat: ArmorMaterial, m: mat4) => void,
+  ): void {
+    const mats = this.armorOf(p);
+    if (!mats) return;
+    this.forEachPart(p, camX, camY, camZ, (part, m) => {
+      for (const box of this.armorParts.get(part) ?? []) {
+        const mat = mats[box.slot];
+        if (mat) fn(box.mesh, mat, m);
+      }
+    });
+  }
+
+  private drawMesh(prog: Program, mesh: PartMesh, m: mat4): void {
+    const gl = this.gl;
+    prog.m4('uModel', m as Float32Array);
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
   }
 
   drawPlayers(
@@ -208,10 +282,21 @@ export class EntityRenderer {
     const prog = bindLighting(this.pEntity.use());
     for (const p of players) {
       prog.tex2D('uSkin', this.skinFor(p)).f2('uLightLevel', p.light[0], p.light[1]).f3('uTint', 1, 1, 1);
-      this.forEachPart(p, camX, camY, camZ, (part, m) => {
-        prog.m4('uModel', m as Float32Array);
-        gl.bindVertexArray(part.vao);
-        gl.drawElements(gl.TRIANGLES, part.count, gl.UNSIGNED_SHORT, 0);
+      this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
+    }
+    // Armadura encima de la piel, con el brillo de cada material.
+    let armor: Program | null = null;
+    for (const p of players) {
+      let bound: ArmorMaterial | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
+        if (!armor) armor = bindLighting(this.pArmor.use());
+        if (!bound) armor.f2('uLightLevel', p.light[0], p.light[1]);
+        if (mat !== bound) {
+          const sh = ARMOR_SHINE[mat];
+          armor.tex2D('uSkin', this.armorTex.get(mat)!).f3('uMat', sh.rough, sh.metal, sh.sheen);
+          bound = mat;
+        }
+        this.drawMesh(armor, mesh, m);
       });
     }
     gl.bindVertexArray(null);
@@ -223,10 +308,12 @@ export class EntityRenderer {
     const prog = this.pEntityShadow.use();
     for (const p of players) {
       prog.tex2D('uSkin', this.skinFor(p));
-      this.forEachPart(p, camX, camY, camZ, (part, m) => {
-        prog.m4('uModel', m as Float32Array);
-        gl.bindVertexArray(part.vao);
-        gl.drawElements(gl.TRIANGLES, part.count, gl.UNSIGNED_SHORT, 0);
+      this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
+      let bound: ArmorMaterial | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
+        if (mat !== bound) prog.tex2D('uSkin', this.armorTex.get(mat)!);
+        bound = mat;
+        this.drawMesh(prog, mesh, m);
       });
     }
     gl.bindVertexArray(null);

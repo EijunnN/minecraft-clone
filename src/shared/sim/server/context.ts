@@ -24,6 +24,8 @@ export interface Session {
   r: [number, number];
   s: number;
   h: number;
+  /** Armadura visible: ids [cabeza, pecho, piernas, pies] (0 = nada). */
+  a: number[];
   mode: GameMode;
   lookAt: number;
   lookUntil: number;

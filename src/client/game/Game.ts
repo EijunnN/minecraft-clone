@@ -730,6 +730,7 @@ export class Game {
         id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
         bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
         swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, light: [skyAtEye, (le & 15) / 15],
+        armor: this.inv.armorIds(),
       });
     }
 
