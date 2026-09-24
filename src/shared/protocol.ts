@@ -13,6 +13,14 @@ export const STATE_FLY = 2;
 export const STATE_SWIM = 4;
 export const STATE_DEAD = 8;
 export const STATE_SLEEP = 16;
+/** Tumbado boca abajo: buceando o gateando. */
+export const STATE_PRONE = 32;
+/** Usando un objeto (para animarlo en los demás): comiendo, tensando el arco o cubriéndose. */
+export const STATE_EAT = 64;
+export const STATE_BOW = 128;
+export const STATE_BLOCK = 256;
+/** Bits de estado que el servidor acepta. */
+export const STATE_MASK = 0x1ff;
 
 /** Bits de estado de las entidades. */
 export const EF_HURT = 1;
@@ -49,6 +57,8 @@ export interface PlayerInfo {
   s: number;
   /** Objeto en la mano. */
   h?: number;
+  /** Objeto en la mano secundaria. */
+  o?: number;
   /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
   a?: number[];
 }
@@ -87,7 +97,7 @@ export type EntUpd = number[];
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
-  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; a?: number[] }
+  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[] }
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
   /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
   | { t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number }
@@ -136,7 +146,7 @@ export type ServerMsg =
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
-  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; a?: number[] }
+  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[] }
   | { t: 'set'; id: string; x: number; y: number; z: number; b: number }
   | { t: 'sets'; l: number[] }
   | { t: 'chat'; id: string | null; name: string; m: string }

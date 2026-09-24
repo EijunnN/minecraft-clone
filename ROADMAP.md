@@ -170,7 +170,7 @@ en la fase 4, muros (8 piedras), carteles (3 maderas, de pie y en la pared) y ca
 | Comandos | 🟡 (10 de ~80: `/time`, `/tp`, `/modo`, `/dificultad`, `/invocar`, `/dar`, `/matar`…) |
 | Operadores y permisos (quién puede usar `/modo` o `/dar`) | ❌ |
 | Aspecto personalizado del jugador (skins) | 🟡 (color de camiseta) |
-| Objeto en la mano y armadura visibles en otros jugadores | 🟡 (armadura sí; el objeto de la mano todavía no) |
+| Objeto en la mano y armadura visibles en otros jugadores | ✅ |
 | Reglas del juego (gamerules), bloques de comandos | ❌ |
 | Subtítulos y opciones de accesibilidad | ❌ |
 | Gráficos | ✅ (por encima del original: sombras, nubes volumétricas, agua con reflejos, TAA) |
@@ -187,9 +187,9 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 | --- | --- |
 | Descripción del objeto con sus datos (daño, velocidad de ataque, armadura, durabilidad, comida, efectos) | ✅ |
 | Mano secundaria (tecla F; escudo, antorcha o comida en la otra mano) | ✅ |
-| Clic central: coger el bloque que se mira (en supervivencia, si está en el inventario) | ❌ |
-| Arrastrar para repartir una pila entre huecos (izquierdo a partes iguales, derecho de uno en uno) | ❌ |
-| Doble clic para juntar en el cursor los objetos iguales | ❌ |
+| Clic central: coger el bloque que se mira (en supervivencia, si está en el inventario) | ✅ |
+| Arrastrar para repartir una pila entre huecos (izquierdo a partes iguales, derecho de uno en uno) | ✅ (en el inventario y la fabricación) |
+| Doble clic para juntar en el cursor los objetos iguales | ✅ |
 | Mayúsculas + clic, 1–9, Q, Ctrl+Q, tirar fuera de la ventana, búsqueda en creativo | ✅ |
 
 **Combate**
@@ -205,16 +205,16 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 
 | Elemento | Estado |
 | --- | --- |
-| Nadar (correr bajo el agua en postura horizontal) y gatear por huecos de 1 bloque | ❌ (en el agua sólo se va más rápido) |
-| Menos daño al caer sobre fardos de heno (−80 %) y camas (−50 %) | ❌ |
-| Animaciones de los demás jugadores: comer, tensar el arco, cubrirse con el escudo | ❌ |
+| Nadar (correr bajo el agua en postura horizontal) y gatear por huecos de 1 bloque | ✅ |
+| Menos daño al caer sobre fardos de heno (−80 %) y camas (−50 %) | ✅ |
+| Animaciones de los demás jugadores: comer, tensar el arco, cubrirse con el escudo | ✅ (y lo que llevan en cada mano) |
 
 **Controles, chat y menús**
 
 | Elemento | Estado |
 | --- | --- |
-| Cambiar las teclas; agacharse y correr con pulsación fija o mantenida | ❌ |
-| Chat: historial con flechas y autocompletar comandos y nombres con Tab | ❌ |
+| Cambiar las teclas; agacharse y correr con pulsación fija o mantenida | ✅ |
+| Chat: historial con flechas y autocompletar comandos y nombres con Tab | ✅ |
 | Lista de mundos recientes en el menú y semilla al crear un mundo | ❌ (se escribe el nombre a mano) |
 | Captura de pantalla (F2) | ❌ |
 

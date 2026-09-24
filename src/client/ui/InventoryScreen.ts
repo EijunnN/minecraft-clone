@@ -1,7 +1,8 @@
 // Pantallas de inventario de supervivencia: inventario con armadura y fabricación 2x2, mesa de
 // trabajo (3x3), cofre (y cofre grande), horno (y ahumador y alto horno) y cortapiedras. Reglas de clic de Minecraft: clic izquierdo coge/deja/intercambia,
-// derecho reparte o deja de uno en uno, mayúsculas mueve rápido, 1–9 intercambia con la barra
-// y Q suelta. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
+// derecho reparte o deja de uno en uno, mayúsculas mueve rápido, 1–9 intercambia con la barra,
+// F con la mano secundaria y Q suelta. Arrastrar con una pila la reparte (izquierdo a partes
+// iguales, derecho de uno en uno) y el doble clic junta en el cursor los objetos iguales. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
 import { matchRecipe, CRAFT_REMAINDER } from '../../shared/recipes';
 import {
@@ -12,6 +13,7 @@ import type { Inventory } from '../game/Inventory';
 import { armorSilhouettes } from './armorBar';
 import { stonecutterOptions } from '../../shared/stonecutting';
 import './workstations.css';
+import { keyLabel, type Keybinds } from '../game/keybinds';
 import { itemTooltipHtml } from './itemTooltip';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter';
@@ -22,6 +24,8 @@ export interface ScreenHost {
   /** Tira una pila al suelo delante del jugador. */
   drop(stack: ItemStack): void;
   sound(kind: 'click' | 'craft'): void;
+  /** Teclas configuradas (tirar, cambiar de mano). */
+  keys(): Keybinds;
 }
 
 type SlotRef =
@@ -62,6 +66,10 @@ export class InventoryScreen {
    */
   private pending = new Map<number, { kind: 'click' | 'put' | 'take'; at: number; slot: number; stack: ItemStack | null }>();
   private mouse = [0, 0];
+  /** Arrastre con una pila en el cursor: botón y huecos por los que pasa (inventario y fabricación). */
+  private drag: { btn: number; keys: string[] } | null = null;
+  /** Último clic (para el doble clic). */
+  private lastClick = { key: '', at: 0 };
 
   constructor(host: ScreenHost, inv: Inventory) {
     this.host = host;
@@ -102,6 +110,7 @@ export class InventoryScreen {
       if (this.kind) this.placeCursor();
     });
     window.addEventListener('keydown', (e) => this.onKey(e));
+    window.addEventListener('mouseup', () => this.endDrag());
   }
 
   isOpen(): boolean {
@@ -213,12 +222,13 @@ export class InventoryScreen {
         `<div class="slot2" data-s="cont:${FURNACE_FUEL}"></div></div>` +
         `<div class="arrow prog"><i></i></div><div class="slot2 big" data-s="cont:${FURNACE_OUT}"></div></div>`;
     }
+    const keys = this.host.keys();
     this.panel.innerHTML =
       `<div class="inv2-top${kind === 'player' ? ' with-armor' : ''}">${top}</div>` +
       `<h3>Inventario</h3>` +
       `<div class="grid g9">${Array.from({ length: 27 }, (_, i) => `<div class="slot2" data-s="inv:${i + 9}"></div>`).join('')}</div>` +
       `<div class="grid g9 hotrow">${Array.from({ length: 9 }, (_, i) => `<div class="slot2" data-s="inv:${i}"></div>`).join('')}</div>` +
-      `<p class="hint">Clic: coger/dejar · Clic derecho: la mitad / de uno en uno · Mayús + clic: mover rápido · 1–9: a la barra · F: a la otra mano · Q: tirar · E: cerrar</p>`;
+      `<p class="hint">Clic: coger/dejar · Clic derecho: la mitad / de uno en uno · Mayús + clic: mover rápido · 1–9: a la barra · ${keyLabel(keys.swapHands)}: a la otra mano · ${keyLabel(keys.drop)}: tirar · ${keyLabel(keys.inventory)}: cerrar</p>`;
     this.panel.querySelectorAll<HTMLElement>('[data-s]').forEach((el) => {
       const key = el.dataset.s!;
       this.slotEls.set(key, el);
@@ -227,10 +237,21 @@ export class InventoryScreen {
       el.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.onSlotClick(this.parseRef(key), e.button === 2 ? 1 : 0, e.shiftKey);
+        const ref = this.parseRef(key);
+        const btn = e.button === 2 ? 1 : 0;
+        if (btn === 0 && !e.shiftKey && this.collect(key)) return;
+        // Con algo en el cursor sobre el inventario o la fabricación: puede ser un arrastre.
+        if (this.inv.cursor && !e.shiftKey && (ref.kind === 'inv' || ref.kind === 'grid') && !this.isBusy()) {
+          this.drag = { btn, keys: [key] };
+          el.classList.add('drag');
+          return;
+        }
+        this.onSlotClick(ref, btn, e.shiftKey);
+        this.lastClick = { key, at: performance.now() };
       });
       el.addEventListener('mouseenter', () => {
         this.hovered = this.parseRef(key);
+        this.extendDrag(key, el);
         this.showTooltip();
       });
       el.addEventListener('mouseleave', () => {
@@ -413,20 +434,92 @@ export class InventoryScreen {
     this.host.send({ t: 'cclick', x, y, z, slot: i, btn, cur: before, q });
   }
 
+  /** Pila de un hueco local del inventario o de la fabricación (para arrastrar). */
+  private localArray(r: SlotRef): (ItemStack | null)[] | null {
+    return r.kind === 'inv' ? this.inv.slots : r.kind === 'grid' ? this.grid : null;
+  }
+
+  /** El arrastre pasa por otro hueco: se añade si acepta la pila del cursor. */
+  private extendDrag(key: string, el: HTMLElement): void {
+    const d = this.drag, cur = this.inv.cursor;
+    if (!d || !cur || d.keys.includes(key)) return;
+    const r = this.parseRef(key);
+    const arr = this.localArray(r);
+    if (!arr || r.kind === 'out') return;
+    const s = arr[r.i];
+    if (s && !(sameKind(s, cur) && s.count < maxStack(s.id))) return;
+    if (d.keys.length >= cur.count && d.btn === 0) return;
+    d.keys.push(key);
+    el.classList.add('drag');
+  }
+
+  /** Suelta el arrastre: un solo hueco es un clic normal; varios, el reparto. */
+  private endDrag(): void {
+    const d = this.drag;
+    if (!d) return;
+    this.drag = null;
+    for (const k of d.keys) this.slotEls.get(k)?.classList.remove('drag');
+    if (d.keys.length === 1 || !this.inv.cursor) {
+      this.onSlotClick(this.parseRef(d.keys[0]), d.btn, false);
+      this.lastClick = { key: d.keys[0], at: performance.now() };
+      return;
+    }
+    const cur = this.inv.cursor;
+    const per = d.btn === 0 ? Math.floor(cur.count / d.keys.length) : 1;
+    for (const key of d.keys) {
+      if (cur.count <= 0) break;
+      const r = this.parseRef(key);
+      const arr = this.localArray(r)!;
+      const i = (r as { i: number }).i;
+      const s = arr[i];
+      const n = Math.min(per, cur.count, maxStack(cur.id) - (s?.count ?? 0));
+      if (n <= 0) continue;
+      arr[i] = s ? { ...s, count: s.count + n } : { ...cur, count: n };
+      cur.count -= n;
+    }
+    this.inv.cursor = cur.count > 0 ? cur : null;
+    this.host.sound('click');
+    this.inv.changed();
+    this.render();
+  }
+
+  /** Doble clic con una pila en el cursor: junta en ella los objetos iguales del inventario. */
+  private collect(key: string): boolean {
+    const cur = this.inv.cursor;
+    const dbl = this.lastClick.key === key && performance.now() - this.lastClick.at < 300;
+    this.lastClick = { key: '', at: 0 };
+    if (!dbl || !cur || this.isBusy()) return false;
+    const max = maxStack(cur.id);
+    for (const arr of [this.inv.slots, this.grid]) {
+      for (let i = 0; i < arr.length && cur.count < max; i++) {
+        const s = arr[i];
+        if (!s || !sameKind(s, cur)) continue;
+        const n = Math.min(max - cur.count, s.count);
+        cur.count += n;
+        arr[i] = s.count - n > 0 ? { ...s, count: s.count - n } : null;
+      }
+    }
+    this.host.sound('click');
+    this.inv.changed();
+    this.render();
+    return true;
+  }
+
   private onKey(e: KeyboardEvent): void {
     if (!this.kind || !this.hovered || this.isBusy()) return;
     const r = this.hovered;
     if (r.kind !== 'inv' && r.kind !== 'grid') return;
     const arr = r.kind === 'inv' ? this.inv.slots : this.grid;
     const n = Number(e.key);
-    if (e.code === 'KeyF' && r.kind === 'inv') this.inv.swapOffhand(r.i);
+    const keys = this.host.keys();
+    if (e.code === keys.swapHands && r.kind === 'inv') this.inv.swapOffhand(r.i);
     else if (n >= 1 && n <= 9) {
       const h = n - 1;
       if (r.kind === 'inv' && r.i === h) return;
       const tmp = arr[r.i];
       arr[r.i] = this.inv.slots[h];
       this.inv.slots[h] = tmp;
-    } else if (e.code === 'KeyQ') {
+    } else if (e.code === keys.drop) {
       const s = arr[r.i];
       if (!s) return;
       if (e.ctrlKey || s.count === 1) {

@@ -576,6 +576,7 @@ export class Renderer {
     };
     this.mobs.draw(s.mobs, s.camX, s.camY, s.camZ, s.time, (e) => lightOf(e.x, e.y + 0.6, e.z), bindLighting);
     this.drawMobHeldItems(s, lightOf, bindLighting);
+    this.drawPlayerHeldItems(s, bindLighting);
     this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
     this.signText.draw(s.signs ?? [], s.camX, s.camY, s.camZ);
     this.entities.drawParticles(s.camX, s.camY, s.camZ, this.atmosphere.irradiance.color);
@@ -867,6 +868,37 @@ export class Renderer {
       out.push({ model, m, light });
       a = b;
     }
+  }
+
+  /** Lo que llevan en las manos los demás jugadores (y uno mismo en tercera persona). */
+  private drawPlayerHeldItems(s: FrameState, bindLighting: (p: Program) => Program): void {
+    const list: ItemDraw[] = [];
+    for (const p of s.players) {
+      if (p.sleeping) continue;
+      for (const [id, left] of [[p.held ?? 0, false], [p.offhand ?? 0, true]] as const) {
+        const model = id > 0 ? this.items.model(id) : null;
+        if (!model) continue;
+        const m = this.entities.handMatrix(p, s.camX, s.camY, s.camZ, left);
+        if (ITEMS[id]?.tool?.kind === 'shield') {
+          // El escudo, de cara hacia delante sobre el antebrazo.
+          mat4.translate(m, m, [left ? 0.06 : -0.06, 0.12, -0.1]);
+          mat4.scale(m, m, [0.62, 0.62, 0.62]);
+        } else if (model.flat) {
+          // Herramientas y objetos planos: el plano a lo largo del brazo, la punta hacia delante y
+          // arriba, y el mango (la esquina de abajo a la izquierda del dibujo) en la mano.
+          mat4.rotateX(m, m, -0.35);
+          mat4.rotateY(m, m, Math.PI / 2);
+          mat4.scale(m, m, [0.62, 0.62, 0.62]);
+          mat4.translate(m, m, [0.32, 0.32, 0]);
+        } else {
+          mat4.translate(m, m, [0, -0.04, 0.02]);
+          mat4.rotateY(m, m, Math.PI / 4);
+          mat4.scale(m, m, [0.28, 0.28, 0.28]);
+        }
+        list.push({ model, m, light: p.light });
+      }
+    }
+    this.items.drawWorld(list, this.viewProj, s.grassTint, bindLighting);
   }
 
   /** Arcos en las manos de los esqueletos. */

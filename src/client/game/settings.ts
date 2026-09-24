@@ -1,4 +1,5 @@
 // Ajustes persistentes (localStorage).
+import { defaultKeybinds, sanitizeKeybinds, type Keybinds } from './keybinds';
 import { PRESETS, type PresetName, type RenderSettings } from '../render/Renderer';
 
 export interface Settings {
@@ -10,6 +11,11 @@ export interface Settings {
   master: number;
   music: number;
   ambient: number;
+  /** Teclas de cada acción. */
+  keys: Keybinds;
+  /** Agacharse y correr con una pulsación (alternar) en vez de mantener la tecla. */
+  toggleSneak: boolean;
+  toggleSprint: boolean;
 }
 
 const KEY = 'voxelcraft:settings:v1';
@@ -32,6 +38,9 @@ export function defaultSettings(preset: PresetName = 'medio'): Settings {
     master: 0.8,
     music: 0.45,
     ambient: 0.7,
+    keys: defaultKeybinds(),
+    toggleSneak: false,
+    toggleSprint: false,
   };
 }
 
@@ -45,6 +54,7 @@ export function loadSettings(fallbackPreset: PresetName): Settings {
       ...def,
       ...s,
       render: { ...def.render, ...(s.render ?? {}) },
+      keys: sanitizeKeybinds(s.keys),
     };
   } catch {
     return def;

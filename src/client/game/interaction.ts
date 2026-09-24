@@ -8,7 +8,10 @@ import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
 import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
   CAMPFIRE, stateProps } from '../../shared/blocks';
-import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, type ItemStack } from '../../shared/items';
+import {
+  ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, itemForBlock, maxStack,
+  type ItemStack,
+} from '../../shared/items';
 import { COMPOSTER_READY, canCompost, composterLevel } from '../../shared/composting';
 import { variantSmelts } from '../../shared/containers';
 import { attackCooldown } from '../../shared/combat';
@@ -16,7 +19,7 @@ import { MOBS, ENT_ITEM, ENT_ARROW, ENT_DISPLAY, MOB_ENDERMAN, MOB_SHEEP, MOB_CO
 import { EF_BABY, EF_SHEARED, EF_PICKABLE, type ServerMsg } from '../../shared/protocol';
 import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use } from './gameTypes';
 import type { ArmorSource } from './Survival';
-import { OFFHAND } from './Inventory';
+import { OFFHAND, HOTBAR } from './Inventory';
 import type { Game } from './Game';
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
@@ -88,6 +91,9 @@ export class Interaction {
         this.resetAttack();
       }
     }
+
+    // --- Botón central: coger el bloque que se mira ---
+    if (input.mousePressed[1] && hit) this.pickBlock(hit);
 
     // --- Botón derecho: usar, colocar, abrir ---
     const held = this.g.heldStack;
@@ -192,6 +198,36 @@ export class Interaction {
       return;
     }
     if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
+  }
+
+  /**
+   * Clic central: pone en la mano el objeto del bloque que se mira. Si ya está en la barra, lo
+   * selecciona; en creativo lo crea; en supervivencia lo trae de la mochila (a un hueco libre de la
+   * barra o cambiándolo por el de la mano).
+   */
+  pickBlock(hit: RayHit): void {
+    const item = itemForBlock(hit.id);
+    if (!item) return;
+    const inv = this.g.inv;
+    const bar = inv.slots.slice(0, HOTBAR);
+    const inBar = bar.findIndex((s) => s?.id === item);
+    if (inBar >= 0) {
+      this.g.selectSlot(inBar);
+      return;
+    }
+    const empty = bar.findIndex((s) => !s);
+    const target = inv.slots[this.g.selected] && empty >= 0 ? empty : this.g.selected;
+    if (this.g.creative) inv.set(target, { id: item, count: maxStack(item) });
+    else {
+      const k = inv.slots.findIndex((s, i) => i >= HOTBAR && s?.id === item);
+      if (k < 0) return;
+      const tmp = inv.slots[target];
+      inv.slots[target] = inv.slots[k];
+      inv.slots[k] = tmp;
+      inv.changed();
+    }
+    this.g.selectSlot(target);
+    this.g.refreshHotbar(true);
   }
 
   /** ¿Tiene la mano principal algo que hacer con el clic derecho? */

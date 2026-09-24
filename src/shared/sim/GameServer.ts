@@ -6,7 +6,7 @@
 // granja, camas, contenedores, ediciones de los jugadores, acciones sobre entidades, comandos y
 // sincronización de entidades. Los sistemas sólo ven un ServerContext (ver server/context.ts).
 import {
-  PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
+  PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, STATE_MASK, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
   stackFromWire, type ClientMsg, type ServerMsg, type PlayerInfo, type WorldTime, type PlayerSave, type WireStack,
 } from '../protocol';
 import { WORLD_LIMIT, CHUNK_SIZE } from '../constants';
@@ -295,7 +295,7 @@ export class GameServer {
   }
 
   private info(s: Session): PlayerInfo {
-    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, a: s.a };
+    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a };
   }
 
   /** Envía las ediciones pendientes respetando el orden en que se aplicaron. */
@@ -323,7 +323,7 @@ export class GameServer {
     const now = this.now();
     this.sessions.set(conn, {
       conn, id: (this.nextSessionId++).toString(36) + Math.random().toString(36).slice(2, 7), joined: false,
-      joinedAt: now, lastMsg: now, name: '', shirt: '#3a7bd5', p: [0, 100, 0], r: [0, 0], s: 0, h: 0, a: [0, 0, 0, 0], mode: 's',
+      joinedAt: now, lastMsg: now, name: '', shirt: '#3a7bd5', p: [0, 100, 0], r: [0, 0], s: 0, h: 0, o: 0, a: [0, 0, 0, 0], mode: 's',
       lookAt: -1, lookUntil: 0, lastAttack: 0, tokens: 60, tokenTime: now, known: new Map(), container: null,
       save: null, saveDirty: false, sleeping: null, sleepTicks: 0, bed: null,
     });
@@ -557,16 +557,17 @@ export class GameServer {
     const yaw = ((r[0] % TAU) + TAU) % TAU;
     s.p = [r2(clamp(p[0], -WORLD_LIMIT, WORLD_LIMIT)), r2(clamp(p[1], -128, 1024)), r2(clamp(p[2], -WORLD_LIMIT, WORLD_LIMIT))];
     s.r = [Math.round(yaw * 1000) / 1000, Math.round(clamp(r[1], -Math.PI / 2, Math.PI / 2) * 1000) / 1000];
-    s.s = (Number(msg.s) | 0) & 0xff;
-    const h = Number(msg.h);
+    s.s = (Number(msg.s) | 0) & STATE_MASK;
+    const h = Number(msg.h), o = Number(msg.o);
     s.h = Number.isInteger(h) && isValidItem(h) ? h : 0;
+    s.o = Number.isInteger(o) && isValidItem(o) ? o : 0;
     // Armadura visible: cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies); lo demás es 0.
     const a = Array.isArray(msg.a) ? msg.a : [];
     s.a = [0, 1, 2, 3].map((slot) => {
       const id = Number(a[slot]);
       return Number.isInteger(id) && isValidItem(id) && ITEMS[id]?.armor?.slot === slot ? id : 0;
     });
-    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, a: s.a }, s);
+    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a }, s);
   }
 
   /** Distancia del ojo del jugador al centro del bloque. */

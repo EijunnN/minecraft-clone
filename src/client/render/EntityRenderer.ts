@@ -29,6 +29,13 @@ export interface RemotePlayerView {
   sneaking: boolean;
   /** Tumbado en una cama (la cabeza hacia donde mira). */
   sleeping?: boolean;
+  /** Boca abajo (buceando o gateando), con la cabeza hacia donde va. */
+  prone?: boolean;
+  /** Objetos en la mano principal y en la secundaria (0 = nada). */
+  held?: number;
+  offhand?: number;
+  /** Lo que está usando: comer, tensar el arco o cubrirse con el escudo. */
+  use?: 'eat' | 'bow' | 'block' | null;
   light: [number, number];
   /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
   armor?: number[];
@@ -54,6 +61,12 @@ interface Particle {
   life: number; max: number; size: number;
   layer: number; u: number; v: number; light: number;
   smoke?: boolean;
+}
+
+/** ¿Usa la mano principal? (come lo que lleva en ella o se cubre con su escudo). */
+function usesMainHand(p: RemotePlayerView): boolean {
+  const def = ITEMS[p.held ?? 0];
+  return p.use === 'block' ? def?.tool?.kind === 'shield' : !!(def?.food || def?.drink);
 }
 
 export class EntityRenderer {
@@ -199,13 +212,18 @@ export class EntityRenderer {
 
   private forEachPart(p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (part: BodyPart, m: mat4) => void): void {
     const root = mat4.create();
-    const sneak = p.sneaking && !p.sleeping;
+    const sneak = p.sneaking && !p.sleeping && !p.prone;
     mat4.translate(root, root, [p.x - camX, p.y - camY - (sneak ? 0.12 : 0), p.z - camZ]);
     if (p.sleeping) {
       // Boca arriba, con la cabeza hacia la cabecera de la cama.
       mat4.rotateY(root, root, p.headYaw + Math.PI);
       mat4.translate(root, root, [0, 0.15, -0.45]);
       mat4.rotateX(root, root, Math.PI / 2);
+    } else if (p.prone) {
+      // Boca abajo: el cuerpo en horizontal hacia donde mira, a ras del suelo.
+      mat4.rotateY(root, root, p.bodyYaw);
+      mat4.translate(root, root, [0, 0.3, 0.9]);
+      mat4.rotateX(root, root, -Math.PI / 2);
     } else mat4.rotateY(root, root, p.bodyYaw);
     const legSwing = p.sleeping ? 0 : Math.sin(p.walkPhase) * 0.9 * p.walkAmount;
     const armSwing = legSwing * 0.8;
@@ -223,10 +241,22 @@ export class EntityRenderer {
     mat4.translate(m, upper, [0, 0, 0]);
     fn('body', m);
     const swing = p.swing > 0 ? Math.sin(p.swing * Math.PI) : 0;
+    // Brazo que come o se cubre: el de la mano que lleva la comida o el escudo.
+    const useArm = p.use === 'eat' || p.use === 'block' ? (usesMainHand(p) ? 'rightArm' : 'leftArm') : null;
+    const t = performance.now() / 1000;
     for (const [part, sx, ang] of [['rightArm', 6, -legSwing * 0.8], ['leftArm', -6, legSwing * 0.8]] as const) {
       mat4.translate(m, upper, [sx * PX, 10 * PX, 0]);
       let a = ang * (armSwing !== 0 ? 1 : 1);
-      if (part === 'rightArm' && swing > 0) a -= swing * 1.3 + 0.2;
+      let turn = 0;
+      if (p.use === 'bow') {
+        // Tensando el arco: los dos brazos hacia delante, apuntando con la cabeza.
+        a = -Math.PI / 2 - p.pitch;
+        turn = sx > 0 ? -0.1 : 0.5;
+      } else if (part === useArm) {
+        a = p.use === 'eat' ? -1.15 + Math.sin(t * 20) * 0.08 : -0.9;
+        turn = sx > 0 ? 0.45 : -0.45;
+      } else if (part === 'rightArm' && swing > 0) a -= swing * 1.3 + 0.2;
+      if (turn) mat4.rotateY(m, m, turn);
       mat4.rotateX(m, m, a);
       mat4.rotateZ(m, m, sx > 0 ? -0.06 : 0.06);
       fn(part, m);
@@ -237,6 +267,17 @@ export class EntityRenderer {
       mat4.rotateX(m, m, p.pitch);
     }
     fn('head', m);
+  }
+
+  /** Matriz de la mano (derecha o izquierda) de un jugador, para dibujar lo que lleva en ella. */
+  handMatrix(p: RemotePlayerView, camX: number, camY: number, camZ: number, left: boolean): mat4 {
+    const want = left ? 'leftArm' : 'rightArm';
+    const out = mat4.create();
+    this.forEachPart(p, camX, camY, camZ, (part, m) => {
+      if (part === want) mat4.copy(out, m);
+    });
+    mat4.translate(out, out, [0, -10 * PX, 1 * PX]);
+    return out;
   }
 
   /** Material de la pieza de cada ranura (null = nada o id que no encaja), o null sin armadura. */

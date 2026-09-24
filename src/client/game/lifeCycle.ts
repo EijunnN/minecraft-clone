@@ -1,7 +1,7 @@
 // Vida del jugador: daño, muerte (suelta el inventario y la experiencia), reaparición (en la cama si
 // la tiene) y dormir.
 import { deathMessage } from './Survival';
-import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, familyBase, stateProps } from '../../shared/blocks';
+import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, stateProps } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
@@ -134,8 +134,11 @@ export class LifeCycle {
     const surv = g.survival;
     if (!g.creative && !surv.dead) {
       if (p.landedFall > 3 && !p.inWater) {
-        const dmg = Math.ceil(p.landedFall - 3);
-        if (surv.damage(dmg, 'fall') > 0) this.hurtFeedback(dmg);
+        // Caer sobre un fardo de heno quita el 80 % del daño y sobre una cama, la mitad.
+        const under = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y - 0.05), Math.floor(p.z));
+        const k = under === HAY_BALE ? 0.2 : isBed(under) ? 0.5 : 1;
+        const dmg = Math.ceil((p.landedFall - 3) * k);
+        if (dmg > 0 && surv.damage(dmg, 'fall') > 0) this.hurtFeedback(dmg);
       }
       if (p.sprinting) surv.addExhaustion(moved * 0.1);
       else if (p.inWater) surv.addExhaustion(moved * 0.01);

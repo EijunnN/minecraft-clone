@@ -1,6 +1,6 @@
 // Jugadores remotos: interpolación de instantáneas y estado de animación.
 import type { PlayerInfo } from '../../shared/protocol';
-import { STATE_SNEAK, STATE_SLEEP } from '../../shared/protocol';
+import { STATE_SNEAK, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK } from '../../shared/protocol';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 
 interface Snapshot {
@@ -37,6 +37,11 @@ function armorFrom(a: unknown): number[] {
   return [0, 1, 2, 3].map((i) => (Number.isInteger(src[i]) && src[i] > 0 ? src[i] : 0));
 }
 
+/** Id de objeto que llega de la red (0 = nada). */
+function itemFrom(v: unknown): number {
+  return Number.isInteger(v) && (v as number) > 0 ? (v as number) : 0;
+}
+
 export class RemotePlayer {
   readonly id: string;
   name: string;
@@ -57,16 +62,18 @@ export class RemotePlayer {
     this.view = {
       id: info.id, name: info.name, shirt: info.shirt, x: info.p[0], y: info.p[1], z: info.p[2],
       bodyYaw: info.r[0], headYaw: info.r[0], pitch: info.r[1], walkPhase: 0, walkAmount: 0, swing: 0,
-      sneaking: false, light: [1, 0], armor: armorFrom(info.a),
+      sneaking: false, light: [1, 0], armor: armorFrom(info.a), held: itemFrom(info.h), offhand: itemFrom(info.o),
     };
     this.lastX = info.p[0];
     this.lastZ = info.p[2];
   }
 
-  push(p: [number, number, number], r: [number, number], s: number, a?: number[]): void {
+  push(p: [number, number, number], r: [number, number], s: number, a?: number[], h?: number, o?: number): void {
     if (!Array.isArray(p) || !Array.isArray(r) || ![p[0], p[1], p[2], r[0], r[1]].every(Number.isFinite)) return;
-    // La armadura se cambia al instante (no se interpola).
+    // La armadura y lo que lleva en las manos se cambian al instante (no se interpolan).
     if (a !== undefined) this.view.armor = armorFrom(a);
+    if (h !== undefined) this.view.held = itemFrom(h);
+    if (o !== undefined) this.view.offhand = itemFrom(o);
     const now = performance.now();
     const pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, r[1]));
     this.snaps.push({ t: now, x: p[0], y: p[1], z: p[2], yaw: wrapAngle(r[0]), pitch, s: s | 0 });
@@ -105,6 +112,8 @@ export class RemotePlayer {
     v.pitch = a.pitch + (b.pitch - a.pitch) * t;
     v.sneaking = (b.s & STATE_SNEAK) !== 0;
     v.sleeping = (b.s & STATE_SLEEP) !== 0;
+    v.prone = (b.s & STATE_PRONE) !== 0;
+    v.use = b.s & STATE_EAT ? 'eat' : b.s & STATE_BOW ? 'bow' : b.s & STATE_BLOCK ? 'block' : null;
     // Animación de caminar según la velocidad horizontal.
     const mv = Math.hypot(v.x - this.lastX, v.z - this.lastZ);
     this.lastX = v.x;

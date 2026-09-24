@@ -22,7 +22,7 @@ import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, DEFAULT_HOTBAR, WATER, R_CROSS,
 import { ITEMS, maxStack, type ItemStack } from '../../shared/items';
 import { MOBS } from '../../shared/mobs';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
-import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
+import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
 import { TerrainGenerator, BIOME_NAMES } from '../../shared/world/terrain';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTypes';
@@ -61,6 +61,12 @@ function srgbToLin(v: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
+/** Bits de estado del objeto que se está usando (para animarlo en los demás jugadores). */
+function useState(use: { kind: string } | null): number {
+  if (!use) return 0;
+  return use.kind === 'eat' ? STATE_EAT : use.kind === 'bow' ? STATE_BOW : use.kind === 'block' ? STATE_BLOCK : 0;
+}
+
 export class Game {
   readonly interaction = new Interaction(this);
   readonly effects = new Effects(this);
@@ -80,6 +86,10 @@ export class Game {
   private local: LocalServer | null = null;
   private offline = false;
   remote = new Map<string, RemotePlayer>();
+  /** Agacharse y correr fijos (ajuste de alternar). */
+  private sneakOn = false;
+  private keysSig = '';
+  private sprintOn = false;
   /** Flotadores de pesca fuera: jugador → entidad. */
   readonly bobbers = new Map<string, number>();
   /** Texto de los carteles y su editor. */
@@ -138,6 +148,7 @@ export class Game {
       send: (m) => this.net?.send(m),
       drop: (s) => this.interaction.throwStack(s, false),
       sound: (k) => (k === 'craft' ? this.audio.playCraft() : this.audio.playUi('click')),
+      keys: () => this.cfg.settings.keys,
     }, this.inv);
     this.survival.armor = this.interaction.armor;
     this.ents.playerPos = (id) => {
@@ -385,6 +396,7 @@ export class Game {
     };
     ui.onRespawn = () => this.life.respawn();
     ui.onChatSubmit = (t) => this.sendChat(t);
+    ui.playerNames = () => [this.cfg.name, ...[...this.remote.values()].map((rp) => rp.name)];
     ui.onChatClosed = () => {
       this.input.gameKeys = true;
       this.input.requestLock();
@@ -507,12 +519,14 @@ export class Game {
   sendPos(force: boolean): void {
     const p = this.player;
     const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
-      (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0);
+      (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0) | (p.pose !== 'stand' ? STATE_PRONE : 0) |
+      useState(this.interaction.use);
     const q = (v: number, step: number) => Math.round(v / step);
     const armor = this.inv.armorIds();
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${armor}`;
+    const off = this.inv.offhand?.id ?? 0;
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor}`;
     if (!force && key === this.lastSentKey) return;
-    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, a: armor });
+    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor });
     this.lastSentKey = key;
   }
 
@@ -536,27 +550,35 @@ export class Game {
     const ui = this.ui;
     const input = this.input;
     const surv = this.survival;
+    const k = this.cfg.settings.keys;
+    // Las teclas asignadas no deben disparar atajos del navegador mientras se juega.
+    const sig = Object.values(k).join(',');
+    if (sig !== this.keysSig) {
+      this.keysSig = sig;
+      input.reserved = new Set(Object.values(k));
+      input.movement = new Set([k.forward, k.back, k.left, k.right]);
+    }
     if (!ui.isChatOpen() && !surv.dead) {
-      if (input.wasPressed('KeyE') && !ui.isSettingsOpen() && !ui.isPauseOpen()) this.toggleInventory();
+      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen()) this.toggleInventory();
       else if (input.wasPressed('Escape') && (ui.isInventoryOpen() || this.screen.isOpen())) this.toggleInventory();
       if (input.locked && !this.anyScreenOpen()) {
-        if (input.wasPressed('KeyT') || input.wasPressed('Enter')) this.openChat('');
-        else if (input.wasPressed('Slash')) this.openChat('/');
+        if (input.wasPressed(k.chat) || input.wasPressed('Enter')) this.openChat('');
+        else if (input.wasPressed(k.command)) this.openChat('/');
         if (input.wasPressed('F1')) {
           this.hudHidden = !this.hudHidden;
           ui.setHudVisible(!this.hudHidden);
         }
         if (input.wasPressed('F3')) this.debug = !this.debug;
-        if (input.wasPressed('F5')) this.thirdPerson = (this.thirdPerson + 1) % 3;
+        if (input.wasPressed(k.perspective)) this.thirdPerson = (this.thirdPerson + 1) % 3;
         for (let i = 0; i < 9; i++) {
           if (input.wasPressed('Digit' + (i + 1))) this.selectSlot(i);
         }
         if (input.wheel !== 0) this.selectSlot((this.selected + (input.wheel > 0 ? 1 : -1) + 9) % 9);
-        if (input.wasPressed('KeyF')) this.swapHands();
-        if (input.wasPressed('KeyQ')) this.interaction.dropHeld(input.wasPressedWithCtrl('KeyQ') || input.isDown('ControlLeft') || input.isDown('ControlRight'));
+        if (input.wasPressed(k.swapHands)) this.swapHands();
+        if (input.wasPressed(k.drop)) this.interaction.dropHeld(input.wasPressedWithCtrl(k.drop) || input.isDown('ControlLeft') || input.isDown('ControlRight'));
       }
     }
-    const tabDown = input.isDown('Tab') && input.locked;
+    const tabDown = input.isDown(k.playerList) && input.locked;
     if (tabDown) {
       const list = [{ name: this.cfg.name, color: this.cfg.shirt, me: true }];
       for (const rp of this.remote.values()) list.push({ name: rp.name, color: rp.shirt, me: false });
@@ -599,17 +621,23 @@ export class Game {
     if (this.life.sleeping) {
       this.life.sleeping.t += dt;
       ui.setSleep(Math.min(0.9, this.life.sleeping.t / 5));
-      if (input.locked && !ui.isChatOpen() && (input.wasPressed('ShiftLeft') || input.wasPressed('ShiftRight'))) this.life.leaveBed(true);
+      if (input.locked && !ui.isChatOpen() && input.wasPressed(settings.keys.sneak)) this.life.leaveBed(true);
     }
 
     // --- Movimiento ---
     const active = input.locked && !ui.isChatOpen() && !surv.dead && !this.life.sleeping;
-    if (active && this.creative && input.wasDoubleTapped('Space')) {
+    const k = settings.keys;
+    // Agacharse y correr fijos: una pulsación los activa y otra los quita.
+    if (active && settings.toggleSneak && input.wasPressed(k.sneak)) this.sneakOn = !this.sneakOn;
+    if (active && settings.toggleSprint && input.wasPressed(k.sprint)) this.sprintOn = !this.sprintOn;
+    if (!settings.toggleSneak) this.sneakOn = false;
+    if (!settings.toggleSprint) this.sprintOn = false;
+    if (active && this.creative && input.wasDoubleTapped(k.jump)) {
       p.flying = !p.flying;
       if (p.flying) p.vy = 0;
     }
     if (!this.creative) p.flying = false;
-    if (active && input.wasDoubleTapped('KeyW') && (this.creative || surv.canSprint())) p.sprinting = true;
+    if (active && input.wasDoubleTapped(k.forward) && (this.creative || surv.canSprint())) p.sprinting = true;
     if (!this.creative && !surv.canSprint()) p.sprinting = false;
     // Usar un objeto frena mucho; los efectos Velocidad y Lentitud multiplican.
     p.usingItem = !!this.interaction.use;
@@ -619,13 +647,13 @@ export class Game {
     const wasGround = p.onGround;
     const ox = p.x, oz = p.z;
     p.update(dt, {
-      forward: active && input.isDown('KeyW'),
-      back: active && input.isDown('KeyS'),
-      left: active && input.isDown('KeyA'),
-      right: active && input.isDown('KeyD'),
-      jump: active && (input.isDown('Space') || input.wasPressed('Space')),
-      sneak: active && (input.isDown('ShiftLeft') || input.isDown('ShiftRight')),
-      sprint: active && (input.isDown('ControlLeft') || input.isDown('ControlRight')) && (this.creative || surv.canSprint()),
+      forward: active && input.isDown(k.forward),
+      back: active && input.isDown(k.back),
+      left: active && input.isDown(k.left),
+      right: active && input.isDown(k.right),
+      jump: active && (input.isDown(k.jump) || input.wasPressed(k.jump)),
+      sneak: active && (settings.toggleSneak ? this.sneakOn : input.isDown(k.sneak)),
+      sprint: active && (settings.toggleSprint ? this.sprintOn : input.isDown(k.sprint)) && (this.creative || surv.canSprint()),
     }, world);
     const moved = Math.hypot(p.x - ox, p.z - oz);
     // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
@@ -781,7 +809,8 @@ export class Game {
       views.push({
         id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
         bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
-        swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, light: [skyAtEye, (le & 15) / 15],
+        swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
+        use: (this.interaction.use?.kind as 'eat' | 'bow' | 'block' | undefined) ?? null, light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
       });
     }
@@ -942,7 +971,7 @@ export class Game {
     this.input.exitLock();
   }
 
-  private selectSlot(i: number): void {
+  selectSlot(i: number): void {
     if (i === this.selected) return;
     this.selected = i;
     // Cambiar de objeto vacía la barra de ataque (como en Minecraft).

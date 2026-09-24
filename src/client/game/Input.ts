@@ -15,6 +15,10 @@ export class Input {
   locked = false;
   /** Cuando es false (chat/inventario abiertos) las teclas de juego se ignoran. */
   gameKeys = true;
+  /** Teclas asignadas a acciones (el navegador no debe usarlas mientras se juega). */
+  reserved = new Set<string>();
+  /** Teclas de movimiento (Ctrl + tecla tampoco debe cerrar la pestaña, p. ej. Ctrl+W). */
+  movement = new Set<string>();
   onLockChange: ((locked: boolean) => void) | null = null;
   private canvas: HTMLCanvasElement;
 
@@ -155,8 +159,8 @@ export class Input {
     // (y así se abre la pausa). Mantener Esc sigue saliendo de la pantalla completa.
     if (e.code === 'Escape' && this.keyboardLocked && this.locked) this.exitLock();
     // Evita acciones del navegador en las teclas del juego.
-    if (this.locked && ['Space', 'Tab', 'F1', 'F3', 'F5', 'Slash', 'ControlLeft', 'KeyW'].includes(e.code)) e.preventDefault();
-    if (this.locked && (e.ctrlKey || e.metaKey) && ['KeyW', 'KeyS', 'KeyD', 'KeyA'].includes(e.code)) e.preventDefault();
+    if (this.locked && (this.reserved.has(e.code) || ['Tab', 'F1', 'F3', 'F5', 'Space'].includes(e.code))) e.preventDefault();
+    if (this.locked && (e.ctrlKey || e.metaKey) && (this.movement.has(e.code) || e.code === 'KeyW')) e.preventDefault();
   };
 
   private onKeyUp = (e: KeyboardEvent) => {

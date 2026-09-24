@@ -10,7 +10,7 @@ import {
   BIRCH_PLANKS, SPRUCE_PLANKS, CRAFTING_TABLE, BOOKSHELF, SAND, GLASS, COBBLESTONE, STONE, IRON_ORE, GOLD_ORE,
   OAK_SAPLING, BIRCH_SAPLING, SPRUCE_SAPLING, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
-  PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS,
+  PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS, familyBase,
 } from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod';
@@ -288,6 +288,19 @@ ITEM_SPRITES.forEach((n, i) => spriteIndex.set(n, i));
 export function itemSpriteIndex(id: number): number {
   const s = ITEMS[id]?.sprite;
   return s ? spriteIndex.get(s) ?? -1 : -1;
+}
+
+/**
+ * Objeto que corresponde a un bloque del mundo (clic central): el propio bloque, su estado base
+ * (hornos encendidos, carteles de pared, cofres dobles) o lo que lo planta (semillas, zanahorias…).
+ */
+export function itemForBlock(block: number): number {
+  if (block <= 0 || BLOCKS[block]?.fluid) return 0;
+  const base = baseBlock(block);
+  if (ITEMS[base]?.block === base) return base;
+  const fam = familyBase(block);
+  const planter = ITEMS.find((i) => i && i.block === fam && !i.tool);
+  return planter ? planter.id : 0;
 }
 
 export function isValidItem(id: number): boolean {

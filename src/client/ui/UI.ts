@@ -1,5 +1,7 @@
 // Interfaz de usuario en DOM: menú principal, HUD, chat, inventario, pausa, ajustes y carga.
+import { KEY_ACTIONS, assignKey, defaultKeybinds, keyLabel } from '../game/keybinds';
 import { itemTooltipHtml } from './itemTooltip';
+import { ChatCompletion } from './chatCompletion';
 import { BLOCKS, INVENTORY_ORDER, type BlockCategory } from '../../shared/blocks';
 import { CREATIVE_ITEMS, ITEMS, itemName, type ItemStack } from '../../shared/items';
 import type { GameMode } from '../../shared/protocol';
@@ -39,6 +41,8 @@ export class UI {
   onResume: (() => void) | null = null;
   onQuit: (() => void) | null = null;
   onChatSubmit: ((text: string) => void) | null = null;
+  /** Nombres de los jugadores conectados (para autocompletar en el chat). */
+  playerNames: () => string[] = () => [];
   onChatClosed: (() => void) | null = null;
   onInventoryPick: ((id: number, slot: number | null) => void) | null = null;
   onInventorySelectSlot: ((slot: number) => void) | null = null;
@@ -88,6 +92,13 @@ export class UI {
       this.onUiSound?.('open');
       this.openSettings('pause');
     });
+    $('btn-keys-reset').addEventListener('click', () => {
+      if (!this.settings) return;
+      this.onUiSound?.('click');
+      this.settings.keys = defaultKeybinds();
+      this.changed();
+      this.renderKeys();
+    });
     $('btn-settings-close').addEventListener('click', () => {
       this.onUiSound?.('close');
       this.closeSettings();
@@ -124,11 +135,20 @@ export class UI {
       });
     }
     const chatInput = $<HTMLInputElement>('chatinput');
+    const completion = new ChatCompletion(chatInput, () => this.playerNames());
     chatInput.addEventListener('keydown', (e) => {
+      if (completion.onKey(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (e.key === 'Enter') {
         const v = chatInput.value.trim();
         chatInput.value = '';
-        if (v) this.onChatSubmit?.(v);
+        if (v) {
+          completion.sent(v);
+          this.onChatSubmit?.(v);
+        }
         this.closeChat();
         e.preventDefault();
       } else if (e.key === 'Escape') {
@@ -654,7 +674,10 @@ export class UI {
       this.slider('Sensibilidad del ratón', s.sensitivity, 0.2, 3, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.sensitivity = v; }),
       this.toggle('Invertir eje Y', s.invertY, (v) => { s.invertY = v; }),
       this.toggle('Balanceo de la cámara', s.viewBobbing, (v) => { s.viewBobbing = v; }),
+      this.toggle('Agacharse con una pulsación (alternar)', s.toggleSneak, (v) => { s.toggleSneak = v; }),
+      this.toggle('Correr con una pulsación (alternar)', s.toggleSprint, (v) => { s.toggleSprint = v; }),
     );
+    this.renderKeys();
     const audio = $('settings-audio');
     audio.innerHTML = '';
     audio.append(
@@ -662,6 +685,35 @@ export class UI {
       this.slider('Música', s.music, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.music = v; }),
       this.slider('Ambiente', s.ambient, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.ambient = v; }),
     );
+  }
+
+  /** Teclas: un botón por acción; al pulsarlo espera la tecla nueva (Esc cancela). */
+  private renderKeys(): void {
+    const s = this.settings;
+    if (!s) return;
+    const box = $('settings-keys');
+    box.innerHTML = '';
+    for (const [action, label] of KEY_ACTIONS) {
+      const row = document.createElement('div');
+      row.className = 'keyrow';
+      row.innerHTML = `<span>${label}</span><button class="btn small key"></button>`;
+      const btn = row.querySelector('button')!;
+      btn.textContent = keyLabel(s.keys[action]);
+      btn.addEventListener('click', () => {
+        this.onUiSound?.('click');
+        btn.textContent = 'Pulsa una tecla…';
+        btn.classList.add('waiting');
+        const onKey = (e: KeyboardEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.removeEventListener('keydown', onKey, true);
+          if (e.code !== 'Escape' && assignKey(s.keys, action, e.code)) this.changed();
+          this.renderKeys();
+        };
+        window.addEventListener('keydown', onKey, true);
+      });
+      box.appendChild(row);
+    }
   }
 
   private slider(label: string, value: number, min: number, max: number, step: number, fmt: (v: number) => string, set: (v: number) => void): HTMLElement {

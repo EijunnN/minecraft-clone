@@ -1,5 +1,6 @@
-// Física del jugador: caminar, correr, agacharse (sin caer por los bordes), saltar, nadar, volar,
-// subir escalones bajos (losas, escaleras) y trepar por escaleras de mano.
+// Física del jugador: caminar, correr, agacharse (sin caer por los bordes), saltar, nadar (y bucear
+// en postura horizontal corriendo bajo el agua), gatear por huecos de un bloque, volar, subir
+// escalones bajos (losas, escaleras) y trepar por escaleras de mano.
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, fluidHeight } from '../../shared/blocks';
 import { moveBox, boxBlocked } from '../../shared/collide';
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
@@ -20,6 +21,14 @@ export interface MoveControls {
 }
 
 const GRAVITY = 32;
+/** Altura del cuerpo tumbado (buceando o gateando) y de sus ojos. */
+const PRONE_HEIGHT = 0.6;
+const PRONE_EYE = 0.4;
+/** Velocidad buceando (Minecraft: unos 5,6 bloques/s) y gateando. */
+const SWIM_SPEED = 5.6;
+const CRAWL_SPEED = 1.3;
+
+export type Pose = 'stand' | 'swim' | 'crawl';
 const JUMP_VELOCITY = 9.0;
 const HW = PLAYER_WIDTH / 2;
 const EPS = 1e-4;
@@ -66,6 +75,13 @@ export class Player {
   onLadder = false;
   /** Chocó horizontalmente en el último movimiento. */
   hitWall = false;
+  /** Postura: de pie, buceando (corriendo bajo el agua) o gateando (sin sitio para ponerse de pie). */
+  pose: Pose = 'stand';
+
+  /** Altura del cuerpo según la postura. */
+  get height(): number {
+    return this.pose === 'stand' ? PLAYER_HEIGHT : PRONE_HEIGHT;
+  }
   private eyeOffset = PLAYER_EYE_HEIGHT;
 
   get eyeY(): number {
@@ -185,10 +201,11 @@ export class Player {
     const wl = Math.hypot(wx, wz);
     if (wl > 1) { wx /= wl; wz /= wl; }
 
-    this.sneaking = c.sneak && !this.flying;
+    this.sneaking = c.sneak && !this.flying && this.pose === 'stand';
     if (fwd <= 0 || this.sneaking || this.usingItem) this.sprinting = false;
     else if (c.sprint) this.sprinting = true;
-    const targetEye = this.sneaking ? PLAYER_SNEAK_EYE_HEIGHT : PLAYER_EYE_HEIGHT;
+    this.updatePose(world);
+    const targetEye = this.pose !== 'stand' ? PRONE_EYE : this.sneaking ? PLAYER_SNEAK_EYE_HEIGHT : PLAYER_EYE_HEIGHT;
     this.eyeOffset += (targetEye - this.eyeOffset) * (1 - Math.exp(-dt * 14));
 
     if (this.flying) {
@@ -198,6 +215,14 @@ export class Player {
       this.vz += (wz * speed - this.vz) * k;
       const vyT = ((c.jump ? 1 : 0) - (c.sneak ? 1 : 0)) * (this.sprinting ? 12 : 8);
       this.vy += (vyT - this.vy) * (1 - Math.exp(-dt * 10));
+    } else if (this.pose === 'swim') {
+      // Buceando: se avanza hacia donde se mira, también hacia arriba o abajo.
+      const cp = Math.cos(this.pitch);
+      const k = 1 - Math.exp(-dt * 5);
+      const s = SWIM_SPEED * this.slow * Math.max(0, fwd);
+      this.vx += ((-sy * cp) * s + cy * str * 2 - this.vx) * k;
+      this.vz += ((-cy * cp) * s - sy * str * 2 - this.vz) * k;
+      this.vy += (Math.sin(this.pitch) * s + (c.jump ? 2.5 : 0) - (c.sneak ? 2.5 : 0) - this.vy) * k;
     } else if (this.inWater || this.inLava) {
       const speed = (this.inLava ? 1.2 : this.sprinting ? 3.6 : 2.4) * this.slow;
       const k = 1 - Math.exp(-dt * 6);
@@ -212,7 +237,7 @@ export class Player {
       // Salir del agua trepando a la orilla.
       if (c.jump && this.inWater && !this.eyeInWater && this.touchingWall(world)) this.vy = Math.max(this.vy, 5.5);
     } else {
-      const speed = (this.sneaking ? 1.31 : this.sprinting ? 5.61 : 4.32) * this.slow;
+      const speed = (this.pose === 'crawl' ? CRAWL_SPEED : this.sneaking ? 1.31 : this.sprinting ? 5.61 : 4.32) * this.slow;
       const k = 1 - Math.exp(-dt * (this.onGround ? 16 : 3.2));
       this.vx += (wx * speed - this.vx) * k;
       this.vz += (wz * speed - this.vz) * k;
@@ -253,7 +278,7 @@ export class Player {
     const prevVy = this.vy;
     const ox = this.x, oy = this.y, oz = this.z;
     // Colisión por cajas con subida automática de escalones de hasta 0,6 bloques.
-    const r = moveBox(world, this.x, this.y, this.z, PLAYER_WIDTH, PLAYER_HEIGHT, dx, dy, dz, this.flying ? 0 : 0.6, wasGround);
+    const r = moveBox(world, this.x, this.y, this.z, PLAYER_WIDTH, this.height, dx, dy, dz, this.flying ? 0 : 0.6, wasGround);
     this.x += r.dx;
     this.y += r.dy;
     this.z += r.dz;
@@ -285,6 +310,28 @@ export class Player {
     this.walkAmount += (target - this.walkAmount) * (1 - Math.exp(-dt * 10));
   }
 
+  /** ¿Cabe de pie donde está? */
+  private roomToStand(world: BlockSource): boolean {
+    return !this.collides(this.x - HW + EPS, this.y + EPS, this.z - HW + EPS, this.x + HW - EPS, this.y + PLAYER_HEIGHT, this.z + HW - EPS, world);
+  }
+
+  /**
+   * Postura: se bucea corriendo con la cabeza bajo el agua y se sigue mientras se corra dentro del
+   * agua; sin sitio para ponerse de pie se gatea (y se levanta en cuanto cabe).
+   */
+  private updatePose(world: BlockSource): void {
+    const canStand = this.roomToStand(world);
+    if (this.flying) this.pose = canStand ? 'stand' : 'crawl';
+    else if (this.pose === 'swim') {
+      if (!this.inWater || !this.sprinting) this.pose = canStand ? 'stand' : 'crawl';
+    } else if (this.sprinting && this.eyeInWater) this.pose = 'swim';
+    else if (this.pose === 'crawl') {
+      if (canStand) this.pose = 'stand';
+    } else if (!canStand) this.pose = 'crawl';
+    // Buceando en un hueco de un bloque el sprint sigue: no se corta por agacharse.
+    if (this.pose === 'crawl' && !this.inWater) this.sprinting = false;
+  }
+
   private touchingWall(world: BlockSource): boolean {
     const y0 = this.y + 0.3, y1 = this.y + 0.9;
     return this.collides(this.x - HW - 0.05, y0, this.z - HW - 0.05, this.x + HW + 0.05, y1, this.z + HW + 0.05, world);
@@ -294,7 +341,7 @@ export class Player {
   intersectsBlock(bx: number, by: number, bz: number): boolean {
     return (
       this.x + HW > bx && this.x - HW < bx + 1 &&
-      this.y + PLAYER_HEIGHT > by && this.y < by + 1 &&
+      this.y + this.height > by && this.y < by + 1 &&
       this.z + HW > bz && this.z - HW < bz + 1
     );
   }
