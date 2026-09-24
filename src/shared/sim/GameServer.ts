@@ -367,7 +367,7 @@ export class GameServer {
     if (!s.joined) return;
     switch (msg.t) {
       case 'pos':
-        this.onPos(s, msg);
+        if (this.allow(s, 0.2)) this.onPos(s, msg);
         break;
       case 'set':
         this.onSet(s, msg);
@@ -376,22 +376,22 @@ export class GameServer {
         this.onChat(s, msg.m);
         break;
       case 'swing':
-        this.broadcast({ t: 'swing', id: s.id }, s);
+        if (this.allow(s, 0.5)) this.broadcast({ t: 'swing', id: s.id }, s);
         break;
       case 'attack':
-        this.onAttack(s, msg);
+        if (this.allow(s, 1)) this.onAttack(s, msg);
         break;
       case 'pickup':
-        this.onPickup(s, Number(msg.e));
+        if (this.allow(s, 0.5)) this.onPickup(s, Number(msg.e));
         break;
       case 'drop':
         this.onDrop(s, msg);
         break;
       case 'shoot':
-        this.onShoot(s, msg);
+        if (this.allow(s, 3)) this.onShoot(s, msg);
         break;
       case 'open':
-        this.onOpen(s, msg);
+        if (this.allow(s, 1)) this.onOpen(s, msg);
         break;
       case 'close':
         s.container = null;
@@ -402,13 +402,13 @@ export class GameServer {
         this.onContainerOp(s, msg);
         break;
       case 'look':
-        if (Number.isInteger(msg.e)) {
+        if (Number.isInteger(msg.e) && this.allow(s, 0.2)) {
           s.lookAt = msg.e;
           s.lookUntil = this.now() + 700;
         }
         break;
       case 'state':
-        this.onState(s, msg.d);
+        if (this.allow(s, 2)) this.onState(s, msg.d);
         break;
       case 'died':
         if (typeof msg.m === 'string' && this.allow(s, 5)) {
@@ -524,7 +524,6 @@ export class GameServer {
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z), b = Number(msg.b);
     if (![x, y, z, b].every(Number.isInteger)) return;
     if (Math.abs(x) > WORLD_LIMIT || Math.abs(z) > WORLD_LIMIT || y < 1 || y >= WORLD_HEIGHT) return;
-    this.world.ensureChunk(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE), this.now());
     if (!isValidBlockId(b) || b === BEDROCK || BLOCK_FLUID_LEVEL[b] !== 0 || (b >= FURNACE_LIT && b < FURNACE_LIT + 4)) {
       this.reject(s, x, y, z);
       return;
@@ -533,6 +532,8 @@ export class GameServer {
       this.reject(s, x, y, z);
       return;
     }
+    // Sólo ahora (edición válida y al alcance del jugador) se genera el chunk si aún no estaba.
+    this.world.ensureChunk(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE), this.now());
     const cur = this.world.getBlock(x, y, z);
     if (cur < 0) return;
     const creative = s.mode === 'c';
@@ -693,7 +694,7 @@ export class GameServer {
     const q = Number(msg.q) || 0;
     if (![x, y, z].every(Number.isInteger)) return;
     const k = posKey(x, y, z);
-    const c = s.container === k ? this.containerAt(x, y, z) : null;
+    const c = s.container === k && this.allow(s, 1) ? this.containerAt(x, y, z) : null;
     if (!c) {
       // Contenedor cerrado o destruido: devolver al jugador lo que ofrecía.
       if (msg.t === 'cclick') this.send(s, { t: 'cres', q, cur: sanitizeStack(msg.cur) });
@@ -771,6 +772,7 @@ export class GameServer {
 
   private onDrop(s: Session, msg: Extract<ClientMsg, { t: 'drop' }>): void {
     if (!Array.isArray(msg.items) || !Array.isArray(msg.p) || msg.items.length > 64) return;
+    if (!this.allow(s, 1 + msg.items.length * 0.5)) return;
     const p = msg.p.map(Number);
     if (p.length !== 3 || !p.every(Number.isFinite)) return;
     if (!this.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1], p[2] - s.p[2]) > 4) return;

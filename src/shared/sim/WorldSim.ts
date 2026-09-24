@@ -147,7 +147,10 @@ export class WorldSim {
     return c.blocks[blockIndex(x - cx * CHUNK_SIZE, y, z - cz * CHUNK_SIZE)];
   }
 
-  /** Cambia un bloque (y registra la edición). Devuelve el id anterior o -1 si no hubo cambio. */
+  /**
+   * Cambia un bloque (y registra la edición). Devuelve el id anterior o -1 si no hubo cambio.
+   * Sólo en chunks cargados: así toda edición se difunde y dispara sus reacciones.
+   */
   setBlock(x: number, y: number, z: number, id: number): number {
     if (y < 0 || y >= WORLD_HEIGHT) return -1;
     const cx = Math.floor(x / CHUNK_SIZE), cz = Math.floor(z / CHUNK_SIZE);
@@ -155,31 +158,29 @@ export class WorldSim {
     const lx = x - cx * CHUNK_SIZE, lz = z - cz * CHUNK_SIZE;
     const idx = blockIndex(lx, y, lz);
     const c = this.chunks.get(key);
-    let old = -1;
-    if (c) {
-      old = c.blocks[idx];
-      if (old === id) return -1;
-      c.blocks[idx] = id;
-      // Mapa de altura.
-      const col = lz * 16 + lx;
-      if (blocksSky(id)) {
-        if (y > c.top[col]) c.top[col] = y;
-      } else if (y === c.top[col]) {
-        let t = -1;
-        for (let yy = y - 1; yy >= 0; yy--) {
-          if (blocksSky(c.blocks[blockIndex(lx, yy, lz)])) {
-            t = yy;
-            break;
-          }
+    if (!c) return -1;
+    const old = c.blocks[idx];
+    if (old === id) return -1;
+    c.blocks[idx] = id;
+    // Mapa de altura.
+    const col = lz * 16 + lx;
+    if (blocksSky(id)) {
+      if (y > c.top[col]) c.top[col] = y;
+    } else if (y === c.top[col]) {
+      let t = -1;
+      for (let yy = y - 1; yy >= 0; yy--) {
+        if (blocksSky(c.blocks[blockIndex(lx, yy, lz)])) {
+          t = yy;
+          break;
         }
-        c.top[col] = t;
       }
-      if (BLOCK_EMISSION[id]) c.emitters.add(idx);
-      else c.emitters.delete(idx);
+      c.top[col] = t;
     }
+    if (BLOCK_EMISSION[id]) c.emitters.add(idx);
+    else c.emitters.delete(idx);
     this.chunkEdits(key).set(idx, id);
     this.dirty.add(key);
-    if (old >= 0) this.onChange?.(x, y, z, old, id);
+    this.onChange?.(x, y, z, old, id);
     return old;
   }
 

@@ -96,6 +96,13 @@ export interface Entity extends Body {
 
 const GRAVITY = 32;
 const TAU = Math.PI * 2;
+/** Límites globales (protegen la memoria y la CPU del servidor): se retiran los más viejos. */
+const MAX_ITEMS = 800;
+const MAX_ARROWS = 200;
+/** Animales en todo el mundo; al llegar al límite se reciclan los que están lejos de todos. */
+const MAX_PASSIVE = 300;
+/** Distancia a los jugadores a partir de la cual una entidad queda congelada (no se simula). */
+const ACTIVE_RANGE = 128;
 
 function angleTo(fromX: number, fromZ: number, toX: number, toZ: number): number {
   return Math.atan2(-(toX - fromX), -(toZ - fromZ));
@@ -149,7 +156,20 @@ export class Entities {
     return e;
   }
 
+  /** Retira la entidad más antigua de un tipo si se alcanzó su límite. */
+  private makeRoom(type: number, max: number): void {
+    let n = 0;
+    let oldest: Entity | null = null;
+    for (const e of this.list.values()) {
+      if (e.type !== type) continue;
+      n++;
+      if (!oldest || e.age > oldest.age) oldest = e;
+    }
+    if (n >= max && oldest) this.remove(oldest.id);
+  }
+
   spawnItem(stack: ItemStack, x: number, y: number, z: number, vx = 0, vy = 0, vz = 0, owner?: string, delay = 0.5): Entity {
+    this.makeRoom(ENT_ITEM, MAX_ITEMS);
     const e = this.base(ENT_ITEM, x, y, z, 0.25, 0.25, 5);
     e.stack = { ...stack };
     e.vx = vx;
@@ -170,6 +190,7 @@ export class Entities {
   }
 
   spawnArrow(x: number, y: number, z: number, vx: number, vy: number, vz: number, shooter: string | number, damage: number): Entity {
+    this.makeRoom(ENT_ARROW, MAX_ARROWS);
     const e = this.base(ENT_ARROW, x, y, z, 0.2, 0.2, 1);
     e.vx = vx;
     e.vy = vy;
@@ -307,9 +328,29 @@ export class Entities {
 
   // ------------------------------------------------------------------ bucle
 
+  /** Distancia horizontal al jugador más cercano. */
+  private nearestPlayer2D(e: Entity, players: PlayerView[]): number {
+    let d = Infinity;
+    for (const p of players) d = Math.min(d, Math.hypot(p.x - e.x, p.z - e.z));
+    return d;
+  }
+
   tick(dt: number): void {
     const players = this.host.players();
+    this.buildItemGrid();
+    const active: Entity[] = [];
     for (const e of this.list.values()) {
+      const near = this.nearestPlayer2D(e, players);
+      // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
+      if (e.ai && !e.dead && (MOBS[e.type].hostile || e.type === MOB_SQUID)) {
+        if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
+          this.remove(e.id);
+          continue;
+        }
+      }
+      // Lejos de los jugadores o en un chunk sin cargar: congelada.
+      if (near > ACTIVE_RANGE || !this.w.isLoaded(Math.floor(e.x / 16), Math.floor(e.z / 16))) continue;
+      if (e.ai) active.push(e);
       e.age += dt;
       e.hurt += dt;
       if (e.invuln > 0) e.invuln -= dt;
@@ -323,13 +364,12 @@ export class Entities {
       else if (e.type === ENT_FALLING) this.fallingTick(e, dt);
       else this.mobTick(e, dt, players);
     }
-    this.separate();
+    this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));
     this.spawnTick(dt, players);
   }
 
-  private separate(): void {
-    const mobs: Entity[] = [];
-    for (const e of this.list.values()) if (e.ai && !e.dead) mobs.push(e);
+  /** Empuje entre criaturas que se solapan (sólo las que se simulan). */
+  private separate(mobs: Entity[]): void {
     for (let i = 0; i < mobs.length; i++) {
       for (let j = i + 1; j < mobs.length; j++) {
         const a = mobs[i], b = mobs[j];
@@ -361,6 +401,19 @@ export class Entities {
 
   // ------------------------------------------------------------------ objetos
 
+  private itemGrid = new Map<string, Entity[]>();
+
+  private buildItemGrid(): void {
+    this.itemGrid.clear();
+    for (const e of this.list.values()) {
+      if (e.type !== ENT_ITEM || e.dead) continue;
+      const k = `${Math.floor(e.x)},${Math.floor(e.y)},${Math.floor(e.z)}`;
+      const l = this.itemGrid.get(k);
+      if (l) l.push(e);
+      else this.itemGrid.set(k, [e]);
+    }
+  }
+
   private itemTick(e: Entity, dt: number, _players: PlayerView[]): void {
     if (e.pickupDelay! > 0) e.pickupDelay! -= dt;
     e.flags = e.pickupDelay! <= 0 ? EF_PICKABLE : 0;
@@ -389,10 +442,16 @@ export class Entities {
       e.vy = 0;
       e.onGround = false;
     } else moveBody(e, this.w, dt);
-    // Fusionar pilas iguales cercanas.
+    // Fusionar pilas iguales cercanas (sólo se miran las celdas vecinas).
     if (((e.id + Math.floor(e.age * 4)) & 7) === 0) {
-      for (const o of this.list.values()) {
-        if (o === e || o.type !== ENT_ITEM || o.dead || !o.stack || !e.stack) continue;
+      const near: Entity[] = [];
+      const bx = Math.floor(e.x), by = Math.floor(e.y), bz = Math.floor(e.z);
+      for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        const l = this.itemGrid.get(`${bx + dx},${by + dy},${bz + dz}`);
+        if (l) near.push(...l);
+      }
+      for (const o of near) {
+        if (o === e || o.type !== ENT_ITEM || o.dead || !o.stack || !e.stack || !this.list.has(o.id)) continue;
         if (o.stack.id !== e.stack.id || (o.stack.dmg ?? 0) !== (e.stack.dmg ?? 0) || ITEMS[e.stack.id]?.tool) continue;
         if (Math.abs(o.x - e.x) > 0.6 || Math.abs(o.y - e.y) > 0.6 || Math.abs(o.z - e.z) > 0.6) continue;
         const room = maxStack(e.stack.id) - e.stack.count;
@@ -515,13 +574,6 @@ export class Entities {
     const def = MOBS[e.type];
     const ai = e.ai!;
     const w = this.w;
-    // Desaparición de hostiles lejanos.
-    let nearest = Infinity;
-    for (const p of players) nearest = Math.min(nearest, Math.hypot(p.x - e.x, p.z - e.z));
-    if (def.hostile && (nearest > 96 || this.host.difficulty() === 0 || (nearest > 32 && this.rand() < dt / 40))) {
-      this.remove(e.id);
-      return;
-    }
     // Ambiente: sol, lava, fuego, caída, vacío.
     if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
     if (e.inLava) {
@@ -835,7 +887,7 @@ export class Entities {
     const sx = e.x, sy = e.y + e.height * 0.8, sz = e.z;
     const tx = target.x, ty = target.y + 1.2, tz = target.z;
     const dx = tx - sx, dz = tz - sz;
-    const horiz = Math.hypot(dx, dz);
+    const horiz = Math.max(1e-3, Math.hypot(dx, dz));
     const speed = 30;
     const t = Math.max(0.05, horiz / speed);
     // Compensar la gravedad (20 m/s²) y añadir imprecisión según la dificultad.
@@ -954,6 +1006,7 @@ export class Entities {
   spawnPassive(p: PlayerView, force = false): void {
     const c = this.counts(p.x, p.z, 72);
     if (!force && c.passive >= 10) return;
+    if (!this.roomForPassive(4)) return;
     const w = this.w;
     for (let attempt = 0; attempt < 6; attempt++) {
       const [x, z] = this.ring(p, force ? 12 : 24, 56);
@@ -977,6 +1030,24 @@ export class Entities {
     }
   }
 
+  /** ¿Caben n animales más? Si no, recicla los más alejados de todos los jugadores. */
+  private roomForPassive(n: number): boolean {
+    const players = this.host.players();
+    const far: [number, Entity][] = [];
+    let total = 0;
+    for (const e of this.list.values()) {
+      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
+      total++;
+      const d = this.nearestPlayer2D(e, players);
+      if (d > ACTIVE_RANGE) far.push([d, e]);
+    }
+    if (total + n <= MAX_PASSIVE) return true;
+    far.sort((a, b) => b[0] - a[0]);
+    const need = total + n - MAX_PASSIVE;
+    for (let i = 0; i < need && i < far.length; i++) this.remove(far[i][1].id);
+    return far.length >= need;
+  }
+
   private spawnSquid(p: PlayerView): void {
     if (this.counts(p.x, p.z, 64).squid >= 5) return;
     const w = this.w;
@@ -997,7 +1068,7 @@ export class Entities {
   serializePassive(): string {
     const out: number[][] = [];
     for (const e of this.list.values()) {
-      if (!e.ai || e.dead || MOBS[e.type].hostile) continue;
+      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
       out.push([e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health)]);
     }
     return JSON.stringify(out);

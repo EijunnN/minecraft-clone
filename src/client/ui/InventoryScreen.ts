@@ -39,10 +39,15 @@ export class InventoryScreen {
   private tooltip: HTMLElement;
   private slotEls = new Map<string, HTMLElement>();
   private hovered: SlotRef | null = null;
+  /** Operación de contenedor esperando respuesta (bloquea los clics mientras la pantalla está abierta). */
   private busy = 0;
   private busyAt = 0;
   private seq = 1;
-  private putBack: { q: number; slot: number } | null = null;
+  /**
+   * Operaciones enviadas al servidor por número de secuencia. Su respuesta se aplica aunque la
+   * pantalla ya se haya cerrado (así cerrar deprisa no pierde ni duplica objetos).
+   */
+  private pending = new Map<number, { kind: 'click' | 'put' | 'take'; at: number; slot: number; stack: ItemStack | null }>();
   private mouse = [0, 0];
 
   constructor(host: ScreenHost, inv: Inventory) {
@@ -96,6 +101,7 @@ export class InventoryScreen {
   /** Cierra y devuelve al inventario lo que quedó en la cuadrícula y el cursor. */
   close(): void {
     if (!this.kind) return;
+    this.busy = 0;
     if (this.container) this.host.send({ t: 'close' });
     for (const s of this.grid) this.giveOrDrop(s);
     this.grid = [];
@@ -120,15 +126,19 @@ export class InventoryScreen {
 
   onServer(msg: ServerMsg): void {
     if (msg.t === 'cres') {
-      if (msg.q !== this.busy) return;
-      this.busy = 0;
-      if (msg.cur !== undefined) this.inv.cursor = cloneStack(msg.cur);
-      if (msg.give) {
-        if (this.putBack && this.putBack.q === msg.q && !this.inv.slots[this.putBack.slot]) {
-          this.inv.slots[this.putBack.slot] = cloneStack(msg.give);
-        } else this.giveOrDrop(cloneStack(msg.give));
-      }
-      this.putBack = null;
+      const p = this.pending.get(msg.q);
+      if (!p) return;
+      this.pending.delete(msg.q);
+      const give = cloneStack(msg.give);
+      if (p.kind === 'click') {
+        // El cursor del servidor manda (si la pantalla sigue abierta con ese clic en curso).
+        if (this.kind && this.busy === msg.q && msg.cur !== undefined) this.inv.cursor = cloneStack(msg.cur);
+      } else if (p.kind === 'put') {
+        // Lo que no cupo vuelve a su ranura (o a donde quepa).
+        if (give && !this.inv.slots[p.slot]) this.inv.slots[p.slot] = give;
+        else this.giveOrDrop(give);
+      } else this.giveOrDrop(give);
+      if (this.busy === msg.q) this.busy = 0;
       this.inv.changed();
       this.render();
     } else if (msg.t === 'cclose') {
@@ -219,8 +229,33 @@ export class InventoryScreen {
   // ---------------------------------------------------------------- clics
 
   private isBusy(): boolean {
-    if (this.busy && performance.now() - this.busyAt > 3000) this.busy = 0;
+    this.expirePending();
     return this.busy !== 0;
+  }
+
+  /**
+   * Operaciones sin respuesta tras 5 s (conexión perdida): lo enviado al contenedor vuelve al
+   * inventario. Llamar a menudo (también con la pantalla cerrada).
+   */
+  expirePending(): void {
+    if (this.pending.size === 0) return;
+    const now = performance.now();
+    for (const [q, p] of this.pending) {
+      if (now - p.at < 5000) continue;
+      this.pending.delete(q);
+      if (p.kind === 'put' && p.stack) {
+        if (!this.inv.slots[p.slot]) this.inv.slots[p.slot] = p.stack;
+        else this.giveOrDrop(p.stack);
+        this.inv.changed();
+      }
+      if (this.busy === q) this.busy = 0;
+    }
+  }
+
+  private track(q: number, kind: 'click' | 'put' | 'take', slot = -1, stack: ItemStack | null = null): void {
+    this.busy = q;
+    this.busyAt = performance.now();
+    this.pending.set(q, { kind, at: this.busyAt, slot, stack });
   }
 
   private onSlotClick(r: SlotRef, btn: number, shift: boolean): void {
@@ -281,9 +316,7 @@ export class InventoryScreen {
     if (this.container && this.containerPos) {
       // Del inventario al contenedor (lo confirma el servidor).
       const q = this.seq++;
-      this.busy = q;
-      this.busyAt = performance.now();
-      this.putBack = { q, slot: r.i };
+      this.track(q, 'put', r.i, s);
       this.inv.slots[r.i] = null;
       const [x, y, z] = this.containerPos;
       this.host.send({ t: 'cput', x, y, z, stack: s, q });
@@ -303,16 +336,14 @@ export class InventoryScreen {
       if (!s) return;
       const max = this.inv.room(s);
       if (max <= 0) return;
-      this.busy = q;
-      this.busyAt = performance.now();
+      this.track(q, 'take');
       this.host.send({ t: 'ctake', x, y, z, slot: i, max, q });
       return;
     }
     const before = cloneStack(this.inv.cursor);
     // Predicción local con las mismas reglas que el servidor.
     this.inv.cursor = clickSlot(this.container, i, btn, this.inv.cursor);
-    this.busy = q;
-    this.busyAt = performance.now();
+    this.track(q, 'click');
     this.host.send({ t: 'cclick', x, y, z, slot: i, btn, cur: before, q });
   }
 

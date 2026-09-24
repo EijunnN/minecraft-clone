@@ -530,6 +530,10 @@ export class Game {
     this.survival.dead = true;
     this.mining = null;
     this.use = null;
+    // Cerrar antes las pantallas: lo que había en la cuadrícula de fabricación vuelve al inventario
+    // y se suelta con todo lo demás.
+    this.screen.close();
+    if (this.ui.isInventoryOpen()) this.toggleInventory();
     if (!this.creative) {
       const items = this.inv.takeAll();
       const p = this.player;
@@ -537,8 +541,6 @@ export class Game {
         this.net?.send({ t: 'drop', items: items.slice(i, i + 16), p: [p.x, p.y + 0.5, p.z] });
       }
     }
-    this.screen.close();
-    if (this.ui.isInventoryOpen()) this.toggleInventory();
     this.audio.playPlayerDeath();
     this.net?.send({ t: 'died', m: deathMessage(this.survival.deathCause) });
     this.showDeath();
@@ -823,6 +825,7 @@ export class Game {
       ui.showPlayerList(list, this.cfg.room, this.net?.latency ?? null);
     } else if (this.lastTabDown) ui.hidePlayerList();
     this.lastTabDown = tabDown;
+    this.screen.expirePending();
     if (this.screen.isOpen()) this.screen.render();
 
     // --- Cámara ---
