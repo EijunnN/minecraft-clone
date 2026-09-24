@@ -1,0 +1,137 @@
+// Comandos del chat (/modo, /dificultad, /time, /invocar, /dar, /matar, /seed, /lista, /ayuda).
+// /tp lo resuelve el cliente.
+import type { GameMode } from '../../protocol';
+import { ITEMS, maxStack } from '../../items';
+import { MOBS, MOB_TYPES } from '../../mobs';
+import { standable } from '../pathfind';
+import type { ServerContext, Session } from './context';
+
+export class Commands {
+  constructor(private ctx: ServerContext) {}
+
+  run(s: Session, line: string): void {
+    const ctx = this.ctx;
+    const [cmdRaw, ...args] = line.slice(1).split(/\s+/);
+    const cmd = cmdRaw.toLowerCase();
+    const reply = (m: string) => ctx.tell(s, m);
+    const norm = (v: string) => v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    switch (cmd) {
+      case 'time':
+      case 'hora': {
+        const sub = norm(args[0] ?? '');
+        const val = norm(args[1] ?? args[0] ?? '');
+        const presets = new Map<string, number>([
+          ['day', 0.05], ['dia', 0.05], ['noon', 0.25], ['mediodia', 0.25], ['sunset', 0.47], ['atardecer', 0.47],
+          ['night', 0.55], ['noche', 0.55], ['midnight', 0.75], ['medianoche', 0.75], ['sunrise', 0.98], ['amanecer', 0.98],
+        ]);
+        const now = ctx.worldTime();
+        const day = Math.floor(now);
+        let target: number | null = null;
+        if (presets.has(val)) target = presets.get(val)!;
+        else if (/^\d+(\.\d+)?$/.test(val)) target = (Number(val) % 24000) / 24000;
+        if (target === null || !Number.isFinite(target) || (sub !== 'set' && !presets.has(sub) && !/^\d/.test(sub))) {
+          reply('Uso: /time set <dia|mediodia|atardecer|noche|medianoche|amanecer|0-24000>');
+          return;
+        }
+        ctx.setTime(day + (target < now - day ? 1 : 0) + target);
+        ctx.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} cambió la hora del día.` });
+        return;
+      }
+      case 'gamemode':
+      case 'modo': {
+        const v = norm(args[0] ?? '');
+        const mode: GameMode | null = ['s', '0', 'survival', 'supervivencia'].includes(v) ? 's'
+          : ['c', '1', 'creative', 'creativo'].includes(v) ? 'c' : null;
+        if (!mode) {
+          reply('Uso: /modo <supervivencia|creativo>');
+          return;
+        }
+        s.mode = mode;
+        ctx.savePlayer(s);
+        ctx.send(s, { t: 'gm', m: mode });
+        ctx.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} pasó al modo ${mode === 's' ? 'supervivencia' : 'creativo'}.` });
+        return;
+      }
+      case 'difficulty':
+      case 'dificultad': {
+        const v = norm(args[0] ?? '');
+        const map: Record<string, number> = {
+          pacifico: 0, peaceful: 0, '0': 0, facil: 1, easy: 1, '1': 1, normal: 2, '2': 2, dificil: 3, hard: 3, '3': 3,
+        };
+        if (!(v in map)) {
+          reply('Uso: /dificultad <pacifico|facil|normal|dificil>');
+          return;
+        }
+        ctx.setDifficulty(map[v]);
+        const names = ['pacífica', 'fácil', 'normal', 'difícil'];
+        ctx.broadcast({ t: 'chat', id: null, name: '', m: `Dificultad: ${names[ctx.difficulty]}.` });
+        return;
+      }
+      case 'kill':
+      case 'matar':
+        ctx.send(s, { t: 'hurt', a: 1000, k: [0, 0, 0], c: 'kill' });
+        return;
+      case 'summon':
+      case 'invocar': {
+        const v = norm(args[0] ?? '');
+        const def = MOB_TYPES.map((t) => MOBS[t]).find((m) => m.key === v || norm(m.name) === v);
+        if (!def) {
+          reply('Uso: /invocar <' + MOB_TYPES.map((t) => norm(MOBS[t].name)).join('|') + '>');
+          return;
+        }
+        // Delante del jugador, en el primer hueco donde quepa de pie.
+        const a = s.r[0];
+        const tx = Math.floor(s.p[0] - Math.sin(a) * 3), tz = Math.floor(s.p[2] - Math.cos(a) * 3);
+        ctx.world.ensureChunk(Math.floor(tx / 16), Math.floor(tz / 16), ctx.now());
+        const h = Math.ceil(def.height);
+        let y = Math.floor(s.p[1]);
+        let found = false;
+        for (let dy = 0; dy <= 12 && !found; dy++) {
+          for (const cand of [y + dy, y - dy]) {
+            if (standable(ctx.world, tx, cand, tz, h)) {
+              y = cand;
+              found = true;
+              break;
+            }
+          }
+        }
+        if (found) ctx.entities.spawnMob(def.id, tx + 0.5, y, tz + 0.5);
+        else ctx.entities.spawnMob(def.id, s.p[0], s.p[1] + 0.1, s.p[2]);
+        return;
+      }
+      case 'give':
+      case 'dar': {
+        const v = norm(args[0] ?? '');
+        const item = ITEMS.find((it) => it && (it.key === v || norm(it.name) === v.replace(/_/g, ' ')));
+        if (!item) {
+          reply('Uso: /dar <objeto> [cantidad] (por ejemplo: /dar diamond 5, /dar iron_pickaxe)');
+          return;
+        }
+        let n = Math.max(1, Math.min(64 * 9, Number(args[1]) || 1));
+        while (n > 0) {
+          const c = Math.min(n, maxStack(item.id));
+          ctx.entities.spawnItem({ id: item.id, count: c }, s.p[0], s.p[1] + 0.5, s.p[2], 0, 0, 0, undefined, 0);
+          n -= c;
+        }
+        return;
+      }
+      case 'seed':
+      case 'semilla':
+        reply(`Semilla del mundo: ${ctx.seed}`);
+        return;
+      case 'list':
+      case 'lista':
+        reply('Jugadores: ' + [...ctx.sessions()].filter((o) => o.joined).map((o) => o.name).join(', '));
+        return;
+      case 'help':
+      case 'ayuda':
+        reply(
+          'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
+          '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /matar, /seed, /lista, /tp <jugador>',
+        );
+        return;
+      default:
+        if (cmd !== 'tp') reply(`Comando desconocido: /${cmdRaw}. Escribe /ayuda.`);
+    }
+  }
+}
