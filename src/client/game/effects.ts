@@ -1,0 +1,172 @@
+// Efectos que llegan del servidor (sonidos y partículas) y sonidos de ambiente de las criaturas y
+// los fluidos cercanos.
+import type { MobSoundKind, MobSoundEvent } from '../audio/types';
+import type { ClientEntity } from './ClientEntities';
+import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, FURNACE_LIT, isValidBlockId } from '../../shared/blocks';
+import { MOBS } from '../../shared/mobs';
+import { EF_LOVE, EF_BABY, EF_FIRE } from '../../shared/protocol';
+import type { Game } from './Game';
+
+export class Effects {
+  constructor(private g: Game) {}
+
+  idleSounds = new Map<number, number>();
+  stepSounds = new Map<number, number>();
+  fluidTimer = 0;
+  heartT = 0;
+
+  onFx(kind: string, p: [number, number, number], a?: number, b?: number): void {
+    if (!Array.isArray(p) || !p.every(Number.isFinite)) return;
+    void b;
+    const mob = a !== undefined ? MOBS[a] : undefined;
+    const mk = mob?.key as MobSoundKind | undefined;
+    const fx = this.g.renderer.entities;
+    switch (kind) {
+      case 'mob_hurt':
+        if (mk) this.g.audio.playMob(mk, 'hurt', p);
+        break;
+      case 'mob_death':
+        if (mk) this.g.audio.playMob(mk, 'death', p);
+        fx.spawnSmoke(p[0], p[1], p[2], 14, 0.45, 0.85, 0.3, 0.8);
+        break;
+      case 'mob_attack':
+        if (mk) this.g.audio.playMob(mk, 'attack', p);
+        break;
+      case 'mob_shoot':
+        if (mk) this.g.audio.playMob(mk, 'shoot', p);
+        break;
+      case 'creeper_fuse':
+        this.g.audio.playMob('creeper', 'fuse', p);
+        break;
+      case 'teleport':
+        this.g.audio.playMob('enderman', 'teleport', p);
+        fx.spawnSmoke(p[0], p[1], p[2], 16, 0.6, 0.15, 0.18, 0.4);
+        break;
+      case 'enderman_scream':
+        this.g.audio.playMob('enderman', 'attack', p);
+        break;
+      case 'arrow_hit':
+        this.g.audio.playArrowHit(p);
+        break;
+      case 'bow':
+        this.g.audio.playBowShoot(p, a ?? 1);
+        break;
+      case 'explode': {
+        const power = a ?? 3;
+        this.g.audio.playExplosion(p, power);
+        fx.spawnSmoke(p[0], p[1], p[2], 50, power * 0.7, 0.8, 0.9, 2.2);
+        fx.spawnSmoke(p[0], p[1], p[2], 12, power * 0.4, 0.97, 0.7, 3);
+        const d = Math.hypot(p[0] - this.g.player.x, p[1] - this.g.player.y, p[2] - this.g.player.z);
+        this.g.shake = Math.max(this.g.shake, Math.max(0, 1 - d / 24));
+        break;
+      }
+      case 'burn_item':
+        fx.spawnSmoke(p[0], p[1], p[2], 6, 0.2, 0.25, 0.2, 1);
+        break;
+      case 'leaves':
+        if (a !== undefined && isValidBlockId(a)) fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2]), a, 0xf0);
+        break;
+      case 'feed':
+        this.g.audio.playEat();
+        fx.spawnHearts(p[0], p[1], p[2], 3, 0.3);
+        break;
+      case 'breed':
+        fx.spawnHearts(p[0], p[1], p[2], 9, 0.6);
+        this.g.audio.playPickup();
+        break;
+      case 'shear':
+        this.g.audio.playBreak('wool', p);
+        break;
+      case 'milk':
+        this.g.audio.playSplash(p, 0.25);
+        break;
+      case 'egg':
+        this.g.audio.playPickup();
+        break;
+      case 'eat_grass':
+        this.g.audio.playBreak('grass', p);
+        fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1] - 1), Math.floor(p[2]), GRASS, 0xf0);
+        break;
+      case 'bonemeal':
+        this.g.audio.playPlace('grass', p);
+        fx.spawnSparkles(p[0], p[1], p[2], 12, 0.5);
+        break;
+    }
+  }
+
+
+  /** Voces ocasionales y pasos de las criaturas cercanas (y llamas de las que arden). */
+  mobSounds(dt: number): void {
+    const p = this.g.player;
+    const now = performance.now() / 1000;
+    this.heartT -= dt;
+    const hearts = this.heartT <= 0;
+    if (hearts) this.heartT = 0.7;
+    for (const e of this.g.ents.list.values()) {
+      const def = MOBS[e.type];
+      if (!def || e.deathT >= 0) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y, e.z - p.z);
+      // Animales enamorados: corazones de vez en cuando.
+      if (hearts && e.flags & EF_LOVE && d < 32) {
+        this.g.renderer.entities.spawnHearts(e.x, e.y + def.height * (e.flags & EF_BABY ? 0.5 : 1) + 0.2, e.z, 1, 0.3);
+      }
+      if ((e.flags & EF_FIRE) && d < 48 && Math.random() < dt * 14) {
+        const hw = def.width / 2;
+        this.g.renderer.entities.spawnFlame(
+          e.x + (Math.random() - 0.5) * hw * 2, e.y + Math.random() * def.height, e.z + (Math.random() - 0.5) * hw * 2,
+        );
+      }
+      if (d > 24) continue;
+      const kind = def.key as MobSoundKind;
+      const next = this.idleSounds.get(e.id);
+      if (next === undefined) this.idleSounds.set(e.id, now + 2 + Math.random() * 8);
+      else if (now >= next) {
+        this.idleSounds.set(e.id, now + 5 + Math.random() * 9);
+        this.playMob(kind, 'idle', e);
+      }
+      if (d < 12 && e.walkAmount > 0.3) {
+        const phase = Math.floor(e.walkPhase / Math.PI);
+        if (this.stepSounds.get(e.id) !== phase) {
+          this.stepSounds.set(e.id, phase);
+          this.playMob(kind, 'step', e);
+        }
+      }
+    }
+    if (this.idleSounds.size > 200) {
+      for (const id of this.idleSounds.keys()) if (!this.g.ents.list.has(id)) {
+        this.idleSounds.delete(id);
+        this.stepSounds.delete(id);
+      }
+    }
+  }
+
+  playMob(kind: MobSoundKind, ev: MobSoundEvent, e: ClientEntity): void {
+    this.g.audio.playMob(kind, ev, [e.x, e.y + 1, e.z]);
+  }
+
+  /** Cercanía de agua que fluye y de lava (para su sonido ambiente). */
+  updateFluidSound(): void {
+    const world = this.g.world!;
+    const p = this.g.player;
+    let water = 0, lava = 0;
+    let furnace: [number, number, number] | null = null;
+    const cx = Math.floor(p.x), cy = Math.floor(p.y), cz = Math.floor(p.z);
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dz = -6; dz <= 6; dz++) {
+        for (let dx = -6; dx <= 6; dx++) {
+          const b = world.getBlock(cx + dx, cy + dy, cz + dz);
+          if (b <= 0) continue;
+          if (b >= FURNACE_LIT && b < FURNACE_LIT + 4) furnace = [cx + dx + 0.5, cy + dy + 0.5, cz + dz + 0.5];
+          const f = BLOCK_FLUID[b];
+          if (!f || ((dx | dz) & 1)) continue;
+          const w = 1 / (1 + Math.hypot(dx, dy, dz) * 0.5);
+          if (f === 2) lava += w;
+          else if (BLOCK_FLUID_LEVEL[b] !== 0) water += w;
+        }
+      }
+    }
+    this.g.audio.setFluidProximity(Math.min(1, water / 4), Math.min(1, lava / 3));
+    // Chisporroteo de un horno encendido cercano.
+    if (furnace && Math.random() < 0.35) this.g.audio.playFurnace(furnace);
+  }
+}

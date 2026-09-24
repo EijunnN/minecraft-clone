@@ -1,0 +1,455 @@
+// Interacción con el mundo: minar y romper, colocar (reglas compartidas), usar bloques (puertas,
+// camas, tartas), comer y beber, arco, cubos, azada, polvo de hueso, animales (dar de comer,
+// esquilar, ordeñar), recoger y tirar objetos.
+import { raycast, type RayHit } from './raycast';
+import type { ClientEntity } from './ClientEntities';
+import { breakTime } from './mining';
+import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
+import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND } from '../../shared/blocks';
+import { ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, BREED_FOOD, isValidItem, type ItemStack } from '../../shared/items';
+import { MOBS, ENT_ITEM, ENT_ARROW, MOB_ENDERMAN, MOB_SHEEP, MOB_COW } from '../../shared/mobs';
+import { EF_BABY, EF_SHEARED, EF_PICKABLE, type ServerMsg } from '../../shared/protocol';
+import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use } from './gameTypes';
+import type { Game } from './Game';
+
+export class Interaction {
+  constructor(private g: Game) {}
+
+  placeCooldown = 0;
+  breakDelay = 0;
+  mining: Mining | null = null;
+  use: Use | null = null;
+  pickupAsk = new Map<number, number>();
+  pendingOpen: [number, number, number] | null = null;
+  /** Usos de objetos sobre criaturas a la espera de respuesta del servidor. */
+  interactQ = 0;
+  pendingInteract = new Map<number, { slot: number; item: number }>();
+  onPicked(s: ItemStack): void {
+    if (!s || !isValidItem(s.id)) return;
+    const rest = this.g.inv.add({ id: s.id, count: Math.max(1, Math.min(64, s.count | 0)), dmg: s.dmg });
+    if (rest) this.throwStack(rest, false);
+    this.g.audio.playPickup();
+  }
+
+  /** Tira una pila al suelo hacia donde mira el jugador (Q o fuera de la ventana del inventario). */
+  throwStack(s: ItemStack, strong: boolean): void {
+    const p = this.g.player;
+    const cp = Math.cos(p.pitch);
+    const d = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
+    const k = strong ? 4.5 : 3;
+    const pos: [number, number, number] = [p.x + d[0] * 0.4, p.eyeY - 0.3, p.z + d[2] * 0.4];
+    const v: [number, number, number] = [d[0] * k + p.vx * 0.5, d[1] * k + 1.8, d[2] * k + p.vz * 0.5];
+    this.g.net?.send({ t: 'drop', items: [s], p: pos, v });
+  }
+
+  interact(dt: number, target: ClientEntity | null, dir: number[]): void {
+    const input = this.g.input;
+    const hit = this.g.hit;
+    // --- Botón izquierdo: atacar o minar ---
+    if (target) {
+      this.mining = null;
+      if (input.mousePressed[0]) this.attack(target);
+    } else if (hit && input.mouseDown[0]) {
+      if (this.g.creative) {
+        if (input.mousePressed[0] || this.breakDelay <= 0) {
+          this.breakBlock(hit);
+          this.breakDelay = 0.25;
+        }
+      } else this.mineStep(dt, hit, input.mousePressed[0]);
+    } else {
+      this.mining = null;
+      if (input.mousePressed[0]) this.g.swing(true);
+    }
+
+    // --- Botón derecho: usar, colocar, abrir ---
+    const held = this.g.heldStack;
+    const def = held ? ITEMS[held.id] : undefined;
+    if (this.use) {
+      const u = this.use;
+      if (!input.mouseDown[2] || this.g.selected !== u.slot || this.g.heldId !== u.item) {
+        if (u.kind === 'bow') this.releaseBow(dir);
+        this.use = null;
+      } else {
+        u.t += dt;
+        if (u.kind === 'eat') {
+          u.soundT -= dt;
+          if (u.soundT <= 0) {
+            u.soundT = 0.22;
+            this.g.audio.playEat();
+          }
+          if (u.t >= 1.6) this.finishEating();
+        }
+      }
+      return;
+    }
+    const pressed = input.mousePressed[2];
+    if (!pressed && !(input.mouseDown[2] && this.placeCooldown <= 0)) return;
+    this.placeCooldown = 0.2;
+    // Criatura delante: dar de comer, esquilar u ordeñar.
+    if (pressed && target && held && this.canInteract(target, held.id)) {
+      this.interactEntity(target, held.id);
+      return;
+    }
+    // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
+    if (pressed && hit && !this.g.player.sneaking) {
+      if (isUsable(hit.id)) {
+        this.useBlock(hit);
+        return;
+      }
+      if (isContainer(hit.id)) {
+        this.pendingOpen = [hit.x, hit.y, hit.z];
+        this.g.net?.send({ t: 'open', x: hit.x, y: hit.y, z: hit.z });
+        this.g.swing(true);
+        return;
+      }
+      if (hit.id === CRAFTING_TABLE) {
+        this.g.openScreen('table', null);
+        this.g.audio.playUi('open');
+        return;
+      }
+    }
+    if (!held || !def) return;
+    // Zanahorias y patatas se plantan en tierra de cultivo; si no, se comen.
+    if (def.block !== undefined && hit && isCrop(def.block) && this.placeBlock(hit, def.block)) return;
+    if (def.tool?.kind === 'hoe') {
+      if (pressed && hit) this.till(hit);
+      return;
+    }
+    if (held.id === BONE_MEAL) {
+      if (pressed && hit) this.boneMeal(hit);
+      return;
+    }
+    if (def.food || def.drink) {
+      if (pressed && (def.drink || this.g.survival.food < 20 || this.g.creative)) this.use = { kind: 'eat', t: 0, slot: this.g.selected, item: held.id, soundT: 0.3 };
+      return;
+    }
+    if (def.tool?.kind === 'bow') {
+      if (pressed && (this.g.creative || this.g.inv.count(ARROW) > 0)) this.use = { kind: 'bow', t: 0, slot: this.g.selected, item: held.id, soundT: 0 };
+      return;
+    }
+    if (held.id === BUCKET) {
+      if (pressed) this.fillBucket(dir);
+      return;
+    }
+    if (held.id === WATER_BUCKET || held.id === LAVA_BUCKET) {
+      if (pressed && hit) this.emptyBucket(hit, held.id === WATER_BUCKET ? WATER : LAVA);
+      return;
+    }
+    if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
+  }
+
+  /** Clic derecho en puertas, trampillas y portillos (se abren al momento) o en una cama. */
+  useBlock(hit: RayHit): void {
+    const world = this.g.world!;
+    const yaw = this.g.player.yaw;
+    if (isCake(hit.id)) {
+      // Una porción: 2 de hambre y 0,4 de saturación (sólo con hambre, salvo en creativo).
+      if (!this.g.creative && this.g.survival.food >= 20) return;
+      this.g.survival.eat(2, 0.4);
+      this.g.audio.playEat();
+    }
+    if (!isBed(hit.id)) {
+      const edits = toggleEdits((x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z, yaw);
+      if (edits) for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
+      this.g.audio.playPlace(BLOCKS[hit.id].sound, [hit.x + 0.5, hit.y + 0.5, hit.z + 0.5]);
+    }
+    this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw });
+    this.g.swing(true);
+  }
+
+  mineStep(dt: number, hit: RayHit, pressed: boolean): void {
+    const m = this.mining;
+    if (!m || m.x !== hit.x || m.y !== hit.y || m.z !== hit.z || m.id !== hit.id) {
+      if (this.breakDelay > 0 && !pressed) return;
+      this.mining = { x: hit.x, y: hit.y, z: hit.z, id: hit.id, progress: 0, hitT: 0 };
+    }
+    const cur = this.mining!;
+    const p = this.g.player;
+    const t = breakTime(hit.id, this.g.heldId, p.eyeInWater, p.onGround || p.inWater);
+    if (this.g.swingT < 0) this.g.swingT = 0;
+    if (t === Infinity) return;
+    if (t === 0) {
+      if (pressed || this.breakDelay <= 0) {
+        this.breakBlock(hit);
+        this.breakDelay = 0.25;
+      }
+      this.mining = null;
+      return;
+    }
+    cur.progress += dt / t;
+    cur.hitT -= dt;
+    if (cur.hitT <= 0) {
+      cur.hitT = 0.25;
+      this.g.audio.playBlockHit(BLOCKS[hit.id].sound, [hit.x + 0.5, hit.y + 0.5, hit.z + 0.5]);
+    }
+    if (cur.progress >= 1) {
+      this.breakBlock(hit);
+      this.mining = null;
+      this.breakDelay = 0.3;
+    }
+  }
+
+  breakBlock(hit: RayHit): void {
+    const world = this.g.world!;
+    const { x, y, z, id } = hit;
+    this.g.swing(false);
+    if (id === BEDROCK || BLOCK_HARDNESS[id] < 0) return;
+    world.setBlock(x, y, z, AIR);
+    // La otra mitad de una puerta o de una cama cae con ella (el servidor lo confirma).
+    const pp = partnerOf(x, y, z, id);
+    if (pp && familyBase(world.getBlock(pp[0], pp[1], pp[2])) === familyBase(id)) world.setBlock(pp[0], pp[1], pp[2], AIR);
+    this.g.net?.sendSet(x, y, z, AIR, this.g.heldId);
+    this.g.audio.playBreak(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
+    this.g.renderer.entities.spawnBreak(x, y, z, id, world.getLight(x, y + 1, z));
+    if (!this.g.creative) {
+      this.g.survival.addExhaustion(0.005);
+      const tool = ITEMS[this.g.heldId]?.tool;
+      if (tool && tool.kind !== 'bow' && BLOCK_HARDNESS[id] > 0) this.wearHeld(tool.kind === 'sword' ? 2 : 1);
+    }
+  }
+
+  wearHeld(amount: number): void {
+    if (this.g.creative) return;
+    if (this.g.inv.wear(this.g.selected, amount)) {
+      this.g.audio.playBreak('stone', [this.g.player.x, this.g.player.eyeY, this.g.player.z]);
+      this.g.ui.toast('¡Se rompió la herramienta!');
+    }
+  }
+
+  attack(e: ClientEntity): void {
+    const p = this.g.player;
+    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying;
+    this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit });
+    this.g.swing(false);
+    this.g.net?.send({ t: 'swing' });
+    if (crit) this.g.renderer.entities.spawnCrit(e.x, e.y + 1, e.z, 10);
+    if (!this.g.creative) {
+      this.g.survival.addExhaustion(0.1);
+      const tool = ITEMS[this.g.heldId]?.tool;
+      if (tool && tool.kind !== 'bow') this.wearHeld(tool.kind === 'sword' ? 1 : 2);
+    }
+  }
+
+  finishEating(): void {
+    const u = this.use!;
+    const def = ITEMS[u.item];
+    const food = def?.food;
+    this.use = null;
+    if (def?.drink) {
+      // Cubo de leche: se bebe y queda el cubo vacío.
+      this.g.audio.playBurp();
+      if (!this.g.creative) this.g.inv.set(this.g.selected, { id: BUCKET, count: 1 });
+      return;
+    }
+    if (!food) return;
+    this.g.survival.eat(food.hunger, food.saturation);
+    this.g.audio.playBurp();
+    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+  }
+
+  releaseBow(dir: number[]): void {
+    const u = this.use;
+    this.use = null;
+    if (!u || u.kind !== 'bow') return;
+    // Potencia como en Minecraft: f = (t² + 2t) / 3 con t en segundos (máx. 1).
+    const t = Math.min(1, u.t);
+    const f = Math.min(1, (t * t + 2 * t) / 3);
+    if (f < 0.1) return;
+    if (!this.g.creative) {
+      if (this.g.inv.remove(ARROW, 1) < 1) return;
+      this.wearHeld(1);
+    }
+    const p = this.g.player;
+    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f });
+    this.g.swing(false);
+  }
+
+  fillBucket(dir: number[]): void {
+    const world = this.g.world!;
+    const p = this.g.player;
+    const hit = raycast(p.x, p.eyeY, p.z, dir[0], dir[1], dir[2], this.g.creative ? REACH_CREATIVE : REACH_SURVIVAL, (x, y, z) => world.getBlock(x, y, z), true);
+    if (!hit || !BLOCK_FLUID[hit.id] || BLOCK_FLUID_LEVEL[hit.id] !== 0) return;
+    const filled = BLOCK_FLUID[hit.id] === 1 ? WATER_BUCKET : LAVA_BUCKET;
+    world.setBlock(hit.x, hit.y, hit.z, AIR);
+    this.g.net?.sendSet(hit.x, hit.y, hit.z, AIR, BUCKET);
+    this.g.audio.playSplash([hit.x + 0.5, hit.y + 0.5, hit.z + 0.5], 0.5);
+    this.g.swing(false);
+    if (this.g.creative) return;
+    const s = this.g.heldStack!;
+    if (s.count <= 1) this.g.inv.set(this.g.selected, { id: filled, count: 1 });
+    else {
+      this.g.inv.consume(this.g.selected, 1);
+      const rest = this.g.inv.add({ id: filled, count: 1 });
+      if (rest) this.throwStack(rest, true);
+    }
+  }
+
+  emptyBucket(hit: RayHit, fluid: number): void {
+    const world = this.g.world!;
+    let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
+    if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) [x, y, z] = [hit.x, hit.y, hit.z];
+    const cur = world.getBlock(x, y, z);
+    if (cur < 0 || !BLOCK_REPLACEABLE[cur]) return;
+    world.setBlock(x, y, z, fluid);
+    this.g.net?.sendSet(x, y, z, fluid);
+    this.g.audio.playSplash([x + 0.5, y + 0.5, z + 0.5], 0.4);
+    this.g.swing(false);
+    if (!this.g.creative) this.g.inv.set(this.g.selected, { id: BUCKET, count: 1 });
+  }
+
+  /** ¿Chocaría el bloque `id` en (x, y, z) con el jugador, otros jugadores o criaturas? */
+  blockedByBodies(x: number, y: number, z: number, id: number): boolean {
+    const world = this.g.world!;
+    const boxes = BLOCK_COLLIDE[id] === 1 ? [0, 0, 0, 1, 1, 1] : blockCollisionBoxes(id, x, y, z, world, []);
+    const hits = (cx: number, cy: number, cz: number, hw: number, h: number) => {
+      for (let i = 0; i + 5 < boxes.length; i += 6) {
+        if (cx + hw > x + boxes[i] && cx - hw < x + boxes[i + 3] && cy + h > y + boxes[i + 1] && cy < y + boxes[i + 4] &&
+          cz + hw > z + boxes[i + 2] && cz - hw < z + boxes[i + 5]) return true;
+      }
+      return false;
+    };
+    const p = this.g.player;
+    if (hits(p.x, p.y, p.z, 0.3, 1.8)) return true;
+    for (const rp of this.g.remote.values()) if (hits(rp.view.x, rp.view.y, rp.view.z, 0.3, 1.8)) return true;
+    for (const e of this.g.ents.list.values()) {
+      const def = MOBS[e.type];
+      if (def && e.deathT < 0 && hits(e.x, e.y, e.z, def.width / 2, def.height)) return true;
+    }
+    return false;
+  }
+
+  placeBlock(hit: RayHit, base: number): boolean {
+    const world = this.g.world!;
+    const get = (x: number, y: number, z: number) => world.getBlock(x, y, z);
+    const edits = planPlacement(get, hit, base, this.g.player.yaw);
+    if (!edits) return false;
+    for (const [x, y, z, id] of edits) {
+      if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return false;
+      // Plantas, antorchas de pie, cactus y caña necesitan apoyo.
+      const r = BLOCK_RENDER[id];
+      if (r === R_CROSS || (r === R_TORCH && BLOCK_WALL[id] < 0) || id === CACTUS || id === SUGAR_CANE) {
+        const under = world.getBlock(x, y - 1, z);
+        if (SAPLINGS.has(id)) {
+          if (!SOIL.has(under)) return false;
+        } else if (id === CACTUS) {
+          if (under !== CACTUS && under !== SAND) return false;
+        } else {
+          const okSame = id === SUGAR_CANE && under === id;
+          if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return false;
+        }
+      }
+    }
+    for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
+    this.g.net?.send({
+      t: 'place', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], p: [hit.px, hit.py, hit.pz], item: base,
+      yaw: this.g.player.yaw,
+    });
+    this.g.swing(false);
+    const [x, y, z, id] = edits[0];
+    this.g.audio.playPlace(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
+    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+    return true;
+  }
+
+  /** Azada: hierba o tierra con aire encima → tierra de cultivo. */
+  till(hit: RayHit): void {
+    const world = this.g.world!;
+    if (hit.ny < 0 || (hit.id !== GRASS && hit.id !== DIRT) || world.getBlock(hit.x, hit.y + 1, hit.z) !== AIR) return;
+    world.setBlock(hit.x, hit.y, hit.z, FARMLAND);
+    this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.g.player.yaw, item: this.g.heldId });
+    this.g.audio.playPlace('gravel', [hit.x + 0.5, hit.y + 1, hit.z + 0.5]);
+    this.g.swing(false);
+    this.wearHeld(1);
+  }
+
+  /** Polvo de hueso sobre un cultivo, un brote o la hierba (el servidor decide el resultado). */
+  boneMeal(hit: RayHit): void {
+    const world = this.g.world!;
+    if (!canFertilize((x, y, z) => world.getBlock(x, y, z), hit.x, hit.y, hit.z, SAPLINGS, GRASS)) return;
+    this.g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: this.g.player.yaw, item: BONE_MEAL });
+    this.g.swing(false);
+    if (!this.g.creative) this.g.inv.consume(this.g.selected, 1);
+  }
+
+  /** ¿Sirve el objeto con esta criatura? (comida para criar, tijeras con ovejas, cubo con vacas). */
+  canInteract(e: ClientEntity, item: number): boolean {
+    const def = MOBS[e.type];
+    if (!def || def.hostile || e.deathT >= 0) return false;
+    const baby = (e.flags & EF_BABY) !== 0;
+    if (BREED_FOOD[def.key]?.includes(item)) return true;
+    if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
+    if (item === BUCKET) return e.type === MOB_COW && !baby;
+    return false;
+  }
+
+  interactEntity(e: ClientEntity, item: number): void {
+    const q = ++this.interactQ;
+    this.pendingInteract.set(q, { slot: this.g.selected, item });
+    if (this.pendingInteract.size > 32) this.pendingInteract.delete(this.pendingInteract.keys().next().value!);
+    this.g.net?.send({ t: 'interact', e: e.id, item, q });
+    this.g.swing(true);
+  }
+
+  /** Respuesta del servidor: gastar comida, desgastar las tijeras o cambiar el cubo por leche. */
+  onInteractResult(msg: Extract<ServerMsg, { t: 'ires' }>): void {
+    const p = this.pendingInteract.get(msg.q);
+    this.pendingInteract.delete(msg.q);
+    if (!p || !msg.ok) return;
+    let slot = p.slot;
+    if (this.g.inv.slots[slot]?.id !== p.item) slot = this.g.inv.slots.findIndex((st) => st?.id === p.item);
+    if (slot < 0) return;
+    if (msg.take && !this.g.creative) this.g.inv.consume(slot, msg.take);
+    if (msg.wear && !this.g.creative && this.g.inv.wear(slot, msg.wear)) this.g.ui.toast('¡Se rompió la herramienta!');
+    if (msg.give && isValidItem(msg.give.id)) {
+      const give = { id: msg.give.id, count: Math.max(1, msg.give.count | 0) };
+      if (!this.g.inv.slots[slot]) this.g.inv.set(slot, give);
+      else {
+        const rest = this.g.inv.add(give);
+        if (rest) this.throwStack(rest, false);
+      }
+    }
+    this.g.inv.changed();
+  }
+
+  /** Q: tirar el objeto de la mano (con Ctrl, la pila entera). */
+  dropHeld(all: boolean): void {
+    const s = this.g.heldStack;
+    if (!s || this.g.survival.dead) return;
+    const n = all ? s.count : 1;
+    this.throwStack({ ...s, count: n }, true);
+    this.g.inv.consume(this.g.selected, n);
+    this.g.swing(false);
+  }
+
+  /** Pide recoger los objetos que el jugador toca. */
+  autoPickup(now: number): void {
+    if (this.g.survival.dead || !this.g.net) return;
+    const p = this.g.player;
+    for (const e of this.g.ents.list.values()) {
+      if ((e.type !== ENT_ITEM && e.type !== ENT_ARROW) || !(e.flags & EF_PICKABLE) || e.gone) continue;
+      if (Math.abs(e.x - p.x) > 1.3 || Math.abs(e.z - p.z) > 1.3 || e.y < p.y - 0.8 || e.y > p.y + 2.3) continue;
+      const id = e.type === ENT_ARROW ? ARROW : e.item;
+      if (this.g.inv.room({ id, count: 1 }) <= 0) continue;
+      const last = this.pickupAsk.get(e.id) ?? 0;
+      if (now - last < 0.5) continue;
+      this.pickupAsk.set(e.id, now);
+      this.g.net.send({ t: 'pickup', e: e.id });
+    }
+    if (this.pickupAsk.size > 256) {
+      for (const [id, t] of this.pickupAsk) if (now - t > 5) this.pickupAsk.delete(id);
+    }
+  }
+
+  /** Mirar a un enderman lo enfada (el servidor decide). */
+  checkEndermanLook(ex: number, ey: number, ez: number, dir: number[]): void {
+    let any = false;
+    for (const e of this.g.ents.list.values()) if (e.type === MOB_ENDERMAN) any = true;
+    if (!any) return;
+    const world = this.g.world!;
+    const hit = this.g.ents.raycast(ex, ey, ez, dir[0], dir[1], dir[2], 64);
+    if (!hit || hit.e.type !== MOB_ENDERMAN) return;
+    const block = raycast(ex, ey, ez, dir[0], dir[1], dir[2], hit.dist, (x, y, z) => world.getBlock(x, y, z));
+    if (block) return;
+    this.g.net?.send({ t: 'look', e: hit.e.id });
+  }
+}
