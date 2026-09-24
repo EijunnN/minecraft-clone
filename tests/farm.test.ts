@@ -207,8 +207,12 @@ test('animales: criar, crías que crecen, seguir la comida, esquilar, ordeñar y
   c.send({ t: 'interact', e: sheep.id, item: SHEARS, q: 9 });
   assert.equal(q()?.ok, false, 'una oveja esquilada no se vuelve a esquilar');
   // Come hierba y le vuelve a crecer la lana.
+  // (La oveja deambula: cada segundo se la devuelve a una celda con hierba para que la prueba no
+  // dependa de hacia dónde camine.)
   let regrown = false;
   for (let i = 0; i < 400 && !regrown; i++) {
+    h.gs.world.setBlock(bx - 3, by - 1, bz, GRASS);
+    sheep.x = bx - 2.5; sheep.z = bz + 0.5; sheep.y = by;
     h.tick(20);
     regrown = !sheep.sheared;
   }
