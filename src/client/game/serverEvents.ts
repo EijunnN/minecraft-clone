@@ -20,7 +20,7 @@ export class ServerEvents {
         this.removeRemote(msg.id);
         break;
       case 'pos':
-        this.g.remote.get(msg.id)?.push(msg.p, msg.r, msg.s);
+        this.g.remote.get(msg.id)?.push(msg.p, msg.r, msg.s, msg.a);
         break;
       case 'set':
         this.applyRemoteSet(msg.id, msg.x, msg.y, msg.z, msg.b);

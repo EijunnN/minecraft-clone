@@ -39,6 +39,11 @@ Objects). Pensado para PC (teclado y ratón).
 - **Animales de granja**: los animales siguen a quien lleva su comida y se crían (corazones, crías que
   crecen en 20 minutos y más rápido si comen); las ovejas se esquilan y les vuelve a crecer la lana
   comiendo hierba; las vacas se ordeñan con un cubo y las gallinas ponen huevos.
+- **Armaduras**: cuero, hierro, oro y diamante (casco, peto, grebas y botas) con la reducción de daño
+  y el desgaste de Minecraft; se ponen con clic derecho o en las ranuras del inventario, se ven sobre
+  los jugadores (también sobre los demás) y tienen su barra en el HUD.
+- **Experiencia**: orbes al matar criaturas, criar animales, minar menas y sacar lo fundido del horno;
+  niveles con las fórmulas de Minecraft, barra con el nivel y al morir se suelta parte.
 - **Mundo vivo**: la arena y la grava caen, las plantas y antorchas necesitan apoyo, las hojas se
   caen al talar el árbol, los brotes crecen hasta ser árboles, la hierba se extiende y los cactus y
   la caña crecen.
@@ -76,6 +81,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Bloques PBR sobre el agua](docs/screenshots/build.png) | ![Bajo el agua](docs/screenshots/underwater.png) |
 | ![Tormenta](docs/screenshots/rain.png) | ![Noche con antorchas](docs/screenshots/torches.png) |
 | ![Losas, escaleras, vallas, puerta y cama](docs/screenshots/building.png) | ![Granja con trigo, zanahorias, patatas y remolachas](docs/screenshots/farm.png) |
+| ![Armadura de diamante y barra de experiencia](docs/screenshots/armor.png) | |
 
 ## Controles
 
@@ -200,8 +206,8 @@ VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no t
 
 - 12 tipos de criatura (no las ~80 de Minecraft): sin aldeanos, lobos, caballos, brujas, slimes,
   jefes, etc.
-- Sin redstone, armaduras, experiencia,
-  encantamientos, pociones, estructuras generadas, barcas ni vagonetas, ni Nether o End.
+- Sin redstone, encantamientos (la experiencia todavía no se gasta en nada), pociones, estructuras
+  generadas, barcas ni vagonetas, ni Nether o End.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores

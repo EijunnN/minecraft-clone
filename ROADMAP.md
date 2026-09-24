@@ -74,8 +74,8 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Aire, ahogamiento, caída, lava, fuego, vacío, asfixia | ✅ |
 | Muerte, pérdida del inventario y reaparición | ✅ (en la cama o en el punto de aparición del mundo) |
 | Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (cama roja; faltan los otros colores y la de paja) |
-| Experiencia (orbes, niveles) | ❌ |
-| Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | ❌ |
+| Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
+| Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
 | Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (críticos y enfriamiento) |
 | Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha y arco) |
 | Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | ❌ |
