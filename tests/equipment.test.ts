@@ -448,3 +448,31 @@ test('servidor: conducto con marco de prismarina da Poder del conducto en el agu
   assert.equal(stateProps(W.getBlock(cx, cy, cz))!.active, 0);
   assert.ok(EFFECT_WATER_BREATHING > 0);
 });
+
+// Fase 7: el conducto puesto en seco no se anega con el agua que corre (como en Minecraft), sino
+// vaciando un cubo de agua encima; el dispensador también lo anega y lo vacía.
+import { withWater, conduitActive, STONE as STONE_B, WATER as WATER_B, AIR as AIR_B } from '../src/shared/blocks';
+import { WATER_BUCKET as WATER_BUCKET_I } from '../src/shared/items';
+test('conducto en seco: el cubo de agua lo anega', () => {
+  const dry = conduitActive(CONDUIT, true);
+  const wet = withWater(dry, true);
+  assert.ok(isConduit(wet) && isWaterlogged(wet) && conduitActive(wet, true) === wet, 'anegado y sigue encendido');
+  assert.equal(withWater(wet, true), 0, 'ya lo está');
+  assert.equal(withWater(wet, false), dry);
+  assert.equal(withWater(STONE_B, true), 0, 'la piedra no se anega');
+  const h = makeServer(4242);
+  const c = h.join('Buzo', 'c');
+  const [sx, sy, sz] = c.welcome.spawn as [number, number, number];
+  c.pos(sx, sy, sz);
+  h.tick(20);
+  const bx = Math.floor(sx) + 2, by = 160, bz = Math.floor(sz);
+  const W = h.gs.world;
+  W.setBlock(bx, by - 1, bz, STONE_B);
+  W.setBlock(bx, by, bz, AIR_B);
+  c.pos(bx + 0.5, by, bz + 2.5);
+  h.tick(2);
+  W.setBlock(bx, by, bz, CONDUIT);
+  c.send({ t: 'set', x: bx, y: by, z: bz, b: WATER_B, tool: WATER_BUCKET_I });
+  const got = W.getBlock(bx, by, bz);
+  assert.ok(isConduit(got) && isWaterlogged(got), 'el cubo anega el conducto');
+});

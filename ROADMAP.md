@@ -382,8 +382,10 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
 
 ### Mejoras entre fases
 
-- 🐞 **Fallo conocido (menor): conducto en seco.** Si se pone un conducto fuera del agua y luego se
-  inunda alrededor, su celda se queda seca (una burbuja de aire alrededor del conducto). Pendiente.
+- ✅ **Conducto en seco.** Como en Minecraft, el agua que corre no anega un conducto puesto en seco
+  (queda una burbuja de aire): ahora un cubo de agua vaciado encima lo anega, igual que a los corales
+  y los pepinos de mar; el dispensador también los anega y, con un cubo vacío, los vacía.
+- ✅ **Raíles.** El metal ya no sale azulado (reflejaba el cielo como un espejo).
 
 - ✅ **Partículas nuevas.** Sistema propio con atlas procedural, física por partícula (viento,
   balanceo, rebote, reposo en el suelo) y fundido suave; emisores del ambiente (pétalos de cerezo,

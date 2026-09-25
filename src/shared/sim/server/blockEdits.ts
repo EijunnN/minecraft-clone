@@ -25,7 +25,7 @@ import { copperInfo } from '../../blocks';
 import { partnerOf } from '../../placement';
 import type { Copper } from './copper';
 import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
-import { isWaterlogged, emptyAfterBreak } from '../../blocks'; // Fase 6.5 (océano y plantas)
+import { isWaterlogged, emptyAfterBreak, withWater, WATER } from '../../blocks'; // Fase 6.5 (océano y plantas) y 7
 // Fase 7 (encantamientos): Toque de seda y Fortuna.
 import { enchantedBlockDrops } from '../enchantDrops';
 import { sanitizeHeldEnchants } from '../../enchantEffects';
@@ -97,6 +97,13 @@ export class BlockEdits {
         const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand());
         if (xp > 0) ctx.entities.xp.spawn(xp, x + 0.5, y + 0.3, z + 0.5);
       } else {
+        // Fase 7: el cubo de agua sobre un bloque que se puede anegar (conducto, corales) lo anega.
+        const wet = b === WATER ? withWater(cur, true) : 0;
+        if (wet) {
+          ctx.world.setBlock(x, y, z, wet);
+          if (Number.isInteger(tool) && tool > 0) ctx.entities.aquatic.releaseBucket(tool, x, y, z);
+          return;
+        }
         // Sólo cubos (fluidos); los bloques se colocan con 'place'.
         if (!BLOCK_FLUID[b] || (!BLOCK_REPLACEABLE[cur] && cur !== b)) {
           ctx.reject(s, x, y, z);

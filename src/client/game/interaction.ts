@@ -38,6 +38,7 @@ import { equipmentUse, equipmentHold, equipmentRelease, EQUIPMENT_WEARLESS } fro
 import { ENT_TRIDENT } from '../../shared/equipment';
 import { TRIDENT } from '../../shared/items';
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { withWater } from '../../shared/blocks'; // Fase 7: el cubo de agua anega el conducto y los corales
 import { materialsUse } from './materialsInteraction'; // Fase 6.5 (materiales)
 import { collectionUse } from './collectionInteraction'; // Fase 6.5 (colecciones)
 import { potionUse, drinkPotion, hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
@@ -600,6 +601,15 @@ export class Interaction {
   /** Pone una fuente de agua o lava en la celda que toca (cubo o bloque de fluido). */
   private pourFluid(hit: RayHit, fluid: number, tool = 0): boolean {
     const world = this.g.world!;
+    // Sobre un bloque que se puede anegar (conducto, corales, pepinos de mar), el agua entra en su celda.
+    const wet = fluid === WATER ? withWater(hit.id, true) : 0;
+    if (wet) {
+      world.setBlock(hit.x, hit.y, hit.z, wet);
+      this.g.net?.sendSet(hit.x, hit.y, hit.z, WATER, tool);
+      this.g.audio.playSplash([hit.x + 0.5, hit.y + 0.5, hit.z + 0.5], 0.4);
+      this.g.swing(false);
+      return true;
+    }
     let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
     if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) [x, y, z] = [hit.x, hit.y, hit.z];
     const cur = world.getBlock(x, y, z);

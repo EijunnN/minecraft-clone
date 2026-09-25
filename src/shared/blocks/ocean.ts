@@ -36,6 +36,17 @@ export function emptyAfterBreak(id: number): number {
   return isWaterlogged(id) || (id > 0 && BLOCK_LEAVES_WATER[id] === 1) ? WATER : AIR;
 }
 
+/**
+ * El mismo bloque con agua o sin ella (conducto, corales, pepinos de mar: las familias con estado
+ * `water`), o 0 si no tiene ese estado o ya está así. Como en Minecraft, el agua que corre no anega:
+ * se anega vaciando un cubo de agua sobre el bloque.
+ */
+export function withWater(id: number, wet: boolean): number {
+  const st = id > 0 ? stateProps(id) : null;
+  if (!st || st.water === undefined || (st.water === 1) === wet) return 0;
+  return stateOf(familyBase(id), { ...st, water: wet ? 1 : 0 });
+}
+
 /** Marca como anegados los estados de una familia que son fluido (después de registrarla). */
 function markWet(base: number): void {
   for (let id = base; defs[id] && familyBase(id) === base; id++) if (defs[id].fluid === 1) BLOCK_WATERLOGGED[id] = 1;

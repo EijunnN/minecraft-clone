@@ -10,7 +10,7 @@ import { Tex, clamp, idx, mix, pixelNoise, scale, type Generator, type RGB } fro
 import { cutoutCanvas } from './genPlants';
 
 const TIE: RGB[] = [[58, 40, 24], [78, 56, 34], [98, 72, 44], [116, 88, 56]];
-const IRON: RGB[] = [[92, 94, 102], [140, 142, 150], [186, 188, 196], [222, 224, 230]];
+const IRON: RGB[] = [[90, 89, 88], [136, 134, 131], [178, 176, 172], [214, 212, 208]]; // gris neutro (no azulado)
 const GOLD: RGB[] = [[132, 90, 18], [192, 140, 34], [236, 190, 60], [255, 230, 128]];
 const DARK_IRON: RGB[] = [[62, 58, 60], [96, 90, 92], [128, 122, 124], [164, 158, 160]];
 const DUST_OFF: RGB = [92, 16, 12];
@@ -32,8 +32,9 @@ function tie(t: Tex, x: number, y: number, row: number, px: number): void {
 function metal(t: Tex, x: number, y: number, left: boolean, look: RailLook, px: number): void {
   const m = look.metal;
   const l = left ? 3 - (px < 0.15 ? 1 : 0) : 1 + (px > 0.8 ? 1 : 0);
-  const i = t.paint(x, y, m[l], 1, 170);
-  t.f0[i] = 236;
+  // Metal gastado: menos pulido que un bloque de hierro para que no refleje el cielo como un espejo.
+  const i = t.paint(x, y, m[l], 1, 120);
+  t.f0[i] = 200;
 }
 
 function straight(t: Tex, look: RailLook): void {

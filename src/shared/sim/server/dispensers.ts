@@ -13,6 +13,7 @@ import {
   AIR, TNT, WATER, LAVA, POWDER_SNOW, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_REPLACEABLE, DISPENSER, DROPPER, isRail,
   isDropper, dispenserTriggered, dispenserWith, facingOf, familyBase,
 } from '../../blocks';
+import { withWater } from '../../blocks'; // Fase 7: anegar y vaciar el conducto y los corales
 import {
   ITEMS, ARROW, TIPPED_ARROW, SNOWBALL, EGG, SPLASH_POTION, LINGERING_POTION, EXPERIENCE_BOTTLE, FIREWORK_ROCKET, BUCKET,
   WATER_BUCKET, LAVA_BUCKET, POWDER_SNOW_BUCKET, BONE_MEAL, FLINT_AND_STEEL, SHEARS, type ItemStack,
@@ -223,6 +224,13 @@ export class Dispensers {
     }
     // Cubos.
     if (id === WATER_BUCKET || id === LAVA_BUCKET || id === POWDER_SNOW_BUCKET) {
+      const wet = id === WATER_BUCKET ? withWater(front, true) : 0;
+      if (wet) {
+        w.setBlock(fx, fy, fz, wet);
+        this.swap(slots, slot, { id: BUCKET, count: 1 }, x, y, z, f);
+        ctx.fx('bucket_empty', fx + 0.5, fy + 0.5, fz + 0.5);
+        return 'ok';
+      }
       if (front < 0 || !(front === AIR || BLOCK_REPLACEABLE[front] || (BLOCK_FLUID[front] && BLOCK_FLUID_LEVEL[front] !== 0))) return 'drop';
       w.setBlock(fx, fy, fz, id === WATER_BUCKET ? WATER : id === LAVA_BUCKET ? LAVA : POWDER_SNOW);
       this.swap(slots, slot, { id: BUCKET, count: 1 }, x, y, z, f);
@@ -230,6 +238,13 @@ export class Dispensers {
       return 'ok';
     }
     if (id === BUCKET) {
+      const dry = withWater(front, false);
+      if (dry) {
+        w.setBlock(fx, fy, fz, dry);
+        this.swap(slots, slot, { id: WATER_BUCKET, count: 1 }, x, y, z, f);
+        ctx.fx('bucket_fill', fx + 0.5, fy + 0.5, fz + 0.5);
+        return 'ok';
+      }
       const full = front === POWDER_SNOW ? POWDER_SNOW_BUCKET : front === WATER ? WATER_BUCKET : front === LAVA ? LAVA_BUCKET : 0;
       if (!full) return 'drop';
       w.setBlock(fx, fy, fz, AIR);
