@@ -25,6 +25,8 @@ import { faunaPainter } from './faunaTextures'; // Fase 6 (fauna)
 import { ILLAGER_PAINTERS } from './illagerTextures'; // Fase 6 (asaltos)
 import { OCEAN_PAINTERS } from './oceanMobTextures'; // Fase 7.5 (océano)
 import { WARDEN_PAINTERS } from './wardenTextures'; // Fase 7.5 (abismo)
+import { critterTexture } from './critterTextures'; // Fase 7.5 (fauna)
+import { ALLAY_PAINTERS } from './allayTextures'; // Fase 7.5 (mansión)
 
 export interface MobTexture {
   width: number;
@@ -1520,11 +1522,14 @@ export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   // enfadada o con néctar.
   const fauna = faunaPainter(mobId, variant);
   if (fauna) return paintMob(mobId, fauna);
+  // Fase 7.5 (fauna): murciélago, ocelote, champiñaca (roja o marrón), llama de comerciante y caballos no muertos.
+  const critter = critterTexture(mobId, variant);
+  if (critter) return critter;
   const mob = MOBS[mobId];
   // Fase 6 (aldeanos): el aldeano y el comerciante se pintan según su profesión (villagerTextures.ts).
   if (mob && isVillagerType(mobId)) return paintMob(mobId, villagerPainter(mobId, variant));
-  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId] ?? ILLAGER_PAINTERS[mobId] ?? OCEAN_PAINTERS[mobId]
-    ?? WARDEN_PAINTERS[mobId]; // Fase 6 (monturas): pelajes; 7.5 (abismo): el warden
+  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId] ?? ILLAGER_PAINTERS[mobId] ?? OCEAN_PAINTERS[mobId] // Fase 6 (monturas): pelajes
+    ?? ALLAY_PAINTERS[mobId] ?? WARDEN_PAINTERS[mobId]; // Fase 7.5 (mansión, abismo)
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }
@@ -1534,6 +1539,7 @@ export function generateMobTexture(mobId: number, variant = 0): MobTexture {
 export {
   paintMob, mapAt, vnoise, rnd, glow, zombieLike, fur, side, tone, clamp01, scale, scale as scaleRGB,
   PX, NX, TOP, BOTTOM, FRONT, BACK,
+  saddlePaint, llama, LLAMA_COATS, // Fase 7.5 (fauna): llama de comerciante y caballos no muertos
 };
 export type { Texel, Paint, Painter, RGB, RGB as MobRGB, ZombieStyle };
 /** Fase 7.5 (abismo): téxel transparente. */

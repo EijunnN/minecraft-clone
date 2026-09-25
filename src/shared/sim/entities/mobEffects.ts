@@ -12,6 +12,7 @@ import {
 } from '../../effects';
 import {
   MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_DROWNED, MOB_ZOMBIE_VILLAGER, MOB_PHANTOM,
+  MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE, // Fase 7.5 (fauna)
 } from '../../mobs';
 import { EF_INVISIBLE } from '../../potions';
 import { EFFECT_GLOWING, EFFECT_WITHER, EFFECT_LEVITATION, EF_GLOWING, witherInterval } from '../../effects'; // Fase 7 (efectos)
@@ -28,7 +29,10 @@ export interface MobEffect {
 }
 
 /** No muertos: la curación les hace daño y el daño les cura; el veneno y la regeneración no les afectan. */
-const UNDEAD: ReadonlySet<number> = new Set([MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_DROWNED, MOB_ZOMBIE_VILLAGER, MOB_PHANTOM]);
+const UNDEAD: ReadonlySet<number> = new Set([
+  MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_DROWNED, MOB_ZOMBIE_VILLAGER, MOB_PHANTOM,
+  MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE, // Fase 7.5 (fauna)
+]);
 
 export function isUndead(type: number): boolean {
   return UNDEAD.has(type);

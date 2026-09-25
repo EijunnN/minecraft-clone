@@ -72,6 +72,8 @@ import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
 import { DeepDark } from './server/deepDark'; // Fase 7.5 (abismo)
 import { OceanMonuments } from './server/monuments'; // Fase 7.5 (océano)
+import { CritterWorld } from './server/critterWorld'; // Fase 7.5 (fauna)
+import { Allays } from './server/allays'; // Fase 7.5 (mansión)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -199,6 +201,10 @@ export class GameServer {
   readonly deepDark: DeepDark;
   /** Fase 7.5 (océano): criaturas de estructura, guardianes de los monumentos y maldición del anciano. */
   readonly monuments: OceanMonuments;
+  /** Fase 7.5 (fauna): trampa del rayo, llamas del comerciante y cabañas de bruja. */
+  readonly critters: CritterWorld;
+  /** Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y objetos). */
+  private allays: Allays;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -367,8 +373,16 @@ export class GameServer {
       strikeDd?.(x, y, z);
       dd.lightning(x, y, z);
     };
+    // Fase 7.5 (océano, mansión): un solo camino para las criaturas de estructura (guardianes, illagers de la
+    // mansión, alays presos): las hace aparecer con persist; lo propio de cada especie (el alay) lo pone
+    // Entities.spawnMob.
     this.monuments = new OceanMonuments(this.ctx); // Fase 7.5 (océano)
     this.world.onStructureMobs = (m) => this.monuments.spawnStructureMobs(m);
+    this.critters = new CritterWorld(this.ctx, this.storms, this.trading); // Fase 7.5 (fauna)
+    // Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y los objetos que les dan los jugadores).
+    this.allays = new Allays(this.ctx, this.collections);
+    const interact3 = this.farming.extraInteract;
+    this.farming.extraInteract = (s, e, msg) => this.allays.onInteract(s, e, msg) ?? interact3?.(s, e, msg) ?? null;
   }
 
   get seed(): number {
@@ -513,6 +527,7 @@ export class GameServer {
     // Fase 7 (efectos): toda campana que suena (tocada o con redstone) pasa por aquí.
     if (kind === 'bell') this.bells?.ring(x, y, z);
     this.deepDark?.onFx(kind, x, y, z, a); // Fase 7.5 (abismo): explosiones, notas, campanas… vibran
+    if (kind === 'note') this.allays?.heardNote(x, y, z); // Fase 7.5 (mansión): los alays lo oyen
     const msg: ServerMsg = { t: 'fx', k: kind, p: [r2(x), r2(y), r2(z)] };
     if (a !== undefined) msg.a = a;
     if (b !== undefined) msg.b = b;
@@ -1067,6 +1082,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     if (this.tickCount % TICK_RATE === 0) this.collections.tick(); // Fase 6.5 (colecciones)
+    if (this.tickCount % TICK_RATE === 0) this.critters.tick(); // Fase 7.5 (fauna)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.banners.endTick(); // Fase 6.5 (libros y estandartes)

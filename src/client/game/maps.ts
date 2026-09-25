@@ -59,8 +59,18 @@ export class MapImage {
   /** Veces que se ha completado el dibujo entero. */
   passes = 0;
 
-  constructor(readonly key: number) {
-    [this.x0, this.z0] = mapOrigin(key);
+  /**
+   * Fase 7.5 (mansión): `explorer`, mapa de estructura (del tesoro o de explorador): su esquina, su escala
+   * (bloques por píxel) y el estilo de Minecraft para lo que aún no se ha visto (tierra anaranjada y agua a
+   * rayas).
+   */
+  readonly scale: number;
+  readonly explorer: boolean;
+
+  constructor(readonly key: number, explorer?: { x0: number; z0: number; scale: number }) {
+    [this.x0, this.z0] = explorer ? [explorer.x0, explorer.z0] : mapOrigin(key);
+    this.scale = explorer?.scale ?? 1;
+    this.explorer = !!explorer;
     this.canvas.width = MAP_SIZE;
     this.canvas.height = MAP_SIZE;
     this.ctx = this.canvas.getContext('2d')!;
@@ -87,9 +97,10 @@ export class MapImage {
 
   private drawRow(world: World, r: number): void {
     const gen = world.generator;
-    const z = this.z0 + r;
+    const sc = this.scale, half = sc >> 1; // Fase 7.5 (mansión): mapas a escala
+    const z = this.z0 + r * sc + half;
     for (let c = 0; c < MAP_SIZE; c++) {
-      const x = this.x0 + c;
+      const x = this.x0 + c * sc + half;
       const i = r * MAP_SIZE + c;
       let top = MIN_Y, id = AIR, depth = 0;
       const col = world.getColumn(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE));
@@ -128,8 +139,30 @@ export class MapImage {
       this.tops[i] = top;
       this.ids[i] = id;
       this.depth[i] = depth;
-      this.paint(gen, x, z, i, r);
+      if (this.explorer && !(col && col.blocks)) this.paintExplorer(c, i, r); // Fase 7.5 (mansión)
+      else this.paint(gen, x, z, i, r);
     }
+  }
+
+  /** Fase 7.5 (mansión): lo no visitado de un mapa de estructura: tierra anaranjada con relieve y agua a rayas. */
+  private paintExplorer(c: number, i: number, r: number): void {
+    const water = BLOCK_FLUID[this.ids[i]] === 1;
+    let rgb: [number, number, number];
+    if (water) {
+      const deep = this.depth[i] > 3;
+      rgb = deep && (c + r) % 2 === 0 ? [92, 124, 196] : [118, 150, 214];
+    } else {
+      const north = r > 0 ? this.tops[i - MAP_SIZE] : this.tops[i];
+      const k = this.tops[i] > north ? 1.08 : this.tops[i] < north ? 0.86 : 0.97;
+      rgb = [214 * k, 152 * k, 94 * k];
+      // Costa: más oscura junto al agua de la fila de arriba.
+      if (r > 0 && BLOCK_FLUID[this.ids[i - MAP_SIZE]] === 1) rgb = [150, 100, 60];
+    }
+    const d = this.img.data;
+    d[i * 4] = Math.min(255, rgb[0]);
+    d[i * 4 + 1] = Math.min(255, rgb[1]);
+    d[i * 4 + 2] = Math.min(255, rgb[2]);
+    d[i * 4 + 3] = 255;
   }
 
   private paint(gen: TerrainGenerator, x: number, z: number, i: number, r: number): void {

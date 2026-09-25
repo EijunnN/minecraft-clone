@@ -560,7 +560,7 @@ export const QUARTZ = item('quartz', 'Cuarzo del Nether');
 ITEMS[HOPPER].sprite = 'hopper';
 export const HOPPER_MINECART = item('hopper_minecart', 'Vagoneta con tolva', { stack: 1 });
 export const TNT_MINECART = item('tnt_minecart', 'Vagoneta con dinamita', { stack: 1 });
-// Fase 7.5: huevos generadores de las criaturas nuevas (guardianes del océano y warden del abismo).
+// Fase 7.5: huevos generadores de las criaturas nuevas (océano: guardianes; fauna: murciélago, ocelote…; abismo: warden).
 for (const e of LATE_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 
 // ------------------------------------------------------------------ Fase 7.5 (abismo)
@@ -745,6 +745,9 @@ smelt(RAW_IRON, IRON_INGOT);
 smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
+// Fase 7.5 (fauna): el ocelote con bacalao o salmón crudos (confianza y cría), la champiñaca con trigo y la
+// llama de comerciante con heno, como la llama.
+Object.assign(BREED_FOOD as Record<string, readonly number[]>, { ocelot: [COD, SALMON], mooshroom: [WHEAT], trader_llama: [HAY_BALE] });
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
 // Fase 7 (pociones): los ingredientes (las pociones, con cada tipo, las añade el inventario creativo).
 (CREATIVE_ITEMS as number[]).push(

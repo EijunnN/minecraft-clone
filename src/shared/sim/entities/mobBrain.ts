@@ -18,6 +18,9 @@ import { CHARGED_POWER, EF_CHARGED, skullDisguises } from '../../collections'; /
 import { PT_LONG_SLOWNESS } from '../../potions'; // Fase 7 (pociones)
 import { invisibleRange } from '../../effects';
 import { GuardianAI } from './guardians'; // Fase 7.5 (océano)
+// Fase 7.5 (fauna): murciélagos, ocelotes, llamas de comerciante, caballos no muertos y jinetes esqueleto.
+import { critterTick, critterFlags, isFeline, isLlamaLike } from './critters';
+import { wearsHelmet, sinksInWater } from './skeletonTrap';
 
 export class MobBrain {
   /** Fase 6 (monstruos). */
@@ -70,7 +73,7 @@ export class MobBrain {
     if (e.vehicle !== undefined && this.m.seated?.(e)) return; // Fase 7 (transporte): sentada en una barca o vagoneta
     if (this.warden.tick(e, dt, players)) return; // Fase 7.5 (abismo): el warden lo decide todo solo
     // Ambiente: sol, lava, fuego, caída, vacío.
-    if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
+    if (def.burnsInSun && !wearsHelmet(e) && this.isSunlit(e)) e.fire = Math.max(e.fire, 2); // Fase 7.5: el casco protege
     if (e.inLava) {
       e.fire = 7;
       e.burnAcc += dt * 8;
@@ -113,8 +116,20 @@ export class MobBrain {
     // Fase 6 (aldeanos): oficio, reposición, puertas y huida de los zombis.
     if (isVillagerType(e.type)) this.m.villagers.tick(e, dt);
     if (e.dead || !this.m.list.has(e.id)) return;
+    // Fase 7.5 (mansión): el alay vuela, recoge objetos y baila.
+    if (this.m.allays.tick(e, dt, players)) {
+      if (!e.dead && this.m.list.has(e.id)) {
+        this.updateFlags(e, ai);
+        e.flags |= this.m.allays.flags(e);
+      }
+      return;
+    }
     // Fase 6 (fauna): abejas y loros vuelan; pandas y armadillos tienen estados propios.
     if (faunaMobTick(this.m, e, dt, players)) {
+      if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
+      return;
+    }
+    if (critterTick(this.m, e, dt, players)) {
       if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
       return;
     }
@@ -246,8 +261,8 @@ export class MobBrain {
             speed = def.run;
           }
         }
-      } else if (e.type === MOB_LLAMA) {
-        // Fase 6 (monturas): la llama no muerde, escupe.
+      } else if (e.type === MOB_LLAMA || isLlamaLike(e.type)) {
+        // Fase 6 (monturas): la llama no muerde, escupe (Fase 7.5: también la llama de comerciante).
         [moveX, moveZ, speed, jump] = this.m.mounts.llamaFight(e, target, dist, los, dt);
       } else {
         // Cuerpo a cuerpo.
@@ -355,10 +370,12 @@ export class MobBrain {
     const acc = e.onGround ? 10 : e.inWater ? 4 : 2;
     e.vx += (tvx - e.vx) * Math.min(1, dt * acc);
     e.vz += (tvz - e.vz) * Math.min(1, dt * acc);
-    if (e.inWater || e.inLava) {
+    if ((e.inWater || e.inLava) && !sinksInWater(e.type)) {
       // Flotar (las criaturas terrestres nadan hacia arriba).
       e.vy += (1.8 - e.vy) * Math.min(1, dt * 3);
       if (e.hitWall) e.vy = Math.max(e.vy, 4);
+    } else if (e.inWater) {
+      e.vy = Math.max(-3, e.vy - GRAVITY * 0.3 * dt); // Fase 7.5: el caballo esqueleto se hunde y anda por el fondo
     } else {
       e.vy -= GRAVITY * dt;
       if (e.vy < -60) e.vy = -60;
@@ -372,7 +389,7 @@ export class MobBrain {
     const prevVy = e.vy;
     moveBody(e, w, dt, 0.6);
     // Daño por caída.
-    if (!wasGround && e.onGround && !e.inWater && e.type !== MOB_CHICKEN) {
+    if (!wasGround && e.onGround && !e.inWater && e.type !== MOB_CHICKEN && !isFeline(e.type)) { // Fase 7.5: gatos y ocelotes caen de pie
       const fall = e.fallStart - e.y;
       if (fall > 3.5 && prevVy < -8) this.m.damage(e, Math.floor(fall - 3), e.x, e.z, null, 0);
       // Pisotear la tierra de cultivo al caer encima (sólo las criaturas grandes, como en Minecraft).
@@ -431,6 +448,7 @@ export class MobBrain {
     f |= this.m.mounts.flags(e); // Fase 6 (monturas): silla, domada, con jinete, encabritada
     f |= this.m.companions.flags(e); // Fase 6 (gólems/domesticar)
     f |= faunaFlags(e); // Fase 6 (fauna)
+    f |= critterFlags(e); // Fase 7.5 (fauna)
     if (e.charged) f |= EF_CHARGED; // Fase 6.5 (colecciones)
     f |= this.m.gear.flags(e); // Fase 6.5 (equipo): la cabra que embiste
     e.flags = f;

@@ -81,7 +81,7 @@ export interface GenResult {
   chests: StructureChest[];
   /** Fase 6 (aldeanos): aldeanos de una aldea cuyo pozo cae en este chunk (el servidor los hace aparecer). */
   villagers: VillagerSpawn[];
-  /** Fase 7.5 (océano): criaturas de estructura de este chunk (guardianes ancianos, ahogados de las ruinas). */
+  /** Fase 7.5 (océano, mansión): criaturas de estructura de este chunk (guardianes ancianos, illagers…). */
   mobs: StructureMob[];
 }
 

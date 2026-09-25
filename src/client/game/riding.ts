@@ -265,11 +265,15 @@ export class Riding {
     const sy = Math.sin(b.yaw), cy = Math.cos(b.yaw);
     const wx = -sy * f + cy * s, wz = -cy * f - sy * s;
     const wet = b.inWater || b.inLava;
-    const v = speed * (wet ? 0.35 : 1);
+    const diver = !!md.underwater && b.inWater; // Fase 7.5 (fauna): el caballo esqueleto anda bajo el agua
+    const v = speed * (diver ? 0.7 : wet ? 0.35 : 1);
     const k = 1 - Math.exp(-dt * (b.onGround ? 5 : wet ? 3 : 1));
     b.vx += (wx * v - b.vx) * k;
     b.vz += (wz * v - b.vz) * k;
-    if (wet) {
+    if (diver) {
+      b.vy = Math.max(-3, b.vy - GRAVITY * 0.3 * dt);
+      if (b.hitWall) b.vy = Math.max(b.vy, 4);
+    } else if (wet) {
       // Nada con la cabeza fuera (como las criaturas).
       b.vy += (1.8 - b.vy) * Math.min(1, dt * 3);
       if (b.hitWall) b.vy = Math.max(b.vy, 4);
@@ -278,7 +282,7 @@ export class Riding {
     }
     if (md.chargeJump) {
       // Salto cargado: cuanto más se mantiene el espacio (hasta ~0,8 s), más alto.
-      if (c.jump && b.onGround && !wet) this.charge = Math.min(1, Math.max(0, this.charge) + dt / 0.8);
+      if (c.jump && b.onGround && (!wet || diver)) this.charge = Math.min(1, Math.max(0, this.charge) + dt / 0.8);
       else if (!c.jump && this.charge >= 0) {
         if (b.onGround) b.vy = jump * (0.45 + 0.55 * this.charge);
         this.charge = -1;

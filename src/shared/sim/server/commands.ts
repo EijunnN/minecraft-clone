@@ -23,6 +23,8 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   // Fase 7.5 (océano)
   monumento: 'monument', monumento_oceanico: 'monument', ruinas: 'ocean_ruins', ruinas_oceanicas: 'ocean_ruins',
   tesoro: 'buried_treasure', tesoro_enterrado: 'buried_treasure',
+  cabana_de_bruja: 'swamp_hut', cabana: 'swamp_hut', choza_de_bruja: 'swamp_hut', fosil: 'fossil', fosiles: 'fossil', // Fase 7.5 (fauna)
+  mansion: 'mansion', mansion_del_bosque: 'mansion', // Fase 7.5 (mansión)
 };
 
 export class Commands {
@@ -171,13 +173,15 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|ciudad_antigua>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion|ciudad_antigua>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];
         const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]));
-        if (!p) reply(`No hay ningún ${STRUCTURE_NAMES[type].toLowerCase()} cerca.`);
-        else reply(`${STRUCTURE_NAMES[type]} más cercano: x ${p[0]}, y ${p[1]}, z ${p[2]} (a ${Math.round(Math.hypot(p[0] - s.p[0], p[2] - s.p[2]))} bloques).`);
+        // Fase 7.5 (mansión): con el género del nombre («ninguna mansión», «aldea más cercana»).
+        const fem = /^(Aldea|Mina|Mansión)/.test(STRUCTURE_NAMES[type]);
+        if (!p) reply(`No hay ${fem ? 'ninguna' : 'ningún'} ${STRUCTURE_NAMES[type].toLowerCase()} cerca.`);
+        else reply(`${STRUCTURE_NAMES[type]} más ${fem ? 'cercana' : 'cercano'}: x ${p[0]}, y ${p[1]}, z ${p[2]} (a ${Math.round(Math.hypot(p[0] - s.p[0], p[2] - s.p[2]))} bloques).`);
         return;
       }
       // Fase 6 (asaltos): lanzar un asalto en la aldea más cercana (hasta 200 bloques) o una patrulla.

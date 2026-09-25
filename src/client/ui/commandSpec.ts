@@ -43,6 +43,8 @@ const STRUCTURES: [string, string][] = [
   ['iglu', 'igloo'], ['pozo', 'desert_well'], ['mina', 'mineshaft'],
   ['ciudad_antigua', 'ancient_city'], // Fase 7.5 (abismo)
   ['monumento', 'monument'], ['ruinas', 'ocean_ruins'], ['tesoro', 'buried_treasure'], // Fase 7.5 (océano)
+  ['cabana_de_bruja', 'swamp_hut'], ['fosil', 'fossil'], // Fase 7.5 (fauna)
+  ['mansion', 'mansion'], // Fase 7.5 (mansión)
 ];
 
 export const COMMAND_SPECS: CommandSpec[] = [

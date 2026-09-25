@@ -31,6 +31,7 @@ export class OceanMonuments {
     for (const m of list) {
       const e = this.ctx.entities.spawnMob(m.type, m.x, m.y, m.z);
       if (e) e.persist = true;
+      if (e && m.variant !== undefined) e.variant = m.variant; // Fase 7.5 (fauna): el gato negro de la cabaña
     }
   }
 

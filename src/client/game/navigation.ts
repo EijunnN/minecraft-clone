@@ -5,6 +5,8 @@ import { COMPASS, FILLED_MAP } from '../../shared/items';
 import { MAP_SIZE } from '../../shared/maps';
 import { MapImage } from './maps';
 import { structureMapOf } from '../../shared/structureMaps'; // Fase 7.5 (océano)
+import { structureMapArea } from '../../shared/structureMapData'; // Fase 7.5 (mansión): escala y estilo
+import { structureMarkIcon } from './explorerMarks';
 import type { Game } from './Game';
 import '../ui/navigation.css';
 import { updateRecoveryCompass } from './recoveryCompass'; // Fase 7.5 (abismo)
@@ -13,7 +15,7 @@ export class Navigation {
   private mapEl: HTMLDivElement | null = null;
   private compassEl: HTMLDivElement | null = null;
   private needle: HTMLDivElement | null = null;
-  private images = new Map<number, MapImage>();
+  private images = new Map<number | string, MapImage>();
   private shown: MapImage | null = null;
 
   constructor(private g: Game) {}
@@ -29,12 +31,16 @@ export class Navigation {
     updateRecoveryCompass(g, !!mapKey); // Fase 7.5 (abismo)
   }
 
-  /** Imagen de un mapa (se crea al verlo por primera vez y se sigue completando). */
-  imageOf(key: number): MapImage {
-    let img = this.images.get(key);
+  /**
+   * Imagen de un mapa (se crea al verlo por primera vez y se sigue completando). Fase 7.5 (mansión): los
+   * mapas de estructura (tesoro y explorador) tienen su propia zona y escala y el estilo de exploración.
+   */
+  imageOf(key: number, area?: { x0: number; z0: number; scale: number }): MapImage {
+    const id = area ? `${area.scale}:${area.x0},${area.z0}` : key;
+    let img = this.images.get(id);
     if (!img) {
-      img = new MapImage(key);
-      this.images.set(key, img);
+      img = new MapImage(key, area);
+      this.images.set(id, img);
       if (this.images.size > 12) this.images.delete(this.images.keys().next().value!);
     }
     return img;
@@ -52,7 +58,9 @@ export class Navigation {
       this.mapEl.id = 'map-view';
       document.body.appendChild(this.mapEl);
     }
-    const img = this.imageOf(key);
+    // Fase 7.5 (mansión): un mapa de estructura se dibuja a su escala, centrado en la celda del objetivo.
+    const target = structureMapOf(g.heldStack);
+    const img = target ? this.imageOf(key, structureMapArea(target.kind, target.x, target.z)) : this.imageOf(key);
     // Unos milisegundos por fotograma: se dibuja entero en menos de un segundo y luego se refresca.
     img.step(g.world, img.passes === 0 ? 6 : 1.5);
     const el = this.mapEl;
@@ -66,7 +74,7 @@ export class Navigation {
     // Marcas: el jugador (flecha) y los demás (puntos de su color), en fracciones del mapa.
     for (const m of el.querySelectorAll('.map-mark')) m.remove();
     const mark = (x: number, z: number, cls: string, yaw: number | null, color?: string) => {
-      let u = (x - img.x0) / MAP_SIZE, v = (z - img.z0) / MAP_SIZE;
+      let u = (x - img.x0) / (MAP_SIZE * img.scale), v = (z - img.z0) / (MAP_SIZE * img.scale);
       const outside = u < 0 || u > 1 || v < 0 || v > 1;
       u = Math.min(1, Math.max(0, u));
       v = Math.min(1, Math.max(0, v));
@@ -78,9 +86,12 @@ export class Navigation {
       if (color) m.style.background = color;
       el.appendChild(m);
     };
-    // Fase 7.5 (océano): el objetivo de un mapa del tesoro o de explorador (X roja, monumento o mansión).
-    const target = structureMapOf(g.heldStack);
-    if (target) mark(target.x + 0.5, target.z + 0.5, `target ${target.def.marker}`, null);
+    // Fase 7.5 (océano, mansión): el objetivo de un mapa del tesoro o de explorador, con su marca pintada a mano
+    // (X roja, monumento o mansión).
+    if (target) {
+      mark(target.x + 0.5, target.z + 0.5, `target ${target.def.marker}`, null);
+      (el.lastElementChild as HTMLElement).style.backgroundImage = `url(${structureMarkIcon(target.def.marker)})`;
+    }
     for (const rp of g.remote.values()) mark(rp.view.x, rp.view.z, 'other', null, rp.shirt);
     mark(g.player.x, g.player.z, 'me', g.player.yaw);
   }

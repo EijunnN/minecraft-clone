@@ -305,3 +305,4 @@ export function potionEffectLines(kind: PotionKind, type: number): [string, bool
 MOBS[MOB_WITCH].drops.push([GLASS_BOTTLE, 0, 2], [GLOWSTONE_DUST, 0, 2]);
 // El daño instantáneo es magia: atraviesa la armadura.
 (ARMOR_BYPASS as Set<string>).add('magic');
+

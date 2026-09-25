@@ -2,6 +2,7 @@
 // armadura, lo que alimenta y sus efectos, qué bloquea el escudo y la durabilidad que le queda.
 import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { FILLED_MAP } from '../../shared/items';
+import { STRUCTURE_MAPS, structureMapArea } from '../../shared/structureMapData'; // Fase 7.5 (mansión)
 import { mapOrigin, MAP_SIZE } from '../../shared/maps';
 import './itemTooltip.css';
 import { ITEMS, itemName, type ItemStack } from '../../shared/items';
@@ -77,9 +78,15 @@ export function itemTooltipHtml(s: ItemStack): string {
   }
   if (s.id === SPYGLASS) lines.push('<span class="tt-dim">Mantén el clic derecho para mirar de lejos</span>');
   if (s.id === CLOCK) lines.push('<span class="tt-dim">En la mano muestra la hora</span>');
-  if (s.id === FILLED_MAP && s.dmg) {
+  if (s.id === FILLED_MAP && s.dmg && !s.data?.smap) { // Fase 7.5: los de estructura, abajo
     const [x0, z0] = mapOrigin(s.dmg);
     lines.push(`<span class="tt-dim">Zona: x ${x0} a ${x0 + MAP_SIZE - 1}, z ${z0} a ${z0 + MAP_SIZE - 1}</span>`);
+  }
+  // Fase 7.5 (mansión): mapas del tesoro y de explorador: su escala y su zona (la del objetivo).
+  const sm = s.id === FILLED_MAP ? s.data?.smap : undefined;
+  if (sm && sm.x !== undefined && sm.z !== undefined && STRUCTURE_MAPS[sm.k]) {
+    const a = structureMapArea(sm.k, sm.x, sm.z);
+    lines.push(`<span class="tt-dim">Escala 1:${a.scale} · zona: x ${a.x0} a ${a.x0 + a.span - 1}, z ${a.z0} a ${a.z0 + a.span - 1}</span>`);
   }
   // Fase 6.5 (colecciones): título del disco y para qué sirve llevar una cabeza.
   const title = discTitle(s.id);

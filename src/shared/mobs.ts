@@ -22,6 +22,12 @@ export * from './warden';
 // Fase 7.5 (océano): guardián y guardián anciano (ids 73–74).
 import { OCEAN_MOBS } from './oceanMobs';
 export * from './oceanMobs';
+// Fase 7.5 (fauna): murciélago, ocelote, champiñaca, llama de comerciante y caballos no muertos (ids 78–83).
+import { critterMobs } from './critters';
+export * from './critters';
+// Fase 7.5 (mansión): el alay (id 76).
+import { ALLAY_DEF } from './allay';
+export { MOB_ALLAY } from './allay';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -111,7 +117,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'flyer' // Fase 6 (fauna): abejas y loros
   | 'illager' | 'vex' | 'ravager' | 'fangs' // Fase 6 (asaltos)
   | 'warden' // Fase 7.5 (abismo)
-  | 'guardian'; // Fase 7.5 (océano)
+  | 'guardian' // Fase 7.5 (océano)
+  | 'allay'; // Fase 7.5 (mansión)
 
 export interface MobDef {
   id: number;
@@ -639,6 +646,9 @@ mob({
 for (const d of ILLAGER_MOBS) mob(d);
 mob(WARDEN_DEF); // Fase 7.5 (abismo)
 for (const d of OCEAN_MOBS) mob(d); // Fase 7.5 (océano)
+// Fase 7.5 (fauna): definiciones en critters.ts (reutilizan los modelos del gato, la vaca, la llama y el caballo).
+for (const d of critterMobs(MOBS, { cat: MOB_CAT, cow: MOB_COW, llama: MOB_LLAMA, horse: MOB_HORSE })) mob(d);
+mob(ALLAY_DEF); // Fase 7.5 (mansión)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

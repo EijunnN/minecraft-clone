@@ -16,13 +16,28 @@ export interface StructureMapDef {
   name: string;
   /** Regiones de la rejilla de estructuras en las que se busca (Minecraft: 50 chunks el tesoro, 100 los de explorador). */
   search: number;
+  /**
+   * Fase 7.5 (mansión): bloques por píxel del mapa (Minecraft: 1:2 el del tesoro, 1:4 los de explorador);
+   * se dibuja con el estilo de exploración (tierra anaranjada y agua a rayas donde aún no se ha estado).
+   */
+  scale: number;
 }
 
 export const STRUCTURE_MAPS: Readonly<Record<StructureMapKind, StructureMapDef>> = {
-  buried_treasure: { structure: 'buried_treasure', marker: 'x', name: 'Mapa del tesoro enterrado', search: 13 },
-  monument: { structure: 'monument', marker: 'monument', name: 'Mapa de explorador oceánico', search: 4 },
-  mansion: { structure: 'mansion', marker: 'mansion', name: 'Mapa de explorador de bosques', search: 3 },
+  buried_treasure: { structure: 'buried_treasure', marker: 'x', name: 'Mapa del tesoro enterrado', search: 13, scale: 2 },
+  monument: { structure: 'monument', marker: 'monument', name: 'Mapa de explorador oceánico', search: 4, scale: 4 },
+  mansion: { structure: 'mansion', marker: 'mansion', name: 'Mapa de explorador de bosques', search: 3, scale: 4 },
 };
+
+/**
+ * Fase 7.5 (mansión): zona que muestra un mapa de estructura: esquina noroeste y escala. Como en Minecraft,
+ * la rejilla de mapas de su escala (128·escala bloques) en la celda que contiene el objetivo.
+ */
+export function structureMapArea(kind: StructureMapKind, x: number, z: number): { x0: number; z0: number; scale: number; span: number } {
+  const scale = STRUCTURE_MAPS[kind].scale, span = 128 * scale;
+  const cell = (v: number) => Math.floor((v + 64) / span) * span - 64;
+  return { x0: cell(x), z0: cell(z), scale, span };
+}
 
 /** Datos de un mapa de estructura: tipo y, ya resuelto, la posición del objetivo. */
 export interface StructureMapData {

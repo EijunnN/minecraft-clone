@@ -5,6 +5,7 @@
 // ni si Web Audio no está disponible (p. ej. navegadores headless de pruebas).
 import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
+import { buildAllaySfx } from './allaySounds'; // Fase 7.5 (mansión)
 import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { buildRedstoneSfx } from './redstoneSounds'; // Fase 7 (redstone)
@@ -407,6 +408,11 @@ export class AudioEngine {
   playRaidSfx(kind: string, pos: Vec3 | null): void {
     const build = (ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number) => buildRaidSfx(ctx, noise, kind, dest, now);
     this.safe(() => (pos ? this.spawnPositional(pos, build, 0.5) : this.spawnLocal(0.4, build)));
+  }
+
+  /** Fase 7.5 (mansión): el alay recibe, devuelve, recoge o lanza objetos, o se duplica. */
+  playAllaySfx(kind: string, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildAllaySfx(ctx, noise, kind, dest, now), 0.3));
   }
 
   /** Fase 6.5 (cobre): encerar o raspar un bloque de cobre en `pos`. */

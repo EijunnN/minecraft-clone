@@ -13,6 +13,8 @@ import { standable } from '../pathfind';
 import type { Entity } from '../entities';
 import type { VillagerSpawn } from '../../world/villages';
 import type { ServerContext, Session } from './context';
+import { ExplorerTrades } from './explorerTrades'; // Fase 7.5 (mansión)
+import { mapKeyAt } from '../../maps';
 
 /** Distancia máxima para comerciar (bloques). */
 const TRADE_RANGE = 6;
@@ -26,13 +28,19 @@ export class Trading {
 
   /** Fase 6 (asaltos): ¿es héroe de la aldea este jugador? (rebaja del 30 % en las esmeraldas). */
   heroOf: (name: string) => boolean = () => false;
+  /** Fase 7.5 (fauna): acaba de llegar un comerciante ambulante (trae sus llamas). */
+  onTraderSpawn: ((trader: Entity) => void) | null = null;
+  /** Fase 7.5 (mansión): mapas de explorador del cartógrafo. */
+  readonly explorer: ExplorerTrades;
 
-  constructor(private ctx: ServerContext) {}
+  constructor(private ctx: ServerContext) {
+    this.explorer = new ExplorerTrades(ctx);
+  }
 
   /** Ofertas actuales de un aldeano o comerciante (con la rebaja del héroe, si `s` lo es). */
   offers(e: Entity, s?: Session): Offer[] {
     const v = this.ctx.entities.villagers.data(e);
-    const list = e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : offersFor(v.prof, v.level, v.seed);
+    const list = e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : this.explorer.resolve(e, offersFor(v.prof, v.level, v.seed)); // Fase 7.5
     if (!s || e.type === MOB_WANDERING_TRADER || !this.heroOf(s.name)) return list;
     return list.map((o) => o.cost[0] === EMERALD ? { ...o, cost: [EMERALD, Math.max(1, Math.round(o.cost[1] * 0.7))] as [number, number] } : o);
   }
@@ -114,7 +122,10 @@ export class Trading {
     // Como en Minecraft, cada trato da algo de experiencia también al jugador.
     ctx.entities.xp.spawn(3 + Math.floor(ctx.rand() * 4), e.x, e.y + 0.5, e.z);
     ctx.fx('villager_yes', e.x, e.y + e.height, e.z, e.type);
-    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1], ...(o.data ? { data: o.data } : {}) }, back }); // Fase 7: libros y equipo encantados
+    // Fase 7.5 (mansión): el mapa de explorador, con su celda como los demás mapas de estructura.
+    const sm = o.data?.smap;
+    const dmg = sm && sm.x !== undefined && sm.z !== undefined ? { dmg: mapKeyAt(sm.x, sm.z) } : {};
+    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1], ...dmg, ...(o.data ? { data: o.data } : {}) }, back }); // Fase 7: libros y equipo encantados
     this.sendOffers(s, e);
   }
 
@@ -167,7 +178,9 @@ export class Trading {
       if (y < -60 || !standable(w, x, y, z, 2)) continue;
       const floor = w.getBlock(x, y - 1, z);
       if (floor <= 0 || BLOCK_FLUID[floor]) continue;
-      return ctx.entities.villagers.spawn(x + 0.5, y, z + 0.5, null, [x, y, z], MOB_WANDERING_TRADER);
+      const trader = ctx.entities.villagers.spawn(x + 0.5, y, z + 0.5, null, [x, y, z], MOB_WANDERING_TRADER);
+      if (trader) this.onTraderSpawn?.(trader); // Fase 7.5 (fauna): sus dos llamas
+      return trader;
     }
     return null;
   }

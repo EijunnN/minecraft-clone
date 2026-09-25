@@ -25,6 +25,10 @@ export function leashLines(
     if (Array.isArray(h)) {
       a = [h[0] + 0.5, h[1] + 0.62, h[2] + 0.5];
       knots.push(a);
+    } else if (h.startsWith('@')) {
+      // Fase 7.5 (fauna): atada a una criatura (la llama de comerciante, al comerciante): de su mano.
+      const t = ents.get(Number(h.slice(1)));
+      if (t && !t.gone) a = handOf(t.x, t.y, t.z, t.bodyYaw);
     } else if (h === myId) {
       if (local.firstPerson) {
         // Abajo a la derecha de la vista.

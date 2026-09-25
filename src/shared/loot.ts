@@ -235,3 +235,28 @@ import { structureMapLoot } from './structureMaps';
     extra: [T(3, 3, [[COMPASS, 1, 1, 1], [EMPTY_MAP, 1, 1, 1], [CLOCK, 1, 1, 1], [PAPER, 20, 1, 10], [FEATHER, 10, 1, 5], [BOOK, 5, 1, 5]])],
   };
 }
+
+// ------------------------------------------------------------------ Fase 7.5 (mansión)
+// Los cofres de la mansión del bosque, como en Minecraft: un grupo de 1 a 3 tesoros (correas, manzanas
+// doradas, discos, cota de malla, azada y peto de diamante, libros encantados), otro de 1 a 4 de
+// provisiones y tres tiradas de despojos. (Faltan la resina y la plantilla de adorno del vex, que aún
+// no existen.)
+import { LEAD } from './items';
+{
+  const disc = (k: string) => MUSIC_DISCS[discIndexOfKey(k)];
+  const randomly: LootFn = (s, rand) => enchantRandomly(s, rndFrom(rand));
+  (LOOT_TABLES as Record<string, LootTable>).woodland_mansion = {
+    ...T(1, 3, [
+      [LEAD, 20, 1, 1], [GOLDEN_APPLE, 15, 1, 1], [ENCHANTED_GOLDEN_APPLE, 2, 1, 1], [disc('13'), 15, 1, 1],
+      [disc('cat'), 15, 1, 1], [ARMOR.chainmail.chestplate, 10, 1, 1], [TOOLS.diamond.hoe, 15, 1, 1],
+      [ARMOR.diamond.chestplate, 5, 1, 1], [BOOK, 10, 1, 1, randomly],
+    ]),
+    extra: [
+      T(1, 4, [
+        [IRON_INGOT, 10, 1, 4], [GOLD_INGOT, 5, 1, 4], [BREAD, 20, 1, 1], [WHEAT, 20, 1, 4], [BUCKET, 10, 1, 1],
+        [REDSTONE, 15, 1, 4], [COAL, 15, 1, 4], [MELON_SEEDS, 10, 2, 4], [PUMPKIN_SEEDS, 10, 2, 4], [BEETROOT_SEEDS, 10, 2, 4],
+      ]),
+      T(3, 3, [[BONE, 10, 1, 8], [GUNPOWDER, 10, 1, 8], [ROTTEN_FLESH, 10, 1, 8], [STRING, 10, 1, 8]]),
+    ],
+  };
+}

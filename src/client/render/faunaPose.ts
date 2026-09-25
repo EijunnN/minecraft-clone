@@ -6,12 +6,13 @@ import { MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO, type MobDef } from '../.
 import { EF_ANGRY } from '../../shared/protocol';
 import { EF_FAUNA_A, EF_FAUNA_B, parrotVariant } from '../../shared/fauna';
 import type { ClientEntity } from '../game/ClientEntities';
+import { critterVariant } from './critterPose'; // Fase 7.5 (fauna)
 
 /** Variante de textura de la criatura (0 = la normal); la textura se pide con id + 1000 · variante. */
 export function mobVariant(e: ClientEntity): number {
   if (e.type === MOB_PARROT) return parrotVariant(e.id);
   if (e.type === MOB_BEE) return (e.flags & EF_ANGRY ? 1 : 0) | (e.flags & EF_FAUNA_A ? 2 : 0);
-  return 0;
+  return critterVariant(e); // Fase 7.5 (fauna): champiñaca marrón
 }
 
 const pandaSitting = (e: ClientEntity) => (e.flags & (EF_FAUNA_A | EF_FAUNA_B)) === EF_FAUNA_A;

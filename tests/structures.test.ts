@@ -8,7 +8,9 @@ import {
   isChest, DARK_OAK_LOG,
   PRISMARINE_BRICKS, // Fase 7.5 (océano)
   REINFORCED_DEEPSLATE, // Fase 7.5 (abismo)
+  SPRUCE_PLANKS, BONE_BLOCK, BONE_BLOCK_AXIS, // Fase 7.5 (fauna)
 } from '../src/shared/blocks';
+import { DARK_OAK_PLANKS } from '../src/shared/blocks'; // Fase 7.5 (mansión)
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { locateStructure, STRUCTURE_NAMES } from '../src/shared/world/structures';
@@ -51,6 +53,10 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     ocean_ruins: (_c, ch) => ch.some((t) => t.startsWith('underwater_ruin')),
     buried_treasure: (_c, ch) => ch.includes('buried_treasure'),
     ancient_city: (c, ch) => (c.get(REINFORCED_DEEPSLATE) ?? 0) > 20 || ch.includes('ancient_city'), // Fase 7.5 (abismo)
+    // Fase 7.5 (fauna)
+    swamp_hut: (c) => (c.get(SPRUCE_PLANKS) ?? 0) > 40,
+    fossil: (c) => (c.get(BONE_BLOCK) ?? 0) + (c.get(BONE_BLOCK_AXIS) ?? 0) + (c.get(BONE_BLOCK_AXIS + 1) ?? 0) > 5,
+    mansion: (c, ch) => ch.includes('woodland_mansion') || (c.get(DARK_OAK_PLANKS) ?? 0) > 200, // Fase 7.5 (mansión)
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);
