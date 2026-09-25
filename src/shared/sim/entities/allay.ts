@@ -16,7 +16,7 @@ import { AMETHYST_SHARD, TIPPED_ARROW, maxStack, type ItemStack } from '../../it
 import { potionKind } from '../../potions';
 import { sanitizeStack } from '../../containers';
 import { lineOfSight } from '../physics';
-import { flyToward, hover, randomAirPoint } from './flight';
+import { flyToward, hover } from './flight';
 import type { PlayerView, InteractResult, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -262,12 +262,14 @@ export class AllayLife {
     this.m.host.fx('allay_throw', e.x, e.y + 0.3, e.z);
   }
 
-  /** Revolotear por su zona: vuela a un punto al azar, se queda un rato flotando y vuelve a empezar. */
+  /**
+   * Revolotear por su zona: vuela a un punto al azar que vea (así no intenta salir de una jaula o de una
+   * celda), se queda un rato flotando y vuelve a empezar.
+   */
   private wander(e: Entity, s: AllayState, dt: number): void {
     const w = this.m.w;
     if (!s.goal || s.goalT <= 0) {
-      const [ax, ay, az] = s.anchor!;
-      s.goal = this.m.rand() < 0.35 ? null : randomAirPoint(w, this.m.rand, ax, Math.max(ay, e.y), az, 1, 7, 1, 3);
+      s.goal = this.m.rand() < 0.35 ? null : this.wanderPoint(e, s);
       s.goalT = 3 + this.m.rand() * 5;
     }
     s.goalT -= dt;
@@ -277,6 +279,20 @@ export class AllayLife {
     }
     const d = flyToward(w, e, s.goal[0], s.goal[1], s.goal[2], MOBS[MOB_ALLAY].walk * 0.6, dt);
     if (d < 0.6) s.goal = null;
+  }
+
+  /** Punto libre y a la vista, cerca de su zona (null si no encuentra ninguno). */
+  private wanderPoint(e: Entity, s: AllayState): [number, number, number] | null {
+    const w = this.m.w, r = this.m.rand;
+    const [ax, , az] = s.anchor!;
+    for (let k = 0; k < 8; k++) {
+      const a = r() * Math.PI * 2, d = 1 + r() * 4;
+      const x = ax + Math.cos(a) * d, y = e.y + (r() - 0.4) * 2.5, z = az + Math.sin(a) * d;
+      const b = w.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)), up = w.getBlock(Math.floor(x), Math.floor(y + 0.6), Math.floor(z));
+      if (b !== 0 || up !== 0) continue;
+      if (lineOfSight(w, e.x, e.y + 0.3, e.z, x, y + 0.3, z)) return [x, y, z];
+    }
+    return null;
   }
 
   // ------------------------------------------------------------------ guardado

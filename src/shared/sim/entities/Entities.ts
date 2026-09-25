@@ -323,8 +323,9 @@ export class Entities {
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
     if (drops) collectionDrops(this, e, this.killer); // Fase 6.5 (colecciones): cabezas y discos
+    // Fase 7.5 (mansión): lo que llevaba el alay (antes que el equipo: su objeto no es una armadura puesta).
+    if (drops) this.allays.onKilled(e);
     if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
-    if (drops) this.allays.onKilled(e); // Fase 7.5 (mansión): lo que llevaba el alay
   }
 
   // ------------------------------------------------------------------ explosiones

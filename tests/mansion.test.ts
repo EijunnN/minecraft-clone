@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { STONE, COBBLESTONE, JUKEBOX, FENCES, DARK_OAK_PLANKS, BIRCH_PLANKS, OBSIDIAN, IRON_BARS, stateOf } from '../src/shared/blocks';
 import {
   WHEAT, AMETHYST_SHARD, EMERALD, COMPASS, FILLED_MAP, MUSIC_DISCS, TOOLS, BONE, GUNPOWDER, ROTTEN_FLESH, STRING, SPAWN_EGGS,
-  ITEMS,
+  ITEMS, HORSE_ARMOR,
 } from '../src/shared/items';
 import { MOBS, MOB_ALLAY, MOB_VINDICATOR, MOB_EVOKER, MOB_VILLAGER, ENT_ITEM } from '../src/shared/mobs';
 import { EF_ALLAY_DANCING, ALLAY_DUPLICATE_COOLDOWN } from '../src/shared/allay';
@@ -226,6 +226,16 @@ test('alay: lo lleva al bloque musical que oyó; su jugador no le hace daño; lo
     atNote = items(h, WHEAT).find((e) => e !== src && Math.hypot(e.x - nx - 0.5, e.z - nz - 0.5) < 4);
   }
   assert.ok(atNote, 'lo dejó junto al bloque musical');
+});
+
+test('alay: al morir suelta lo suyo una sola vez', () => {
+  const { h, c, bx, by, bz } = arena();
+  const a = h.gs.entities.spawnMob(MOB_ALLAY, bx + 0.5, by + 1, bz + 0.5)!;
+  interact(c, a, HORSE_ARMOR.iron, { id: HORSE_ARMOR.iron, count: 1 });
+  h.gs.entities.allays.state(a).inv = { id: WHEAT, count: 7 };
+  h.gs.entities.kill(a, true);
+  assert.equal(items(h, HORSE_ARMOR.iron).length, 1, 'la armadura, una vez');
+  assert.equal(items(h, WHEAT).reduce((n, e) => n + e.stack!.count, 0), 7, 'y lo recogido');
 });
 
 test('alay: baila con un tocadiscos y se duplica con un fragmento de amatista (cada 5 minutos)', () => {
