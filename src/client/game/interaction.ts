@@ -22,6 +22,8 @@ import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use }
 import type { ArmorSource } from './Survival';
 import { OFFHAND, HOTBAR } from './Inventory';
 import type { Game } from './Game';
+// Fase 6 (acuáticos): cubos con criatura.
+import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -209,6 +211,11 @@ export class Interaction {
     }
     if (held.id === WATER_BUCKET || held.id === LAVA_BUCKET) {
       if (pressed && hit) this.emptyBucket(hit, held.id === WATER_BUCKET ? WATER : LAVA);
+      return;
+    }
+    // Fase 6 (acuáticos): cubo con criatura: se vacía el agua y sale la criatura (el servidor la crea).
+    if (mobInBucket(held.id)) {
+      if (pressed && hit && this.pourFluid(hit, WATER, held.id) && !this.g.creative) this.g.inv.set(this.g.selected, { id: BUCKET, count: 1 });
       return;
     }
     // Agua y lava como bloque (inventario creativo): se ponen igual que con un cubo, sin gastarlo.
@@ -500,14 +507,14 @@ export class Interaction {
   }
 
   /** Pone una fuente de agua o lava en la celda que toca (cubo o bloque de fluido). */
-  private pourFluid(hit: RayHit, fluid: number): boolean {
+  private pourFluid(hit: RayHit, fluid: number, tool = 0): boolean {
     const world = this.g.world!;
     let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
     if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) [x, y, z] = [hit.x, hit.y, hit.z];
     const cur = world.getBlock(x, y, z);
     if (cur < 0 || !BLOCK_REPLACEABLE[cur]) return false;
     world.setBlock(x, y, z, fluid);
-    this.g.net?.sendSet(x, y, z, fluid);
+    this.g.net?.sendSet(x, y, z, fluid, tool);
     this.g.audio.playSplash([x + 0.5, y + 0.5, z + 0.5], 0.4);
     this.g.swing(false);
     return true;
@@ -667,6 +674,7 @@ export class Interaction {
     if (BREED_FOOD[def.key]?.includes(item)) return true;
     if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
     if (item === BUCKET) return e.type === MOB_COW && !baby;
+    if (item === WATER_BUCKET) return MOB_BUCKETS[e.type] !== undefined; // Fase 6 (acuáticos)
     return false;
   }
 

@@ -14,6 +14,7 @@ import {
 } from '../../world/biomeIds';
 import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
+import { isWaterAmbient } from '../../aquaticMobs'; // Fase 6 (acuáticos)
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 import { mountSpawnFor } from './mounts'; // Fase 6 (monturas)
@@ -181,7 +182,7 @@ export class Spawner {
     const far: [number, Entity][] = [];
     let total = 0;
     for (const e of this.m.list.values()) {
-      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
+      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) continue;
       if (e.villager) continue; // Fase 6 (aldeanos): los aldeanos no se reciclan ni cuentan
       total++;
       const d = this.m.nearestPlayer2D(e, players);

@@ -70,6 +70,8 @@ export class BlockEdits {
           return;
         }
         ctx.world.setBlock(x, y, z, b);
+        // Fase 6 (acuáticos): al vaciar un cubo con criatura, sale la criatura.
+        if (Number.isInteger(tool) && tool > 0) ctx.entities.aquatic.releaseBucket(tool, x, y, z);
       }
     }));
   }

@@ -20,6 +20,7 @@ import {
 } from '../../shared/mobs';
 import { villagerPainter } from './villagerTextures'; // Fase 6 (aldeanos)
 import { MONSTER_PAINTERS } from './monsterTextures'; // Fase 6 (monstruos)
+import { AQUATIC_PAINTERS } from './aquaticMobTextures'; // Fase 6 (acuáticos)
 
 export interface MobTexture {
   width: number;
@@ -1495,6 +1496,8 @@ const PAINTERS: Record<number, Painter> = {
   [MOB_DONKEY]: (t) => horseLike(t, DONKEY_STYLE),
   [MOB_MULE]: (t) => horseLike(t, MULE_STYLE),
   [MOB_CAMEL]: camel,
+  // Fase 6 (acuáticos).
+  ...AQUATIC_PAINTERS,
 };
 
 /** Genera el atlas de una criatura (tamaño MOBS[id].atlas); `variant`: pelaje o profesión. */

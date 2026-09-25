@@ -7,6 +7,9 @@ import {
 import { WHITE_WOOL } from './blocks';
 // Fase 6 (monstruos): botín de los monstruos nuevos.
 import { STICK, SUGAR, REDSTONE, SLIME_BALL, PHANTOM_MEMBRANE } from './items';
+// Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana, renacuajo y calamar brillante (ids 30–39).
+import { AQUATIC_MOBS } from './aquaticMobs';
+export * from './aquaticMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -79,7 +82,9 @@ export interface ModelPart {
 export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid'
   | 'villager' // Fase 6 (aldeanos)
   // Fase 6 (monstruos)
-  | 'slime' | 'phantom' | 'silverfish';
+  | 'slime' | 'phantom' | 'silverfish'
+  // Fase 6 (acuáticos).
+  | 'fish' | 'puffer' | 'dolphin' | 'turtle' | 'axolotl' | 'frog' | 'tadpole';
 
 export interface MobDef {
   id: number;
@@ -492,6 +497,8 @@ mob({
   width: 0.6, height: 2.0, damage: 3, burnsInSun: true, drops: [[ROTTEN_FLESH, 0, 2]], atlas: [64, 64], anim: 'zombie', scale: 1,
   sound: 'zombie', parts: villagerLike(),
 });
+// Fase 6 (acuáticos): definiciones en aquaticMobs.ts.
+for (const d of AQUATIC_MOBS) mob(d);
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

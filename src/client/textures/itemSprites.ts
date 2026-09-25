@@ -11,6 +11,7 @@
 
 import { ITEM_SPRITES } from '../../shared/items';
 import { MONSTER_SPRITES } from './monsterSprites'; // Fase 6 (monstruos)
+import { AQUATIC_SPRITES } from './aquaticSprites'; // Fase 6 (acuáticos)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2231,6 +2232,8 @@ const SPRITES: Record<string, SpriteDef> = {
     },
     holes: true,
   },
+  // Fase 6 (acuáticos): cubos con criatura.
+  ...AQUATIC_SPRITES,
 };
 
 // Fase 6 (monstruos): bola de slime, membrana de phantom y pociones arrojadizas.

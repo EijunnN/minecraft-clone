@@ -249,6 +249,10 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'barrel_side', 'barrel_bottom', 'loom_top', 'loom_side', 'loom_front', 'grindstone_side', 'grindstone_round',
     'smithing_table_top', 'smithing_table_side', 'smithing_table_front', 'cauldron_side', 'cauldron_top', 'cauldron_inner',
     'cauldron_bottom'].map((name): TextureDef => ({ name })),
+  // Fase 6 (acuáticos): huevos de tortuga (enteros, algo agrietados y muy agrietados).
+  { name: 'turtle_egg' },
+  { name: 'turtle_egg_slightly_cracked' },
+  { name: 'turtle_egg_very_cracked' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

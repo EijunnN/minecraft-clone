@@ -34,6 +34,7 @@ import { UNDERGROUND_GENERATORS } from './genUnderground';
 import { STRUCTURE_GENERATORS } from './genStructures';
 // Fase 6 (aldeanos): bloques de trabajo de los aldeanos.
 import { VILLAGE_GENERATORS } from './genVillage';
+import { AQUATIC_GENERATORS } from './genAquatic'; // Fase 6 (acuáticos)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -61,6 +62,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...UNDERGROUND_GENERATORS,
   ...STRUCTURE_GENERATORS,
   ...VILLAGE_GENERATORS, // Fase 6 (aldeanos)
+  ...AQUATIC_GENERATORS, // Fase 6 (acuáticos)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

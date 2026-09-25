@@ -99,6 +99,11 @@ export class MobBrain {
     if (ai.panic > 0) ai.panic -= dt;
     // Animales neutrales (lobo, oso polar): si un jugador les pega, en vez de huir se enfadan.
     if (!def.hostile && def.neutral && ai.panic > 0 && e.lastHurtBy && e.age - (e.lastHurtAt ?? -99) < 0.5) this.provoke(e, e.lastHurtBy);
+    // Fase 6 (acuáticos): peces, delfines, tortugas, ajolotes, ranas y renacuajos nadan a su manera.
+    if (this.m.aquatic.handles(e.type)) {
+      this.m.aquatic.tick(e, dt, players);
+      return;
+    }
     // Fase 6 (monstruos): los monstruos nuevos deciden y se mueven solos.
     if (this.monsters.tick(e, dt, players)) return;
     const spiderLike = isSpiderLike(e.type);
