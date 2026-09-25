@@ -23,6 +23,7 @@ import type { ServerContext, Session } from './context';
 import { isBrewingStand, brewingStandMask, brewingStandWith } from '../../blocks';
 import { brewTick, brewBottleMask, BREW_INGREDIENT, BREW_FUEL } from '../../brewing';
 import { mechanismSlots } from '../../blocks'; // Fase 7 (mecanismos)
+import { resolveStructureMaps } from '../../structureMaps'; // Fase 7.5 (océano)
 
 /** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
 interface View {
@@ -64,6 +65,7 @@ export class ContainerSystem {
       const k = posKey(ch.x, ch.y, ch.z);
       const c = newContainer('chest');
       c.slots = scatterLoot(rollLoot(table, rand), CHEST_SLOTS, rand);
+      resolveStructureMaps(c.slots, this.ctx.world.gen, ch.x, ch.z); // Fase 7.5 (océano): mapas del tesoro
       this.containers.set(k, c);
       this.dirty.add(k);
     }

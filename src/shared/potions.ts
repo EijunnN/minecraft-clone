@@ -2,6 +2,7 @@
 // efectos y duraciones, colores y nombres; las cuatro formas (frasco, arrojadiza, persistente y flecha
 // con efecto), las recetas de destilación del alambique y la de las flechas con efecto.
 // Los ids de tipo se guardan con las pilas: sólo se añaden al final.
+import { STRUCTURE_MAPS } from './structureMapData'; // Fase 7.5 (océano)
 import {
   EFFECT_SPEED, EFFECT_SLOWNESS, EFFECT_STRENGTH, EFFECT_WEAKNESS, EFFECT_REGENERATION, EFFECT_POISON, EFFECT_FIRE_RESISTANCE,
   EFFECT_NIGHT_VISION, EFFECT_WATER_BREATHING, EFFECT_RESISTANCE, EFFECT_JUMP_BOOST, EFFECT_INVISIBILITY, EFFECT_SLOW_FALLING,
@@ -180,6 +181,7 @@ export function potionName(kind: PotionKind, type: number): string {
 
 /** Nombre visible de una pila (las pociones, según su tipo). */
 export function stackName(s: ItemStack): string {
+  if (s.data?.smap) return STRUCTURE_MAPS[s.data.smap.k]?.name ?? itemName(s.id); // Fase 7.5 (océano): mapas del tesoro
   const kind = potionKind(s.id);
   return kind ? potionName(kind, potionType(s)) : itemName(s.id);
 }

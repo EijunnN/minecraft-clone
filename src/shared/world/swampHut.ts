@@ -1,7 +1,7 @@
 // Fase 7.5 (fauna): cabaña de bruja de los pantanos, como la de Minecraft Java: una casita de tablones de
 // abeto sobre cuatro postes de roble (que bajan hasta el fondo), con porche de vallas, ventanas, un tejado
 // con reborde de escaleras, mesa de trabajo, caldero y una maceta con un champiñón rojo.
-// Al generarse aparecen una bruja y un gato negro (server/critterWorld.ts) y dentro de su caja sólo salen
+// Al generarse aparecen una bruja y un gato negro (criaturas de estructura) y dentro de su caja sólo salen
 // brujas (sim/entities/critters.ts, con inHutBox). Se reparte por regiones como el resto (structures.ts).
 import {
   AIR, SPRUCE_PLANKS, OAK_LOG, FENCES, STAIRS, CRAFTING_TABLE, CAULDRON, RED_MUSHROOM, potWith, stateOf,
@@ -10,6 +10,8 @@ import { SEA_LEVEL, hash2 } from '../constants';
 import type { TerrainGenerator } from './terrain';
 import type { VillageCanvas, VillageStart } from './villages';
 import { BIOME_SWAMP } from './biomeIds';
+import { MOB_WITCH, MOB_CAT } from '../mobs';
+import { CAT_SKINS } from '../companions';
 
 /** Radio de la caja alrededor del origen (bloques): 7 × 9 de planta. */
 export const SWAMP_HUT_RADIUS = 5;
@@ -18,7 +20,10 @@ export const SWAMP_HUT_SALT = 14357620;
 /** Altura de la caja (el suelo va a 1 sobre el origen y el tejado a 4). */
 const HEIGHT = 7;
 
-type Canvas = Pick<VillageCanvas, 'get' | 'set' | 'foundation' | 'clearAbove'>;
+type Canvas = Pick<VillageCanvas, 'get' | 'set' | 'foundation' | 'clearAbove'> & {
+  /** Criatura de la estructura (se guarda y no desaparece): la bruja y el gato negro. */
+  mob?(type: number, x: number, y: number, z: number, variant?: number): void;
+};
 
 /** Candidata: en el pantano; el origen queda a ras del agua o del suelo (el primer bloque de aire). */
 export function swampHutSite(biome: number, surface: number): number | null {
@@ -110,6 +115,10 @@ export function buildSwampHut(c: Canvas, s: VillageStart, gen: TerrainGenerator)
     const [x, z] = toWorld(turn, s.x, s.z, u - 3, v - 4);
     c.foundation(x, y0 - 1, z, OAK_LOG);
   }
+  // La bruja y su gato negro, dentro junto al caldero (una sola vez, con el chunk).
+  const [sx, sy, sz] = swampHutSpawnSpot(gen.seed, s.x, s.y, s.z);
+  c.mob?.(MOB_WITCH, sx, sy, sz);
+  c.mob?.(MOB_CAT, sx, sy, sz, CAT_SKINS.indexOf('negro'));
 }
 
 /** Dónde aparecen la bruja y el gato de la cabaña (dentro, junto al caldero): pies [x, y, z]. */

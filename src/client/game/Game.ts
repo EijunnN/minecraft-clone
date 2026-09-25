@@ -4,6 +4,7 @@
 // partículas) y environment (lluvia y océano lejano).
 import { Navigation } from './navigation';
 import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
+import { guardianBeams } from './guardianBeams'; // Fase 7.5 (océano)
 import { Renderer, type FrameState } from '../render/Renderer';
 import { World } from '../world/World';
 import { Player } from './Player';
@@ -1091,6 +1092,7 @@ export class Game {
       signs: this.signs.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ),
       banners: this.books.banners.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ), // Fase 6.5 (libros y estandartes)
       bolts: this.bolts,
+      guardianBeams: guardianBeams(this), // Fase 7.5 (océano)
       fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, localRod, views),
       leashes: leashLines(this.ents.list, this.net?.id ?? null, localRod, views), // Fase 6.5 (remate)
       showHand: this.thirdPerson === 0 && !this.hudHidden && this.interaction.use?.kind !== 'spyglass',

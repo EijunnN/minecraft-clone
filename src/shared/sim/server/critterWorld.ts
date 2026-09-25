@@ -2,17 +2,16 @@
 // - Rayos: en una tormenta, un rayo natural puede dejar una trampa de esqueletos (un caballo esqueleto y
 //   un rayo sólo de luz) en vez de caer; y el rayo que toca a una champiñaca le cambia el color sin herirla.
 // - Comerciante ambulante: llega con dos llamas de comerciante atadas.
-// - Cabañas de bruja: la primera vez que un jugador pasa cerca aparecen su bruja y su gato negro (una sola
-//   vez por cabaña, se anota en el mundo); y, como en Minecraft, cada minuto vuelve un gato negro si no
-//   queda ninguno cerca. Las brujas que salen de noche dentro de la cabaña las pone el spawner.
-import { MOB_WITCH, MOB_CAT } from '../../mobs';
+// - Cabañas de bruja: su bruja y su gato negro aparecen con el chunk (criaturas de estructura); y, como en
+//   Minecraft, cada minuto vuelve un gato negro si no queda ninguno cerca. Las brujas que salen de noche
+//   dentro de la cabaña las pone el spawner.
+import { MOB_CAT } from '../../mobs';
 import { CAT_SKINS } from '../../companions';
 import { STATE_DEAD } from '../../protocol';
 import { locateStructure } from '../../world/structures';
 import { swampHutSpawnSpot } from '../../world/swampHut';
 import { critterStruck, spawnTraderLlamas } from '../entities/critters';
 import { spawnTrapHorse, trapChance } from '../entities/skeletonTrap';
-import type { ServerStore } from '../store';
 import type { Storms } from './storms';
 import type { Trading } from './trading';
 import type { ServerContext } from './context';
@@ -26,7 +25,7 @@ const BLACK_CAT = CAT_SKINS.indexOf('negro');
 export class CritterWorld {
   private catIn = HUT_CAT_EVERY;
 
-  constructor(private ctx: ServerContext, private store: ServerStore, storms: Storms, trading: Trading) {
+  constructor(private ctx: ServerContext, storms: Storms, trading: Trading) {
     storms.natural = (x, y, z) => this.trap(x, y, z);
     storms.struck = (e) => critterStruck(ctx.entities, e);
     trading.onTraderSpawn = (trader) => {
@@ -44,26 +43,22 @@ export class CritterWorld {
     return true;
   }
 
-  /** Una vez por segundo: bruja y gato de las cabañas cercanas a los jugadores. */
+  /** Una vez por segundo: cada minuto, el gato negro de las cabañas cercanas a los jugadores si falta. */
   tick(): void {
     const ctx = this.ctx;
     this.catIn -= 1;
-    const cats = this.catIn <= 0;
-    if (cats) this.catIn = HUT_CAT_EVERY;
+    if (this.catIn > 0) return;
+    this.catIn = HUT_CAT_EVERY;
     const seen = new Set<string>();
     for (const s of ctx.sessions()) {
       if (!s.joined || s.s & STATE_DEAD) continue;
       const o = locateStructure(ctx.world.gen, 'swamp_hut', Math.floor(s.p[0]), Math.floor(s.p[2]), 1);
       if (!o || Math.hypot(o[0] - s.p[0], o[2] - s.p[2]) > HUT_RANGE) continue;
-      const key = `hut:${o[0]},${o[2]}`;
+      const key = `${o[0]},${o[2]}`;
       if (seen.has(key) || !ctx.world.isLoaded(Math.floor(o[0] / 16), Math.floor(o[2] / 16))) continue;
       seen.add(key);
       const spot = swampHutSpawnSpot(ctx.world.seed, o[0], o[1], o[2]);
-      if (!this.store.getMeta(key)) {
-        this.store.setMeta(key, '1');
-        ctx.entities.spawnMob(MOB_WITCH, ...spot);
-        this.spawnCat(spot);
-      } else if (cats && !this.catNear(spot)) this.spawnCat(spot);
+      if (!this.catNear(spot)) this.spawnCat(spot);
     }
   }
 
@@ -76,6 +71,8 @@ export class CritterWorld {
 
   private spawnCat(spot: [number, number, number]): void {
     const cat = this.ctx.entities.spawnMob(MOB_CAT, ...spot);
-    if (cat) cat.variant = BLACK_CAT;
+    if (!cat) return;
+    cat.variant = BLACK_CAT;
+    cat.persist = true;
   }
 }

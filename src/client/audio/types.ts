@@ -59,6 +59,9 @@ export type MobSoundKind =
   | 'illager'
   | 'vex'
   | 'ravager'
+  // Fase 7.5 (océano).
+  | 'guardian'
+  | 'elder_guardian'
   // Fase 7.5 (fauna).
   | 'bat'
   | 'ocelot'

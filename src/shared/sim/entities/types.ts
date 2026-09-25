@@ -242,6 +242,8 @@ export interface Entity extends Body {
   lure?: number;
   /** Bloque que cae: altura desde la que empezó a caer (el yunque hiere según la caída). */
   fallFrom?: number;
+  /** Fase 7.5 (océano): criatura de estructura (guardián anciano, ahogados de las ruinas): no desaparece y se guarda. */
+  persist?: boolean;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

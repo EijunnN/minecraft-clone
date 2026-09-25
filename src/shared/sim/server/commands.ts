@@ -19,6 +19,9 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   pozo: 'desert_well', mina_abandonada: 'mineshaft', mina: 'mineshaft',
   aldea: 'village',
   puesto: 'pillager_outpost', puesto_de_saqueadores: 'pillager_outpost', puesto_saqueador: 'pillager_outpost', // Fase 6 (asaltos)
+  // Fase 7.5 (océano)
+  monumento: 'monument', monumento_oceanico: 'monument', ruinas: 'ocean_ruins', ruinas_oceanicas: 'ocean_ruins',
+  tesoro: 'buried_treasure', tesoro_enterrado: 'buried_treasure',
   cabana_de_bruja: 'swamp_hut', cabana: 'swamp_hut', choza_de_bruja: 'swamp_hut', fosil: 'fossil', fosiles: 'fossil', // Fase 7.5 (fauna)
 };
 
@@ -168,7 +171,7 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|cabana_de_bruja|fosil>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];

@@ -25,6 +25,8 @@ import { OFFHAND, HOTBAR } from './Inventory';
 import type { Game } from './Game';
 // Fase 6 (acuáticos): cubos con criatura.
 import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
+import { MOB_DOLPHIN } from '../../shared/aquaticMobs'; // Fase 7.5 (océano)
+import { COD, SALMON } from '../../shared/items'; // Fase 7.5 (océano)
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
 import { critterCanInteract } from './critterInteraction'; // Fase 7.5 (fauna)
@@ -787,6 +789,7 @@ export class Interaction {
     if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
     if (item === BUCKET) return e.type === MOB_COW && !baby;
     if (item === WATER_BUCKET) return MOB_BUCKETS[e.type] !== undefined; // Fase 6 (acuáticos)
+    if (e.type === MOB_DOLPHIN && (item === COD || item === SALMON)) return true; // Fase 7.5 (océano): lleva a los tesoros
     return false;
   }
 

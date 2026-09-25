@@ -408,6 +408,12 @@ export class AquaticLife {
       this.swim(e, ai.swimDir[0] * 0.3, 1, ai.swimDir[2] * 0.3, def.run, dt, true);
       return;
     }
+    // Fase 7.5 (océano): si le dieron pescado, lleva al naufragio o a las ruinas más cercanos.
+    const guide = this.m.dolphinGuide.heading(e, dt);
+    if (guide) {
+      this.swim(e, guide[0], guide[1], guide[2], def.run, dt);
+      return;
+    }
     // Acompañar al jugador que nada más cerca.
     let near: PlayerView | null = null, best = 20;
     for (const p of players) {

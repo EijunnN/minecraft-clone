@@ -18,6 +18,8 @@ export type LootFn = (s: ItemStack, rand: () => number) => ItemStack;
 export interface LootTable {
   rolls: [number, number];
   entries: Entry[];
+  /** Fase 7.5 (océano): más montones de botín (las «pools» de Minecraft), que se tiran después. */
+  extra?: LootTable[];
 }
 
 const T = (min: number, max: number, entries: Entry[]): LootTable => ({ rolls: [min, max], entries });
@@ -99,7 +101,19 @@ export function rollLoot(table: LootTable, rand: () => number): ItemStack[] {
       break;
     }
   }
+  for (const t of table.extra ?? []) out.push(...rollLoot(t, rand)); // Fase 7.5 (océano)
   return out;
+}
+
+/** Fase 7.5 (océano): montones [mínimo, máximo] que puede dar una tabla contando sus tiradas extra. */
+export function lootRollRange(table: LootTable): [number, number] {
+  let lo = table.rolls[0], hi = table.rolls[1];
+  for (const t of table.extra ?? []) {
+    const [a, b] = lootRollRange(t);
+    lo += a;
+    hi += b;
+  }
+  return [lo, hi];
 }
 
 /** Reparte el botín en huecos al azar de un cofre de `slots` casillas. */
@@ -175,4 +189,45 @@ import { EXPERIENCE_BOTTLE } from './items';
   enchantAll('jungle_temple', [BOOK], levels30);
   enchantAll('ruined_portal', [ARMOR.golden.helmet, ARMOR.golden.boots, TOOLS.golden.sword, TOOLS.golden.pickaxe], randomly);
   enchantAll('shipwreck_supply', [ARMOR.leather.helmet, ARMOR.leather.boots], randomly);
+}
+
+// ------------------------------------------------------------------ Fase 7.5 (océano)
+// Ruinas oceánicas (pequeñas y grandes), tesoro enterrado y el cofre de los mapas de los naufragios,
+// con las tablas de Minecraft Java por montones. Los mapas del tesoro se resuelven al llenar el cofre
+// (apuntan al tesoro enterrado más cercano a él).
+import { FISHING_ROD, GOLD_NUGGET, COOKED_COD, COOKED_SALMON, POTION, COMPASS, CLOCK, EMPTY_MAP, FEATHER, PRISMARINE_CRYSTALS } from './items';
+import { TNT } from './blocks';
+import { PT_WATER_BREATHING } from './potions';
+import { structureMapLoot } from './structureMaps';
+{
+  const randomly: LootFn = (s, rand) => enchantRandomly(s, rndFrom(rand));
+  const treasureMap = structureMapLoot('buried_treasure');
+  const tables = LOOT_TABLES as Record<string, LootTable>;
+  tables.underwater_ruin_small = {
+    ...T(2, 8, [[COAL, 10, 1, 4], [TOOLS.stone.axe, 2, 1, 1], [ROTTEN_FLESH, 5, 1, 1], [EMERALD, 1, 1, 1], [WHEAT, 10, 2, 3]]),
+    extra: [T(1, 1, [[ARMOR.leather.chestplate, 1, 1, 1], [ARMOR.golden.helmet, 1, 1, 1], [FISHING_ROD, 5, 1, 1, randomly], [EMPTY_MAP, 5, 1, 1, treasureMap]])],
+  };
+  tables.underwater_ruin_big = {
+    ...T(2, 8, [[COAL, 10, 1, 4], [GOLD_NUGGET, 10, 1, 3], [EMERALD, 1, 1, 1], [WHEAT, 10, 2, 3]]),
+    extra: [T(1, 1, [
+      [GOLDEN_APPLE, 1, 1, 1], [BOOK, 5, 1, 1, randomly], [ARMOR.leather.chestplate, 1, 1, 1], [ARMOR.golden.helmet, 1, 1, 1],
+      [FISHING_ROD, 5, 1, 1, randomly], [EMPTY_MAP, 10, 1, 1, treasureMap],
+    ])],
+  };
+  const waterBreathing: LootFn = (s) => ({ ...s, dmg: PT_WATER_BREATHING });
+  tables.buried_treasure = {
+    ...T(1, 1, [[HEART_OF_THE_SEA, 1, 1, 1]]),
+    extra: [
+      T(5, 8, [[IRON_INGOT, 20, 1, 4], [GOLD_INGOT, 10, 1, 4], [TNT, 5, 1, 2]]),
+      T(1, 3, [[EMERALD, 5, 4, 8], [DIAMOND, 5, 1, 2], [PRISMARINE_CRYSTALS, 5, 1, 5]]),
+      T(0, 1, [[ARMOR.leather.chestplate, 1, 1, 1], [TOOLS.iron.sword, 1, 1, 1]]),
+      T(2, 2, [[COOKED_COD, 1, 2, 4], [COOKED_SALMON, 1, 2, 4]]),
+      T(0, 2, [[POTION, 1, 1, 1, waterBreathing]]),
+    ],
+  };
+  // El tercer cofre de los naufragios (el del camarote): siempre un mapa del tesoro.
+  tables.shipwreck_map = {
+    ...T(1, 1, [[EMPTY_MAP, 1, 1, 1, treasureMap]]),
+    extra: [T(3, 3, [[COMPASS, 1, 1, 1], [EMPTY_MAP, 1, 1, 1], [CLOCK, 1, 1, 1], [PAPER, 20, 1, 10], [FEATHER, 10, 1, 5], [BOOK, 5, 1, 5]])],
+  };
 }

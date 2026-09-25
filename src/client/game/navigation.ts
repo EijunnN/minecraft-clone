@@ -4,6 +4,7 @@
 import { COMPASS, FILLED_MAP } from '../../shared/items';
 import { MAP_SIZE } from '../../shared/maps';
 import { MapImage } from './maps';
+import { structureMapOf } from '../../shared/structureMaps'; // Fase 7.5 (océano)
 import type { Game } from './Game';
 import '../ui/navigation.css';
 
@@ -75,6 +76,9 @@ export class Navigation {
       if (color) m.style.background = color;
       el.appendChild(m);
     };
+    // Fase 7.5 (océano): el objetivo de un mapa del tesoro o de explorador (X roja, monumento o mansión).
+    const target = structureMapOf(g.heldStack);
+    if (target) mark(target.x + 0.5, target.z + 0.5, `target ${target.def.marker}`, null);
     for (const rp of g.remote.values()) mark(rp.view.x, rp.view.z, 'other', null, rp.shirt);
     mark(g.player.x, g.player.z, 'me', g.player.yaw);
   }

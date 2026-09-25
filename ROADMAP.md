@@ -501,9 +501,13 @@ sculk da señales de redstone), y las criaturas y estructuras del mundo normal q
   chillador) con sus vibraciones, el *warden* y la ciudad antigua (pizarra reforzada, eco, fragmentos
   y disco 5, brújula de recuperación, sigilo rápido). La ciudad usa bloques de alma (arena y tierra de
   alma, fuego y farol de alma), que se adelantan de la fase 8.
-- **Océano:** monumentos oceánicos con guardianes y el guardián anciano (fatiga minera; prismarina,
-  faroles marinos y esponjas en supervivencia), ruinas oceánicas y el tesoro enterrado (corazón del
-  mar) con sus mapas.
+- ✅ **Océano:** monumentos oceánicos en los océanos profundos (laberinto de salas, núcleo con 8 bloques
+  de oro, salas de esponjas mojadas, alas y ático) con guardianes (púas que pinchan, láser que carga y
+  cambia de color, coletazos en tierra) y tres guardianes ancianos (fatiga minera III con su aparición;
+  prismarina, faroles marinos y esponjas en supervivencia); ruinas oceánicas frías y templadas, grandes
+  y pequeñas, con cofres y ahogados; el tesoro enterrado en las playas (corazón del mar) y los mapas del
+  tesoro (ruinas y el cofre del camarote de los naufragios). Los mapas de estructura (`structureMaps.ts`)
+  sirven también para los de explorador del cartógrafo. Pendiente: adornos de armadura (fase 9).
 - **Mansión del bosque** con sus illagers y el alay (también en los puestos de saqueadores); mapas de
   explorador del cartógrafo (bosque y océano).
 - **Criaturas sueltas:** murciélago, ocelote, champiñaca, llama de comerciante, caballos esqueleto

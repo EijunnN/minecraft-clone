@@ -16,6 +16,7 @@ import { IllagerAI } from './illagers'; // Fase 6 (asaltos)
 import { CHARGED_POWER, EF_CHARGED, skullDisguises } from '../../collections'; // Fase 6.5 (colecciones)
 import { PT_LONG_SLOWNESS } from '../../potions'; // Fase 7 (pociones)
 import { invisibleRange } from '../../effects';
+import { GuardianAI } from './guardians'; // Fase 7.5 (océano)
 // Fase 7.5 (fauna): murciélagos, ocelotes, llamas de comerciante, caballos no muertos y jinetes esqueleto.
 import { critterTick, critterFlags, isFeline, isLlamaLike } from './critters';
 import { wearsHelmet, sinksInWater } from './skeletonTrap';
@@ -25,10 +26,13 @@ export class MobBrain {
   readonly monsters: MonsterAI;
   /** Fase 6 (asaltos): illagers, vex, devastadores, colmillos y zombis contra aldeanos. */
   readonly illagers: IllagerAI;
+  /** Fase 7.5 (océano): guardianes y guardianes ancianos. */
+  readonly guardians: GuardianAI;
 
   constructor(private m: Entities) {
     this.monsters = new MonsterAI(m, this);
     this.illagers = new IllagerAI(m, this);
+    this.guardians = new GuardianAI(m, this);
   }
 
   nearestPlayer(e: Entity, players: PlayerView[], max: number, needLos: boolean): PlayerView | null {
@@ -136,6 +140,7 @@ export class MobBrain {
       if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
       return;
     }
+    if (this.guardians.tick(e, dt, players)) return; // Fase 7.5 (océano)
     // Fase 6 (monstruos): los monstruos nuevos deciden y se mueven solos.
     if (this.monsters.tick(e, dt, players)) return;
     if (this.illagers.tick(e, dt, players)) return; // Fase 6 (asaltos)

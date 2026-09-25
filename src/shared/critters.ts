@@ -109,7 +109,7 @@ export function critterMobs(base: readonly MobDef[], ids: { cat: number; cow: nu
   return [
     {
       id: MOB_BAT, key: 'bat', name: 'Murciélago', hostile: false, health: 6, walk: 3, run: 5, width: 0.5, height: 0.9,
-      damage: 0, burnsInSun: false, drops: [], anim: 'flyer', scale: 1, flying: true, parts: bat.parts, atlas: bat.atlas,
+      damage: 0, burnsInSun: false, drops: [], xp: 0, anim: 'flyer', scale: 1, flying: true, parts: bat.parts, atlas: bat.atlas,
     },
     {
       id: MOB_OCELOT, key: 'ocelot', name: 'Ocelote', hostile: false, health: 10, walk: 1.4, run: 4.2, width: 0.6, height: 0.7,

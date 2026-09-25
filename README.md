@@ -210,7 +210,7 @@ pulsación). Estas son las de por defecto:
 | `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
 | `/efecto <efecto> [segundos] [nivel]` | Da un efecto (`/efecto velocidad 60 2`); `/efecto quitar` los quita todos |
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
-| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`) |
+| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`, `monumento`, `ruinas`, `tesoro`) |
 | `/asalto` · `/patrulla` | Desatar un asalto en la aldea más cercana · hacer aparecer una patrulla de saqueadores |
 | `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
 
