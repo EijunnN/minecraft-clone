@@ -25,8 +25,10 @@ export interface StructureMapDef {
 
 export const STRUCTURE_MAPS: Readonly<Record<StructureMapKind, StructureMapDef>> = {
   buried_treasure: { structure: 'buried_treasure', marker: 'x', name: 'Mapa del tesoro enterrado', search: 13, scale: 2 },
-  monument: { structure: 'monument', marker: 'monument', name: 'Mapa de explorador oceánico', search: 4, scale: 4 },
-  mansion: { structure: 'mansion', marker: 'mansion', name: 'Mapa de explorador de bosques', search: 3, scale: 4 },
+  // Fase 7.5 (mansión): los de explorador buscan en 100 regiones, como en Minecraft (el del tesoro, 50 chunks:
+  // 13 regiones de 4 chunks).
+  monument: { structure: 'monument', marker: 'monument', name: 'Mapa de explorador oceánico', search: 100, scale: 4 },
+  mansion: { structure: 'mansion', marker: 'mansion', name: 'Mapa de explorador de bosques', search: 100, scale: 4 },
 };
 
 /**

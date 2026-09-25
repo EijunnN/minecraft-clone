@@ -8,7 +8,7 @@ import { standable } from '../pathfind';
 import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../../effects';
 import type { ServerContext, Session } from './context';
 import type { Raids } from './raids'; // Fase 6 (asaltos)
-import { locateStructure, STRUCTURE_NAMES } from '../../world/structures';
+import { locateStructure, STRUCTURE_NAMES, LOCATE_REGIONS } from '../../world/structures';
 import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
 
 /** Nombres que acepta /localizar (sin tildes, en minúsculas). */
@@ -176,7 +176,7 @@ export class Commands {
           return;
         }
         const type = STRUCTURE_ALIASES[key];
-        const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]));
+        const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS); // Fase 7.5: como en Minecraft
         // Fase 7.5 (mansión): con el género del nombre («ninguna mansión», «aldea más cercana»).
         const fem = /^(Aldea|Mina|Mansión)/.test(STRUCTURE_NAMES[type]);
         if (!p) reply(`No hay ${fem ? 'ninguna' : 'ningún'} ${STRUCTURE_NAMES[type].toLowerCase()} cerca.`);

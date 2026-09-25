@@ -316,6 +316,14 @@ export function structureStartAt(gen: TerrainGenerator, key: string, x: number, 
   return t ? gridStart(gen, t, Math.floor(Math.floor(x / 16) / t.spacing), Math.floor(Math.floor(z / 16) / t.spacing)) : null;
 }
 
+/**
+ * Fase 7.5 (mansión): regiones en las que buscan /localizar y los mapas de explorador, como en Minecraft
+ * (findNearestMapStructure con radio 100 en regiones de la rejilla de cada estructura). Se deja de buscar
+ * en cuanto ninguna región más lejana puede estar más cerca, así que suele costar pocos milisegundos; sin
+ * ninguna en todo el radio (el peor caso) son ~40 000 columnas, unos 100–150 ms.
+ */
+export const LOCATE_REGIONS = 100;
+
 /** Estructura más cercana de un tipo a (x, z): [x, y, z] o null (busca hasta `maxRegions` regiones). */
 export function locateStructure(gen: TerrainGenerator, key: string, x: number, z: number, maxRegions = 12): [number, number, number] | null {
   if (key === 'mineshaft') {

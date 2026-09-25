@@ -312,6 +312,19 @@ test('cartógrafo: mapa del monumento de oficial y de la mansión de maestro, fu
   assert.equal(structureMapArea('buried_treasure', 0, 0).scale, 2, 'el del tesoro, a 1:2');
 });
 
+test('mapas de explorador y /localizar: buscan en 100 regiones, como en Minecraft', () => {
+  assert.equal(STRUCTURE_MAPS.mansion.search, 100);
+  assert.equal(STRUCTURE_MAPS.monument.search, 100);
+  // Con la semilla 1, la mansión más cercana al origen está a unas 9 regiones: el mapa la encuentra.
+  const gen = new TerrainGenerator(1);
+  const far = locateStructure(gen, 'mansion', 0, 0, 100)!;
+  assert.ok(Math.hypot(far[0], far[2]) > 4 * 80 * 16, 'lejos del origen');
+  const t = performance.now();
+  const map = structureMapOf(structureMap('mansion', gen, 0, 0));
+  assert.deepEqual([map?.x, map?.z], [far[0], far[2]]);
+  assert.ok(performance.now() - t < 500, 'y es barato');
+});
+
 test('cartógrafo: vende los mapas del monumento y de la mansión más cercanos', () => {
   const h = makeServer(SEED);
   const c = h.join('Cartografa');
