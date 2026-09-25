@@ -102,3 +102,9 @@ export const INVENTORY_ORDER: readonly number[] = [
 export const DEFAULT_HOTBAR: readonly number[] = [
   GRASS, STONE, OAK_PLANKS, OAK_LOG, GLASS, TORCH, BRICKS, WATER, GLOWSTONE,
 ];
+
+// Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal (registrados los últimos
+// para no mover ids) y su sitio en el inventario creativo.
+import { BEE_INVENTORY } from './beeBlocks';
+export * from './beeBlocks';
+(INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);

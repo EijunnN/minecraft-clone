@@ -15,6 +15,7 @@ import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
+import { faunaWorldTick, faunaPassiveFor, faunaFloor, FAUNA_GROUPS } from './wildlife'; // Fase 6 (fauna)
 
 export class Spawner {
   private spawnTimer = 0;
@@ -28,6 +29,7 @@ export class Spawner {
     this.passiveTimer -= dt;
     this.squidTimer -= dt;
     if (players.length === 0) return;
+    faunaWorldTick(this.m, dt, players); // Fase 6 (fauna): abejas y nidos
     if (this.spawnTimer <= 0) {
       // Un intento cada ~2.5 s por jugador: la noche es peligrosa pero no una avalancha.
       this.spawnTimer = 1.5 + this.m.rand() * 2;
@@ -136,6 +138,9 @@ export class Spawner {
 
   /** Animal que aparece en un bioma (0: ninguno). Los de granja salen en casi todos. */
   passiveFor(biome: number): number {
+    // Fase 6 (fauna): pandas y loros en la jungla, armadillos en sabanas y tierras baldías.
+    const fauna = faunaPassiveFor(biome, this.m.rand);
+    if (fauna) return fauna;
     const r = this.m.rand();
     const farm = (): number => {
       const q = this.m.rand();
@@ -207,6 +212,7 @@ const GROUP: Record<number, [number, number]> = {
   [MOB_RABBIT]: [2, 3],
   [MOB_WOLF]: [2, 4],
 };
+Object.assign(GROUP, FAUNA_GROUPS); // Fase 6 (fauna)
 
 /** Suelo natural de los animales salvajes (nieve, roca de montaña, arena del desierto, hielo). */
 const WILD_FLOORS = new Set<number>([GRASS, SNOWY_GRASS, SNOW_BLOCK, SAND, STONE, GRAVEL, ICE, PACKED_ICE]);
@@ -214,6 +220,8 @@ for (let i = 0; i < 8; i++) WILD_FLOORS.add(SNOW_LAYER + i);
 
 /** ¿Puede aparecer este animal sobre ese bloque? Los de granja sólo sobre hierba. */
 function floorFor(type: number, floor: number): boolean {
+  const fauna = faunaFloor(type, floor); // Fase 6 (fauna)
+  if (fauna !== undefined) return fauna;
   if (type in GROUP) return WILD_FLOORS.has(floor);
   return floor === GRASS || floor === SNOWY_GRASS;
 }

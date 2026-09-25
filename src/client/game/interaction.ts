@@ -22,6 +22,7 @@ import { REACH_CREATIVE, REACH_SURVIVAL, SOIL, SAPLINGS, type Mining, type Use }
 import type { ArmorSource } from './Survival';
 import { OFFHAND, HOTBAR } from './Inventory';
 import type { Game } from './Game';
+import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -126,6 +127,8 @@ export class Interaction {
       this.interactEntity(target, held.id);
       return;
     }
+    // Fase 6 (fauna): cosechar un nido o colmena llenos con tijeras o un frasco.
+    if (pressed && hit && held && useOnBeeHome(this.g, this, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       if (isUsable(hit.id)) {
@@ -453,6 +456,7 @@ export class Interaction {
     }
     this.g.audio.playBurp();
     if (!this.g.creative) this.g.inv.consume(u.slot, 1);
+    faunaAfterEat(this.g, this, u.item, u.slot); // Fase 6 (fauna): miel
   }
 
   releaseBow(dir: number[]): void {
@@ -657,6 +661,8 @@ export class Interaction {
     const def = MOBS[e.type];
     if (!def || def.hostile || e.deathT >= 0) return false;
     const baby = (e.flags & EF_BABY) !== 0;
+    const fauna = faunaCanInteract(e, item); // Fase 6 (fauna): cepillo
+    if (fauna !== undefined) return fauna;
     if (BREED_FOOD[def.key]?.includes(item)) return true;
     if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
     if (item === BUCKET) return e.type === MOB_COW && !baby;

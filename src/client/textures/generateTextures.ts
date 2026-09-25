@@ -32,6 +32,8 @@ import { WORKSTATION_GENERATORS } from './genWorkstations';
 import { BIOME_GENERATORS } from './genBiomes';
 import { UNDERGROUND_GENERATORS } from './genUnderground';
 import { STRUCTURE_GENERATORS } from './genStructures';
+// Fase 6 (fauna): nido de abejas, colmena, miel y panal.
+import { BEE_GENERATORS } from './genBees';
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -58,6 +60,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...BIOME_GENERATORS,
   ...UNDERGROUND_GENERATORS,
   ...STRUCTURE_GENERATORS,
+  ...BEE_GENERATORS,
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

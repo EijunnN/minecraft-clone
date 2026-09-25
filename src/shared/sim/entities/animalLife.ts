@@ -7,6 +7,7 @@ import { breedXp } from '../../experience';
 import { boxCollides } from '../physics';
 import { LOVE_SECONDS, BREED_COOLDOWN, type PlayerView, type InteractResult, type Entity } from './types';
 import type { Entities } from './Entities';
+import { faunaInteract } from './wildlife'; // Fase 6 (fauna)
 
 export class AnimalLife {
   constructor(private m: Entities) {}
@@ -127,6 +128,9 @@ export class AnimalLife {
     const def = MOBS[e.type];
     if (!def || e.dead || !e.ai || def.hostile) return { ok: false };
     const baby = (e.growAge ?? 0) > 0;
+    // Fase 6 (fauna): cepillar armadillos.
+    const fauna = faunaInteract(this.m, e, item, creative);
+    if (fauna) return fauna;
     const food = BREED_FOOD[def.key];
     if (food && food.includes(item)) {
       if (baby) {

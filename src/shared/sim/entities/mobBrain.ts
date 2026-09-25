@@ -8,6 +8,7 @@ import { findPath, standable } from '../pathfind';
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type AI, type Entity } from './types';
 import type { Entities } from './Entities';
 import { MIN_Y, VOID_Y } from '../../constants';
+import { faunaMobTick, faunaFlags } from './wildlife'; // Fase 6 (fauna)
 
 export class MobBrain {
   constructor(private m: Entities) {}
@@ -79,6 +80,11 @@ export class MobBrain {
 
     if (!def.hostile && !def.aquatic) this.m.animals.animalTick(e, dt);
     if (e.dead || !this.m.list.has(e.id)) return;
+    // Fase 6 (fauna): abejas y loros vuelan; pandas y armadillos tienen estados propios.
+    if (faunaMobTick(this.m, e, dt, players)) {
+      if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
+      return;
+    }
     ai.attackCd -= dt;
     ai.shootCd -= dt;
     ai.repath -= dt;
@@ -338,6 +344,7 @@ export class MobBrain {
     if ((e.growAge ?? 0) > 0) f |= EF_BABY;
     if (e.sheared) f |= EF_SHEARED;
     if ((e.love ?? 0) > 0) f |= EF_LOVE;
+    f |= faunaFlags(e); // Fase 6 (fauna)
     e.flags = f;
   }
 

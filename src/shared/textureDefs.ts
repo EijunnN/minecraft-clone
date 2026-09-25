@@ -243,6 +243,9 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'cracked_stone_bricks' },
   { name: 'netherrack' },
   { name: 'crying_obsidian' },
+  // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
+  ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
+    'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

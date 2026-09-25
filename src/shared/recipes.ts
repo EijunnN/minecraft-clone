@@ -14,6 +14,9 @@ import {
   APPLE, GOLDEN_APPLE, SHIELD, COPPER_INGOT, EMERALD, AMETHYST_SHARD, COMPASS, EMPTY_MAP, SNOWBALL, REDSTONE, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD,
   ARMOR, type ItemStack,
 } from './items';
+// Fase 6 (fauna).
+import { BEEHIVE, HONEY_BLOCK, HONEYCOMB_BLOCK } from './blocks';
+import { GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, BRUSH, RABBIT_HIDE } from './items';
 
 type Cell = readonly number[] | null;
 
@@ -126,7 +129,7 @@ mix([SUGAR_CANE], SUGAR);
 shape(['MMM', 'SES', 'WWW'], { M: MILK_BUCKET, S: SUGAR, E: EGG, W: WHEAT }, CAKE);
 
 /** Lo que queda en la cuadrícula al fabricar (los cubos de leche de la tarta vuelven vacíos). */
-export const CRAFT_REMAINDER: Readonly<Record<number, number>> = { [MILK_BUCKET]: BUCKET };
+export const CRAFT_REMAINDER: Readonly<Record<number, number>> = { [MILK_BUCKET]: BUCKET, [HONEY_BOTTLE]: GLASS_BOTTLE };
 
 // --- Calabazas, sandías, compostador y pesca ---
 mix([PUMPKIN], PUMPKIN_SEEDS, 4);
@@ -188,6 +191,16 @@ mix([POPPY, WHITE_WOOL], RED_WOOL);
 mix([DANDELION, WHITE_WOOL], YELLOW_WOOL);
 mix([CORNFLOWER, WHITE_WOOL], BLUE_WOOL);
 mix([LAPIS, WHITE_WOOL], BLUE_WOOL);
+
+// --- Fauna (fase 6): colmena, frascos, miel, panal, cepillo y piel de conejo ---
+shape(['PPP', 'HHH', 'PPP'], { P: PLANKS, H: HONEYCOMB }, BEEHIVE);
+shape(['G G', ' G '], { G: GLASS }, GLASS_BOTTLE, 3);
+shape(['HH', 'HH'], { H: HONEY_BOTTLE }, HONEY_BLOCK);
+mix([HONEY_BLOCK, GLASS_BOTTLE, GLASS_BOTTLE, GLASS_BOTTLE, GLASS_BOTTLE], HONEY_BOTTLE, 4);
+mix([HONEY_BOTTLE], SUGAR, 3);
+shape(['CC', 'CC'], { C: HONEYCOMB }, HONEYCOMB_BLOCK);
+shape(['F', 'C', 'S'], { F: FEATHER, C: COPPER_INGOT, S: STICK }, BRUSH);
+shape(['HH', 'HH'], { H: RABBIT_HIDE }, LEATHER);
 
 export interface RecipeMatch {
   out: ItemStack;

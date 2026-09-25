@@ -35,6 +35,9 @@ export function deathMessage(cause: DamageCause): string {
     zombie: 'fue devorado por un zombi', husk: 'fue devorado por un zombi momificado', skeleton: 'fue abatido por un esqueleto',
     stray: 'fue abatido por un esqueleto errante', spider: 'fue mordido por una araña', enderman: 'fue destrozado por un enderman',
     creeper: 'voló por los aires por un creeper',
+    // Fase 6 (fauna).
+    bee: 'murió picado por una abeja', panda: 'fue aplastado por un panda', wolf: 'fue despedazado por un lobo',
+    polar_bear: 'fue destrozado por un oso polar',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

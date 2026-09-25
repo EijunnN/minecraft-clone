@@ -10,6 +10,7 @@
 // Herramientas en diagonal: mango abajo-izquierda, cabeza arriba-derecha.
 
 import { ITEM_SPRITES } from '../../shared/items';
+import { FAUNA_SPRITES } from './faunaSprites'; // Fase 6 (fauna)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -407,6 +408,8 @@ function doorInks(light: RGB, base: RGB, dark: RGB, glass: RGB): Inks {
 }
 
 const SPRITES: Record<string, SpriteDef> = {
+  // Fase 6 (fauna): frascos, miel, panal, conejo, escama de armadillo y cepillo.
+  ...FAUNA_SPRITES,
 
   compass: {
     rows: [

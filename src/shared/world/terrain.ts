@@ -17,6 +17,7 @@ import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, h
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
 import { DIR_X, DIR_Z } from '../blockModels';
 import { placeStructures, type StructureChest } from './structures';
+import { placeBeeNest } from './beeNests'; // Fase 6 (fauna)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -760,6 +761,8 @@ export class TerrainGenerator {
           if (tr > 0.8) this.bigOak(tx, sy + 1, tz, tr, set);
           else this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
         }
+        // Fase 6 (fauna): nidos de abejas en algunos robles y abedules de llanuras y praderas.
+        placeBeeNest(seed, biome, tx, sy + 1, tz, tr, set);
         // El tronco convierte la hierba de debajo en tierra.
         if (inside) {
           const gi = blockIndex(tx - x0, sy, tz - z0);

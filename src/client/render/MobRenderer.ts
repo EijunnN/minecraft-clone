@@ -6,6 +6,7 @@ import { MOB_VS, MOB_FS, MOB_SHADOW_VS, MOB_SHADOW_FS, MAX_BONES } from './shade
 import { MOBS, boxFaces, type MobDef, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } from '../../shared/mobs';
 import { EF_ACTION, EF_ANGRY, EF_BABY, EF_SHEARED } from '../../shared/protocol';
 import type { ClientEntity } from '../game/ClientEntities';
+import { mobVariant, faunaAnimate, faunaPartScale, faunaRoot } from './faunaPose'; // Fase 6 (fauna)
 
 export interface MobTexture {
   width: number;
@@ -98,11 +99,13 @@ export class MobRenderer {
     return m;
   }
 
-  private skin(def: MobDef): WebGLTexture {
-    let t = this.skins.get(def.id);
+  /** Textura de una especie; `variant` > 0 (fase 6: loros de colores, abejas enfadadas) pide id + 1000 · variante. */
+  private skin(def: MobDef, variant = 0): WebGLTexture {
+    const key = def.id + variant * 1000;
+    let t = this.skins.get(key);
     if (t) return t;
     const gl = this.gl;
-    const src = this.texSource(def.id) ?? placeholderTexture(def);
+    const src = this.texSource(key) ?? placeholderTexture(def);
     t = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, t);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -111,7 +114,7 @@ export class MobRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.skins.set(def.id, t);
+    this.skins.set(key, t);
     return t;
   }
 
@@ -127,6 +130,7 @@ export class MobRenderer {
   /** Rotaciones de animación por parte: [x, y, z] añadidas a la de reposo. */
   private animate(def: MobDef, e: ClientEntity, time: number, name: string, out: number[]): void {
     out[0] = out[1] = out[2] = 0;
+    if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
     const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
     const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
     const acting = (e.flags & EF_ACTION) !== 0;
@@ -213,7 +217,9 @@ export class MobRenderer {
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
-      if (part.name === 'wool' && e.flags & EF_SHEARED) mat4.scale(m, m, [0, 0, 0]);
+      const faunaScale = faunaPartScale(def, e, part.name); // Fase 6 (fauna): armadillo enroscado
+      if (faunaScale) mat4.scale(m, m, faunaScale);
+      else if (part.name === 'wool' && e.flags & EF_SHEARED) mat4.scale(m, m, [0, 0, 0]);
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
       b.set(m, i * 16);
@@ -226,6 +232,7 @@ export class MobRenderer {
     mat4.translate(m, m, [e.x - camX, e.y - camY, e.z - camZ]);
     mat4.rotateY(m, m, e.bodyYaw);
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
+    faunaRoot(def, e, m); // Fase 6 (fauna)
     let s = def.scale;
     if (e.flags & EF_BABY) s *= 0.5;
     if (def.id === MOB_CREEPER && e.actionT >= 0) {
@@ -263,7 +270,7 @@ export class MobRenderer {
       const light = lightAt(e);
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def))
+      p.tex2D('uSkin', this.skin(def, mobVariant(e)))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)

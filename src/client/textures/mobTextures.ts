@@ -16,6 +16,7 @@ import {
   MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
 } from '../../shared/mobs';
+import { faunaPainter } from './faunaTextures'; // Fase 6 (fauna)
 
 export interface MobTexture {
   width: number;
@@ -1227,8 +1228,9 @@ function polarBear(t: Texel): Paint {
     case 'ear':
       return t.f === FRONT ? [190, 186, 180] : white();
     case 'leg':
-      // Almohadillas negras bajo las patas y garras claras por delante.
-      if (t.f === BOTTOM) return [40, 38, 40];
+      // Fase 6 (fauna): planta de las patas gris clara (antes casi negra: al andar, la zancada la
+      // enseñaba como una mancha negra) y garras claras por delante.
+      if (t.f === BOTTOM) return [168, 164, 156];
       if (t.f === FRONT && t.y < 1 && t.i % 2 === 1) return [120, 116, 110];
       return white();
     default:
@@ -1297,8 +1299,16 @@ const PAINTERS: Record<number, Painter> = {
 
 /** Genera el atlas de una criatura (tamaño MOBS[id].atlas). */
 export function generateMobTexture(mobId: number): MobTexture {
+  // Fase 6 (fauna): abejas, pandas, loros y armadillos; id + 1000 · variante (color del loro, abeja
+  // enfadada o con néctar).
+  const fauna = faunaPainter(mobId % 1000, Math.floor(mobId / 1000));
+  if (fauna) return paintMob(mobId % 1000, fauna);
   const mob = MOBS[mobId];
   const painter = PAINTERS[mobId];
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }
+
+// Fase 6 (fauna): utilidades de pintado para faunaTextures.ts.
+export { paintMob, fur, mapAt, tone, side, rnd, vnoise, scale, clamp01, PX, NX, TOP, BOTTOM, FRONT, BACK };
+export type { Texel, Paint, Painter, RGB };
