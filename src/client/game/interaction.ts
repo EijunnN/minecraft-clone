@@ -26,6 +26,7 @@ import type { Game } from './Game';
 import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
+import { afterDrinkOminous } from './raidClient'; // Fase 6 (asaltos)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -472,6 +473,7 @@ export class Interaction {
     this.g.audio.playBurp();
     if (!this.g.creative) this.g.inv.consume(u.slot, 1);
     faunaAfterEat(this.g, this, u.item, u.slot); // Fase 6 (fauna): miel
+    afterDrinkOminous(this.g, u.item); // Fase 6 (asaltos): Mal presagio
   }
 
   releaseBow(dir: number[]): void {

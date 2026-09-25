@@ -12,6 +12,9 @@ import { STICK, SUGAR, REDSTONE, SLIME_BALL, PHANTOM_MEMBRANE } from './items';
 // Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana, renacuajo y calamar brillante (ids 30–39).
 import { AQUATIC_MOBS } from './aquaticMobs';
 export * from './aquaticMobs';
+// Fase 6 (asaltos): saqueadores, vindicadores, evocadores, vex, devastadores y colmillos (ids 60–69).
+import { ILLAGER_MOBS } from './illagers';
+export * from './illagers';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -98,7 +101,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'fish' | 'puffer' | 'dolphin' | 'turtle' | 'axolotl' | 'frog' | 'tadpole'
   // Fase 6 (gólems/domesticar): brazos largos que se balancean y golpean hacia arriba.
   | 'golem'
-  | 'flyer'; // Fase 6 (fauna): abejas y loros
+  | 'flyer' // Fase 6 (fauna): abejas y loros
+  | 'illager' | 'vex' | 'ravager' | 'fangs'; // Fase 6 (asaltos)
 
 export interface MobDef {
   id: number;
@@ -128,6 +132,8 @@ export interface MobDef {
   sound?: string;
   /** Fase 6 (fauna): vuela (abejas y loros; su movimiento va en sim/entities/wildlife.ts). */
   flying?: boolean;
+  /** Fase 6 (asaltos): sin vida ni IA propia (colmillos del evocador): no se le puede golpear ni apuntar. */
+  inert?: boolean;
 }
 
 const quadLegs = (h: number, xs: number, zs: [number, number], uv: [number, number], w = 4): ModelPart[] => [
@@ -617,6 +623,9 @@ mob({
     ...quadLegs(3, 2, [-3, 3], [0, 18], 2),
   ],
 });
+
+// Fase 6 (asaltos): definiciones en illagers.ts.
+for (const d of ILLAGER_MOBS) mob(d);
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

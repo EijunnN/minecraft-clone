@@ -41,6 +41,7 @@ import { Riding } from './server/riding'; // Fase 6 (monturas)
 import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
+import { Raids } from './server/raids'; // Fase 6 (asaltos)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -106,6 +107,8 @@ export class GameServer {
   private monsters: Monsters;
   /** Fase 6 (gólems/domesticar): construir gólems y poblar las aldeas. */
   readonly golems: Golems;
+  /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
+  readonly raids: Raids;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -166,6 +169,9 @@ export class GameServer {
     this.world.onVillagers = (v) => this.trading.spawnVillagers(v);
     this.monsters = new Monsters(this.ctx, store);
     this.golems = new Golems(this.ctx, store); // Fase 6 (gólems/domesticar)
+    this.raids = new Raids(this.ctx, store); // Fase 6 (asaltos)
+    this.trading.heroOf = (name) => this.raids.isHero(name);
+    this.commands.raids = this.raids;
   }
 
   get seed(): number {
@@ -372,6 +378,7 @@ export class GameServer {
     this.savePlayer(s);
     this.broadcast({ t: 'leave', id: s.id });
     this.riding.onLeave(s); // Fase 6 (monturas)
+    this.raids.onLeave(s); // Fase 6 (asaltos)
     this.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} salió del mundo.` });
     if (this.playerCount === 0) this.flush(true);
   }
@@ -508,10 +515,15 @@ export class GameServer {
         this.trading.onClose(s);
         break;
       case 'died':
+        this.raids.onDeath(s); // Fase 6 (asaltos): se pierde el presagio
         if (typeof msg.m === 'string' && this.allow(s, 5)) {
           const m = msg.m.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80);
           if (m) this.broadcast({ t: 'chat', id: null, name: '', m: `☠ ${s.name} ${m}.` });
         }
+        break;
+      // Fase 6 (asaltos)
+      case 'omen':
+        if (this.allow(s, 1)) this.raids.onOmen(s, msg.a);
         break;
       // Fase 6 (monturas)
       case 'mount':
@@ -749,6 +761,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.monsters.tick();
     this.storms.tick(DT);
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
+    if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
@@ -821,6 +834,7 @@ export class GameServer {
     this.campfires.flush(this.store);
     this.signs.flush(this.store);
     this.monsters.flush(this.store);
+    this.raids.flush(this.store); // Fase 6 (asaltos)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

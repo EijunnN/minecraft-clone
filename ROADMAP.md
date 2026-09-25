@@ -11,7 +11,7 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | Dimensiones | 3 (Mundo normal, Nether, End) | 1 |
 | Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
 | Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 6 (y 3 elementos decorativos) |
-| Criaturas | más de 80, incluidos 2 jefes | 47 |
+| Criaturas | más de 80, incluidos 2 jefes | 52 |
 | Bloques | ~1.100 contando colores y variantes | ~70 |
 | Objetos | ~1.500 | 56 objetos + bloques |
 | Recetas | más de 1.000 | ~50 |
@@ -121,7 +121,9 @@ Aldeas, 13 profesiones con bloques de trabajo, comercio con esmeraldas y niveles
 protector, vendedor ambulante, curar aldeanos zombi, asaltos con saqueadores, vindicadores,
 evocadores y devastadores, y la bandera de mal presagio. **VoxelCraft: 🟡** aldeas con aldeanos,
 12 profesiones con sus bloques de trabajo, comercio con esmeraldas en 5 niveles, gólem de hierro,
-vendedor ambulante y aldeanos zombi (sin curarlos todavía); faltan los asaltos.
+vendedor ambulante, aldeanos zombi (sin curarlos todavía), puestos de saqueadores, patrullas con
+capitán, Mal presagio y asaltos por oleadas con saqueadores, vindicadores, evocadores, vex,
+devastadores y brujas; Héroe de la aldea (rebajas). Falta la campana de la aldea.
 
 ### 2.8 Redstone
 
@@ -336,7 +338,7 @@ acumulación de nieve.
   que apunta al punto de aparición y mapas de 128×128 bloques (con un mapa vacío en la mano), que se
   ven al llevarlos con la posición propia y la de los demás jugadores.
 
-### Fase 6 — Criaturas (XL) · 🟡 casi hecha (faltan saqueadores y asaltos)
+### Fase 6 — Criaturas (XL) · ✅ hecha
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y
 gatos domesticables, caballos y burros montables, conejos, zorros, abejas y miel, tortugas, peces,
 delfines, loros, cabras, llamas, pandas, osos polares, ranas, ajolotes, armadillos, camellos;
@@ -366,6 +368,16 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
 - ✅ **Abejas y más fauna.** Nidos en robles y abedules de praderas, colmenas, miel (quita el veneno)
   y panal; con una fogata debajo las abejas no se enfadan. Pandas, loros de 5 colores y armadillos
   que se enroscan (escamas con el cepillo). Carne y piel de conejo, y voces para todos los animales.
+- ✅ **Saqueadores y asaltos.** Puestos de saqueadores (torre de vigilancia con mirador y cofre, nunca
+  cerca de una aldea) donde aparecen saqueadores; patrullas de 2 a 5 con un capitán que lleva el
+  estandarte ominoso. El capitán suelta la botella ominosa: al beberla se lleva Mal presagio y, al
+  entrar en una aldea, empieza un asalto de 3, 5 o 7 oleadas (según la dificultad) con saqueadores
+  (ballesta), vindicadores (hacha), evocadores (colmillos que brotan del suelo y vex que atraviesan
+  paredes), devastadores (arrasan hojas y cultivos) y brujas. Barra del asalto arriba, aldeanos que
+  se esconden, victoria con Héroe de la aldea (los aldeanos rebajan un 30 %) o derrota si no queda
+  ninguno. Los evocadores sueltan el tótem de inmortalidad, que salva de una muerte. Los zombis van
+  a por los aldeanos y en normal o difícil los convierten en aldeanos zombi. `/asalto` y `/patrulla`
+  para probarlo.
 
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,

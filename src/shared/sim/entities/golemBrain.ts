@@ -125,7 +125,7 @@ export class GolemBrain {
     for (const o of this.m.list.values()) {
       if (!o.ai || o.dead || o === e) continue;
       const def = MOBS[o.type];
-      if (!def?.hostile || o.type === MOB_ENDERMAN || (!creepers && o.type === MOB_CREEPER)) continue;
+      if (!def?.hostile || def.inert || o.type === MOB_ENDERMAN || (!creepers && o.type === MOB_CREEPER)) continue;
       const dx = o.x - e.x, dy = o.y - e.y, dz = o.z - e.z;
       const d2 = dx * dx + dy * dy + dz * dz;
       if (d2 >= bd) continue;

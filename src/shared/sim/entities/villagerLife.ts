@@ -2,7 +2,10 @@
 // aldea de día, vuelta a casa de noche (abriendo y cerrando puertas), huida de los zombis, reposición
 // de las ofertas y el comerciante ambulante que se marcha pasado un tiempo. El comercio en sí (qué se
 // paga y qué se recibe) es del sistema de comercio del servidor (server/trading.ts).
-import { MOBS, MOB_VILLAGER, MOB_WANDERING_TRADER, MOB_ZOMBIE, MOB_HUSK, isVillagerType } from '../../mobs';
+import {
+  MOBS, MOB_VILLAGER, MOB_WANDERING_TRADER, MOB_ZOMBIE, MOB_HUSK, MOB_ZOMBIE_VILLAGER, MOB_DROWNED, MOB_PILLAGER,
+  MOB_VINDICATOR, MOB_EVOKER, MOB_VEX, MOB_RAVAGER, isVillagerType,
+} from '../../mobs';
 import { AIR, isDoor, familyBase, stateProps } from '../../blocks';
 import { PROFESSIONS, PROF_NONE, levelForXp, MAX_LEVEL } from '../../villagers';
 import { toggleEdits } from '../../placement';
@@ -13,6 +16,11 @@ import { TAU, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 
 type Vec3 = [number, number, number];
+
+/** De qué huyen los aldeanos: zombis y (fase 6, asaltos) los asaltantes. */
+const THREATS = new Set([
+  MOB_ZOMBIE, MOB_HUSK, MOB_ZOMBIE_VILLAGER, MOB_DROWNED, MOB_PILLAGER, MOB_VINDICATOR, MOB_EVOKER, MOB_VEX, MOB_RAVAGER,
+]);
 
 export interface VillagerData {
   /** Profesión (índice de PROFESSIONS; 0 = sin oficio). */
@@ -144,7 +152,7 @@ export class VillagerLife {
   private nearestZombie(e: Entity): Entity | null {
     let best: Entity | null = null, bd = FLEE_RANGE;
     for (const o of this.m.list.values()) {
-      if ((o.type !== MOB_ZOMBIE && o.type !== MOB_HUSK) || o.dead) continue;
+      if (!THREATS.has(o.type) || o.dead) continue;
       const d = Math.hypot(o.x - e.x, o.z - e.z);
       if (d < bd && Math.abs(o.y - e.y) < 4) {
         bd = d;
@@ -268,7 +276,8 @@ export class VillagerLife {
       v.dest = null;
       return true;
     }
-    const night = this.m.host.sunHeight() < 0.02;
+    // De noche (o si hay un asalto en la aldea, fase 6), a casa.
+    const night = this.m.host.sunHeight() < 0.02 || this.m.alarmed(e.x, e.z);
     if (night && e.type === MOB_VILLAGER) {
       const home = v.home ?? v.meet;
       if (home && Math.hypot(home[0] + 0.5 - e.x, home[2] + 0.5 - e.z) > 0.8) this.walkTo(e, v, home, def.walk, dt);

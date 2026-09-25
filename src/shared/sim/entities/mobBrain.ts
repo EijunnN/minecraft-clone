@@ -12,13 +12,17 @@ import { MIN_Y, VOID_Y } from '../../constants';
 // Fase 6 (monstruos): comportamiento de los monstruos nuevos.
 import { MonsterAI, isSpiderLike } from './monsterAi';
 import { faunaMobTick, faunaFlags } from './wildlife'; // Fase 6 (fauna)
+import { IllagerAI } from './illagers'; // Fase 6 (asaltos)
 
 export class MobBrain {
   /** Fase 6 (monstruos). */
   readonly monsters: MonsterAI;
+  /** Fase 6 (asaltos): illagers, vex, devastadores, colmillos y zombis contra aldeanos. */
+  readonly illagers: IllagerAI;
 
   constructor(private m: Entities) {
     this.monsters = new MonsterAI(m, this);
+    this.illagers = new IllagerAI(m, this);
   }
 
   nearestPlayer(e: Entity, players: PlayerView[], max: number, needLos: boolean): PlayerView | null {
@@ -114,6 +118,7 @@ export class MobBrain {
     }
     // Fase 6 (monstruos): los monstruos nuevos deciden y se mueven solos.
     if (this.monsters.tick(e, dt, players)) return;
+    if (this.illagers.tick(e, dt, players)) return; // Fase 6 (asaltos)
     const spiderLike = isSpiderLike(e.type);
 
     // --- Decisión ---

@@ -184,7 +184,7 @@ export class ClientEntities {
     let best: { e: ClientEntity; dist: number } | null = null;
     for (const e of this.list.values()) {
       const def = MOBS[e.type];
-      if (!def || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia (fase 6)
+      if (!def || def.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
       const k = e.flags & EF_BABY ? 0.5 : 1;
       const hw = (def.width * k) / 2 + 0.05;
       const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height * k, e.z + hw];

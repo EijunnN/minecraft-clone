@@ -6,6 +6,7 @@ import { MOBS, MOB_TYPES } from '../../mobs';
 import { standable } from '../pathfind';
 import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../../effects';
 import type { ServerContext, Session } from './context';
+import type { Raids } from './raids'; // Fase 6 (asaltos)
 import { locateStructure, STRUCTURE_NAMES } from '../../world/structures';
 
 /** Nombres que acepta /localizar (sin tildes, en minúsculas). */
@@ -15,9 +16,13 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   portal_en_ruinas: 'ruined_portal', portal: 'ruined_portal', iglu: 'igloo', pozo_del_desierto: 'desert_well',
   pozo: 'desert_well', mina_abandonada: 'mineshaft', mina: 'mineshaft',
   aldea: 'village',
+  puesto: 'pillager_outpost', puesto_de_saqueadores: 'pillager_outpost', puesto_saqueador: 'pillager_outpost', // Fase 6 (asaltos)
 };
 
 export class Commands {
+  /** Fase 6 (asaltos): para /asalto y /patrulla. */
+  raids: Raids | null = null;
+
   constructor(private ctx: ServerContext) {}
 
   run(s: Session, line: string): void {
@@ -151,13 +156,37 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];
         const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]));
         if (!p) reply(`No hay ningún ${STRUCTURE_NAMES[type].toLowerCase()} cerca.`);
         else reply(`${STRUCTURE_NAMES[type]} más cercano: x ${p[0]}, y ${p[1]}, z ${p[2]} (a ${Math.round(Math.hypot(p[0] - s.p[0], p[2] - s.p[2]))} bloques).`);
+        return;
+      }
+      // Fase 6 (asaltos): lanzar un asalto en la aldea más cercana (hasta 200 bloques) o una patrulla.
+      case 'asalto':
+      case 'raid': {
+        if (!this.raids) return;
+        const v = locateStructure(ctx.world.gen, 'village', Math.floor(s.p[0]), Math.floor(s.p[2]), 1);
+        if (!v || Math.hypot(v[0] - s.p[0], v[2] - s.p[2]) > 200) {
+          reply('No hay ninguna aldea cerca (a menos de 200 bloques).');
+          return;
+        }
+        if (ctx.difficulty === 0) {
+          reply('En dificultad pacífica no hay asaltos.');
+          return;
+        }
+        this.raids.start(v[0], v[1], v[2]);
+        ctx.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} desató un asalto en la aldea de x ${v[0]}, z ${v[2]}.` });
+        return;
+      }
+      case 'patrulla':
+      case 'patrol': {
+        if (!this.raids) return;
+        const n = this.raids.spawnPatrol(s.p[0], s.p[2]).length;
+        reply(n ? `Aparece una patrulla de ${n} saqueadores cerca.` : 'No hay sitio para una patrulla aquí.');
         return;
       }
       case 'seed':
@@ -173,7 +202,7 @@ export class Commands {
         reply(
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar, ' +
-          '/seed, /lista, /tp <jugador>, /localizar <estructura>',
+          '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla',
         );
         return;
       default:

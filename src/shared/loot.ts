@@ -6,7 +6,9 @@ import {
   GOLDEN_APPLE, BUCKET, WHEAT_SEEDS, MELON_SEEDS, PUMPKIN_SEEDS, BEETROOT_SEEDS, APPLE, PAPER, CARROT, POTATO,
   FLINT, SPIDER_EYE, LEATHER, COD, SALMON, COPPER_INGOT, BOOK, ARMOR, TOOLS, type ItemStack,
   SADDLE, // Fase 6 (monturas)
+  ARROW, // Fase 6 (asaltos)
 } from './items';
+import { DARK_OAK_LOG, BIRCH_LOG } from './blocks'; // Fase 6 (asaltos)
 
 /** Entrada: [objeto, peso, mínimo, máximo]. */
 type Entry = [number, number, number, number];
@@ -71,6 +73,12 @@ export const LOOT_TABLES: Readonly<Record<string, LootTable>> = {
     [BREAD, 20, 1, 4], [APPLE, 15, 1, 5], [WHEAT, 15, 2, 7], [WHEAT_SEEDS, 12, 2, 6], [CARROT, 10, 1, 4],
     [POTATO, 10, 1, 4], [TORCH, 10, 2, 8], [IRON_INGOT, 6, 1, 3], [COAL, 8, 1, 4], [EMERALD, 2, 1, 2],
     [BEETROOT_SEEDS, 5, 1, 4], [BOOK, 2, 1, 1],
+  ]),
+  // Fase 6 (asaltos): el mirador del puesto de saqueadores (como en Minecraft: flechas, trigo,
+  // patatas, zanahorias, troncos, hierro y, rara vez, un libro).
+  pillager_outpost: T(3, 6, [
+    [ARROW, 16, 2, 7], [WHEAT, 14, 3, 5], [POTATO, 10, 2, 5], [CARROT, 10, 3, 5], [DARK_OAK_LOG, 10, 2, 3],
+    [BIRCH_LOG, 8, 2, 3], [STRING, 8, 1, 6], [IRON_INGOT, 6, 1, 3], [EMERALD, 2, 1, 1], [BOOK, 1, 1, 1],
   ]),
 };
 

@@ -1,6 +1,6 @@
 // Física de lo que no son criaturas: objetos tirados (se fusionan, se recogen, arden en lava),
 // flechas (vuelan, se clavan, hieren) y bloques que caen (arena y grava).
-import { ENT_ITEM, ENT_ARROW } from '../../mobs';
+import { MOBS, ENT_ITEM, ENT_ARROW, isRaider } from '../../mobs';
 import { ITEMS, ARROW, maxStack, type ItemStack } from '../../items';
 import { AIR, BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
 import { EF_PICKABLE } from '../../protocol';
@@ -142,11 +142,14 @@ export class ItemPhysics {
       e.z = nz;
       // Daño proporcional a la velocidad (bloques por tick × daño base), como en Minecraft.
       const dmg = Math.max(1, Math.ceil((speed / 20) * (e.arrowDamage ?? 2)));
+      // Fase 6 (asaltos): los virotes de los asaltantes no hieren a los suyos.
+      const shooter = typeof e.shooter === 'number' ? this.m.list.get(e.shooter) : undefined;
+      const raiderShot = !!shooter && isRaider(shooter.type);
       for (const m of this.m.list.values()) {
-        if (!m.ai || m.dead || m.id === e.shooter) continue;
+        if (!m.ai || m.dead || m.id === e.shooter || MOBS[m.type].inert || (raiderShot && isRaider(m.type))) continue;
         const hw = m.width / 2 + 0.1;
         if (Math.abs(m.x - e.x) < hw && Math.abs(m.z - e.z) < hw && e.y > m.y - 0.1 && e.y < m.y + m.height + 0.1) {
-          this.m.damage(m, dmg, e.x - e.vx, e.z - e.vz, typeof e.shooter === 'string' ? e.shooter : null, 0.6);
+          this.m.damage(m, dmg, e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6);
           this.m.host.fx('arrow_hit', e.x, e.y, e.z);
           this.m.remove(e.id);
           return;

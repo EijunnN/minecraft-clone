@@ -157,6 +157,13 @@ export interface Entity extends Body {
   foe?: number | string;
   /** Gólem de nieve: segundos acumulados derritiéndose (1 de daño por segundo). */
   meltAcc?: number;
+  // Fase 6 (asaltos)
+  /** Asalto al que pertenece (no desaparece mientras dure). */
+  raid?: number;
+  /** Capitán de una patrulla o de una oleada: lleva el estandarte y suelta la botella ominosa. */
+  captain?: boolean;
+  /** Patrulla: punto hacia el que camina. */
+  patrolTo?: [number, number];
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

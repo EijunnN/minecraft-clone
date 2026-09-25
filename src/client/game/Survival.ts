@@ -44,6 +44,9 @@ export function deathMessage(cause: DamageCause): string {
     // Fase 6 (fauna).
     bee: 'murió picado por una abeja', panda: 'fue aplastado por un panda',
     polar_bear: 'fue destrozado por un oso polar',
+    // Fase 6 (asaltos)
+    pillager: 'fue abatido por un saqueador', vindicator: 'fue despedazado por un vindicador',
+    evoker: 'fue devorado por los colmillos de un evocador', vex: 'fue atravesado por un vex', ravager: 'fue arrollado por un devastador',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

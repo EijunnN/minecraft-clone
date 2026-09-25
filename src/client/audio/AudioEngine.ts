@@ -4,6 +4,7 @@
 // continua/discreta y música generativa. Ningún método debe lanzar nunca ni antes de resume()
 // ni si Web Audio no está disponible (p. ej. navegadores headless de pruebas).
 import type { SoundMaterial } from '../../shared/blocks';
+import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -381,6 +382,12 @@ export class AudioEngine {
     const delay = Math.min(4, distance / 343);
     const loud = Math.max(0.15, Math.min(1, 1 - distance / 260));
     this.safe(() => this.spawnLocal(0.6, (ctx, noise, dest, now) => buildThunder(ctx, noise, dest, now, delay, loud)));
+  }
+
+  /** Fase 6 (asaltos): cuerno, ballesta, conjuros, colmillos, rugido, tótem, victoria y derrota. */
+  playRaidSfx(kind: string, pos: Vec3 | null): void {
+    const build = (ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number) => buildRaidSfx(ctx, noise, kind, dest, now);
+    this.safe(() => (pos ? this.spawnPositional(pos, build, 0.5) : this.spawnLocal(0.4, build)));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

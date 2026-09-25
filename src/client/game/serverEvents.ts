@@ -101,7 +101,12 @@ export class ServerEvents {
       case 'effect':
         // Del comando /efecto (id 0 = quitarlos todos).
         if (msg.id === 0) this.g.statusEffects.clear(this.g.survival);
+        else if (Number(msg.s) < 0) this.g.statusEffects.remove(Number(msg.id), this.g.survival); // Fase 6: quitar uno
         else this.g.statusEffects.add(Number(msg.id), Number(msg.s), Number(msg.a), this.g.survival);
+        break;
+      // Fase 6 (asaltos): barra del asalto cercano.
+      case 'raid':
+        this.g.raid = msg.s ? { s: msg.s, w: msg.w, n: msg.n, h: msg.h, r: msg.r } : null;
         break;
       case 'ires':
         this.g.interaction.onInteractResult(msg);

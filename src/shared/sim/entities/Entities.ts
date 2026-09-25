@@ -46,6 +46,10 @@ export class Entities {
   readonly aquatic = new AquaticLife(this);
   // Fase 6 (gólems/domesticar): gólems y animales domesticados.
   readonly companions = new Companions(this);
+  /** Fase 6 (asaltos): centro de la aldea de cada asalto en curso (hacia donde marchan los asaltantes). */
+  readonly raidCenters = new Map<number, [number, number, number]>();
+  /** Fase 6 (asaltos): zonas en alerta [x, z, radio]: los aldeanos se refugian en casa. */
+  alarms: [number, number, number][] = [];
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -206,7 +210,7 @@ export class Entities {
 
   /** Daño a una entidad; devuelve true si murió. */
   damage(e: Entity, amount: number, fromX: number, fromZ: number, attacker: string | number | null, knock = 1): boolean {
-    if (e.dead || !e.ai) return false;
+    if (e.dead || !e.ai || MOBS[e.type].inert) return false;
     if (e.invuln > 0) return false;
     e.health -= amount;
     e.invuln = 0.5;
@@ -236,6 +240,7 @@ export class Entities {
     this.companions.onHurt(e, attacker);
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
     this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
+    this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.kill(e, true);
@@ -265,6 +270,7 @@ export class Entities {
     }
     if (drops) this.xp.onMobKilled(e);
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
+    if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -323,11 +329,12 @@ export class Entities {
     const players = this.host.players();
     this.items.buildItemGrid();
     this.xp.beginTick(dt);
+    this.mobs.illagers.tickWorld(dt); // Fase 6 (asaltos): colmillos que brotan
     const active: Entity[] = [];
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
-      if (e.ai && !e.dead && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
+      if (e.ai && !e.dead && e.raid === undefined && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
         if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
           this.remove(e.id);
           continue;
@@ -423,6 +430,12 @@ export class Entities {
     } catch {
       /* ignorar */
     }
+  }
+
+  /** Fase 6 (asaltos): ¿hay un asalto en curso cerca de (x, z)? */
+  alarmed(x: number, z: number): boolean {
+    for (const [ax, az, r] of this.alarms) if (Math.hypot(x - ax, z - az) < r) return true;
+    return false;
   }
 
   // ------------------------------------------------------------------ fachada para el servidor

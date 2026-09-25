@@ -3,7 +3,7 @@
 // un sprite 16x16 del atlas de objetos.
 import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
 import {
-  EFFECT_HUNGER, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_ABSORPTION, type FoodEffect,
+  EFFECT_HUNGER, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_ABSORPTION, EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, type FoodEffect,
 } from './effects';
 import {
   BLOCKS, BLOCK_COUNT, R_NONE, WATER, LAVA, FURNACE, CHEST, OAK_LOG, BIRCH_LOG, SPRUCE_LOG, OAK_PLANKS,
@@ -272,8 +272,14 @@ export const RABBIT_HIDE = item('rabbit_hide', 'Piel de conejo');
 export const ARMADILLO_SCUTE = item('armadillo_scute', 'Escama de armadillo');
 /** Cepillo: saca escamas a los armadillos (16 de desgaste por escama). */
 export const BRUSH = item('brush', 'Cepillo', { stack: 1, tool: { kind: 'brush', tier: 0, speed: 1, durability: 64, damage: 1 } });
+// ------------------------------------------------------------------ Fase 6 (asaltos)
+/** Botella ominosa: la suelta el capitán de una patrulla; al beberla da Mal presagio. */
+export const OMINOUS_BOTTLE = item('ominous_bottle', 'Botella ominosa', { food: { hunger: 0, saturation: 0, always: true } });
+/** Tótem de inmortalidad: en la mano (o la secundaria), salva de una muerte segura. */
+export const TOTEM_OF_UNDYING = item('totem_of_undying', 'Tótem de inmortalidad', { stack: 1 });
 
 // Comida con efectos (valores de Minecraft).
+ITEMS[OMINOUS_BOTTLE].food!.effects = [[EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, 0, 1]]; // Fase 6 (asaltos)
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
 ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
 
@@ -408,6 +414,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   COD_BUCKET, SALMON_BUCKET, TROPICAL_FISH_BUCKET, PUFFERFISH_BUCKET, AXOLOTL_BUCKET, TADPOLE_BUCKET,
   // Fase 6 (fauna).
   GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, RAW_RABBIT, COOKED_RABBIT, RABBIT_HIDE, ARMADILLO_SCUTE, BRUSH,
+  OMINOUS_BOTTLE, TOTEM_OF_UNDYING, // Fase 6 (asaltos)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

@@ -3,7 +3,7 @@ import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 8;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -48,6 +48,8 @@ export const EF_SITTING = 1 << 15;
 /** Piel de la criatura (gatos): 3 bits a partir de este desplazamiento. */
 export const EF_VARIANT_SHIFT = 16;
 export const EF_VARIANT_MASK = 7 << EF_VARIANT_SHIFT;
+/** Fase 6 (asaltos): capitán de una patrulla o de un asalto (lleva el estandarte ominoso). */
+export const EF_CAPTAIN = 1 << 21;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';
@@ -156,7 +158,9 @@ export type ClientMsg =
   // sacó de su inventario para pagar) y cerrarla.
   | { t: 'topen'; e: number }
   | { t: 'trade'; e: number; i: number; q: number; pay: ItemStack[] }
-  | { t: 'tclose' };
+  | { t: 'tclose' }
+  // Fase 6 (asaltos): el jugador se bebió una botella ominosa (Mal presagio de nivel a).
+  | { t: 'omen'; a: number };
 
 export type ServerMsg =
   | {
@@ -213,7 +217,11 @@ export type ServerMsg =
   // se le devuelve si no salió) y cierre de la pantalla.
   | { t: 'trades'; e: number; p: number; lvl: number; xp: number; tr: boolean; o: TradeWire[] }
   | { t: 'tres'; q: number; ok: boolean; give?: ItemStack | null; back?: ItemStack[]; m?: string }
-  | { t: 'tclose' };
+  | { t: 'tclose' }
+  // Fase 6 (asaltos): barra del asalto cercano. s: 0 ninguno, 1 en curso, 2 victoria, 3 derrota;
+  // w oleada actual (1..n), n oleadas, h vida que les queda a los asaltantes (0..1; en la espera, lo
+  // que falta para la siguiente oleada), r asaltantes vivos.
+  | { t: 'raid'; s: number; w: number; n: number; h: number; r: number };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

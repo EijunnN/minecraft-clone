@@ -20,6 +20,7 @@ import {
 } from './biomeIds';
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
+import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -196,13 +197,25 @@ const GRID: GridType[] = [
     },
     build: buildVillage,
   },
+  // Fase 6 (asaltos): puestos de saqueadores, nunca cerca de una aldea.
+  {
+    key: 'pillager_outpost', spacing: 32, separation: 8, salt: 165745296, radius: OUTPOST_RADIUS,
+    site: (gen, x, z, inf) => {
+      if (!outpostCandidate(inf.biome, x, z, gen.seed)) return null;
+      const [h, slope] = flatness(gen, x, z, 7);
+      if (slope > 4 || h < SEA_LEVEL + 1) return null;
+      const v = locateStructure(gen, 'village', x, z, 1);
+      return v && Math.hypot(v[0] - x, v[2] - z) < OUTPOST_VILLAGE_GAP ? null : h;
+    },
+    build: buildOutpost,
+  },
 ];
 
 /** Nombres en español de las estructuras (y las claves que acepta /localizar). */
 export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   desert_pyramid: 'Templo del desierto', jungle_temple: 'Templo de la jungla', shipwreck: 'Naufragio',
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
-  village: 'Aldea',
+  village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
 };
 
 const startCache = new Map<string, Start | null>();

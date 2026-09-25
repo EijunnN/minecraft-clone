@@ -8,6 +8,7 @@ import { EF_ACTION, EF_ANGRY, EF_BABY, EF_SHEARED } from '../../shared/protocol'
 import type { ClientEntity } from '../game/ClientEntities';
 import { hiddenMountPart, mountPartAnim, mountRootPose } from './mountPose'; // Fase 6 (monturas)
 import { animateMonster, monsterRoot } from './monsterAnim'; // Fase 6 (monstruos)
+import { animateIllager, illagerRoot, hiddenIllagerPart } from './illagerAnim'; // Fase 6 (asaltos)
 import { animateAquatic, hiddenAquaticPart, aquaticRoot } from './aquaticPose'; // Fase 6 (acuáticos)
 // Fase 6 (gólems/domesticar): pieles, collar, poses de sentado y de los gólems.
 import { mobSkinKey, hiddenPart, sitRoot, companionPart } from './companionPose';
@@ -220,6 +221,8 @@ export class MobRenderer {
         animateMonster(def, e, time, name, out);
         // Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana y renacuajo.
         animateAquatic(def, e, time, name, out);
+        // Fase 6 (asaltos): illagers, vex, devastador y colmillos.
+        animateIllager(def, e, time, name, out);
     }
     companionPart(def, e, time, name, out); // Fase 6 (gólems/domesticar)
   }
@@ -245,6 +248,7 @@ export class MobRenderer {
       if (faunaScale) mat4.scale(m, m, faunaScale);
       else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, [0, 0, 0]);
       else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, [0, 0, 0]); // Fase 6 (monturas): sin silla
+      else if (hiddenIllagerPart(part.name, e)) mat4.scale(m, m, [1e-3, 1e-3, 1e-3]); // Fase 6 (asaltos): estandarte
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
       b.set(m, i * 16);
@@ -272,6 +276,7 @@ export class MobRenderer {
       mat4.rotateX(m, m, Math.max(-1, Math.min(1, e.pitch)) * 0.8);
       mat4.translate(m, m, [0, -0.5, 0]);
     } else s *= aquaticRoot(def, e, m, time); // Fase 6 (acuáticos)
+    illagerRoot(def, e, m, time); // Fase 6 (asaltos): colmillos que brotan, vex que flota
     const k = monsterRoot(def, e, m); // Fase 6 (monstruos): picado del phantom, slime que se estira
     mat4.scale(m, m, [s * k[0], s * k[1], s * k[2]]);
     sitRoot(def, e.flags, m); // Fase 6 (gólems/domesticar)

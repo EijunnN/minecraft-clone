@@ -45,6 +45,7 @@ import { ServerEvents } from './serverEvents';
 import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
 import { Trading } from './trading'; // Fase 6 (aldeanos)
+import { renderRaidBar, type RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
 
 export interface GameConfig {
   room: string;
@@ -85,6 +86,8 @@ export class Game {
   readonly trading = new Trading(this);
   readonly xp = new Experience();
   readonly statusEffects = new StatusEffects();
+  /** Fase 6 (asaltos): asalto cercano (para la barra) o null. */
+  raid: RaidState | null = null;
   cfg: GameConfig;
   renderer: Renderer;
   ui: UI;
@@ -794,6 +797,7 @@ export class Game {
       fx.has(EFFECT_POISON), fx.has(EFFECT_HUNGER),
     );
     renderEffectsHud(fx, !surv.dead && !this.hudHidden);
+    renderRaidBar(this.raid, !this.hudHidden); // Fase 6 (asaltos)
     renderAttackIndicator(this.interaction.attackCharge(), !surv.dead && !this.hudHidden && !this.anyScreenOpen());
     renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
     renderXpBar(this.xp, !this.creative && !surv.dead);

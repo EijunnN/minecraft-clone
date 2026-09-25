@@ -4,7 +4,7 @@
 // ofertas), aldeanos nuevos al generarse una aldea y el comerciante ambulante que aparece de vez en cuando.
 import { MOB_VILLAGER, MOB_WANDERING_TRADER, isVillagerType } from '../../mobs';
 import { BLOCK_FLUID } from '../../blocks';
-import { maxStack, type ItemStack } from '../../items';
+import { maxStack, EMERALD, type ItemStack } from '../../items';
 import { offersFor, traderOffers, offerToWire, PROF_NONE, type Offer } from '../../villagers';
 import { sanitizeStack } from '../../containers';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
@@ -24,12 +24,17 @@ export class Trading {
   private open = new Map<string, number>();
   private traderTimer = TRADER_EVERY;
 
+  /** Fase 6 (asaltos): ¿es héroe de la aldea este jugador? (rebaja del 30 % en las esmeraldas). */
+  heroOf: (name: string) => boolean = () => false;
+
   constructor(private ctx: ServerContext) {}
 
-  /** Ofertas actuales de un aldeano o comerciante. */
-  offers(e: Entity): Offer[] {
+  /** Ofertas actuales de un aldeano o comerciante (con la rebaja del héroe, si `s` lo es). */
+  offers(e: Entity, s?: Session): Offer[] {
     const v = this.ctx.entities.villagers.data(e);
-    return e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : offersFor(v.prof, v.level, v.seed);
+    const list = e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : offersFor(v.prof, v.level, v.seed);
+    if (!s || e.type === MOB_WANDERING_TRADER || !this.heroOf(s.name)) return list;
+    return list.map((o) => o.cost[0] === EMERALD ? { ...o, cost: [EMERALD, Math.max(1, Math.round(o.cost[1] * 0.7))] as [number, number] } : o);
   }
 
   /** Aldeano vivo y al alcance del jugador (o null). */
@@ -69,7 +74,7 @@ export class Trading {
     const v = this.ctx.entities.villagers.data(e);
     this.ctx.send(s, {
       t: 'trades', e: e.id, p: v.prof, lvl: v.level, xp: v.xp, tr: e.type === MOB_WANDERING_TRADER,
-      o: this.offers(e).map((o) => offerToWire(o, v.uses[o.key] ?? 0)),
+      o: this.offers(e, s).map((o) => offerToWire(o, v.uses[o.key] ?? 0)),
     });
   }
 
@@ -85,7 +90,7 @@ export class Trading {
       this.close(s, true);
       return fail();
     }
-    const list = this.offers(e);
+    const list = this.offers(e, s);
     const i = Number(msg.i);
     const o = Number.isInteger(i) ? list[i] : undefined;
     if (!o) return fail();

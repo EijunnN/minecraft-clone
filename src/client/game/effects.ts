@@ -7,6 +7,7 @@ import { MOBS } from '../../shared/mobs';
 import { EF_LOVE, EF_BABY, EF_FIRE } from '../../shared/protocol';
 import type { Game } from './Game';
 import { aquaticFx } from './aquaticFx'; // Fase 6 (acuáticos)
+import { illagerFx } from './illagerFx'; // Fase 6 (asaltos)
 import { faunaFx } from './faunaEffects'; // Fase 6 (fauna)
 
 export class Effects {
@@ -223,7 +224,7 @@ export class Effects {
         break;
       default:
         // Fase 6 (acuáticos, fauna)
-        if (!aquaticFx(this.g, kind, p)) faunaFx(this.g, kind, p, a);
+        if (!aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos)
     }
   }
 

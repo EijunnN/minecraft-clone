@@ -5,6 +5,7 @@ import './effects.css';
 import {
   EFFECTS, EFFECT_SPEED, EFFECT_SLOWNESS, EFFECT_STRENGTH, EFFECT_WEAKNESS, EFFECT_REGENERATION, EFFECT_POISON,
   EFFECT_HUNGER, EFFECT_FIRE_RESISTANCE, EFFECT_NIGHT_VISION, EFFECT_WATER_BREATHING, EFFECT_ABSORPTION, effectLevel,
+  EFFECT_BAD_OMEN, EFFECT_HERO,
 } from '../../shared/effects';
 import type { StatusEffects } from '../game/statusEffects';
 
@@ -42,6 +43,13 @@ const GLYPHS: Record<number, string[]> = {
   ],
   [EFFECT_ABSORPTION]: [
     '.KK...KK.', 'KaaK.KaaK', 'KabaKaaaK', 'KaaaaaaaK', 'KaaaaaacK', '.KaaaacK.', '..KaacK..', '...KcK...', '....K....',
+  ],
+  // Fase 6 (asaltos): el rostro del estandarte ominoso y la esmeralda del héroe.
+  [EFFECT_BAD_OMEN]: [
+    '.KKKKKKK.', 'KwwwwwwwK', 'KwaaaaawK', 'KaKaaaKaK', 'KaaaaaaaK', 'KwaacaawK', 'KwwcccwwK', '.KwwwwwK.', '..KKKKK..',
+  ],
+  [EFFECT_HERO]: [
+    '...KKK...', '..KbbaK..', '.KbbaaaK.', 'KbbaaaacK', 'KbaaaaacK', 'KaaaaaccK', '.KaaaccK.', '..KaccK..', '...KKK...',
   ],
 };
 

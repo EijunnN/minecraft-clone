@@ -7,6 +7,7 @@ import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, state
 import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
+import { useTotem } from './raidClient'; // Fase 6 (asaltos)
 
 /** Destino de los efectos en creativo: nada hace daño ni cura. */
 const CREATIVE_TARGET: EffectTarget = { health: 20, absorption: 0, heal: () => {}, damage: () => 0, addExhaustion: () => {} };
@@ -74,6 +75,8 @@ export class LifeCycle {
   }
 
   die(): void {
+    // Fase 6 (asaltos): un tótem de inmortalidad en la mano salva de la muerte.
+    if (useTotem(this.g)) return;
     this.leaveBed(true);
     this.g.survival.dead = true;
     this.g.statusEffects.clear(this.g.survival);

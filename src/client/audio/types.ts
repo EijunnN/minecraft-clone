@@ -54,7 +54,11 @@ export type MobSoundKind =
   | 'bee'
   | 'panda'
   | 'parrot'
-  | 'armadillo';
+  | 'armadillo'
+  // Fase 6 (asaltos).
+  | 'illager'
+  | 'vex'
+  | 'ravager';
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
  * (p. ej. el creeper no tiene voz de `idle`); los combos no aplicables caen a un sonido genérico

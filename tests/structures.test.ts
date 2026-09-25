@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AIR, STONE, SANDSTONE, MOSSY_COBBLESTONE, COBBLESTONE, MOB_SPAWNER, COBWEB, OBSIDIAN, SNOW_BLOCK, FENCES, OAK_PLANKS,
-  isChest,
+  isChest, DARK_OAK_LOG,
 } from '../src/shared/blocks';
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
 import { TerrainGenerator } from '../src/shared/world/terrain';
@@ -42,6 +42,7 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     desert_well: (c) => (c.get(SANDSTONE) ?? 0) > 8,
     mineshaft: (c) => (c.get(FENCES.oak) ?? 0) + (c.get(OAK_PLANKS) ?? 0) > 3,
     village: (_c, ch) => ch.includes('village'),
+    pillager_outpost: (c, ch) => ch.includes('pillager_outpost') || (c.get(DARK_OAK_LOG) ?? 0) > 20,
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);

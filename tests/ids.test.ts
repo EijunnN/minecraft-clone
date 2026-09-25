@@ -16,11 +16,12 @@ import {
   STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR, ARMOR, GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, FISHING_ROD,
   PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, COMPASS, EMPTY_MAP, FILLED_MAP, SNOWBALL,
   SADDLE, SLIME_BALL, SPLASH_POISON, COD_BUCKET, TADPOLE_BUCKET, GLASS_BOTTLE, HONEY_BOTTLE, RAW_RABBIT, RABBIT_HIDE, BRUSH,
+  OMINOUS_BOTTLE, TOTEM_OF_UNDYING,
 } from '../src/shared/items';
 import {
   MOB_FOX, MOB_WOLF, MOB_VILLAGER, MOB_WANDERING_TRADER, MOB_IRON_GOLEM, MOB_SNOW_GOLEM, MOB_CAT, MOB_HORSE, MOB_CAMEL,
   MOB_COD, MOB_GLOW_SQUID, MOB_DROWNED, MOB_SLIME, MOB_ZOMBIE_VILLAGER, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL,
-  MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO,
+  MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO, MOB_PILLAGER, MOB_EVOKER_FANGS,
 } from '../src/shared/mobs';
 
 const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate'];
@@ -78,6 +79,8 @@ test('los ids de objetos guardados no cambian', () => {
   // Fase 6: silla, botín de monstruos, cubos con criatura y fauna.
   assert.deepEqual([SADDLE, SLIME_BALL, SPLASH_POISON, COD_BUCKET, TADPOLE_BUCKET], [366, 367, 371, 372, 377]);
   assert.deepEqual([GLASS_BOTTLE, HONEY_BOTTLE, RAW_RABBIT, RABBIT_HIDE, BRUSH], [378, 379, 381, 383, 385]);
+  // Asaltos (fase 6).
+  assert.deepEqual([OMINOUS_BOTTLE, TOTEM_OF_UNDYING], [386, 387]);
 });
 
 test('los ids de criatura guardados no cambian', () => {
@@ -86,4 +89,5 @@ test('los ids de criatura guardados no cambian', () => {
   assert.deepEqual([MOB_COD, MOB_GLOW_SQUID], [30, 39]);
   assert.deepEqual([MOB_DROWNED, MOB_SLIME, MOB_ZOMBIE_VILLAGER, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL], [40, 42, 46, 47, 48]);
   assert.deepEqual([MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO], [50, 51, 52, 53]);
+  assert.deepEqual([MOB_PILLAGER, MOB_EVOKER_FANGS], [60, 65]);
 });

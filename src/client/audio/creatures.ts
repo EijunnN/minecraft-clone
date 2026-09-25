@@ -9,6 +9,7 @@ import { buildBowTwang } from './combat';
 import { randRange, type MobSoundEvent, type MobSoundKind } from './types';
 import { villagerSound } from './villagerVoice'; // Fase 6 (aldeanos)
 import { buildMonsterSound } from './monsterSounds'; // Fase 6 (monstruos)
+import { buildIllagerSound } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildWildlifeSound } from './wildlife'; // Fase 6 (fauna)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
@@ -476,7 +477,10 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
       // abeja, panda, loro y armadillo.
       {
         const monster = buildMonsterSound(ctx, noise, kind, event, destination, now);
-        return monster.length ? monster : buildWildlifeSound(ctx, noise, kind, event, destination, now);
+        if (monster.length) return monster;
+        // Fase 6 (asaltos): illagers, vex y devastador.
+        const raider = buildIllagerSound(ctx, noise, kind, event, destination, now);
+        return raider.length ? raider : buildWildlifeSound(ctx, noise, kind, event, destination, now);
       }
   }
 }

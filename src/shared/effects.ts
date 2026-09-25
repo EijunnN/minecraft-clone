@@ -12,6 +12,10 @@ export const EFFECT_FIRE_RESISTANCE = 8;
 export const EFFECT_NIGHT_VISION = 9;
 export const EFFECT_WATER_BREATHING = 10;
 export const EFFECT_ABSORPTION = 11;
+// Fase 6 (asaltos): Mal presagio (se bebe con la botella ominosa; al entrar en una aldea empieza un
+// asalto) y Héroe de la aldea (tras ganar un asalto: los aldeanos rebajan sus precios).
+export const EFFECT_BAD_OMEN = 12;
+export const EFFECT_HERO = 13;
 
 export interface EffectDef {
   id: number;
@@ -36,7 +40,13 @@ export const EFFECTS: Readonly<Record<number, EffectDef>> = {
   [EFFECT_NIGHT_VISION]: { id: EFFECT_NIGHT_VISION, key: 'night_vision', name: 'Visión nocturna', color: [194, 255, 102], good: true },
   [EFFECT_WATER_BREATHING]: { id: EFFECT_WATER_BREATHING, key: 'water_breathing', name: 'Respiración acuática', color: [152, 218, 192], good: true },
   [EFFECT_ABSORPTION]: { id: EFFECT_ABSORPTION, key: 'absorption', name: 'Absorción', color: [37, 82, 165], good: true },
+  [EFFECT_BAD_OMEN]: { id: EFFECT_BAD_OMEN, key: 'bad_omen', name: 'Mal presagio', color: [11, 97, 56], good: false },
+  [EFFECT_HERO]: { id: EFFECT_HERO, key: 'hero_of_the_village', name: 'Héroe de la aldea', color: [68, 255, 68], good: true },
 };
+
+/** Segundos de Mal presagio al beber la botella ominosa y de Héroe de la aldea tras ganar un asalto. */
+export const BAD_OMEN_SECONDS = 3600;
+export const HERO_SECONDS = 2400;
 
 /** Duración máxima que se acepta (s) y nivel máximo (0 = nivel I). */
 export const MAX_EFFECT_SECONDS = 3600;

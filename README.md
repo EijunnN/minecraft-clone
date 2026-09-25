@@ -28,7 +28,7 @@ Objects). Pensado para PC (teclado y ratón).
 - **Inventario y fabricación**: inventario de 36 ranuras con fabricación 2×2, mesa de trabajo 3×3,
   cofres y hornos compartidos entre jugadores. Clic, clic derecho, mayúsculas + clic, teclas 1–9 y Q
   funcionan como en Minecraft.
-- **47 criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: animales de
+- **52 criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: animales de
   granja y salvajes (zorros, cabras, osos polares, conejos, lobos, pandas, loros, armadillos y abejas
   con sus nidos y su miel), criaturas acuáticas (peces, delfines, tortugas, ajolotes, ranas y calamar
   brillante) y monstruos (zombis, esqueletos, creepers, arañas, endermen, ahogados, brujas, slimes,
@@ -37,6 +37,10 @@ Objects). Pensado para PC (teclado y ratón).
 - **Aldeas y comercio**: aldeanos con 12 profesiones según su bloque de trabajo, que pasean de día y
   vuelven a casa de noche; clic derecho abre el comercio en esmeraldas, con 5 niveles. Vendedor
   ambulante y gólem de hierro protector.
+- **Saqueadores y asaltos**: puestos de saqueadores y patrullas con capitán. Su botella ominosa da Mal
+  presagio y, al entrar en una aldea, llega un asalto por oleadas (saqueadores, vindicadores,
+  evocadores con sus colmillos y vex, devastadores y brujas) con su barra arriba; ganarlo te hace
+  Héroe de la aldea. El evocador suelta el tótem de inmortalidad.
 - **Domesticar y montar**: lobos y gatos se domestican (se sientan, siguen y defienden a su dueño);
   gólems de hierro y de nieve se construyen con calabazas. Caballos, burros, mulas y camellos se doman
   y se montan con silla (salto cargado); las llamas escupen.
@@ -130,6 +134,8 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Comercio con un cantero de la aldea](docs/screenshots/trade.png) | ![Gólems de hierro y de nieve, aldeanos, gato y lobo](docs/screenshots/golems.png) |
 | ![Caballo, burro, mula, llama y camello](docs/screenshots/mounts.png) | ![Slime, bruja y otros monstruos nuevos; un fantasma al fondo](docs/screenshots/monsters.png) |
 | ![Tortuga, ajolote, delfín y peces en la playa](docs/screenshots/aquatic.png) | ![Panda, oso polar, zorro, abeja y armadillo](docs/screenshots/fauna.png) |
+| ![Capitán de una patrulla con el estandarte ominoso](docs/screenshots/pillagers.png) | ![Evocador y, detrás, una patrulla de saqueadores](docs/screenshots/evoker.png) |
+| ![Puesto de saqueadores en la taiga](docs/screenshots/outpost.png) | ![Barra de un asalto sobre la aldea](docs/screenshots/raid.png) |
 
 ## Controles
 
@@ -166,7 +172,8 @@ pulsación). Estas son las de por defecto:
 | `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
 | `/efecto <efecto> [segundos] [nivel]` | Da un efecto (`/efecto velocidad 60 2`); `/efecto quitar` los quita todos |
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
-| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`) |
+| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`) |
+| `/asalto` · `/patrulla` | Desatar un asalto en la aldea más cercana · hacer aparecer una patrulla de saqueadores |
 | `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
 
 ### Primeros pasos en supervivencia
@@ -259,8 +266,7 @@ preocupaciones.
 
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
-- 47 tipos de criatura (no las ~80 de Minecraft): sin saqueadores ni asaltos, criaturas del Nether
-  y el End, ni jefes.
+- 52 tipos de criatura (no las ~80 de Minecraft): sin criaturas del Nether y el End, ni jefes.
 - Sin redstone, encantamientos (la experiencia todavía no se gasta en nada), pociones, estructuras
   generadas, barcas ni vagonetas, ni Nether o End.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los

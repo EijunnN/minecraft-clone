@@ -183,7 +183,7 @@ export class MonsterAI {
   }
 
   /** Paseo sin rumbo: dirección [x, z] y velocidad (0 = quieto). */
-  private wander(e: Entity): [number, number, number] {
+  wander(e: Entity): [number, number, number] {
     const ai = e.ai!;
     if (ai.think <= 0) {
       ai.think = 3 + this.m.rand() * 6;
@@ -215,7 +215,7 @@ export class MonsterAI {
   }
 
   /** Movimiento a pie (como el de MobBrain): aceleración, flotar, gravedad, saltos y caídas. */
-  private walk(e: Entity, mx: number, mz: number, speed: number, lookAt: [number, number, number] | null, dt: number): void {
+  walk(e: Entity, mx: number, mz: number, speed: number, lookAt: [number, number, number] | null, dt: number): void {
     const ai = e.ai!;
     const want = speed > 0 && (mx !== 0 || mz !== 0);
     if (want) {
