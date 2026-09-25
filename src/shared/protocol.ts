@@ -197,7 +197,14 @@ export type ClientMsg =
   // tocar el cuerno de cabra (se oye lejos) y acelerón del cerdo con la caña con zanahoria ('ires' con q).
   | { t: 'ignite'; x: number; y: number; z: number; n: [number, number, number]; q: number }
   | { t: 'horn'; v: number }
-  | { t: 'boost'; q: number };
+  | { t: 'boost'; q: number }
+  // Fase 7 (transporte): poner una barca o vagoneta con el objeto `item` en el punto p (b: el bloque tocado;
+  // respuesta 'ires' con q), subirse a la entidad e, bajarse y la posición de la que lleva el jugador
+  // (p, yaw r, pitch pi, velocidad v en bloques por tick y remos k: bit 1 izquierdo, bit 2 derecho).
+  | { t: 'vplace'; item: number; p: [number, number, number]; b?: [number, number, number]; yaw: number; q: number }
+  | { t: 'vride'; e: number }
+  | { t: 'vleave' }
+  | { t: 'vpos'; e: number; p: [number, number, number]; r: number; pi?: number; v: [number, number, number]; k?: number };
 
 export type ServerMsg =
   | {
@@ -268,7 +275,11 @@ export type ServerMsg =
   // Fase 6.5 (libros y estandartes): capas del estandarte de (x, y, z) (lista vacía: liso) y el libro de un
   // atril para leerlo (b null: no tiene; own: lo puso quien lo pide y lo puede sacar).
   | { t: 'banner'; x: number; y: number; z: number; l: BannerLayer[] }
-  | { t: 'lbook'; x: number; y: number; z: number; b: ItemStack | null; own: boolean };
+  | { t: 'lbook'; x: number; y: number; z: number; b: ItemStack | null; own: boolean }
+  // Fase 7 (transporte): quién va en cada plaza de la barca o vagoneta e (id de jugador, id de la criatura o
+  // 0 si está libre) y posición rechazada de la que lleva el jugador (vuelve a p con velocidad v).
+  | { t: 'vpass'; e: number; p: (string | number)[] }
+  | { t: 'vfix'; e: number; p: [number, number, number]; v: [number, number, number] };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

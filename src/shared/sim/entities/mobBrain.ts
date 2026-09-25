@@ -55,6 +55,7 @@ export class MobBrain {
     const w = this.m.w;
     // Fase 6 (monturas): la montura que guía su jinete ni piensa ni se mueve sola.
     if (this.m.mounts.riddenTick(e, dt)) return;
+    if (e.vehicle !== undefined && this.m.seated?.(e)) return; // Fase 7 (transporte): sentada en una barca o vagoneta
     // Ambiente: sol, lava, fuego, caída, vacío.
     if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
     if (e.inLava) {

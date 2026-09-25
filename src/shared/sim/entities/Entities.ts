@@ -31,6 +31,7 @@ import { collectionDrops } from './collectionDrops'; // Fase 6.5 (colecciones)
 import { MobGear } from './mobGear';
 import { GearShots } from './gearShots';
 import { ENT_TRIDENT, ENT_FIREWORK } from '../../equipment';
+import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -65,6 +66,11 @@ export class Entities {
   readonly gear = new MobGear(this);
   /** Fase 6.5 (equipo): tridentes lanzados y cohetes. */
   readonly gearShots = new GearShots(this);
+  /**
+   * Fase 7 (transporte): criatura sentada en una barca o vagoneta: la coloca en su asiento el sistema de
+   * transporte (devuelve true y la criatura ni piensa ni se mueve sola).
+   */
+  seated: ((e: Entity) => boolean) | null = null;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -383,6 +389,7 @@ export class Entities {
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
       else if (e.type === ENT_DISPLAY || isHangingType(e.type) || e.type === ENT_ARMOR_STAND) e.flags = 0; // Fase 6.5: cuadros, marcos y soportes
       else if (e.type === ENT_TRIDENT || e.type === ENT_FIREWORK) this.gearShots.tick(e, dt, players); // Fase 6.5 (equipo)
+      else if (isVehicleType(e.type)) continue; // Fase 7 (transporte): las mueve su sistema
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

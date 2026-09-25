@@ -499,6 +499,24 @@ export const NAUTILUS_SHELL = item('nautilus_shell', 'Concha de nautilo');
 export const FIREWORK_ROCKET = item('firework_rocket', 'Cohete de fuegos artificiales');
 export const FIREWORK_STAR = item('firework_star', 'Estrella de fuegos artificiales');
 
+// ------------------------------------------------------------------ Fase 7 (transporte)
+/** Barcas y barcas con cofre por madera (la de bambú es una balsa), en el orden de BOAT_WOODS. */
+const BOAT_NAMES: [string, string][] = [
+  ['oak', 'de roble'], ['spruce', 'de abeto'], ['birch', 'de abedul'], ['jungle', 'de jungla'], ['acacia', 'de acacia'],
+  ['dark_oak', 'de roble oscuro'], ['mangrove', 'de mangle'], ['cherry', 'de cerezo'], ['pale_oak', 'de roble pálido'],
+  ['bamboo', 'de bambú'],
+];
+export const BOAT_ITEMS: Record<string, number> = {};
+export const CHEST_BOAT_ITEMS: Record<string, number> = {};
+for (const [wood, name] of BOAT_NAMES) {
+  const raft = wood === 'bamboo';
+  BOAT_ITEMS[wood] = item(raft ? 'bamboo_raft' : `${wood}_boat`, raft ? 'Balsa de bambú' : `Barca ${name}`, { stack: 1, fuel: 60 });
+  CHEST_BOAT_ITEMS[wood] = item(raft ? 'bamboo_chest_raft' : `${wood}_chest_boat`, raft ? 'Balsa de bambú con cofre' : `Barca ${name} con cofre`, { stack: 1 });
+}
+export const MINECART = item('minecart', 'Vagoneta', { stack: 1 });
+export const CHEST_MINECART = item('chest_minecart', 'Vagoneta con cofre', { stack: 1 });
+export const FURNACE_MINECART = item('furnace_minecart', 'Vagoneta con horno', { stack: 1 });
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -672,3 +690,7 @@ smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
+// Fase 7 (transporte): barcas, balsas y vagonetas en el creativo.
+(CREATIVE_ITEMS as number[]).push(
+  ...Object.values(BOAT_ITEMS).flatMap((b, i) => [b, Object.values(CHEST_BOAT_ITEMS)[i]]), MINECART, CHEST_MINECART, FURNACE_MINECART,
+);

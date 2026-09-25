@@ -4,6 +4,7 @@ import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mo
 import type { ServerMsg, EntExtra } from '../../protocol';
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
 import { ENT_ARMOR_STAND } from '../../armorStands'; // Fase 6.5 (remate)
+import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
 import type { Entity } from '../entities';
 import { r2, type ServerContext } from './context';
 
@@ -65,6 +66,7 @@ export class EntitySync {
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (isHangingType(e.type)) rec.push(e.variant ?? 0); // Fase 6.5: variante del cuadro u objeto del marco
           else if (e.type === ENT_ARMOR_STAND) rec.push(...(e.standArmor ?? [0, 0, 0, 0])); // Fase 6.5 (remate): su armadura
+          else if (isVehicleType(e.type)) rec.push(e.variant ?? 0); // Fase 7 (transporte): madera de la barca
           else if (e.ai) rec.push(Math.round(e.health), e.variant ?? 0); // Fase 6: variante (pelaje o profesión)
           add.push(rec);
         } else {

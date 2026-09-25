@@ -183,3 +183,7 @@ export * from './equipmentBlocks';
 (INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);
 // Fase 6.5 (calderos): caldero con agua, con lava y con nieve polvo (registrados los últimos: ids nuevos).
 export * from './cauldrons';
+// Fase 7 (transporte): raíles normal, propulsor, detector y activador (registrados los últimos: ids nuevos).
+import { RAIL_INVENTORY } from './rails';
+export * from './rails';
+(INVENTORY_ORDER as number[]).push(...RAIL_INVENTORY);
