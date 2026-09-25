@@ -14,6 +14,7 @@ import { MONSTER_SPRITES } from './monsterSprites'; // Fase 6 (monstruos)
 import { AQUATIC_SPRITES } from './aquaticSprites'; // Fase 6 (acuáticos)
 import { FAUNA_SPRITES } from './faunaSprites'; // Fase 6 (fauna)
 import { ILLAGER_SPRITES } from './illagerSprites'; // Fase 6 (asaltos)
+import { COPPER_SPRITES, COPPER_TOOL_INKS, COPPER_ARMOR_ACCENT } from './copperSprites'; // Fase 6.5 (cobre)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -80,6 +81,7 @@ const TOOL_MATERIALS: Record<string, Record<string, Ink>> = {
   iron: ramp([255, 255, 255], [228, 228, 230], [194, 194, 198], [150, 150, 156], [64, 64, 70]),
   golden: ramp([255, 250, 186], [252, 220, 78], [228, 172, 34], [180, 118, 18], [92, 54, 8]),
   diamond: ramp([226, 255, 250], [124, 240, 228], [64, 202, 192], [32, 146, 142], [12, 66, 66]),
+  copper: COPPER_TOOL_INKS, // Fase 6.5 (cobre)
 };
 
 // ---------------------------------------------------------------------------
@@ -207,6 +209,7 @@ const ARMOR_INKS: Record<string, Record<string, Ink>> = {
   iron: TOOL_MATERIALS.iron,
   golden: TOOL_MATERIALS.golden,
   diamond: TOOL_MATERIALS.diamond,
+  copper: COPPER_TOOL_INKS, // Fase 6.5 (cobre)
 };
 
 /** Detalle claro: costuras en el cuero, destello en el metal. */
@@ -215,6 +218,7 @@ const ARMOR_ACCENT: Record<string, Ink> = {
   iron: ink([255, 255, 255], [64, 64, 70]),
   golden: ink([255, 255, 226], [92, 54, 8]),
   diamond: ink([246, 255, 255], [12, 66, 66]),
+  copper: COPPER_ARMOR_ACCENT, // Fase 6.5 (cobre)
 };
 
 const HELMET = [
@@ -414,6 +418,7 @@ const SPRITES: Record<string, SpriteDef> = {
   // Fase 6 (fauna): frascos, miel, panal, conejo, escama de armadillo y cepillo.
   ...FAUNA_SPRITES,
   ...ILLAGER_SPRITES, // Fase 6 (asaltos)
+  ...COPPER_SPRITES, // Fase 6.5 (cobre)
 
   compass: {
     rows: [
@@ -2248,8 +2253,8 @@ Object.assign(SPRITES, MONSTER_SPRITES);
 // Rasterizado
 // ---------------------------------------------------------------------------
 
-const TOOL_RE = /^(wooden|stone|iron|golden|diamond)_(pickaxe|axe|shovel|sword|hoe)$/;
-const ARMOR_RE = /^(leather|iron|golden|diamond)_(helmet|chestplate|leggings|boots)$/;
+const TOOL_RE = /^(wooden|stone|iron|golden|diamond|copper)_(pickaxe|axe|shovel|sword|hoe)$/; // Fase 6.5: cobre
+const ARMOR_RE = /^(leather|iron|golden|diamond|copper)_(helmet|chestplate|leggings|boots)$/;
 
 /** Marcador para sprites que aún no tienen dibujo. */
 const PLACEHOLDER: SpriteDef = {

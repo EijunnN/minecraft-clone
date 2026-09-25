@@ -42,6 +42,7 @@ import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 import { Raids } from './server/raids'; // Fase 6 (asaltos)
+import { Copper } from './server/copper'; // Fase 6.5 (cobre)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -109,6 +110,8 @@ export class GameServer {
   readonly golems: Golems;
   /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
   readonly raids: Raids;
+  /** Fase 6.5 (cobre): oxidación, cera, raspado y rayos. */
+  private copper: Copper;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -172,6 +175,10 @@ export class GameServer {
     this.raids = new Raids(this.ctx, store); // Fase 6 (asaltos)
     this.trading.heroOf = (name) => this.raids.isHero(name);
     this.commands.raids = this.raids;
+    // Fase 6.5 (cobre).
+    this.copper = new Copper(this.ctx, this.nature, this.rules);
+    this.edits.copper = this.copper;
+    this.storms.onStrike = (x, y, z) => this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z));
   }
 
   get seed(): number {

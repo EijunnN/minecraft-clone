@@ -13,6 +13,7 @@ import {
 import { DIR_X, DIR_Z } from './blockModels';
 import { isBeeHome } from './blocks'; // Fase 6 (fauna)
 import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
+import { copperPlacement } from './blocks'; // Fase 6.5 (cobre)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -203,6 +204,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   }
   // Fase 6 (fauna): nidos y colmenas con la entrada hacia el jugador.
   if (isBeeHome(base)) return one(stateOf(familyBase(base), { facing: (facing + 2) & 3 }));
+  // Fase 6.5 (cobre): cadenas en el eje de la cara, faroles de pie o colgados y antorchas de cobre.
+  const copper = copperPlacement(base, face, hit.nx, hit.nz, rel(get, x, y, z));
+  if (copper >= 0) return copper ? one(copper) : null;
   // Bloques con apoyo a medida (amatista, alfombra de musgo, nenúfar…).
   if (BLOCK_NEEDS_SUPPORT[base] && !blockSupported(base, rel(get, x, y, z))) return null;
   return one(orientedFor(base, yaw));

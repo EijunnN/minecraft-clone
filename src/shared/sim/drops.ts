@@ -10,6 +10,9 @@ import {
 } from '../blocks';
 // Fase 6 (monstruos): los bloques infestados no sueltan nada (sale una lepisma).
 import { isInfested } from '../blocks';
+// Fase 6.5 (cobre): la mena de cobre suelta cobre en bruto.
+import { COPPER_ORE } from '../blocks';
+import { RAW_COPPER } from '../items';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -62,6 +65,7 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
     return same.length === 1 && same[0].id === SURFACE_ORE[block] ? one(block) : same;
   }
   if (block === EMERALD_ORE) return one(EMERALD);
+  if (block === COPPER_ORE) return one(RAW_COPPER, rnd(2, 5)); // Fase 6.5 (cobre), como en Minecraft
   // La amatista con brotes no se puede recoger (como sin toque de seda).
   if (block === BUDDING_AMETHYST) return [];
   // Brotes de amatista: sólo el racimo suelta fragmentos (4 con pico, 2 a mano).

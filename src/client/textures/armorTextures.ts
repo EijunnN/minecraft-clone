@@ -59,6 +59,7 @@ export const ARMOR_SHINE: Readonly<Record<ArmorMaterial, { rough: number; metal:
   iron: { rough: 0.4, metal: 0.55, sheen: 0.05 },
   golden: { rough: 0.3, metal: 0.8, sheen: 0.3 },
   diamond: { rough: 0.22, metal: 0.4, sheen: 0.3 },
+  copper: { rough: 0.35, metal: 0.7, sheen: 0.15 }, // Fase 6.5 (cobre)
 };
 
 export interface ArmorTexture {
@@ -76,13 +77,14 @@ const RAMPS: Readonly<Record<ArmorMaterial, readonly RGB[]>> = {
   iron: [[252, 252, 254], [214, 214, 218], [178, 178, 184], [136, 136, 144], [86, 86, 94]],
   golden: [[255, 250, 180], [250, 214, 72], [224, 166, 34], [178, 114, 18], [112, 66, 10]],
   diamond: [[222, 255, 250], [112, 234, 222], [62, 198, 190], [32, 144, 142], [14, 84, 86]],
+  copper: [[246, 176, 136], [214, 124, 86], [178, 94, 62], [136, 68, 44], [88, 42, 26]], // Fase 6.5 (cobre)
 };
 
 /** Pulido base (alpha) de cada material. */
-const GLOSS: Readonly<Record<ArmorMaterial, number>> = { leather: 150, iron: 236, golden: 255, diamond: 255 };
+const GLOSS: Readonly<Record<ArmorMaterial, number>> = { leather: 150, iron: 236, golden: 255, diamond: 255, copper: 240 };
 
 /** Ruido de color por téxel (el cuero tiene grano, el metal apenas). */
-const GRAIN: Readonly<Record<ArmorMaterial, number>> = { leather: 0.12, iron: 0.05, golden: 0.05, diamond: 0.04 };
+const GRAIN: Readonly<Record<ArmorMaterial, number>> = { leather: 0.12, iron: 0.05, golden: 0.05, diamond: 0.04, copper: 0.06 };
 
 // Índices de cara (orden de boxUV).
 const PX = 0;
@@ -250,6 +252,10 @@ function pattern(mat: ArmorMaterial, t: Texel, tone: number, seed: number): numb
       if (r < 0.1) return 0;
       if ((t.i - t.j + 64) % 5 === 0) return 2;
       return 1;
+    case 'copper':
+      // Fase 6.5 (cobre): remaches claros en las esquinas y alguna mancha más oscura.
+      if ((t.i === 1 || t.i === t.fw - 2) && (t.j === 1 || t.j === t.fh - 2)) return 0;
+      return r > 0.93 ? 2 : 1;
   }
 }
 

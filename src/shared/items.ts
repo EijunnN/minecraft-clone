@@ -14,6 +14,8 @@ import {
   HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
 import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
+import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
+import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -277,6 +279,30 @@ export const BRUSH = item('brush', 'Cepillo', { stack: 1, tool: { kind: 'brush',
 export const OMINOUS_BOTTLE = item('ominous_bottle', 'Botella ominosa', { food: { hunger: 0, saturation: 0, always: true } });
 /** Tótem de inmortalidad: en la mano (o la secundaria), salva de una muerte segura. */
 export const TOTEM_OF_UNDYING = item('totem_of_undying', 'Tótem de inmortalidad', { stack: 1 });
+// ------------------------------------------------------------------ Fase 6.5 (cobre)
+/** Cobre en bruto: lo sueltan las menas de cobre; se funde en lingotes. */
+export const RAW_COPPER = item('raw_copper', 'Cobre en bruto');
+export const COPPER_NUGGET = item('copper_nugget', 'Pepita de cobre');
+// Herramientas de cobre (la «Edad del cobre»): cosechan como las de piedra, algo más rápidas y duraderas.
+TOOLS.copper = {};
+for (const [kind, kindName, damage, attackSpeed] of [
+  ['pickaxe', 'Pico', 3, 1.2], ['axe', 'Hacha', 9, 0.8], ['shovel', 'Pala', 3.5, 1], ['sword', 'Espada', 5, 1.6], ['hoe', 'Azada', 1, 2],
+] as const) {
+  TOOLS.copper[kind] = item(`copper_${kind}`, `${kindName} de cobre`, {
+    stack: 1, tool: { kind, tier: 2, speed: 5, durability: 190, damage, attackSpeed },
+  });
+}
+// Armadura de cobre: entre la de cuero y la de hierro.
+ARMOR[COPPER_ARMOR] = {};
+ARMOR_PIECES.forEach((piece, slot) => {
+  const st = ARMOR_STATS[COPPER_ARMOR];
+  ARMOR[COPPER_ARMOR][piece] = item(`copper_${piece}`, `${PIECE_NAMES[slot]} de cobre`, {
+    stack: 1,
+    armor: { slot: slot as ArmorSlot, material: COPPER_ARMOR, points: st.points[slot], toughness: st.toughness, durability: st.durability[slot] },
+  });
+});
+// Las puertas de cobre se ven planas, con el color de su fase (las enceradas, como las otras).
+COPPER.door.forEach((row) => row.forEach((id, stage) => (ITEMS[id].sprite = copperTexture('copper_door', stage))));
 
 // Comida con efectos (valores de Minecraft).
 ITEMS[OMINOUS_BOTTLE].food!.effects = [[EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, 0, 1]]; // Fase 6 (asaltos)
@@ -346,6 +372,9 @@ smelt(POTATO, BAKED_POTATO);
 smelt(COD, COOKED_COD);
 smelt(SALMON, COOKED_SALMON);
 smelt(RAW_RABBIT, COOKED_RABBIT); // Fase 6 (fauna)
+// Fase 6.5 (cobre): el cobre en bruto da lingotes; las herramientas y armaduras de cobre, pepitas.
+smelt(RAW_COPPER, COPPER_INGOT);
+for (const id of [...Object.values(TOOLS.copper), ...Object.values(ARMOR[COPPER_ARMOR])]) smelt(id, COPPER_NUGGET);
 
 // Los hornos y cofres se apilan hasta 64 como bloque base.
 void FURNACE;
@@ -415,6 +444,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   // Fase 6 (fauna).
   GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, RAW_RABBIT, COOKED_RABBIT, RABBIT_HIDE, ARMADILLO_SCUTE, BRUSH,
   OMINOUS_BOTTLE, TOTEM_OF_UNDYING, // Fase 6 (asaltos)
+  RAW_COPPER, COPPER_NUGGET, // Fase 6.5 (cobre)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

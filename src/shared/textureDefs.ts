@@ -256,6 +256,17 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
   ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
     'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (cobre): bloque de cobre en bruto y las fases expuesta, degradada y oxidada de cada textura
+  // de cobre (la normal del bloque de cobre ya estaba). Las cuatro fases salen de un mismo dibujo (genCopper.ts).
+  { name: 'raw_copper_block' },
+  { name: 'copper_torch', cutout: true },
+  ...['', 'exposed_', 'weathered_', 'oxidized_'].flatMap((p): TextureDef[] => [
+    ...(p ? [{ name: `${p}copper` }] : []),
+    { name: `${p}cut_copper` },
+    { name: `${p}chiseled_copper` },
+    ...['copper_grate', 'copper_door_top', 'copper_door_bottom', 'copper_trapdoor', 'copper_bars', 'copper_chain', 'copper_lantern']
+      .map((n): TextureDef => ({ name: p + n, cutout: true })),
+  ]),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

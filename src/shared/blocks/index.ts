@@ -122,3 +122,8 @@ export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
 // Troncos tumbados (se registran los últimos: ids guardados).
 export * from './logAxis';
+// Fase 6.5 (cobre): bloques de cobre en sus cuatro fases de oxidación, con y sin cera (se registran
+// los últimos: ids guardados) y su sitio en el inventario creativo.
+import { COPPER_INVENTORY } from './copperBlocks';
+export * from './copperBlocks';
+(INVENTORY_ORDER as number[]).push(...COPPER_INVENTORY);

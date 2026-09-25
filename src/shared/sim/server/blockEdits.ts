@@ -20,8 +20,15 @@ import type { ServerContext, Session } from './context';
 // Fase 6 (fauna): cosechar nidos y colmenas.
 import { isBeeHome } from '../../blocks';
 import { harvestBeeHome } from '../entities/bees';
+// Fase 6.5 (cobre): encerar y raspar.
+import { copperInfo } from '../../blocks';
+import { partnerOf } from '../../placement';
+import type { Copper } from './copper';
 
 export class BlockEdits {
+  /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
+  copper: Copper | null = null;
+
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
     private composters: Composters, private campfires: Campfires,
@@ -138,6 +145,19 @@ export class BlockEdits {
       const ok = Number.isInteger(item) && ctx.asActor(s.id, () => harvestBeeHome(ctx.entities, x, y, z, item, s.id));
       if (!ok) ctx.reject(s, x, y, z);
       return;
+    }
+    // Fase 6.5 (cobre): panal (encerar) o hacha (raspar) sobre un bloque de cobre.
+    if (this.copper && Number.isInteger(item) && item > 0 && copperInfo(id)) {
+      const copper = this.copper;
+      const done = ctx.asActor(s.id, () => copper.use(x, y, z, item));
+      if (done !== null) {
+        if (!done) {
+          ctx.reject(s, x, y, z);
+          const p = partnerOf(x, y, z, id);
+          if (p) ctx.reject(s, p[0], p[1], p[2]);
+        }
+        return;
+      }
     }
     // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
     if (Number.isInteger(item) && item > 0) {

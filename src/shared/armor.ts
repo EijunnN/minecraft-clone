@@ -6,7 +6,11 @@ export const ARMOR_SLOTS = 4;
 export const ARMOR_PIECES = ['helmet', 'chestplate', 'leggings', 'boots'] as const;
 export type ArmorPiece = (typeof ARMOR_PIECES)[number];
 export const ARMOR_MATERIALS = ['leather', 'iron', 'golden', 'diamond'] as const;
-export type ArmorMaterial = (typeof ARMOR_MATERIALS)[number];
+/** Fase 6.5 (cobre): va aparte para que el bucle de items.ts no mueva los ids de los objetos guardados. */
+export const COPPER_ARMOR = 'copper';
+export type ArmorMaterial = (typeof ARMOR_MATERIALS)[number] | typeof COPPER_ARMOR;
+/** Todos los materiales de armadura (los de siempre y el cobre). */
+export const ALL_ARMOR_MATERIALS: readonly ArmorMaterial[] = [...ARMOR_MATERIALS, COPPER_ARMOR];
 
 export interface ArmorInfo {
   slot: ArmorSlot;
@@ -25,6 +29,7 @@ export const ARMOR_STATS: Readonly<Record<ArmorMaterial, { points: readonly numb
   golden: { points: [2, 5, 3, 1], durability: [77, 112, 105, 91], toughness: 0 },
   iron: { points: [2, 6, 5, 2], durability: [165, 240, 225, 195], toughness: 0 },
   diamond: { points: [3, 8, 6, 3], durability: [363, 528, 495, 429], toughness: 2 },
+  copper: { points: [2, 4, 3, 1], durability: [121, 176, 165, 143], toughness: 0 }, // Fase 6.5 (cobre)
 };
 
 /** Causas de daño que la armadura no reduce (como en Minecraft). */

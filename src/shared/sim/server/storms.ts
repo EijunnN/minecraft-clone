@@ -9,6 +9,9 @@ import type { ServerContext } from './context';
 const STRIKES_PER_SECOND = 1 / 9;
 
 export class Storms {
+  /** Fase 6.5 (cobre): aviso de cada rayo (el punto de impacto, encima del bloque alcanzado). */
+  onStrike: ((x: number, y: number, z: number) => void) | null = null;
+
   constructor(private ctx: ServerContext) {}
 
   tick(dt: number): void {
@@ -37,5 +40,6 @@ export class Storms {
       if (!s.joined || Math.hypot(s.p[0] - x, s.p[1] - y, s.p[2] - z) > 3) continue;
       ctx.entities.host.hurtPlayer(s.id, 5, 0, 0.3, 0, 'lightning');
     }
+    this.onStrike?.(x, y, z);
   }
 }

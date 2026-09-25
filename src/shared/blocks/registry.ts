@@ -255,6 +255,8 @@ export const KINDS = {
   crop: KIND_CROP, cake: KIND_CAKE, farmland: KIND_FARMLAND, fence: KIND_FENCE,
 } as const;
 export const BLOCK_KIND = new Uint8Array(MAX_BLOCK_ID);
+/** Fase 6.5 (cobre): tipo de las familias registradas fuera de index.ts (estado base → tipo de KINDS). */
+export const FAMILY_KINDS = new Map<number, number>();
 /** Necesita apoyo de un vecino (antorchas de pared, escaleras de mano, puertas, camas). */
 export const BLOCK_NEEDS_SUPPORT = new Uint8Array(MAX_BLOCK_ID);
 /** Colisión más alta que un bloque (vallas y portillos cerrados): no se puede saltar por encima. */
@@ -263,7 +265,7 @@ export const BLOCK_TALL = new Uint8Array(MAX_BLOCK_ID);
 export function finalizeBlocks(kindOf: ReadonlyMap<number, number>): void {
   for (const b of defs) {
     if (!b) continue;
-    const k = kindOf.get(familyBase(b.id)) ?? 0;
+    const k = kindOf.get(familyBase(b.id)) ?? FAMILY_KINDS.get(familyBase(b.id)) ?? 0;
     BLOCK_KIND[b.id] = k;
     BLOCK_TALL[b.id] = k === KIND_FENCE || (k === KIND_GATE && b.solid) ? 1 : 0;
     BLOCK_NEEDS_SUPPORT[b.id] = k === KIND_DOOR || k === KIND_BED || k === KIND_CROP || k === KIND_CAKE ||

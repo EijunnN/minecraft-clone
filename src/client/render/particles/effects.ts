@@ -194,11 +194,11 @@ export class ParticleFx {
     });
   }
 
-  /** Antorcha: llamita en la punta y, a veces, una voluta de humo. */
-  torch(x: number, y: number, z: number): void {
+  /** Antorcha: llamita en la punta y, a veces, una voluta de humo (Fase 6.5: verde en las de cobre). */
+  torch(x: number, y: number, z: number, copper = false): void {
     this.ps.spawn({
       x, y, z, vy: rnd(0.05, 0.2), life: rnd(0.25, 0.45), size: rnd(0.07, 0.1), size1: 0.02, sprite: SPRITE.flame, frames: 4,
-      r: 4, g: 2.4, b: 1.2, flags: PF.EMISSIVE,
+      ...(copper ? { r: 1.3, g: 4, b: 2 } : { r: 4, g: 2.4, b: 1.2 }), flags: PF.EMISSIVE,
     });
     if (Math.random() < 0.3) this.smoke(x, y + 0.05, z, 1, 0.02, 0.55, 0.06, 0.8);
   }
@@ -206,6 +206,28 @@ export class ParticleFx {
   /** Nubecilla oscura sobre la cabeza (aldeano enfadado o que dice que no). */
   angry(x: number, y: number, z: number): void {
     this.ps.spawn({ x, y, z, vy: 0.3, life: 1, size: 0.3, sprite: SPRITE.cloud, r: 1, g: 1, b: 1, drag: 1, flags: PF.FADE_IN });
+  }
+
+  /**
+   * Fase 6.5 (cobre): destellos sobre las caras de un bloque de cobre al encerarlo (ámbar), quitarle
+   * la cera (blancos) o rasparle el verdín (verde azulado, también cuando lo limpia un rayo).
+   */
+  copperFlakes(x: number, y: number, z: number, kind: 'wax' | 'unwax' | 'scrape'): void {
+    const [r, g, b] = kind === 'wax' ? [1.7, 1.05, 0.3] : kind === 'unwax' ? [1.45, 1.45, 1.4] : [0.35, 1.35, 1.05];
+    for (let i = 0; i < 18; i++) {
+      // Un punto al azar de una de las seis caras, un pelo por fuera.
+      const f = Math.floor(Math.random() * 6), ax = f >> 1, side = f & 1;
+      const p = [Math.random(), Math.random(), Math.random()];
+      p[ax] = side ? 1.06 : -0.06;
+      const n = [0, 0, 0];
+      n[ax] = side ? 1 : -1;
+      this.ps.spawn({
+        x: x + p[0], y: y + p[1], z: z + p[2], vx: n[0] * rnd(0.1, 0.4) + rnd(-0.1, 0.1), vy: n[1] * rnd(0.1, 0.4) + rnd(0, 0.25),
+        vz: n[2] * rnd(0.1, 0.4) + rnd(-0.1, 0.1), life: rnd(0.6, 1.2), size: rnd(0.08, 0.14), size1: 0.02,
+        sprite: pick([SPRITE.twinkle, SPRITE.star]), r, g, b, drag: 1.2, rot: Math.random() * 3, spin: rnd(-3, 3),
+        flags: PF.EMISSIVE | PF.FADE_IN | PF.BLINK,
+      });
+    }
   }
 
   /** Anillo que se expande (onda, aterrizaje fuerte). */

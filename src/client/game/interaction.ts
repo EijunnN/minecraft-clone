@@ -27,6 +27,7 @@ import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
 import { afterDrinkOminous } from './raidClient'; // Fase 6 (asaltos)
+import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -140,6 +141,8 @@ export class Interaction {
     }
     // Fase 6 (fauna): cosechar un nido o colmena llenos con tijeras o un frasco.
     if (pressed && hit && held && useOnBeeHome(this.g, this, hit, held)) return;
+    // Fase 6.5 (cobre): encerar con panal o raspar con un hacha.
+    if (pressed && hit && held && useOnCopper(this.g, this, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       if (isUsable(hit.id)) {

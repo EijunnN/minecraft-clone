@@ -12,7 +12,7 @@ import { buildBox, drawSkin, skinColorsFor, PART_LAYOUT } from './PlayerSkin';
 import type { BlockTextures } from './BlockTextures';
 import { BLOCK_TEX } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
-import { ARMOR_MATERIALS, type ArmorMaterial } from '../../shared/armor';
+import { ALL_ARMOR_MATERIALS, type ArmorMaterial } from '../../shared/armor'; // Fase 6.5 (cobre): con el cobre
 import { ARMOR_BOXES, ARMOR_SHINE, generateArmorTexture, type BodyPart } from '../textures/armorTextures';
 
 export interface RemotePlayerView {
@@ -131,7 +131,7 @@ export class EntityRenderer {
         this.armorParts.set(part, list);
       }
     }
-    for (const mat of ARMOR_MATERIALS) {
+    for (const mat of ALL_ARMOR_MATERIALS) {
       const t = generateArmorTexture(mat);
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
