@@ -119,8 +119,11 @@ class RailNode {
     return shape;
   }
 
-  /** Coloca el raíl eligiendo su forma según los vecinos libres y tuerce a éstos hacia él. */
-  place(fallback: number): void {
+  /**
+   * Coloca el raíl eligiendo su forma según los vecinos libres y tuerce a éstos hacia él. `powered`: el
+   * raíl recibe potencia (en un cruce en T cambia hacia qué lado tuerce, como en Minecraft).
+   */
+  place(fallback: number, powered = false): void {
     const { x, y, z } = this;
     const n = this.hasNeighbor(x, y, z - 1), s = this.hasNeighbor(x, y, z + 1);
     const wv = this.hasNeighbor(x - 1, y, z), e = this.hasNeighbor(x + 1, y, z);
@@ -140,11 +143,18 @@ class RailNode {
       else if (ns) shape = RAIL_NS;
       else if (ew) shape = RAIL_EW;
       if (!this.straight) {
-        // Cruce en T: la curva hacia el norte o el sur y el oeste (como en Minecraft sin redstone).
-        if (se) shape = RAIL_SE;
-        if (sw) shape = RAIL_SW;
-        if (ne) shape = RAIL_NE;
-        if (nw) shape = RAIL_NW;
+        // Cruce en T: sin potencia manda el sur y el este; con potencia, el norte y el oeste (Minecraft).
+        if (powered) {
+          if (se) shape = RAIL_SE;
+          if (sw) shape = RAIL_SW;
+          if (ne) shape = RAIL_NE;
+          if (nw) shape = RAIL_NW;
+        } else {
+          if (nw) shape = RAIL_NW;
+          if (ne) shape = RAIL_NE;
+          if (sw) shape = RAIL_SW;
+          if (se) shape = RAIL_SE;
+        }
       }
     }
     if (shape < 0) shape = fallback;
@@ -194,15 +204,29 @@ export function isRailItem(block: number): boolean {
  * Colocar un raíl de la familia `base` en (x, y, z) mirando hacia `facing` (0 N, 1 E, 2 S, 3 O): el raíl
  * y los vecinos que se tuercen hacia él. null si no hay suelo firme debajo.
  */
-export function planRail(get: RailGet, x: number, y: number, z: number, base: number, facing: number, firm: (id: number) => boolean): RailEdit[] | null {
+export function planRail(
+  get: RailGet, x: number, y: number, z: number, base: number, facing: number, firm: (id: number) => boolean, powered = false,
+): RailEdit[] | null {
   if (!firm(get(x, y - 1, z))) return null;
   const kind = RAIL_KIND[base];
   const w = new Overlay(get);
   const fallback = facing === 1 || facing === 3 ? RAIL_EW : RAIL_NS;
   const id = railState(kind, fallback);
   w.set(x, y, z, id);
-  new RailNode(w, x, y, z, id).place(fallback);
+  new RailNode(w, x, y, z, id).place(fallback, powered);
   return [...w.changed.values()];
+}
+
+/**
+ * Para la redstone: el raíl normal de (x, y, z) que está en un cruce en T vuelve a elegir su forma
+ * con o sin potencia (en Minecraft, dar potencia a un cruce lo cambia de lado). Devuelve los cambios.
+ */
+export function replanJunction(get: RailGet, x: number, y: number, z: number, powered: boolean): RailEdit[] {
+  const id = get(x, y, z);
+  if (!isRail(id) || RAIL_KIND[id] !== RAIL_PLAIN) return [];
+  const w = new Overlay(get);
+  new RailNode(w, x, y, z, id).place(RAIL_SHAPE[id], powered);
+  return [...w.changed.values()].filter(([a, b, c, v]) => get(a, b, c) !== v);
 }
 
 // ------------------------------------------------------------------ potencia
