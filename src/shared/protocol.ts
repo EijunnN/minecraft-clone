@@ -174,7 +174,10 @@ export type ClientMsg =
   // (sacar el libro o meter el de la mano). Respuesta: 'ires' con q (take 1 al meterlo, give al sacarlo).
   | { t: 'shelf'; x: number; y: number; z: number; slot: number; item: number; q: number }
   // Fase 6.5 (remate): poner un soporte para armadura sobre el bloque (x, y, z), mirando a `yaw`.
-  | { t: 'stand'; x: number; y: number; z: number; yaw: number; q: number };
+  | { t: 'stand'; x: number; y: number; z: number; yaw: number; q: number }
+  // Fase 6.5 (colecciones): clic derecho en un tocadiscos con `item` en la mano: meter el disco (take 1)
+  // o sacar el que tiene (cae encima). Respuesta: 'ires' con q.
+  | { t: 'jukebox'; x: number; y: number; z: number; item: number; q: number };
 
 export type ServerMsg =
   | {

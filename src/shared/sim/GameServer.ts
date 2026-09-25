@@ -50,6 +50,7 @@ import { Shelves } from './server/shelves'; // Fase 6.5 (remate)
 import { Leashes } from './server/leashes'; // Fase 6.5 (remate)
 import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
+import { Collections } from './server/collections'; // Fase 6.5 (colecciones)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -133,6 +134,8 @@ export class GameServer {
   private stands: ArmorStands;
   /** Fase 6.5 (océano y plantas): corales, algas, esponjas, bayas dulces y plantaformas. */
   readonly oceanLife: OceanLife;
+  /** Fase 6.5 (colecciones): tocadiscos y creepers cargados. */
+  readonly collections: Collections;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -211,6 +214,13 @@ export class GameServer {
     this.leashes = new Leashes(this.ctx); // Fase 6.5 (remate)
     this.stands = new ArmorStands(this.ctx, store); // Fase 6.5 (remate)
     this.farming.extraInteract = (s, e, msg) => this.stands.onInteract(s, e, msg) ?? this.leashes.onInteract(s, e, msg);
+    // Fase 6.5 (colecciones): tocadiscos; los rayos también cargan a los creepers.
+    this.collections = new Collections(this.ctx, store);
+    this.storms.onStrike = (x, y, z) => {
+      this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z));
+      this.collections.lightning(x, y, z);
+    };
+    this.commands.lightning = (x, y, z) => this.storms.strike(x, y, z);
   }
 
   get seed(): number {
@@ -333,6 +343,7 @@ export class GameServer {
       out.push({
         id: s.id, name: s.name, x: s.p[0], y: s.p[1], z: s.p[2], alive: !(s.s & STATE_DEAD), creative: s.mode === 'c',
         lookingAt: s.lookUntil > now ? s.lookAt : -1, held: s.h,
+        head: s.a[0], // Fase 6.5 (colecciones)
       });
     }
     return out;
@@ -592,6 +603,9 @@ export class GameServer {
       case 'shelf': // Fase 6.5 (remate)
         if (this.allow(s, 1)) this.shelves.onShelf(s, msg);
         break;
+      case 'jukebox': // Fase 6.5 (colecciones)
+        if (this.allow(s, 1)) this.collections.onJukebox(s, msg);
+        break;
     }
   }
 
@@ -652,6 +666,7 @@ export class GameServer {
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: this.info(s) }, s);
     this.riding.onJoin(s); // Fase 6 (monturas): quién va montado
+    this.collections.onJoin(s); // Fase 6.5 (colecciones): los tocadiscos que están sonando
   }
 
   private loadRecord(name: string): PlayerRecord | null {
@@ -803,6 +818,7 @@ export class GameServer {
     this.shelves?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (remate)
     this.stands?.onBlockChanged(x, y, z); // Fase 6.5 (remate)
     this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
+    this.collections?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (colecciones)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -825,6 +841,7 @@ export class GameServer {
     this.storms.tick(DT);
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
+    if (this.tickCount % TICK_RATE === 0) this.collections.tick(); // Fase 6.5 (colecciones)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.entitySync.takeRemoved(this.entities.removed);
@@ -902,6 +919,7 @@ export class GameServer {
     this.hangings.flush(this.store); // Fase 6.5 (decoración)
     this.shelves.flush(this.store); // Fase 6.5 (remate)
     this.stands.flush(this.store); // Fase 6.5 (remate)
+    this.collections.flush(this.store); // Fase 6.5 (colecciones)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

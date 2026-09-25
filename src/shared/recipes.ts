@@ -461,6 +461,11 @@ shape(['SSS', ' S ', 'SLS'], { S: STICK, L: SLABS.smooth_stone }, ARMOR_STAND);
 // Estantería cincelada: 6 tablones y 3 losas de madera (de cualquier madera).
 import { CHISELED_BOOKSHELF } from './blocks';
 shape(['PPP', 'SSS', 'PPP'], { P: PLANKS, S: WOODS.map((w) => SLABS[w.key]).filter((id) => id !== undefined) }, CHISELED_BOOKSHELF);
+// Fase 6.5 (colecciones): tocadiscos (8 tablones y un diamante) y marco brillante (marco y saco de tinta brillante).
+import { JUKEBOX } from './blocks';
+import { GLOW_INK_SAC, GLOW_ITEM_FRAME } from './items';
+shape(['PPP', 'PDP', 'PPP'], { P: PLANKS, D: DIAMOND }, JUKEBOX);
+mix([ITEM_FRAME, GLOW_INK_SAC], GLOW_ITEM_FRAME);
 
 export interface RecipeMatch {
   out: ItemStack;

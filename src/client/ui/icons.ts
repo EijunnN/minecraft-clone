@@ -3,6 +3,7 @@ import { BLOCKS, BLOCK_TEX, R_CROSS, R_TORCH, R_NONE, R_MODEL, blockItemModel } 
 import { modelQuads } from '../../shared/blockModels';
 import { TEXTURE_DEFS, textureLayer } from '../../shared/textureDefs';
 import type { GeneratedTextures } from '../textures/generateTextures';
+import { isSkull } from '../../shared/blocks'; // Fase 6.5 (colecciones)
 
 const GRASS_TINT = [145, 189, 89];
 const FOLIAGE_TINT = [113, 167, 55];
@@ -62,6 +63,8 @@ export function buildIcons(tex: GeneratedTextures): Map<number, string> {
       g.drawImage(L(b.flatItem ? textureLayer(b.flatItem) : BLOCK_TEX[b.id * 6]), 8, 8, 48, 48);
     } else if (b.render === R_MODEL) {
       drawModelIcon(g, blockItemModel(b.id), L, tex.size);
+      // Fase 6.5 (colecciones): las cabezas (medio bloque de lado) se ven más grandes en el inventario.
+      if (isSkull(b.id)) enlargeIcon(cv, 1.75);
     } else {
       const top = L(BLOCK_TEX[b.id * 6 + 2]);
       const left = L(BLOCK_TEX[b.id * 6 + 4]);
@@ -86,6 +89,20 @@ export function buildIcons(tex: GeneratedTextures): Map<number, string> {
     out.set(b.id, cv.toDataURL());
   }
   return out;
+}
+
+/** Fase 6.5 (colecciones): amplía el dibujo de un icono alrededor de su centro. */
+function enlargeIcon(cv: HTMLCanvasElement, k: number): void {
+  const tmp = document.createElement('canvas');
+  tmp.width = cv.width;
+  tmp.height = cv.height;
+  tmp.getContext('2d')!.drawImage(cv, 0, 0);
+  const g = cv.getContext('2d')!;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, cv.width, cv.height);
+  g.imageSmoothingEnabled = false;
+  const w = cv.width / k, h = cv.height / k;
+  g.drawImage(tmp, 32 - w / 2, 31.5 - h / 2, w, h, 0, 0, cv.width, cv.height);
 }
 
 /** Proyección isométrica del icono (dieciseisavos → píxeles): vista desde el sureste y arriba. */

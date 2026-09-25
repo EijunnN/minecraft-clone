@@ -164,3 +164,8 @@ export * from './hangingSigns';
 import { CHISELED_BOOKSHELF } from './chiseledBookshelf';
 export * from './chiseledBookshelf';
 (INVENTORY_ORDER as number[]).push(CHISELED_BOOKSHELF);
+// Fase 6.5 (colecciones): cabezas de criaturas, tocadiscos y el modelo del marco brillante (registrados
+// los últimos: ids nuevos) y su sitio en el inventario creativo.
+import { COLLECTION_INVENTORY } from './collections';
+export * from './collections';
+(INVENTORY_ORDER as number[]).push(...COLLECTION_INVENTORY);

@@ -15,6 +15,7 @@ import {
   BLOCK_MODEL_TRANSLUCENT, // Fase 6.5 (colores)
 } from '../../../shared/blocks';
 import { WATER, BLOCK_WATERLOGGED } from '../../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { skullPose } from '../../../shared/blocks'; // Fase 6.5 (colecciones)
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2, MIN_Y, WORLD_HEIGHT, CHUNK_VOLUME } from '../../../shared/constants';
 
@@ -27,6 +28,8 @@ const SY = W * W; // paso en y
 const VOL = W * W * H;
 const QUEUE_SIZE = 1 << 21;
 const QUEUE_MASK = QUEUE_SIZE - 1;
+/** Fase 6.5 (colecciones): cara a la que pasa cada cara (+X, −X, +Y, −Y, +Z, −Z) en un giro de 90° (norte → este). */
+const TURN_FACE = [4, 5, 2, 3, 1, 0];
 
 export interface MeshResult {
   opaque: Uint32Array;
@@ -625,12 +628,17 @@ export class Mesher {
     const buf = BLOCK_MODEL_TRANSLUCENT[id] ? this.translucent : BLOCK_MODEL_CUTOUT[id] ? this.cutout : this.opaque;
     const bx = x * 16, by = y * 16, bz = z * 16;
     const us = this.tU, vs = this.tV;
+    // Fase 6.5 (colecciones): las cabezas se giran (de 22,5° en 22,5°) y se desplazan al suelo o a la pared.
+    const pose = skullPose(id);
+    const turns = pose ? (Math.round(Math.atan2(pose[1], pose[0]) / (Math.PI / 2)) + 4) & 3 : 0;
     let any = false;
     for (const b of boxes) {
       const lo = [b.x0, b.y0, b.z0], hi = [b.x1, b.y1, b.z1];
       for (let f = 0; f < 6; f++) {
         const layer = b.tex[f];
         if (layer < 0) continue;
+        let nf = f;
+        for (let t = 0; t < turns; t++) nf = TURN_FACE[nf];
         const onEdge = (f === 0 && b.x1 === 16) || (f === 1 && b.x0 === 0) || (f === 2 && b.y1 === 16) ||
           (f === 3 && b.y0 === 0) || (f === 4 && b.z1 === 16) || (f === 5 && b.z0 === 0);
         let li = i;
@@ -663,8 +671,14 @@ export class Mesher {
         const sv = Math.floor(Math.min(vs[0], vs[1], vs[2], vs[3]) / 16) * 16;
         for (let k = 0; k < 4; k++) {
           const c = corners[k];
-          const px = c[0] ? hi[0] : lo[0], py = c[1] ? hi[1] : lo[1], pz = c[2] ? hi[2] : lo[2];
-          this.pushVertex(buf, bx + px, by + py, bz + pz, us[k] - su, vs[k] - sv, layer, f, 3, sl, bl);
+          let px = c[0] ? hi[0] : lo[0], py = c[1] ? hi[1] : lo[1], pz = c[2] ? hi[2] : lo[2];
+          if (pose) {
+            const dx = px - 8, dz = pz - 8;
+            px = Math.round(8 + dx * pose[0] - dz * pose[1] + pose[2]);
+            py += pose[3];
+            pz = Math.round(8 + dx * pose[1] + dz * pose[0] + pose[4]);
+          }
+          this.pushVertex(buf, bx + px, by + py, bz + pz, us[k] - su, vs[k] - sv, layer, nf, 3, sl, bl);
         }
         any = true;
       }

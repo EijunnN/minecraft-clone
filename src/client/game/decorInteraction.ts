@@ -9,7 +9,7 @@ import type { Game } from './Game';
 import { FLOWER_POT, familyBase, isBell, pottedPlant, potWith, isChiseledShelf, shelfSlotAt, stateProps, SHELF_BOOK_KEYS } from '../../shared/blocks';
 import { ITEMS, PAINTING, ITEM_FRAME, SPYGLASS, SUSPICIOUS_STEW, spawnEggMob, type ItemStack } from '../../shared/items';
 import { EATEN_REMAINDER, stewEffect } from '../../shared/decorFood';
-import { ENT_FRAME, hangingBox, isHangingType } from '../../shared/paintings';
+import { hangingBox, isHangingType, isFrameType } from '../../shared/paintings';
 import { ENT_ARMOR_STAND, standBox } from '../../shared/armorStands'; // Fase 6.5 (remate)
 import { ARMOR_STAND } from '../../shared/items';
 
@@ -39,7 +39,7 @@ export function decorUse(
   const heldId = held?.id ?? 0;
   // Marco o cuadro delante: el marco recibe el objeto (o lo gira); el cuadro no hace nada.
   if (target && isHangingType(target.type)) {
-    if (target.type === ENT_FRAME) {
+    if (isFrameType(target.type)) { // Fase 6.5 (colecciones): también el marco brillante
       askServer(ia, g, heldId, (q) => g.net?.send({ t: 'frame', e: target.id, item: heldId, q }));
       g.swing(true);
     }

@@ -3,6 +3,7 @@
 import type { GameMode } from '../../protocol';
 import { ITEMS, maxStack } from '../../items';
 import { MOBS, MOB_TYPES } from '../../mobs';
+import { MOB_CREEPER } from '../../mobs'; // Fase 6.5 (colecciones)
 import { standable } from '../pathfind';
 import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../../effects';
 import type { ServerContext, Session } from './context';
@@ -22,6 +23,8 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
 export class Commands {
   /** Fase 6 (asaltos): para /asalto y /patrulla. */
   raids: Raids | null = null;
+  /** Fase 6.5 (colecciones): para /invocar rayo. */
+  lightning: ((x: number, y: number, z: number) => void) | null = null;
 
   constructor(private ctx: ServerContext) {}
 
@@ -108,6 +111,12 @@ export class Commands {
       case 'summon':
       case 'invocar': {
         const v = norm(args[0] ?? '');
+        // Fase 6.5 (colecciones): /invocar rayo (a 3 bloques delante, en lo alto de la columna).
+        if ((v === 'rayo' || v === 'lightning_bolt') && this.lightning) {
+          const lx = Math.floor(s.p[0] - Math.sin(s.r[0]) * 3), lz = Math.floor(s.p[2] - Math.cos(s.r[0]) * 3);
+          this.lightning(lx + 0.5, ctx.world.skyTop(lx, lz) + 1, lz + 0.5);
+          return;
+        }
         // Fase 6: también con guiones bajos en vez de espacios (como sugiere el autocompletado: gólem_de_hierro).
         const def = MOB_TYPES.map((t) => MOBS[t]).find((m) => m.key === v || norm(m.name) === v || norm(m.name).replace(/\s+/g, '_') === v);
         if (!def) {
@@ -130,8 +139,9 @@ export class Commands {
             }
           }
         }
-        if (found) ctx.entities.spawnMob(def.id, tx + 0.5, y, tz + 0.5);
-        else ctx.entities.spawnMob(def.id, s.p[0], s.p[1] + 0.1, s.p[2]);
+        const mob = found ? ctx.entities.spawnMob(def.id, tx + 0.5, y, tz + 0.5) : ctx.entities.spawnMob(def.id, s.p[0], s.p[1] + 0.1, s.p[2]);
+        // Fase 6.5 (colecciones): /invocar creeper cargado.
+        if (mob && def.id === MOB_CREEPER && norm(args[1] ?? '') === 'cargado') mob.charged = true;
         return;
       }
       case 'give':

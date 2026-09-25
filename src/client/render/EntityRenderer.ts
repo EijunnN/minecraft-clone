@@ -14,6 +14,7 @@ import { BLOCK_TEX } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
 import { ALL_ARMOR_MATERIALS, type ArmorMaterial } from '../../shared/armor'; // Fase 6.5 (cobre): con el cobre
 import { ARMOR_BOXES, ARMOR_SHINE, generateArmorTexture, type BodyPart } from '../textures/armorTextures';
+import { isSkull } from '../../shared/blocks'; // Fase 6.5 (colecciones)
 
 export interface RemotePlayerView {
   id: string;
@@ -264,6 +265,21 @@ export class EntityRenderer {
     return out;
   }
 
+  /**
+   * Fase 6.5 (colecciones): matriz para una cabeza puesta (centrada en la cabeza del jugador, con el
+   * tamaño de un bloque = la cabeza del modelo; el modelo de la cabeza mide medio bloque).
+   */
+  headMatrix(p: RemotePlayerView, camX: number, camY: number, camZ: number): mat4 {
+    const out = mat4.create();
+    this.forEachPart(p, camX, camY, camZ, (part, m) => {
+      if (part === 'head') mat4.copy(out, m);
+    });
+    mat4.translate(out, out, [0, 4 * PX, 0]);
+    const s = (8.8 * PX) / 0.5;
+    mat4.scale(out, out, [s, s, s]);
+    return out;
+  }
+
   /** Material de la pieza de cada ranura (null = nada o id que no encaja), o null sin armadura. */
   private armorOf(p: RemotePlayerView): (ArmorMaterial | null)[] | null {
     const a = p.armor;
@@ -271,7 +287,7 @@ export class EntityRenderer {
     let any = false;
     const mats = [0, 1, 2, 3].map((slot) => {
       const info = ITEMS[a[slot]]?.armor;
-      if (!info || info.slot !== slot) return null;
+      if (!info || info.slot !== slot || isSkull(a[slot])) return null; // (las cabezas se dibujan aparte)
       any = true;
       return info.material;
     });

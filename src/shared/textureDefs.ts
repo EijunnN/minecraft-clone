@@ -371,6 +371,14 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'chiseled_bookshelf_occupied' },
   { name: 'chiseled_bookshelf_top' },
   { name: 'chiseled_bookshelf_side' },
+  // Fase 6.5 (colecciones): caras de las cabezas (como skullTexture en blocks/collections.ts), tocadiscos y
+  // marco brillante.
+  ...['zombie', 'skeleton', 'creeper', 'player'].flatMap((k) =>
+    ['right', 'left', 'top', 'bottom', 'back', 'front'].map((f): TextureDef => ({ name: `${k}_head_${f}` }))),
+  { name: 'jukebox_side' },
+  { name: 'jukebox_top' },
+  { name: 'jukebox_bottom' },
+  { name: 'glow_item_frame' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

@@ -26,6 +26,7 @@ import { isWaterAmbient } from '../../aquaticMobs';
 import { Companions } from './companions';
 import { ENT_ARMOR_STAND } from '../../armorStands'; // Fase 6.5 (remate)
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
+import { collectionDrops } from './collectionDrops'; // Fase 6.5 (colecciones)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -52,6 +53,10 @@ export class Entities {
   readonly raidCenters = new Map<number, [number, number, number]>();
   /** Fase 6 (asaltos): zonas en alerta [x, z, radio]: los aldeanos se refugian en casa. */
   alarms: [number, number, number][] = [];
+  /** Fase 6.5 (colecciones): quién dio el golpe mortal (mientras se resuelve la muerte). */
+  private killer: string | number | null = null;
+  /** Fase 6.5 (colecciones): explosión de creeper cargado en curso (suelta una sola cabeza). */
+  chargedBlast: { dropped: boolean } | null = null;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -245,7 +250,9 @@ export class Entities {
     this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
+      this.killer = attacker; // Fase 6.5 (colecciones)
       this.kill(e, true);
+      this.killer = null;
       return true;
     }
     return false;
@@ -273,11 +280,13 @@ export class Entities {
     if (drops) this.xp.onMobKilled(e);
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
+    if (drops) collectionDrops(this, e, this.killer); // Fase 6.5 (colecciones): cabezas y discos
   }
 
   // ------------------------------------------------------------------ explosiones
 
-  explode(x: number, y: number, z: number, power: number): void {
+  /** `charged`: Fase 6.5 (colecciones), creeper cargado (su víctima suelta la cabeza). */
+  explode(x: number, y: number, z: number, power: number, charged = false): void {
     const r = Math.ceil(power);
     this.host.fx('explode', x, y, z, power);
     for (let dy = -r; dy <= r; dy++) {
@@ -295,6 +304,7 @@ export class Entities {
       }
     }
     const reach = power * 2;
+    this.chargedBlast = charged ? { dropped: false } : null;
     for (const e of this.list.values()) {
       if (!e.ai || e.dead) continue;
       const d = Math.hypot(e.x - x, e.y + e.height / 2 - y, e.z - z);
@@ -302,6 +312,7 @@ export class Entities {
       const impact = 1 - d / reach;
       this.damage(e, Math.floor((impact * impact + impact) * 3.5 * power + 1), x, z, null, 1 + impact * 2);
     }
+    this.chargedBlast = null;
     for (const p of this.host.players()) {
       if (!p.alive || p.creative) continue;
       const d = Math.hypot(p.x - x, p.y + 0.9 - y, p.z - z);

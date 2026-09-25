@@ -34,6 +34,7 @@ import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 import { decorUse, decorAfterEat } from './decorInteraction'; // Fase 6.5 (decoración)
 import { leashUse } from './leashInteraction'; // Fase 6.5 (remate)
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { collectionUse } from './collectionInteraction'; // Fase 6.5 (colecciones)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -176,6 +177,8 @@ export class Interaction {
       // Comida cruda sobre una fogata encendida: a asar.
       if (familyBase(hit.id) === CAMPFIRE && held && this.cookOnCampfire(hit, held.id)) return;
     }
+    // Fase 6.5 (colecciones): tocadiscos, cabezas (colocar o ponérsela) y marco brillante.
+    if (collectionUse(this.g, this, pressed, hit, held)) return;
     // Si la mano principal no hace nada con el clic derecho, lo usa la secundaria.
     if (!this.mainHandUses(held, hit)) {
       this.useOffhand(pressed, hit);

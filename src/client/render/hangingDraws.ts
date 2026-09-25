@@ -6,7 +6,10 @@ import type { ItemDraw, ItemRenderer } from './ItemRenderer';
 import type { ClientEntity } from '../game/ClientEntities';
 import { PAINTING_CELLS, ITEM_FRAME_MODEL } from '../../shared/blocks';
 import { DIR_X, DIR_Z } from '../../shared/blockModels';
-import { ENT_PAINTING, ENT_FRAME, PAINTINGS, HANGING_DEPTH, facingOfYaw } from '../../shared/paintings';
+import { ENT_PAINTING, PAINTINGS, HANGING_DEPTH, facingOfYaw } from '../../shared/paintings';
+// Fase 6.5 (colecciones): marco brillante (su objeto se dibuja a plena luz).
+import { ENT_GLOW_FRAME, isFrameType } from '../../shared/paintings';
+import { GLOW_ITEM_FRAME_MODEL } from '../../shared/blocks';
 
 /** Añade a la lista de dibujo un cuadro o un marco (rx, ry, rz: posición respecto a la cámara). */
 export function pushHangingDraws(
@@ -31,18 +34,20 @@ export function pushHangingDraws(
     }
     return;
   }
-  if (e.type !== ENT_FRAME) return;
+  if (!isFrameType(e.type)) return;
+  const glow = e.type === ENT_GLOW_FRAME;
   const m = mat4.create();
   mat4.translate(m, m, [rx, ry, rz]);
   mat4.rotateY(m, m, e.yaw);
   const frame = mat4.clone(m);
   mat4.scale(frame, frame, [12 / 16, 12 / 16, HANGING_DEPTH]);
-  out.push({ model: items.blockModel(ITEM_FRAME_MODEL), m: frame, light });
+  out.push({ model: items.blockModel(glow ? GLOW_ITEM_FRAME_MODEL : ITEM_FRAME_MODEL), m: frame, light });
   const model = e.item > 0 ? items.model(e.item) : null;
   if (!model) return;
   const size = model.flat ? 0.5 : 0.32;
   mat4.translate(m, m, [0, 0, HANGING_DEPTH / 2 + (model.flat ? 0.02 : size / 2 + 0.01)]);
   mat4.rotateZ(m, m, -e.pitch);
   mat4.scale(m, m, [size, size, size]);
-  out.push({ model, m, light });
+  // Marco brillante: el objeto, con luz de antorcha aunque esté a oscuras.
+  out.push({ model, m, light: glow ? [light[0], Math.max(light[1], 0.8)] : light });
 }

@@ -35,6 +35,7 @@ import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY }
 import { isHangingType } from '../../shared/paintings';
 import { pushHangingDraws } from './hangingDraws';
 import { pushStandDraws, standArmorView } from './standDraws'; // Fase 6.5 (remate)
+import { isSkull } from '../../shared/blocks'; // Fase 6.5 (colecciones)
 import { ENT_ARMOR_STAND } from '../../shared/armorStands';
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { LightningRenderer, type Bolt } from './LightningRenderer';
@@ -953,6 +954,12 @@ export class Renderer {
         }
         list.push({ model, m, light: p.light });
       }
+    }
+    // Fase 6.5 (colecciones): cabezas puestas en el hueco del casco (jugadores y soportes para armadura).
+    for (const p of [...s.players, ...this.standViews]) {
+      const head = p.armor?.[0] ?? 0;
+      const model = head && isSkull(head) ? this.items.model(head) : null;
+      if (model) list.push({ model, m: this.entities.headMatrix(p, s.camX, s.camY, s.camZ), light: p.light });
     }
     this.items.drawWorld(list, this.viewProj, s.grassTint, bindLighting);
   }

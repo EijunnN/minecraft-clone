@@ -25,6 +25,8 @@ import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
+import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
+import { DISCS } from './discs'; // Fase 6.5 (colecciones)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -402,6 +404,15 @@ export const DYED_BUNDLES = {} as Record<DyeColor, number>;
 for (const c of DYE_COLORS) DYED_BUNDLES[c] = item(`${c}_bundle`, `Saco ${COLOR_NAMES[c][0]}`, { stack: 1 });
 /** Soporte para armadura: se pone sobre un bloque y se le viste con clic derecho. */
 export const ARMOR_STAND = item('armor_stand', 'Soporte para armadura', { stack: 16 });
+// ------------------------------------------------------------------ Fase 6.5 (colecciones)
+/** Saco de tinta brillante: lo suelta el calamar brillante; con un marco se hace el marco brillante. */
+export const GLOW_INK_SAC = item('glow_ink_sac', 'Saco de tinta brillante');
+/** Marco brillante: como el marco, pero el objeto que muestra se ve a plena luz aunque esté a oscuras. */
+export const GLOW_ITEM_FRAME = item('glow_item_frame', 'Marco brillante');
+/** Discos de música, en el orden de DISCS (discs.ts); el título va en la descripción. */
+export const MUSIC_DISCS: readonly number[] = DISCS.map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
+// Las cabezas se llevan en el hueco del casco (sin puntos de armadura ni desgaste).
+for (const k of SKULL_KINDS) ITEMS[SKULLS[k]].armor = { slot: 0, material: 'leather', points: 0, toughness: 0, durability: 0 };
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -527,6 +538,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, ...Object.values(SPAWN_EGGS),
   DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
   INK_SAC, NAME_TAG, LEAD, BUNDLE, ...DYE_COLORS.map((c) => DYED_BUNDLES[c]), ARMOR_STAND,
+  GLOW_INK_SAC, GLOW_ITEM_FRAME, ...MUSIC_DISCS, // Fase 6.5 (colecciones)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */
