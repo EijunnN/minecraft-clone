@@ -20,6 +20,7 @@ import { MOB_DROWNED } from '../../shared/mobs';
 import { EF_INVISIBLE } from '../../shared/potions'; // Fase 7 (remate)
 import { vehicleModel, vehicleSkinVariant, animateVehicle, vehicleRoot } from './vehicleModels'; // Fase 7 (transporte)
 import { animateGuardian, guardianPartScale } from './guardianPose'; // Fase 7.5 (océano)
+import { animateWarden, wardenPartScale, wardenRoot } from './wardenAnim'; // Fase 7.5 (abismo)
 
 export interface MobTexture {
   width: number;
@@ -250,6 +251,7 @@ export class MobRenderer {
         animateAquatic(def, e, time, name, out);
         // Fase 6 (asaltos): illagers, vex, devastador y colmillos.
         animateIllager(def, e, time, name, out);
+        animateWarden(def, e, time, name, out); // Fase 7.5 (abismo)
     }
     companionPart(def, e, time, name, out); // Fase 6 (gólems/domesticar)
   }
@@ -271,7 +273,7 @@ export class MobRenderer {
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
-      const faunaScale = faunaPartScale(def, e, part.name) ?? guardianPartScale(def, e, part.name, time); // Fase 6 (fauna): armadillo enroscado; 7.5: púas
+      const faunaScale = faunaPartScale(def, e, part.name) ?? guardianPartScale(def, e, part.name, time) ?? wardenPartScale(def, e, part.name, time); // Fase 6 (fauna): armadillo enroscado; 7.5: púas y corazón del warden
       if (faunaScale) mat4.scale(m, m, faunaScale);
       else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, HIDE);
       else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, HIDE); // Fase 6 (monturas): sin silla
@@ -305,6 +307,7 @@ export class MobRenderer {
       mat4.translate(m, m, [0, -0.5, 0]);
     } else s *= aquaticRoot(def, e, m, time); // Fase 6 (acuáticos)
     illagerRoot(def, e, m, time); // Fase 6 (asaltos): colmillos que brotan, vex que flota
+    wardenRoot(def, e, m, time); // Fase 7.5 (abismo): el warden sale del suelo o se hunde
     const k = monsterRoot(def, e, m); // Fase 6 (monstruos): picado del phantom, slime que se estira
     mat4.scale(m, m, [s * k[0], s * k[1], s * k[2]]);
     sitRoot(def, e.flags, m); // Fase 6 (gólems/domesticar)

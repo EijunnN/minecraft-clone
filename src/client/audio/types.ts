@@ -61,7 +61,8 @@ export type MobSoundKind =
   | 'ravager'
   // Fase 7.5 (océano).
   | 'guardian'
-  | 'elder_guardian';
+  | 'elder_guardian'
+  | 'warden'; // Fase 7.5 (abismo)
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
  * (p. ej. el creeper no tiene voz de `idle`); los combos no aplicables caen a un sonido genérico

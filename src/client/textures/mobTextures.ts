@@ -24,6 +24,7 @@ import { AQUATIC_PAINTERS } from './aquaticMobTextures'; // Fase 6 (acuáticos)
 import { faunaPainter } from './faunaTextures'; // Fase 6 (fauna)
 import { ILLAGER_PAINTERS } from './illagerTextures'; // Fase 6 (asaltos)
 import { OCEAN_PAINTERS } from './oceanMobTextures'; // Fase 7.5 (océano)
+import { WARDEN_PAINTERS } from './wardenTextures'; // Fase 7.5 (abismo)
 
 export interface MobTexture {
   width: number;
@@ -72,7 +73,12 @@ interface Glow {
   glow: true;
 }
 
-type Paint = RGB | Glow;
+/** Fase 7.5 (abismo): téxel transparente (costillar y zarcillos del warden). */
+interface Clear {
+  clear: true;
+}
+
+type Paint = RGB | Glow | Clear;
 type Painter = (t: Texel) => Paint;
 
 // ---------------------------------------------------------------------------
@@ -249,6 +255,7 @@ function paintMob(mobId: number, painter: Painter): MobTexture {
               z = d;
           }
           const out = painter({ part: p.name, g, f, i, j, fw, fh, x, y, z, w, h, d });
+          if ('clear' in out) continue; // Fase 7.5 (abismo): se queda transparente
           const o = (v * W + u) * 4;
           const c = 'glow' in out ? out.c : out;
           rgba[o] = Math.max(0, Math.min(255, Math.round(c[0])));
@@ -1516,7 +1523,8 @@ export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   const mob = MOBS[mobId];
   // Fase 6 (aldeanos): el aldeano y el comerciante se pintan según su profesión (villagerTextures.ts).
   if (mob && isVillagerType(mobId)) return paintMob(mobId, villagerPainter(mobId, variant));
-  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId] ?? ILLAGER_PAINTERS[mobId] ?? OCEAN_PAINTERS[mobId]; // Fase 6 (monturas): pelajes
+  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId] ?? ILLAGER_PAINTERS[mobId] ?? OCEAN_PAINTERS[mobId]
+    ?? WARDEN_PAINTERS[mobId]; // Fase 6 (monturas): pelajes; 7.5 (abismo): el warden
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }
@@ -1528,3 +1536,5 @@ export {
   PX, NX, TOP, BOTTOM, FRONT, BACK,
 };
 export type { Texel, Paint, Painter, RGB, RGB as MobRGB, ZombieStyle };
+/** Fase 7.5 (abismo): téxel transparente. */
+export const CLEAR: Clear = { clear: true };
