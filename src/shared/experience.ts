@@ -8,6 +8,7 @@ import {
 } from './items';
 import { DYES } from './items'; // Fase 6.5 (colores)
 import { DYE_COLORS, GLAZED_TERRACOTTA } from './blocks'; // Fase 6.5 (colores)
+import { LIT_REDSTONE_ORE } from './blocks'; // Fase 7 (redstone)
 
 type Rand = () => number;
 
@@ -86,6 +87,7 @@ const ORE_XP: readonly [number, number, number, number][] = [
   [DIAMOND_ORE, DIAMOND, 3, 7],
   [LAPIS_ORE, LAPIS, 2, 5],
   [REDSTONE_ORE, REDSTONE, 1, 5],
+  [LIT_REDSTONE_ORE, REDSTONE, 1, 5], // Fase 7 (redstone): la mena encendida (al pisarla o tocarla)
 ];
 
 /** Experiencia al romper `block` si soltó su mineral (`dropped` son los ids que soltó). */

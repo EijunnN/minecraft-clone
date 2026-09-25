@@ -11,6 +11,8 @@ const STRIKES_PER_SECOND = 1 / 9;
 export class Storms {
   /** Fase 6.5 (cobre): aviso de cada rayo (el punto de impacto, encima del bloque alcanzado). */
   onStrike: ((x: number, y: number, z: number) => void) | null = null;
+  /** Fase 7 (redstone): un pararrayos cercano atrae el rayo (devuelve el nuevo punto de impacto). */
+  redirect: ((x: number, y: number, z: number) => [number, number, number] | null) | null = null;
 
   constructor(private ctx: ServerContext) {}
 
@@ -23,7 +25,9 @@ export class Storms {
       const x = Math.floor(s.p[0] + (ctx.rand() - 0.5) * 96), z = Math.floor(s.p[2] + (ctx.rand() - 0.5) * 96);
       const top = ctx.world.skyTop(x, z);
       if (top < MIN_Y) continue; // sin cargar
-      this.strike(x + 0.5, top + 1, z + 0.5);
+      const rod = this.redirect?.(x, top + 1, z); // Fase 7 (redstone)
+      if (rod) this.strike(rod[0], rod[1], rod[2]);
+      else this.strike(x + 0.5, top + 1, z + 0.5);
     }
   }
 

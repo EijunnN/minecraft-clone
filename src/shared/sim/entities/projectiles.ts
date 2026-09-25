@@ -36,6 +36,7 @@ export class Projectiles {
       const nx = e.x + (e.vx * dt) / steps, ny = e.y + (e.vy * dt) / steps, nz = e.z + (e.vz * dt) / steps;
       const id = this.m.w.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz));
       if (id < 0 || BLOCK_SOLID[id]) {
+        this.m.host.projectileHit?.('thrown', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z); // Fase 7 (redstone)
         this.shatter(e, null);
         return;
       }

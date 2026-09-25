@@ -2,9 +2,10 @@
 // posición, operaciones de los jugadores (clic, meter, sacar), hornos que funden solos, contenido
 // que cae al romperlos y persistencia.
 import {
-  CHEST, CHEST_DOUBLE, isContainer, isChest, isFurnace, furnaceVariant, isLitFurnace, furnaceWithLit, familyBase,
+  isContainer, isChest, isFurnace, furnaceVariant, isLitFurnace, furnaceWithLit, familyBase,
   stateProps, chestPartnerDir,
 } from '../../blocks';
+import { isDoubleChest, singleChestOf } from '../../blocks'; // Fase 7 (redstone): también los cofres trampa
 import { DIR_X, DIR_Z } from '../../blockModels';
 import { smeltXp } from '../../experience';
 import type { ClientMsg, ServerMsg } from '../../protocol';
@@ -28,6 +29,10 @@ interface View {
 export class ContainerSystem {
   private containers = new Map<number, ContainerState>();
   private dirty = new Set<number>();
+  /** Fase 7 (redstone): cambió quién tiene abierto el contenedor de (x, y, z) (cofres trampa). */
+  viewersChanged: ((x: number, y: number, z: number) => void) | null = null;
+  /** Fase 7 (redstone): cambió el contenido del contenedor de (x, y, z) (comparadores). */
+  contentsChanged: ((x: number, y: number, z: number) => void) | null = null;
 
   constructor(private ctx: ServerContext, store: ServerStore) {
     for (const [key, data] of store.loadContainers()) {
@@ -74,11 +79,11 @@ export class ContainerSystem {
   /** Pareja de una mitad de cofre doble: [x, y, z, lado de la mitad dada] o null. */
   private partnerOf(x: number, y: number, z: number): [number, number, number, number] | null {
     const id = this.ctx.world.getBlock(x, y, z);
-    if (familyBase(id) !== CHEST_DOUBLE) return null;
+    if (!isDoubleChest(id)) return null; // Fase 7 (redstone): también los cofres trampa
     const st = stateProps(id)!;
     const d = chestPartnerDir(st.facing, st.side);
     const px = x + DIR_X[d], pz = z + DIR_Z[d];
-    return familyBase(this.ctx.world.getBlock(px, y, pz)) === CHEST_DOUBLE ? [px, y, pz, st.side] : null;
+    return familyBase(this.ctx.world.getBlock(px, y, pz)) === familyBase(id) ? [px, y, pz, st.side] : null;
   }
 
   /** Lo que se ve al abrir (x, y, z): el contenedor o el cofre grande. */
@@ -106,11 +111,11 @@ export class ContainerSystem {
   /** Contenedores destruidos: soltar su contenido y cerrar las ventanas abiertas. */
   onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
     // Se rompe media cofre doble: la otra mitad vuelve a ser un cofre sencillo.
-    if (familyBase(old) === CHEST_DOUBLE && familyBase(id) !== CHEST_DOUBLE) {
+    if (isDoubleChest(old) && familyBase(id) !== familyBase(old)) {
       const st = stateProps(old)!;
       const d = chestPartnerDir(st.facing, st.side);
       const px = x + DIR_X[d], pz = z + DIR_Z[d];
-      if (familyBase(this.ctx.world.getBlock(px, y, pz)) === CHEST_DOUBLE) this.ctx.world.setBlock(px, y, pz, CHEST + st.facing);
+      if (familyBase(this.ctx.world.getBlock(px, y, pz)) === familyBase(old)) this.ctx.world.setBlock(px, y, pz, singleChestOf(old, st.facing));
     }
     if (!isContainer(old) || isContainer(id)) return;
     const k = posKey(x, y, z);
@@ -154,7 +159,9 @@ export class ContainerSystem {
       return;
     }
     const k = posKey(x, y, z);
+    if (s.container !== null && s.container !== k) this.close(s); // Fase 7 (redstone)
     s.container = k;
+    this.notifyViewers(k); // Fase 7 (redstone)
     this.sendView(k, s);
   }
 
@@ -190,7 +197,10 @@ export class ContainerSystem {
     }
     this.commit(v);
     if (before) this.smeltReward(s, before.id, before.count - (c.slots[FURNACE_OUT]?.count ?? 0));
-    for (const [pk] of v.parts) this.dirty.add(pk);
+    for (const [pk] of v.parts) {
+      this.dirty.add(pk);
+      this.contentsChanged?.(keyX(pk), keyY(pk), keyZ(pk)); // Fase 7 (redstone)
+    }
     this.sendView(k);
   }
 
@@ -212,10 +222,40 @@ export class ContainerSystem {
       const active = c.burn > 0 || c.slots[0] !== null;
       if (!active) continue;
       const res = furnaceTick(c, dt, furnaceVariant(id) as FurnaceVariant);
-      if (res.changed) this.dirty.add(k);
+      if (res.changed) {
+        this.dirty.add(k);
+        this.contentsChanged?.(x, y, z); // Fase 7 (redstone)
+      }
       if (res.lit !== isLitFurnace(id)) w.setBlock(x, y, z, furnaceWithLit(id, res.lit));
       if (res.changed || c.burn > 0) this.sendView(k);
     }
+  }
+
+  // ------------------------------------------------------------------ Fase 7 (redstone)
+
+  /** El jugador cierra el contenedor que tenía abierto (o se va). */
+  close(s: Session): void {
+    const k = s.container;
+    if (k === null) return;
+    s.container = null;
+    this.notifyViewers(k);
+  }
+
+  private notifyViewers(k: number): void {
+    if (this.viewersChanged) for (const vk of this.viewKeys(k)) this.viewersChanged(keyX(vk), keyY(vk), keyZ(vk));
+  }
+
+  /** Jugadores que tienen abierto el contenedor de (x, y, z) (los dos lados de un cofre doble cuentan). */
+  viewers(x: number, y: number, z: number): number {
+    const k = posKey(x, y, z);
+    let n = 0;
+    for (const s of this.ctx.sessions()) if (s.joined && s.container !== null && this.viewKeys(s.container).includes(k)) n++;
+    return n;
+  }
+
+  /** Casillas que ve un comparador en (x, y, z): las del contenedor o las del cofre doble entero. */
+  slotsAt(x: number, y: number, z: number): readonly (ItemStack | null)[] | null {
+    return this.viewAt(x, y, z)?.state.slots ?? null;
   }
 
   /** Guarda los contenedores que cambiaron. */

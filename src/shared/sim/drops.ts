@@ -18,6 +18,7 @@ import { FLOWER_POT, pottedPlant } from '../blocks'; // Fase 6.5 (decoración)
 import { isWaterlogged } from '../blocks'; // Fase 6.5 (océano y plantas)
 import { plantDrops65 } from './plantDrops'; // Fase 6.5 (océano y plantas)
 import { materialDrops } from './materialDrops'; // Fase 6.5 (materiales)
+import { redstoneDrops } from './redstoneDrops'; // Fase 7 (redstone)
 import { POISONOUS_POTATO } from '../items'; // Fase 6.5 (equipo)
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
@@ -41,6 +42,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (plant65) return plant65;
   const mat = materialDrops(block); // Fase 6.5 (materiales): hierro y oro en bruto, podsol, tartas con vela…
   if (mat) return mat;
+  const rs = redstoneDrops(block, toolId, rand, blockDrops); // Fase 7 (redstone): polvo, cuerda y mena encendida
+  if (rs) return rs;
   const one = (id: number, n = 1): ItemStack[] => [{ id, count: n }];
   const rnd = (a: number, c: number) => a + Math.floor(rand() * (c - a + 1));
   // Puertas y camas sueltan el objeto una sola vez (por la mitad de abajo / los pies).

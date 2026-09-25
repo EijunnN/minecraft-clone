@@ -1,9 +1,13 @@
 // Fase 7 (redstone): registro abierto de la redstone. Cada tipo de bloque (por su estado base) puede
-// declarar aquí lo que hace con la potencia sin tocar el motor (server/redstone.ts):
+// declarar aquí lo que hace con la potencia sin tocar el motor (sim/server/redstone.ts):
 // - emisor: cuánta potencia débil y fuerte da hacia cada cara (y si el polvo se une a él);
 // - oyente: qué hace cuando cambia algo a su alrededor (la potencia que recibe, un vecino…);
 // - tick: qué hace cuando vence un tick programado (repetidores, antorchas, botones…);
 // - lectura analógica: lo que lee de él un comparador (lo lleno que está un cofre, un caldero…);
+// - cambio: se coloca, se quita o cambia de estado (y al cargar su chunk);
+// - pisado: hay una entidad en su celda (placas de presión, cuerda, mena de redstone);
+// - proyectil: le da una flecha, un tridente o algo lanzado (diana);
+// - periódico: se repite cada tantos ticks mientras está cargado (sensor de luz solar);
 // - uso: qué pasa con el clic derecho (palancas, botones, repetidores…).
 // Las funciones son puras sobre la RedstoneApi que reciben: sirven para cualquier servidor (el del
 // Durable Object, el del modo un jugador y los de las pruebas). Ver docs/redstone.md.
@@ -38,6 +42,9 @@ export interface RedstoneView {
 /** Qué entidades cuenta una placa de presión o un cable trampa. */
 export type EntityFilter = 'all' | 'living' | 'arrows';
 
+/** Prioridades de los ticks programados (las de Minecraft: antes las más bajas). */
+export const PRIORITY_EXTREMELY_HIGH = -3, PRIORITY_VERY_HIGH = -2, PRIORITY_HIGH = -1, PRIORITY_NORMAL = 0;
+
 /**
  * Lo que ofrece el motor de redstone del servidor a los componentes (los de esta fase y los que se
  * enganchen después: pistones, observadores, tolvas, dispensadores, raíles…).
@@ -45,8 +52,9 @@ export type EntityFilter = 'all' | 'living' | 'arrows';
 export interface RedstoneApi extends RedstoneView {
   /** Tick de juego actual (20 por segundo). */
   readonly gameTick: number;
-  /** Cambia un bloque (se difunde a los clientes y avisa a los vecinos). */
+  /** Cambia un bloque (se difunde a los clientes y avisa a los vecinos en este mismo tick). */
   setBlock(x: number, y: number, z: number, id: number): void;
+  /** Guarda un dato por posición (se borra solo cuando el bloque cambia de familia). */
   setData(x: number, y: number, z: number, value: number): void;
   /** Mayor potencia (0..15) que recibe (x, y, z) de sus seis vecinos (getBestNeighborSignal de Minecraft). */
   power(x: number, y: number, z: number): number;
@@ -56,12 +64,17 @@ export interface RedstoneApi extends RedstoneView {
   powerFrom(x: number, y: number, z: number, face: number): number;
   /** Potencia fuerte que recibe el bloque (x, y, z) de sus vecinos (getDirectSignalTo de Minecraft). */
   strongPower(x: number, y: number, z: number): number;
-  /** Programa un tick de redstone dentro de `delay` ticks (si ya hay uno pendiente en esa posición, no hace nada). */
+  /**
+   * Programa un tick dentro de `delay` ticks de juego (≥ 1) para el bloque que haya ahora en (x, y, z);
+   * si ya hay uno pendiente en esa posición, no hace nada. Si el bloque cambia de familia, no se ejecuta.
+   */
   schedule(x: number, y: number, z: number, delay: number, priority?: number): void;
   /** ¿Hay un tick pendiente en (x, y, z)? */
   isScheduled(x: number, y: number, z: number): boolean;
   /** ¿Vence en este mismo tick un tick pendiente en (x, y, z)? */
   willTickNow(x: number, y: number, z: number): boolean;
+  /** Avisa (como oyente) al bloque de (x, y, z). */
+  updateAt(x: number, y: number, z: number): void;
   /** Avisa a los seis vecinos de (x, y, z). */
   updateNeighbors(x: number, y: number, z: number): void;
   /**
@@ -75,8 +88,18 @@ export interface RedstoneApi extends RedstoneView {
   analog(x: number, y: number, z: number): number;
   /** Entidades (jugadores incluidos) cuya caja toca la caja dada (coordenadas del mundo). */
   countEntities(x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, filter: EntityFilter): number;
-  /** Casillas de un contenedor (cofres, hornos…) o null si no hay. */
+  /** Casillas de un contenedor (cofres —los dobles enteros—, hornos, barriles…) o null si no hay. */
   containerSlots(x: number, y: number, z: number): readonly (ItemStack | null)[] | null;
+  /** Jugadores con el contenedor de (x, y, z) abierto. */
+  viewers(x: number, y: number, z: number): number;
+  /** Libro puesto en el atril de (x, y, z) (null si no tiene). */
+  lecternBook(x: number, y: number, z: number): ItemStack | null;
+  /** Disco del tocadiscos de (x, y, z) (índice de DISCS; −1 si no tiene). */
+  jukeboxDisc(x: number, y: number, z: number): number;
+  /** Lectura de un marco colgado en la celda de aire (x, y, z): giro + 1 si tiene objeto, 0 vacío, −1 si no hay. */
+  frameSignal(x: number, y: number, z: number): number;
+  /** Luz del sol (0..15) que lee un sensor de luz solar en (x, y, z). */
+  sunlight(x: number, y: number, z: number, inverted: boolean): number;
   /** Efecto (sonido y partículas) para los jugadores cercanos. */
   fx(kind: string, x: number, y: number, z: number, a?: number, b?: number): void;
   /** Número aleatorio en [0, 1). */
@@ -95,41 +118,67 @@ export interface Emitter {
   connects?(id: number, face: number): boolean;
 }
 
-/** Algo cambió junto a (x, y, z) (un bloque vecino, la potencia que recibe…). */
-export type NeighborHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => void;
+/**
+ * Algo cambió junto a (x, y, z) (un bloque vecino, la potencia que recibe…). (sx, sy, sz) es la
+ * posición que provocó el aviso (la del bloque que cambió; la propia si el bloque acaba de aparecer).
+ */
+export type NeighborHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number, sx: number, sy: number, sz: number) => void;
 /** Venció un tick programado en (x, y, z). */
 export type TickHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => void;
 /** Lo que lee un comparador (0..15). */
 export type AnalogReader = (api: RedstoneApi, x: number, y: number, z: number, id: number) => number;
 /** Clic derecho sobre el bloque en el servidor: devuelve si lo atendió. */
 export type UseHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => boolean;
-/** El bloque aparece o desaparece (old → id); sirve para llevar la cuenta de sensores. */
-export type PlacedHandler = (api: RedstoneApi, x: number, y: number, z: number, old: number, id: number) => void;
+/**
+ * El bloque de (x, y, z) pasó de `old` a `id` (uno de los dos es de esta familia): se colocó, se quitó
+ * o cambió de estado. Al cargar su chunk se llama con old = 0. No debe cambiar bloques (sólo anotar y programar).
+ */
+export type ChangeHandler = (api: RedstoneApi, x: number, y: number, z: number, old: number, id: number) => void;
+/** Hay al menos una entidad en la celda (x, y, z) este tick (se llama una vez por tick y celda). */
+export type SteppedHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => void;
+/** Un proyectil chocó con el bloque; (px, py, pz) es su último punto libre, justo delante de la cara tocada. */
+export type ProjectileHandler = (
+  api: RedstoneApi, x: number, y: number, z: number, id: number, px: number, py: number, pz: number, kind: ProjectileKind,
+) => void;
+export type ProjectileKind = 'arrow' | 'trident' | 'thrown';
+
+/** Algo que se repite cada `every` ticks mientras el bloque está cargado (sensor de luz solar, tolvas…). */
+export interface Periodic {
+  every: number;
+  run: TickHandler;
+}
 
 export interface RedstoneBehavior {
   emitter?: Emitter;
   neighbor?: NeighborHandler;
   tick?: TickHandler;
   analog?: AnalogReader;
-  /** Se llama al colocarlo o quitarlo (y al cargar su chunk, con old = 0). */
-  placed?: PlacedHandler;
+  changed?: ChangeHandler;
+  stepped?: SteppedHandler;
+  projectile?: ProjectileHandler;
+  use?: UseHandler;
+  periodic?: Periodic;
 }
 
 const EMITTERS: (Emitter | undefined)[] = [];
 const NEIGHBOR: (NeighborHandler[] | undefined)[] = [];
 const TICKS: (TickHandler | undefined)[] = [];
 const ANALOG: (AnalogReader | undefined)[] = [];
-const PLACED: (PlacedHandler[] | undefined)[] = [];
+const CHANGED: (ChangeHandler[] | undefined)[] = [];
+const STEPPED: (SteppedHandler | undefined)[] = [];
+const PROJECTILE: (ProjectileHandler | undefined)[] = [];
+const USES: (UseHandler | undefined)[] = [];
+const PERIODIC: (Periodic | undefined)[] = [];
 /** Conductores forzados: 1 conduce, 2 no conduce (0: lo decide su forma). */
 const CONDUCTOR = new Uint8Array(MAX_BLOCK_ID);
-/** Estados base que tienen algún comportamiento (para revisarlos al cargar un chunk). */
+/** Estados base que tienen algún comportamiento. */
 const KNOWN = new Uint8Array(MAX_BLOCK_ID);
 
 const bases = (b: number | readonly number[]): readonly number[] => (typeof b === 'number' ? [b] : b);
 
 /**
  * Registra el comportamiento de redstone de uno o varios bloques (sus estados base: la familia entera).
- * Los oyentes y los avisos de colocación se acumulan; emisor, tick y lectura analógica sustituyen al anterior.
+ * Los oyentes y los avisos de cambio se acumulan; lo demás sustituye a lo anterior.
  */
 export function registerRedstone(base: number | readonly number[], b: RedstoneBehavior): void {
   for (const id of bases(base)) {
@@ -139,11 +188,15 @@ export function registerRedstone(base: number | readonly number[], b: RedstoneBe
     if (b.neighbor) (NEIGHBOR[f] ??= []).push(b.neighbor);
     if (b.tick) TICKS[f] = b.tick;
     if (b.analog) ANALOG[f] = b.analog;
-    if (b.placed) (PLACED[f] ??= []).push(b.placed);
+    if (b.changed) (CHANGED[f] ??= []).push(b.changed);
+    if (b.stepped) STEPPED[f] = b.stepped;
+    if (b.projectile) PROJECTILE[f] = b.projectile;
+    if (b.use) USES[f] = b.use;
+    if (b.periodic) PERIODIC[f] = b.periodic;
   }
 }
 
-/** Fuerza que un bloque conduzca (o no) la potencia, sea cual sea su forma. */
+/** Fuerza que un bloque (estados concretos) conduzca o no la potencia, sea cual sea su forma. */
 export function setConductor(ids: number | readonly number[], conducts: boolean): void {
   for (const id of bases(ids)) CONDUCTOR[id] = conducts ? 1 : 2;
 }
@@ -160,8 +213,20 @@ export function tickHandler(id: number): TickHandler | undefined {
 export function analogReader(id: number): AnalogReader | undefined {
   return id > 0 ? ANALOG[familyBase(id)] : undefined;
 }
-export function placedHandlers(id: number): readonly PlacedHandler[] | undefined {
-  return id > 0 ? PLACED[familyBase(id)] : undefined;
+export function changeHandlers(id: number): readonly ChangeHandler[] | undefined {
+  return id > 0 ? CHANGED[familyBase(id)] : undefined;
+}
+export function steppedHandler(id: number): SteppedHandler | undefined {
+  return id > 0 ? STEPPED[familyBase(id)] : undefined;
+}
+export function projectileHandler(id: number): ProjectileHandler | undefined {
+  return id > 0 ? PROJECTILE[familyBase(id)] : undefined;
+}
+export function useHandler(id: number): UseHandler | undefined {
+  return id > 0 ? USES[familyBase(id)] : undefined;
+}
+export function periodicOf(id: number): Periodic | undefined {
+  return id > 0 ? PERIODIC[familyBase(id)] : undefined;
 }
 /** ¿Tiene el bloque algún comportamiento de redstone? */
 export function hasRedstone(id: number): boolean {
@@ -176,16 +241,4 @@ export function isConductor(id: number): boolean {
   const o = CONDUCTOR[id];
   if (o) return o === 1;
   return BLOCK_OPAQUE[id] === 1 && BLOCK_COLLIDE[id] === 1;
-}
-
-// ------------------------------------------------------------------ usos (clic derecho)
-
-const USES: (UseHandler | undefined)[] = [];
-
-/** Clic derecho sobre el bloque en el servidor (el cliente lo predice con redstoneToggle). */
-export function registerUse(base: number | readonly number[], fn: UseHandler): void {
-  for (const id of bases(base)) USES[familyBase(id)] = fn;
-}
-export function useHandler(id: number): UseHandler | undefined {
-  return id > 0 ? USES[familyBase(id)] : undefined;
 }

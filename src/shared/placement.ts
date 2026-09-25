@@ -24,6 +24,8 @@ import { planMaterial } from './materialPlacement'; // Fase 6.5 (materiales)
 import { isCandleCake } from './blocks'; // Fase 6.5 (materiales)
 import { skullPlacement } from './blocks'; // Fase 6.5 (colecciones)
 import { CONDUIT, conduitFor } from './blocks'; // Fase 6.5 (equipo)
+import { planRedstone } from './redstonePlacement'; // Fase 7 (redstone)
+import { isIronOpenable } from './blocks'; // Fase 7 (redstone)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -127,6 +129,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 6.5 (decoración): faroles, campanas, cadenas y andamios.
   const deco = planDecor(get, hit, base, x, y, z, face, facing);
   if (deco !== undefined) return deco;
+  // Fase 7 (redstone): polvo, antorchas, palancas, botones, placas, repetidores, comparadores, ganchos…
+  const rs = planRedstone(get, hit, base, x, y, z, face, facing);
+  if (rs !== undefined) return rs;
   // Fase 6.5 (colecciones): cabezas en el suelo (16 orientaciones, mirando al jugador) o en la pared.
   const skull = skullPlacement(base, face, hit.nx, hit.nz, yaw);
   if (skull >= 0) return skull && blockSupported(skull, rel(get, x, y, z)) ? one(skull) : null;
@@ -267,6 +272,7 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
 
 /** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores, carteles, velas). */
 export function isUsable(id: number): boolean {
+  if (isIronOpenable(id)) return false; // Fase 7 (redstone): la puerta y la trampilla de hierro sólo las abre la redstone
   return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id) ||
     isCandle(id) || // Fase 6.5 (colores): encender o apagar velas
     isRipeBerryBush(id) || // Fase 6.5 (océano y plantas): cosechar las bayas dulces

@@ -135,6 +135,7 @@ export class ItemPhysics {
         e.vx = e.vy = e.vz = 0;
         e.flags = typeof e.shooter === 'string' ? EF_PICKABLE : 0;
         this.m.host.fx('arrow_hit', nx, ny, nz);
+        this.m.host.projectileHit?.('arrow', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z); // Fase 7 (redstone)
         return;
       }
       e.x = nx;

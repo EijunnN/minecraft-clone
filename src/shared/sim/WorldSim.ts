@@ -39,6 +39,8 @@ export class WorldSim {
   onLoot: ((chests: StructureChest[]) => void) | null = null;
   /** Fase 6 (aldeanos): aldeanos de una aldea recién generada (una sola vez por chunk). */
   onVillagers: ((villagers: VillagerSpawn[]) => void) | null = null;
+  /** Fase 7 (redstone): un chunk acaba de cargarse (sus componentes se apuntan y reprograman). */
+  onChunkLoaded: ((c: SimChunk) => void) | null = null;
   generatedCount = 0;
 
   constructor(seed: number, store: ServerStore) {
@@ -137,6 +139,7 @@ export class WorldSim {
     }
     this.chunks.set(key, c);
     this.generatedCount++;
+    this.onChunkLoaded?.(c); // Fase 7 (redstone)
     return c;
   }
 
@@ -150,6 +153,11 @@ export class WorldSim {
       }
     }
     return n;
+  }
+
+  /** Fase 7 (redstone): chunks cargados ahora mismo. */
+  loadedChunks(): IterableIterator<SimChunk> {
+    return this.chunks.values();
   }
 
   get loadedCount(): number {

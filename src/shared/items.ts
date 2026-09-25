@@ -33,6 +33,7 @@ import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
 import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
 import { DISCS } from './discs'; // Fase 6.5 (colecciones)
+import { REDSTONE_WIRE, TRIPWIRE, IRON_DOOR } from './blocks'; // Fase 7 (redstone)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -499,6 +500,15 @@ export const NAUTILUS_SHELL = item('nautilus_shell', 'Concha de nautilo');
 export const FIREWORK_ROCKET = item('firework_rocket', 'Cohete de fuegos artificiales');
 export const FIREWORK_STAR = item('firework_star', 'Estrella de fuegos artificiales');
 
+// ------------------------------------------------------------------ Fase 7 (redstone)
+// El polvo de redstone pone el polvo en el suelo y la cuerda, la cuerda tendida (como las semillas
+// plantan su cultivo); la puerta de hierro se ve plana en la mano, como las de madera. El cuarzo del
+// Nether (comparador y sensor de luz solar) sólo sale en el Nether (fase 8): de momento, en creativo.
+ITEMS[REDSTONE].block = REDSTONE_WIRE;
+ITEMS[STRING].block = TRIPWIRE;
+ITEMS[IRON_DOOR].sprite = 'iron_door';
+export const QUARTZ = item('quartz', 'Cuarzo del Nether');
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -672,3 +682,6 @@ smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
+
+// ------------------------------------------------------------------ Fase 7 (redstone)
+(CREATIVE_ITEMS as number[]).push(QUARTZ);

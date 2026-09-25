@@ -39,6 +39,12 @@ export class BlockEdits {
   materials: ((s: Session, x: number, y: number, z: number, id: number, item: number, h: number) => boolean) | null = null;
   /** Fase 6.5 (calderos): llenar, vaciar y lavar en un caldero. */
   cauldrons: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
+  /** Fase 7 (redstone): clic derecho sobre un componente (palanca, botón, repetidor…); devuelve si lo atendió. */
+  redstone: ((x: number, y: number, z: number, id: number) => boolean) | null = null;
+  /** Fase 7 (redstone): se coloca algo contra (x, y, z) (la mena de redstone se enciende). */
+  touched: ((x: number, y: number, z: number) => void) | null = null;
+  /** Fase 7 (redstone): justo antes de romper un bloque con la herramienta `tool` (cuerda y tijeras). */
+  beforeBreak: ((x: number, y: number, z: number, id: number, tool: number) => void) | null = null;
 
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
@@ -80,6 +86,7 @@ export class BlockEdits {
           return;
         }
         const drops = !creative && (!BLOCK_FLUID[cur] || wet) ? blockDrops(cur, Number.isInteger(tool) ? tool : 0, () => ctx.rand()) : [];
+        this.beforeBreak?.(x, y, z, cur, Number.isInteger(tool) ? tool : 0); // Fase 7 (redstone)
         ctx.world.setBlock(x, y, z, wet ? emptyAfterBreak(cur) : AIR);
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
         // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
@@ -133,6 +140,7 @@ export class BlockEdits {
     }
     ctx.asActor(s.id, () => this.rules.applyEdits(edits));
     this.placed?.(s, msg, edits);
+    this.touched?.(x, y, z); // Fase 7 (redstone)
   }
 
   /** Clic derecho sobre un bloque: objetos (azada, polvo de hueso, tijeras), puertas, tartas, camas y compostadores. */
@@ -143,6 +151,9 @@ export class BlockEdits {
     const id = ctx.world.getBlock(x, y, z);
     if (id < 0) return;
     const item = Number(msg.item);
+    // Fase 7 (redstone): palancas, botones, repetidores, comparadores, bloques musicales, sensores y menas.
+    const rsUse = this.redstone;
+    if (rsUse && ctx.asActor(s.id, () => rsUse(x, y, z, id))) return;
     // El compostador acepta cualquier objeto (o la mano, para sacar el polvo de hueso).
     if (familyBase(id) === COMPOSTER) {
       this.composters.use(s, x, y, z, Number.isInteger(item) && item > 0 ? item : 0);

@@ -90,6 +90,7 @@ export class GearShots {
         e.age = 0;
         e.vx = e.vy = e.vz = 0;
         m.host.fx('trident_hit', nx, ny, nz);
+        m.host.projectileHit?.('trident', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z); // Fase 7 (redstone)
         return;
       }
       e.x = nx;

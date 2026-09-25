@@ -14,11 +14,12 @@ import {
   family, defs, L, familyBase, stateOf, stateProps, isSlab, isStairs, isTrapdoor, FAMILY_KINDS, KINDS, BLOCK_COLLIDE,
   R_CUBE, R_MODEL, R_TORCH, type NeighborGet, type Opts, type BlockDef,
 } from './registry';
-import { REDSTONE_ORE, STONE, CHEST, GLOWSTONE } from './classic';
+import { REDSTONE_ORE, CHEST, GLOWSTONE } from './classic';
 import { WOODS, isFence } from './building';
 import { WALLS } from './decoration';
 import { DEEPSLATE_ORE, SURFACE_ORE } from './underground';
-import { addCopperVariants, OXIDATION_STAGES, copperTexture } from './copperBlocks';
+import { addCopperVariants, copperTexture } from './copperBlocks';
+import { EXTRA_CHESTS } from './queries';
 import { mbox, rotateBoxes, rotateFlat, DIR_X, DIR_Z, DIR_FACE, type ModelBox } from '../blockModels';
 import { registerRedstone, setConductor, emitterOf, isConductor, HFACE, UP, DOWN, type RedstoneView } from '../redstone/api';
 
@@ -160,6 +161,7 @@ export function wireConnections(get: NeighborGet, dot: boolean, out: number[]): 
 }
 
 const tmpConn = [0, 0, 0, 0];
+const emitConn = [0, 0, 0, 0];
 
 /** Forma del polvo: mancha central, brazos hacia sus uniones y tiras que suben por las paredes. */
 function wireShape(get: NeighborGet, dot: boolean, t: number): ModelBox[] {
@@ -197,9 +199,8 @@ registerRedstone(REDSTONE_WIRE, {
       const p = wirePower(id);
       if (p === 0 || face === UP) return 0;
       if (face === DOWN) return p;
-      const c = [0, 0, 0, 0];
-      wireConnections(relGet(v, x, y, z), wireDot(id), c);
-      return c[HFACE.indexOf(face)] ? p : 0;
+      wireConnections(relGet(v, x, y, z), wireDot(id), emitConn);
+      return emitConn[HFACE.indexOf(face)] ? p : 0;
     },
     // La «potencia débil» de Minecraft: carga el bloque como fuerte, salvo para otro polvo (lo trata el motor).
     strong: (v, x, y, z, id, face) => {
@@ -648,6 +649,8 @@ export const TRAPPED_CHEST_DOUBLE = family('trapped_chest_double', 'Cofre trampa
   tex[DIR_FACE[(st.facing + 2) & 3]] = st.side === 0 ? 'chest_side_seam_left' : 'chest_side_seam_right';
   return { tex, hardness: 2.5, tool: 'axe', sound: 'wood', category: null, base: TRAPPED_CHEST };
 });
+// Es un cofre más (se abre, guarda cosas y se une en dobles): lo tratan las consultas de cofres.
+EXTRA_CHESTS.push({ single: TRAPPED_CHEST, double: TRAPPED_CHEST_DOUBLE });
 export function isTrappedChest(id: number): boolean {
   const b = familyBase(id);
   return id > 0 && (b === TRAPPED_CHEST || b === TRAPPED_CHEST_DOUBLE);
@@ -800,7 +803,6 @@ registerRedstone([...ROD_BASES], {
 setConductor([GLOWSTONE, REDSTONE_BLOCK, ...[0, 1, 2, 3].map((f) => CHEST + f)], false);
 for (let i = 0; i < 4; i++) setConductor(TRAPPED_CHEST + i, false);
 for (let i = 0; i < 8; i++) setConductor(TRAPPED_CHEST_DOUBLE + i, false);
-void STONE;
 
 // ------------------------------------------------------------------ inventario creativo
 
@@ -809,4 +811,3 @@ export const REDSTONE_INVENTORY: readonly number[] = [
   LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE, REDSTONE_LAMP, DAYLIGHT_DETECTOR, TARGET, TRIPWIRE_HOOK, NOTE_BLOCK, TRAPPED_CHEST,
   IRON_DOOR, IRON_TRAPDOOR,
 ];
-void OXIDATION_STAGES;

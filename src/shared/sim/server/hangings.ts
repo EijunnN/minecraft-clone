@@ -47,6 +47,8 @@ export class Hangings {
   /** Celdas (de aire y de pared) → cuadros y marcos que dependen de ellas. */
   private byCell = new Map<number, Set<Hanging>>();
   private dirty = false;
+  /** Fase 7 (redstone): cambió un marco colgado en la celda de aire (x, y, z) (lo leen los comparadores). */
+  onFrameChanged: ((x: number, y: number, z: number) => void) | null = null;
 
   constructor(private ctx: ServerContext, store: ServerStore) {
     try {
@@ -89,6 +91,7 @@ export class Hangings {
     e.variant = h.v;
     h.ent = e.id;
     this.byEnt.set(e.id, h);
+    if (h.kind >= 1) this.onFrameChanged?.(h.x, h.y, h.z); // Fase 7 (redstone)
   }
 
   private add(h: Hanging): void {
@@ -110,6 +113,14 @@ export class Hangings {
     this.byEnt.delete(h.ent);
     this.ctx.entities.remove(h.ent);
     this.dirty = true;
+    if (h.kind >= 1) this.onFrameChanged?.(h.x, h.y, h.z); // Fase 7 (redstone)
+  }
+
+  /** Fase 7 (redstone): lectura de un comparador del marco colgado en la celda de aire (x, y, z): giro + 1 con objeto, 0 vacío, −1 si no hay. */
+  frameSignal(x: number, y: number, z: number): number {
+    const set = this.byCell.get(posKey(x, y, z));
+    if (set) for (const h of set) if (h.kind >= 1 && h.x === x && h.y === y && h.z === z) return h.v ? h.rot + 1 : 0;
+    return -1;
   }
 
   /** ¿Sigue bien colgado? (pared sólida detrás y aire delante en todas sus celdas). */
@@ -197,6 +208,7 @@ export class Hangings {
     h.rot = (h.rot + 1) & 7;
     e.pitch = (h.rot * Math.PI) / 4;
     this.dirty = true;
+    this.onFrameChanged?.(h.x, h.y, h.z); // Fase 7 (redstone)
     ctx.fx('frame_rotate', e.x, e.y, e.z);
     reply(false);
   }

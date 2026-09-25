@@ -131,6 +131,7 @@ export function blockFacing(id: number): number {
   if (id >= CHEST && id < CHEST + 4) return id - CHEST;
   const b = familyBase(id);
   if (b === CHEST_DOUBLE || b === SMOKER || b === BLAST_FURNACE || b === STONECUTTER) return stateProps(id)!.facing;
+  if (extraChest(b)) return stateProps(id)!.facing; // Fase 7 (redstone): cofre trampa
   return -1;
 }
 
@@ -176,7 +177,31 @@ export function furnaceWithLit(id: number, lit: boolean): number {
 export function isChest(id: number): boolean {
   return (id >= CHEST && id < CHEST + 4) || familyBase(id) === CHEST_DOUBLE ||
     // Fase 6 (aldeanos): el barril guarda cosas como un cofre sencillo.
-    defs[id]?.key === 'barrel';
+    defs[id]?.key === 'barrel' ||
+    (id > 0 && !!extraChest(familyBase(id))); // Fase 7 (redstone): cofre trampa
+}
+
+/**
+ * Fase 7 (redstone): cofres registrados después (el cofre trampa), con su estado base sencillo (con
+ * `facing`) y doble (con `facing` y `side`, como CHEST_DOUBLE). Sólo se unen en dobles con los suyos.
+ */
+export const EXTRA_CHESTS: { single: number; double: number }[] = [];
+
+function extraChest(base: number): { single: number; double: number } | undefined {
+  for (const c of EXTRA_CHESTS) if (base === c.single || base === c.double) return c;
+  return undefined;
+}
+
+/** Fase 7 (redstone): ¿mitad de un cofre doble (normal o trampa)? */
+export function isDoubleChest(id: number): boolean {
+  const b = familyBase(id);
+  return id > 0 && (b === CHEST_DOUBLE || extraChest(b)?.double === b);
+}
+
+/** Fase 7 (redstone): el cofre sencillo (con la orientación dada) de la misma clase que `id`. */
+export function singleChestOf(id: number, facing: number): number {
+  const c = extraChest(familyBase(id));
+  return c ? c.single + (facing & 3) : CHEST + (facing & 3);
 }
 
 export function isContainer(id: number): boolean {

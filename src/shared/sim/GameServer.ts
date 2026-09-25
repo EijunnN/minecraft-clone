@@ -60,6 +60,8 @@ import { Collections } from './server/collections'; // Fase 6.5 (colecciones)
 import { Fire } from './server/fire';
 import { Conduits } from './server/conduits';
 import { Equipment } from './server/equipment';
+import { Redstone } from './server/redstone'; // Fase 7 (redstone)
+import { discOfItem } from '../collections';
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -163,6 +165,8 @@ export class GameServer {
   readonly fire: Fire;
   readonly conduits: Conduits;
   private equipment: Equipment;
+  /** Fase 7 (redstone): potencia, componentes y ticks programados. */
+  readonly redstone: Redstone;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -272,6 +276,32 @@ export class GameServer {
     };
     const interact = this.farming.extraInteract;
     this.farming.extraInteract = (s, e, msg) => this.equipment.onInteract(s, e, msg) ?? interact?.(s, e, msg) ?? null;
+    // Fase 7 (redstone): el motor, lo que lee de otros sistemas y los avisos que le llegan de ellos.
+    const rs = (this.redstone = new Redstone(this.ctx, this.nature));
+    rs.hooks = {
+      slots: (x, y, z) => this.containers.slotsAt(x, y, z),
+      viewers: (x, y, z) => this.containers.viewers(x, y, z),
+      lecternBook: (x, y, z) => this.lecterns.bookAt(x, y, z),
+      jukeboxDisc: (x, y, z) => {
+        const item = this.collections.discAt(x, y, z);
+        return item ? discOfItem(item) : -1;
+      },
+      frameSignal: (x, y, z) => this.hangings.frameSignal(x, y, z),
+    };
+    this.containers.viewersChanged = (x, y, z) => rs.viewersChanged(x, y, z);
+    this.containers.contentsChanged = (x, y, z) => rs.analogChanged(x, y, z);
+    this.hangings.onFrameChanged = (x, y, z) => rs.analogChanged(x, y, z);
+    this.world.onChunkLoaded = (c) => rs.onChunkLoaded(c);
+    this.storms.redirect = (x, y, z) => rs.lightningTarget(x, y, z);
+    const strikeRs = this.storms.onStrike;
+    this.storms.onStrike = (x, y, z) => {
+      strikeRs?.(x, y, z);
+      rs.lightning(x, y, z);
+    };
+    this.edits.redstone = (x, y, z, id) => rs.use(x, y, z, id);
+    this.edits.touched = (x, y, z) => rs.touch(x, y, z);
+    this.edits.beforeBreak = (x, y, z, id, tool) => rs.beforeBreak(x, y, z, id, tool);
+    for (const c of this.world.loadedChunks()) rs.onChunkLoaded(c);
   }
 
   get seed(): number {
@@ -376,6 +406,8 @@ export class GameServer {
       giveXp: (id, n) => {
         for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
       },
+      // Fase 7 (redstone): proyectiles que se clavan (diana, botones de madera).
+      projectileHit: (kind, bx, by, bz, px, py, pz) => this.redstone?.projectileHit(kind, bx, by, bz, px, py, pz),
       // Fase 6 (monstruos): efectos de estado que causan las criaturas (los aplica el cliente).
       effectPlayer: (id, effect, seconds, amp) => {
         for (const s of this.sessions.values()) {
@@ -476,6 +508,7 @@ export class GameServer {
     this.sessions.delete(conn);
     if (!s.joined) return;
     this.trading.onLeave(s); // Fase 6 (aldeanos)
+    this.containers.close(s); // Fase 7 (redstone): deja de mirar el cofre trampa
     this.savePlayer(s);
     this.broadcast({ t: 'leave', id: s.id });
     this.riding.onLeave(s); // Fase 6 (monturas)
@@ -583,7 +616,7 @@ export class GameServer {
         if (this.allow(s, 1)) this.containers.onOpen(s, msg);
         break;
       case 'close':
-        s.container = null;
+        this.containers.close(s); // Fase 7 (redstone): los cofres trampa cuentan quién mira
         break;
       case 'cclick':
       case 'cput':
@@ -889,6 +922,7 @@ export class GameServer {
     this.collections?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (colecciones)
     this.fire?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (equipo)
     this.conduits?.onBlockChanged(x, y, z, old, id);
+    this.redstone?.onBlockChanged(x, y, z, old, id); // Fase 7 (redstone)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -920,6 +954,7 @@ export class GameServer {
     this.fire.tick(); // Fase 6.5 (equipo)
     this.conduits.tick();
     this.equipment.tick();
+    this.redstone.tick(); // Fase 7 (redstone)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {
