@@ -13,6 +13,7 @@ import { standable } from '../pathfind';
 import type { Entity } from '../entities';
 import type { VillagerSpawn } from '../../world/villages';
 import type { ServerContext, Session } from './context';
+import { ExplorerTrades } from './explorerTrades'; // Fase 7.5 (mansión)
 
 /** Distancia máxima para comerciar (bloques). */
 const TRADE_RANGE = 6;
@@ -26,13 +27,17 @@ export class Trading {
 
   /** Fase 6 (asaltos): ¿es héroe de la aldea este jugador? (rebaja del 30 % en las esmeraldas). */
   heroOf: (name: string) => boolean = () => false;
+  /** Fase 7.5 (mansión): mapas de explorador del cartógrafo. */
+  readonly explorer: ExplorerTrades;
 
-  constructor(private ctx: ServerContext) {}
+  constructor(private ctx: ServerContext) {
+    this.explorer = new ExplorerTrades(ctx);
+  }
 
   /** Ofertas actuales de un aldeano o comerciante (con la rebaja del héroe, si `s` lo es). */
   offers(e: Entity, s?: Session): Offer[] {
     const v = this.ctx.entities.villagers.data(e);
-    const list = e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : offersFor(v.prof, v.level, v.seed);
+    const list = e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : this.explorer.resolve(e, offersFor(v.prof, v.level, v.seed)); // Fase 7.5
     if (!s || e.type === MOB_WANDERING_TRADER || !this.heroOf(s.name)) return list;
     return list.map((o) => o.cost[0] === EMERALD ? { ...o, cost: [EMERALD, Math.max(1, Math.round(o.cost[1] * 0.7))] as [number, number] } : o);
   }

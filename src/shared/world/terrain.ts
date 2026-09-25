@@ -17,6 +17,7 @@ import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, h
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
 import { DIR_X, DIR_Z } from '../blockModels';
 import { placeStructures, locateStructure, type StructureChest } from './structures';
+import type { StructureMob } from './structures'; // Fase 7.5 (mansión)
 import { VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { placeInfested } from './infested'; // Fase 6 (monstruos)
@@ -80,6 +81,8 @@ export interface GenResult {
   chests: StructureChest[];
   /** Fase 6 (aldeanos): aldeanos de una aldea cuyo pozo cae en este chunk (el servidor los hace aparecer). */
   villagers: VillagerSpawn[];
+  /** Fase 7.5 (mansión): criaturas de las estructuras de este chunk (el servidor las hace aparecer). */
+  mobs: StructureMob[];
 }
 
 const CAVE_GRID = 4;
@@ -851,7 +854,8 @@ export class TerrainGenerator {
 
     // --- 8b. Estructuras (mazmorras, minas, templos, naufragios…) ---
     const villagers: VillagerSpawn[] = []; // Fase 6 (aldeanos)
-    const chests = placeStructures(this, blocks, cx, cz, tops, villagers);
+    const mobs: StructureMob[] = []; // Fase 7.5 (mansión)
+    const chests = placeStructures(this, blocks, cx, cz, tops, villagers, mobs);
     // Fase 6.5 (océano y plantas): arrecifes, algas y praderas marinas; flores altas, bayas, azaleas y cuevas frondosas.
     decorate65(this, blocks, tops, infos, cx, cz);
 
@@ -902,7 +906,7 @@ export class TerrainGenerator {
         tint[o + 3] = Math.round(clamp01(inf.temp * 0.6 + 0.5) * 255);
       }
     }
-    return { blocks, tint, heights, chests, villagers };
+    return { blocks, tint, heights, chests, villagers, mobs };
   }
 
   // ---------------------------------------------------------------- árboles

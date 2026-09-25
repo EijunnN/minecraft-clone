@@ -27,6 +27,11 @@ export interface TradeOffer {
   data?: ItemData;
   /** Fase 7 (encantamientos): se encanta al crear la oferta ('book': libro al azar; 'item': con 5–19 niveles). */
   enchant?: 'book' | 'item';
+  /**
+   * Fase 7.5 (mansión): mapa de explorador hacia la estructura más cercana de esta clave (el servidor la
+   * busca desde el aldeano; si no hay ninguna, la oferta no sale).
+   */
+  explorer?: string;
 }
 
 export interface Profession {
@@ -244,6 +249,10 @@ export function offersFor(prof: number, level: number, seed: number): Offer[] {
     out.push(...pool.slice(0, PICKS[lvl]));
   }
   while (out.length > MAX_OFFERS) out.shift();
+  // Fase 7.5 (mansión): los mapas de explorador del cartógrafo salen siempre en su nivel (aparte del sorteo).
+  for (let lvl = 0; lvl < Math.min(level, p.pool.length); lvl++) {
+    (EXPLORER_TRADES[prof]?.[lvl] ?? []).forEach((o, i) => out.push({ ...o, key: lvl * 16 + 12 + i }));
+  }
   return out.map((o) => (o.enchant ? enchantOffer(o, seed) : o)); // Fase 7 (encantamientos)
 }
 
@@ -348,3 +357,16 @@ function enchantOffer(o: Offer, seed: number): Offer {
   void _e;
   return { ...rest, cost: [o.cost[0], price], result: [stack.id, 1], ...(stack.data ? { data: stack.data } : {}) };
 }
+
+// ------------------------------------------------------------------ Fase 7.5 (mansión)
+// Mapas de explorador del cartógrafo, como en Minecraft 26.x: el del monumento oceánico de oficial (13
+// esmeraldas y una brújula) y el de la mansión del bosque de maestro (14 esmeraldas y una brújula). No
+// entran en el sorteo de ofertas: salen siempre (si hay una estructura así en el mundo).
+import { FILLED_MAP } from './items';
+const explorerTrade = (kind: string, em: number, xp: number): TradeOffer => ({
+  cost: [EMERALD, em], cost2: [COMPASS, 1], result: [FILLED_MAP, 1], max: 12, xp, explorer: kind,
+});
+/** Ofertas de mapas de explorador por profesión y nivel (índice 0 = novato). */
+export const EXPLORER_TRADES: Readonly<Record<number, TradeOffer[][]>> = {
+  [PROF_CARTOGRAPHER]: [[], [], [explorerTrade('monument', 13, 10)], [], [explorerTrade('mansion', 14, 30)]],
+};

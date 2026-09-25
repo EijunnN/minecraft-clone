@@ -191,7 +191,7 @@ export class Spawner {
       if (e.villager) continue; // Fase 6 (aldeanos): los aldeanos no se reciclan ni cuentan
       total++;
       const d = this.m.nearestPlayer2D(e, players);
-      if (d > ACTIVE_RANGE && !this.m.companions.keep(e) && !e.customName && !e.leash) far.push([d, e]); // Fase 6: gólems y mascotas no se reciclan (6.5: ni los que tienen nombre o correa)
+      if (d > ACTIVE_RANGE && !this.m.companions.keep(e) && !e.customName && !e.leash && !e.persistent) far.push([d, e]); // Fase 7.5: ni los alays // Fase 6: gólems y mascotas no se reciclan (6.5: ni los que tienen nombre o correa)
     }
     if (total + n <= MAX_PASSIVE) return true;
     far.sort((a, b) => b[0] - a[0]);

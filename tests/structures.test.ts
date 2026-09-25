@@ -7,6 +7,7 @@ import {
   AIR, STONE, SANDSTONE, MOSSY_COBBLESTONE, COBBLESTONE, MOB_SPAWNER, COBWEB, OBSIDIAN, SNOW_BLOCK, FENCES, OAK_PLANKS,
   isChest, DARK_OAK_LOG,
 } from '../src/shared/blocks';
+import { DARK_OAK_PLANKS } from '../src/shared/blocks'; // Fase 7.5 (mansión)
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { locateStructure, STRUCTURE_NAMES } from '../src/shared/world/structures';
@@ -20,9 +21,12 @@ test('botín: tiradas dentro de los márgenes y repartido por el cofre', () => {
   let r = 0.37;
   const rand = () => (r = (r * 9301 + 49297) % 233280 / 233280);
   for (const [name, t] of Object.entries(LOOT_TABLES)) {
+    // Fase 7.5 (mansión): las tablas con varios grupos tiran cada uno.
+    const all = [t, ...(t.pools ?? [])];
+    const lo = all.reduce((n, p) => n + p.rolls[0], 0), hi = all.reduce((n, p) => n + p.rolls[1], 0);
     for (let i = 0; i < 20; i++) {
       const out = rollLoot(t, rand);
-      assert.ok(out.length >= t.rolls[0] && out.length <= t.rolls[1], `${name}: ${out.length} montones`);
+      assert.ok(out.length >= lo && out.length <= hi, `${name}: ${out.length} montones`);
       for (const s of out) assert.ok(s.count >= 1, name);
     }
   }
@@ -43,6 +47,7 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     mineshaft: (c) => (c.get(FENCES.oak) ?? 0) + (c.get(OAK_PLANKS) ?? 0) > 3,
     village: (_c, ch) => ch.includes('village'),
     pillager_outpost: (c, ch) => ch.includes('pillager_outpost') || (c.get(DARK_OAK_LOG) ?? 0) > 20,
+    mansion: (c, ch) => ch.includes('woodland_mansion') || (c.get(DARK_OAK_PLANKS) ?? 0) > 200, // Fase 7.5 (mansión)
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);

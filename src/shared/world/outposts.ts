@@ -12,6 +12,8 @@ import { hash2 } from '../constants';
 import { mulberry32 } from './noise';
 import { isVillageBiome } from './villages';
 import type { VillageCanvas, VillageStart } from './villages';
+import type { StructureMob } from './structures'; // Fase 7.5 (mansión)
+import { MOB_ALLAY } from '../allay'; // Fase 7.5 (mansión)
 
 /** Radio que ocupa el puesto alrededor de la torre (bloques). */
 export const OUTPOST_RADIUS = 13;
@@ -25,7 +27,10 @@ export function outpostCandidate(biome: number, x: number, z: number, seed: numb
   return isVillageBiome(biome) && hash2(x, z, seed ^ 0x5a3c7) % 3 === 0;
 }
 
-type Canvas = Pick<VillageCanvas, 'x0' | 'z0' | 'get' | 'set' | 'chest' | 'foundation' | 'clearAbove'>;
+type Canvas = Pick<VillageCanvas, 'x0' | 'z0' | 'get' | 'set' | 'chest' | 'foundation' | 'clearAbove'> & {
+  /** Fase 7.5 (mansión): los alays de la jaula. */
+  mob?(m: StructureMob): void;
+};
 
 export function buildOutpost(c: Canvas, s: VillageStart): void {
   const ox = s.x, oy = s.y, oz = s.z;
@@ -107,6 +112,36 @@ export function buildOutpost(c: Canvas, s: VillageStart): void {
       c.set(x, g + 2, z, CARVED_PUMPKIN);
     }
   }
+  // Fase 7.5 (mansión): en la mitad de los puestos, una jaula de roble oscuro con alays presos (con su
+  // propio azar: el de arriba depende de lo que cae en cada chunk).
+  const cr = mulberry32(s.rng ^ 0xa11a7);
+  if (cr() < 0.5) {
+    const [dx, dz] = cr() < 0.5 ? [-9, 9] : [9, -9];
+    cage(c, ox + dx, oz + dz, oy, 1 + Math.floor(cr() * 3));
+  }
+}
+
+/**
+ * Fase 7.5 (mansión): jaula de 5×5 (postes de tronco, barrotes de valla y techo de losas) con `n` alays
+ * dentro. Se asienta sobre el suelo del centro de la jaula (la altura la da el generador, igual en todos
+ * los chunks).
+ */
+function cage(c: Canvas, x: number, z: number, oy: number, n: number): void {
+  const g = oy;
+  const fence = FENCES.dark_oak;
+  for (let dz = -2; dz <= 2; dz++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const px = x + dx, pz = z + dz;
+      c.foundation(px, g - 1, pz, COBBLESTONE);
+      c.set(px, g, pz, DARK_OAK_PLANKS);
+      c.clearAbove(px, g + 1, pz, 6);
+      const rim = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+      const post = Math.abs(dx) === 2 && Math.abs(dz) === 2;
+      for (let y = g + 1; y <= g + 3; y++) c.set(px, y, pz, post ? DARK_OAK_LOG : rim ? fence : AIR);
+      c.set(px, g + 4, pz, stateOf(SLABS.dark_oak, { type: 0 }));
+    }
+  }
+  for (let k = 0; k < n; k++) c.mob?.({ type: MOB_ALLAY, x: x + 0.5 + (k - 1) * 0.6, y: g + 1.5, z: z + 0.5 });
 }
 
 /** Tienda de lana blanca de 3 de fondo con un poste en cada extremo. */

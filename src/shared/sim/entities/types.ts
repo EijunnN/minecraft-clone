@@ -242,6 +242,11 @@ export interface Entity extends Body {
   lure?: number;
   /** Bloque que cae: altura desde la que empezó a caer (el yunque hiere según la caída). */
   fallFrom?: number;
+  /**
+   * Fase 7.5 (mansión): no desaparece nunca (los illagers de la mansión, los alays): ni lejos de los
+   * jugadores ni al reciclar animales, y se guarda con el mundo aunque sea un monstruo.
+   */
+  persistent?: boolean;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

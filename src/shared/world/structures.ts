@@ -22,6 +22,7 @@ import {
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
+import { buildMansion, mansionSite, MANSION_RADIUS } from './mansion'; // Fase 7.5 (mansión)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -29,6 +30,17 @@ export interface StructureChest {
   y: number;
   z: number;
   table: string;
+}
+
+/**
+ * Fase 7.5 (mansión): criatura que aparece con una estructura (illagers de la mansión, alays presos),
+ * una sola vez, cuando se genera por primera vez el chunk en el que está.
+ */
+export interface StructureMob {
+  type: number;
+  x: number;
+  y: number;
+  z: number;
 }
 
 /** Lienzo de un chunk: escribe sólo dentro del chunk y anota los cofres. */
@@ -40,6 +52,8 @@ class Canvas {
     readonly chests: StructureChest[],
     /** Fase 6 (aldeanos): aldeanos que aparecen con el chunk. */
     readonly villagers: VillagerSpawn[] = [],
+    /** Fase 7.5 (mansión): criaturas de las estructuras que aparecen con el chunk. */
+    readonly mobs: StructureMob[] = [],
   ) {}
 
   inside(x: number, y: number, z: number): boolean {
@@ -72,6 +86,11 @@ class Canvas {
     this.villagers.push(v);
   }
 
+  /** Fase 7.5 (mansión): criatura que aparecerá al generarse este chunk por primera vez (si cae dentro). */
+  mob(m: StructureMob): void {
+    if (this.inside(Math.floor(m.x), Math.floor(m.y), Math.floor(m.z))) this.mobs.push(m);
+  }
+
   chest(x: number, y: number, z: number, facing: number, table: string): void {
     if (!this.inside(x, y, z)) return;
     this.set(x, y, z, CHEST + facing);
@@ -99,7 +118,7 @@ class Canvas {
 
 // ------------------------------------------------------------------ tipos de estructura
 
-interface Start {
+export interface Start {
   key: string;
   x: number;
   y: number;
@@ -210,6 +229,12 @@ const GRID: GridType[] = [
     },
     build: buildOutpost,
   },
+  // Fase 7.5 (mansión): la mansión del bosque, sólo en el bosque oscuro y muy rara (como en Minecraft).
+  {
+    key: 'mansion', spacing: 80, separation: 20, salt: 10387319, radius: MANSION_RADIUS,
+    site: (gen, x, z, inf) => mansionSite(gen, x, z, inf),
+    build: buildMansion,
+  },
 ];
 
 /** Nombres en español de las estructuras (y las claves que acepta /localizar). */
@@ -217,6 +242,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   desert_pyramid: 'Templo del desierto', jungle_temple: 'Templo de la jungla', shipwreck: 'Naufragio',
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
   village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
+  mansion: 'Mansión del bosque', // Fase 7.5 (mansión)
 };
 
 const startCache = new Map<string, Start | null>();
@@ -246,10 +272,11 @@ function gridStart(gen: TerrainGenerator, t: GridType, rx: number, rz: number): 
 export function placeStructures(
   gen: TerrainGenerator, blocks: Uint16Array, cx: number, cz: number, tops: Int16Array,
   villagers: VillagerSpawn[] = [], // Fase 6 (aldeanos)
+  mobs: StructureMob[] = [], // Fase 7.5 (mansión)
 ): StructureChest[] {
   const chests: StructureChest[] = [];
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
-  const c = new Canvas(blocks, x0, z0, chests, villagers);
+  const c = new Canvas(blocks, x0, z0, chests, villagers, mobs);
   placeDungeon(gen, c, cx, cz, tops);
   for (const m of mineshaftsNear(gen, cx, cz)) buildMineshaft(c, m, tops);
   for (const t of GRID) {
@@ -264,6 +291,12 @@ export function placeStructures(
     }
   }
   return chests;
+}
+
+/** Fase 7.5 (mansión): origen de la estructura `key` de la región que contiene (x, z), si la hay. */
+export function structureStartAt(gen: TerrainGenerator, key: string, x: number, z: number): Start | null {
+  const t = GRID.find((g) => g.key === key);
+  return t ? gridStart(gen, t, Math.floor(Math.floor(x / 16) / t.spacing), Math.floor(Math.floor(z / 16) / t.spacing)) : null;
 }
 
 /** Estructura más cercana de un tipo a (x, z): [x, y, z] o null (busca hasta `maxRegions` regiones). */

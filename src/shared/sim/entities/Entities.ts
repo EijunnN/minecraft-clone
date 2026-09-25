@@ -36,6 +36,7 @@ import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
+import { AllayLife } from './allay'; // Fase 7.5 (mansión)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -89,6 +90,8 @@ export class Entities {
   readonly custom = new Map<number, (e: Entity, dt: number) => void>();
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
   explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
+  /** Fase 7.5 (mansión): alays (objetos que recogen, bailes y duplicación). */
+  readonly allays = new AllayLife(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -127,6 +130,7 @@ export class Entities {
       teleportCd: 0, goalDir: [0, 0, 0, 0], lookAt: null,
     };
     this.gear.onSpawn(e); // Fase 6.5 (equipo)
+    this.allays.init(e); // Fase 7.5 (mansión)
     this.list.set(e.id, e);
     return e;
   }
@@ -253,6 +257,7 @@ export class Entities {
   damage(e: Entity, amount: number, fromX: number, fromZ: number, attacker: string | number | null, knock = 1): boolean {
     if (e.dead || !e.ai || MOBS[e.type].inert) return false;
     if (e.invuln > 0) return false;
+    if (this.allays.immune(e, attacker)) return false; // Fase 7.5 (mansión): su jugador no hiere al alay
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
     amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
     e.health -= amount;
@@ -319,6 +324,7 @@ export class Entities {
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
     if (drops) collectionDrops(this, e, this.killer); // Fase 6.5 (colecciones): cabezas y discos
     if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
+    if (drops) this.allays.onKilled(e); // Fase 7.5 (mansión): lo que llevaba el alay
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -386,7 +392,9 @@ export class Entities {
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
-      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
+      // Fase 7.5 (mansión): los que no desaparecen (illagers de la mansión) sólo se van en pacífico.
+      const stays = e.persistent && this.host.difficulty() > 0;
+      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && !stays && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
         if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
           this.remove(e.id);
           continue;
@@ -448,7 +456,8 @@ export class Entities {
     const out: number[][] = [];
     for (const e of this.list.values()) {
       // Fase 6.5 (remate): los que llevan nombre se guardan siempre (también monstruos y calamares).
-      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) && !e.customName)) continue;
+      // Fase 7.5 (mansión): y los que no desaparecen (los illagers de la mansión).
+      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) && !e.customName && !e.persistent)) continue;
       const row = [
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
@@ -467,6 +476,10 @@ export class Entities {
       // Fase 6.5 (equipo): armadura de caballo o de lobo.
       const gear = this.gear.save(e);
       if (gear) (row as unknown[]).push(gear);
+      // Fase 7.5 (mansión): lo que lleva el alay y si no desaparece.
+      const allay = this.allays.save(e);
+      if (allay) (row as unknown[]).push(allay);
+      if (e.persistent && MOBS[e.type].hostile) (row as unknown[]).push({ persist: 1 });
       out.push(row);
     }
     return JSON.stringify(out);
@@ -497,6 +510,11 @@ export class Entities {
           if (Array.isArray(f) && f.length === 3 && f.every(Number.isInteger)) e.leash = [f[0], f[1], f[2]];
         }
         if (Array.isArray(row)) this.gear.restore(e, row as unknown[]); // Fase 6.5 (equipo)
+        // Fase 7.5 (mansión): el alay y los que no desaparecen.
+        if (Array.isArray(row)) {
+          this.allays.restore(e, row as unknown[]);
+          if ((row as unknown[]).some((c) => !!c && typeof c === 'object' && 'persist' in (c as object))) e.persistent = true;
+        }
       }
     } catch {
       /* ignorar */

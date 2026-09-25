@@ -114,7 +114,8 @@ test('ofertas: de 3 a 6 según el nivel, deterministas, y niveles por experienci
   for (const p of PROFESSIONS.slice(1)) {
     for (let lvl = 1; lvl <= 5; lvl++) {
       const o = offersFor(p.id, lvl, 1234);
-      assert.equal(o.length, Math.min(6, 2 + lvl), `${p.key} nivel ${lvl}`);
+      // Fase 7.5 (mansión): los mapas de explorador del cartógrafo van aparte del sorteo.
+      assert.equal(o.filter((t) => !t.explorer).length, Math.min(6, 2 + lvl), `${p.key} nivel ${lvl}`);
       assert.deepEqual(o, offersFor(p.id, lvl, 1234));
       // Todas se pagan o se cobran en esmeraldas.
       for (const t of o) assert.ok(t.cost[0] === EMERALD || t.cost2?.[0] === EMERALD || t.result[0] === EMERALD, `${p.key}: ${JSON.stringify(t)}`);

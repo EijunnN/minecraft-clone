@@ -114,6 +114,12 @@ export class Collections {
     return this.playing.has(posKey(x, y, z));
   }
 
+  /** Fase 7.5 (mansión): ¿suena algún tocadiscos a `r` bloques de (x, y, z)? (Los alays bailan.) */
+  playingNear(x: number, y: number, z: number, r: number): boolean {
+    for (const k of this.playing.keys()) if (Math.hypot(keyX(k) + 0.5 - x, keyY(k) + 0.5 - y, keyZ(k) + 0.5 - z) <= r) return true;
+    return false;
+  }
+
   /** Disco que tiene el tocadiscos de (x, y, z) (0 si ninguno). */
   discAt(x: number, y: number, z: number): number {
     return this.discs.get(posKey(x, y, z)) ?? 0;

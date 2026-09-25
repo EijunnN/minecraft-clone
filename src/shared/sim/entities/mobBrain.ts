@@ -104,6 +104,14 @@ export class MobBrain {
     // Fase 6 (aldeanos): oficio, reposición, puertas y huida de los zombis.
     if (isVillagerType(e.type)) this.m.villagers.tick(e, dt);
     if (e.dead || !this.m.list.has(e.id)) return;
+    // Fase 7.5 (mansión): el alay vuela, recoge objetos y baila.
+    if (this.m.allays.tick(e, dt, players)) {
+      if (!e.dead && this.m.list.has(e.id)) {
+        this.updateFlags(e, ai);
+        e.flags |= this.m.allays.flags(e);
+      }
+      return;
+    }
     // Fase 6 (fauna): abejas y loros vuelan; pandas y armadillos tienen estados propios.
     if (faunaMobTick(this.m, e, dt, players)) {
       if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
