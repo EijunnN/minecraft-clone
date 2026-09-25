@@ -37,6 +37,7 @@ import { VILLAGE_GENERATORS } from './genVillage';
 import { AQUATIC_GENERATORS } from './genAquatic'; // Fase 6 (acuáticos)
 // Fase 6 (fauna): nido de abejas, colmena, miel y panal.
 import { BEE_GENERATORS } from './genBees';
+import { STONES_GENERATORS } from './genStones'; // Fase 6.5 (piedras)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -66,6 +67,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...VILLAGE_GENERATORS, // Fase 6 (aldeanos)
   ...AQUATIC_GENERATORS, // Fase 6 (acuáticos)
   ...BEE_GENERATORS, // Fase 6 (fauna)
+  ...STONES_GENERATORS, // Fase 6.5 (piedras)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

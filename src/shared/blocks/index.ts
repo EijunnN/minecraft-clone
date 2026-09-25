@@ -122,3 +122,7 @@ export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
 // Troncos tumbados (se registran los últimos: ids guardados).
 export * from './logAxis';
+// Fase 6.5 (piedras): piedras del mundo normal y sus formas (se registran las últimas: ids guardados).
+import { STONE_INVENTORY } from './stoneBlocks';
+export * from './stoneBlocks';
+(INVENTORY_ORDER as number[]).push(...STONE_INVENTORY);

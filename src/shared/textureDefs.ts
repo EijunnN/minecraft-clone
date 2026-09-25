@@ -256,6 +256,14 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
   ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
     'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (piedras): piedras del mundo normal (piedra lisa, pulidas, pizarra profunda, toba, areniscas,
+  // barro, cinabrio y azufre).
+  ...['smooth_stone', 'smooth_stone_slab_side', 'chiseled_stone_bricks', 'polished_granite', 'polished_diorite',
+    'polished_andesite', 'polished_deepslate', 'deepslate_bricks', 'cracked_deepslate_bricks', 'deepslate_tiles',
+    'cracked_deepslate_tiles', 'chiseled_deepslate', 'polished_tuff', 'tuff_bricks', 'chiseled_tuff', 'chiseled_tuff_top',
+    'chiseled_tuff_bricks', 'chiseled_tuff_bricks_top', 'cut_red_sandstone', 'chiseled_red_sandstone', 'mud', 'packed_mud',
+    'mud_bricks', 'cinnabar', 'polished_cinnabar', 'cinnabar_bricks', 'chiseled_cinnabar', 'sulfur', 'polished_sulfur',
+    'sulfur_bricks', 'chiseled_sulfur'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

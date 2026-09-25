@@ -14,6 +14,10 @@ import {
   HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
 import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
+import { // Fase 6.5 (piedras)
+  STONE_BRICKS, SANDSTONE, RED_SANDSTONE, SMOOTH_STONE, CRACKED_STONE_BRICKS, DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_BRICKS,
+  DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES, SMOOTH_SANDSTONE, SMOOTH_RED_SANDSTONE,
+} from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -421,3 +425,11 @@ export const CREATIVE_ITEMS: readonly number[] = [
 export const PLACEABLE_BLOCKS: ReadonlySet<number> = new Set(
   ITEMS.filter((i) => i && i.block !== undefined && !i.tool).map((i) => i.block!),
 );
+
+// Fase 6.5 (piedras): fundición de piedras (como en Minecraft).
+smelt(STONE, SMOOTH_STONE);
+smelt(STONE_BRICKS, CRACKED_STONE_BRICKS);
+smelt(DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_BRICKS);
+smelt(DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES);
+smelt(SANDSTONE, SMOOTH_SANDSTONE);
+smelt(RED_SANDSTONE, SMOOTH_RED_SANDSTONE);
