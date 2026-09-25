@@ -36,6 +36,7 @@ import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
+import { MOB_WARDEN } from '../../mobs'; // Fase 7.5 (abismo)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -89,6 +90,8 @@ export class Entities {
   readonly custom = new Map<number, (e: Entity, dt: number) => void>();
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
   explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
+  /** Fase 7.5 (abismo): un catalizador de sculk cercano se come la experiencia de la criatura que muere (devuelve true). */
+  xpEater: ((e: Entity) => boolean) | null = null;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -284,6 +287,7 @@ export class Entities {
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
     this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
     this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
+    this.mobs.warden.onDamaged(e, attacker); // Fase 7.5 (abismo): el warden se enfada (y no retrocede)
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.killer = attacker; // Fase 6.5 (colecciones)
@@ -314,7 +318,7 @@ export class Entities {
       if (e.saddled) stacks.push({ id: SADDLE, count: 1 }); // Fase 6 (monturas): suelta la silla
       this.dropStacks(stacks, e.x, e.y + 0.3, e.z);
     }
-    if (drops) this.xp.onMobKilled(e);
+    if (drops && !this.xpEater?.(e)) this.xp.onMobKilled(e); // Fase 7.5 (abismo): o se la come un catalizador
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
     if (drops) collectionDrops(this, e, this.killer); // Fase 6.5 (colecciones): cabezas y discos
@@ -387,7 +391,9 @@ export class Entities {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
       if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
-        if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
+        // Fase 7.5 (abismo): el warden no desaparece por estar lejos (se hunde él solo).
+        const far = e.type !== MOB_WARDEN && (near > 96 || (near > 32 && this.rand() < dt / 40));
+        if (far || (MOBS[e.type].hostile && this.host.difficulty() === 0)) {
           this.remove(e.id);
           continue;
         }

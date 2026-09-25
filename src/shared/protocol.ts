@@ -313,7 +313,9 @@ export type ServerMsg =
   // Fase 7 (encantamientos): /encantar pone estos encantamientos al objeto de la mano.
   | { t: 'ench'; e: [number, number][] }
   // Fase 7 (mecanismos): un dispensador le pone esta pieza de armadura al jugador (en su hueco, si está libre).
-  | { t: 'equip'; s: ItemStack };
+  | { t: 'equip'; s: ItemStack }
+  // Fase 7.5 (abismo): dónde murió el jugador por última vez (la brújula de recuperación apunta allí).
+  | { t: 'death'; p: [number, number, number] };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

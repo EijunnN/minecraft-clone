@@ -13,7 +13,12 @@ export const WARDEN_POSE_SHIFT = 12;
 export const WARDEN_POSE_MASK = 7 << WARDEN_POSE_SHIFT;
 export const POSE_IDLE = 0, POSE_EMERGING = 1, POSE_DIGGING = 2, POSE_SNIFFING = 3, POSE_ROARING = 4, POSE_SONIC = 5,
   POSE_ATTACK = 6;
-/** Nivel de enfado (2 bits): 0 tranquilo, 1 agitado, 2 enfadado. Acelera el latido del corazón. */
+/** Zarcillos vibrando (acaba de sentir una vibración). */
+export const WARDEN_TENDRILS = 1 << 15;
+/**
+ * Enfado hacia su presa principal, en cuartos del umbral de enfado (2 bits: 0..3, 3 = enfadado). Acelera el
+ * latido del corazón, como el `clientAngerLevel` de Minecraft.
+ */
 export const WARDEN_ANGER_SHIFT = 19;
 export const WARDEN_ANGER_MASK = 3 << WARDEN_ANGER_SHIFT;
 
@@ -23,6 +28,11 @@ export function wardenPose(flags: number): number {
 
 export function wardenAngerLevel(flags: number): number {
   return (flags & WARDEN_ANGER_MASK) >> WARDEN_ANGER_SHIFT;
+}
+
+/** Nivel (0..3) que viaja en los bits de estado para un enfado. */
+export function angerBits(anger: number): number {
+  return Math.round(Math.max(0, Math.min(1, anger / ANGER_ANGRY)) * 3);
 }
 
 /** Duración de cada pose (ticks de juego, los de Minecraft). */
@@ -39,14 +49,14 @@ export const ANGER_AGITATED = 40;
 export const ANGER_ANGRY = 80;
 export const ANGER_MAX = 150;
 
-/** Nivel (0, 1, 2) de un enfado. */
+/** Nivel (0 tranquilo, 1 agitado, 2 enfadado) de un enfado. */
 export function angerLevelOf(anger: number): number {
   return anger >= ANGER_ANGRY ? 2 : anger >= ANGER_AGITATED ? 1 : 0;
 }
 
-/** Segundos entre latidos según el nivel de enfado (más deprisa cuanto más enfadado). */
-export function heartbeatInterval(level: number): number {
-  return [1.6, 1.05, 0.6][Math.max(0, Math.min(2, level))];
+/** Segundos entre latidos según los bits de enfado (de 2 s tranquilo a 0,5 s enfadado, como en Minecraft). */
+export function heartbeatInterval(bits: number): number {
+  return (40 - Math.max(0, Math.min(3, bits)) * 10) / 20;
 }
 
 export const WARDEN_DEF: MobDef = (() => {

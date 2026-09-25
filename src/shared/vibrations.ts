@@ -26,13 +26,15 @@ export const VIBRATION_FREQUENCY = {
 export type VibrationEvent = keyof typeof VIBRATION_FREQUENCY
   /** Resonancia de la amatista junto a un sensor que se activa (frecuencia 1..15). */
   | 'resonate'
-  /** Un sensor que se activa hace chasquear sus zarcillos: sólo lo oyen los chilladores (no es una vibración). */
-  | 'tendrils_clicking';
+  /** Un sensor que se activa hace chasquear sus zarcillos: sólo lo oyen los chilladores y el warden (no es una vibración). */
+  | 'tendrils_clicking'
+  /** Un chillador chilla: sólo lo oye el warden. */
+  | 'shriek';
 
 /** Frecuencia de un suceso (la de la resonancia va aparte); 0 si no es una vibración. */
 export function vibrationFrequency(ev: VibrationEvent, resonance = 0): number {
   if (ev === 'resonate') return resonance;
-  if (ev === 'tendrils_clicking') return 0;
+  if (ev === 'tendrils_clicking' || ev === 'shriek') return 0;
   return VIBRATION_FREQUENCY[ev];
 }
 
@@ -122,4 +124,14 @@ export function vibrationOccluded(
     if (occludesVibrations(get(cx, cy, cz))) return true;
   }
   return false;
+}
+
+/** Desplazamiento (−63..63 por eje, en medios bloques) empaquetado en un número para un efecto (partículas). */
+export function packDelta(dx: number, dy: number, dz: number): number {
+  const q = (v: number) => Math.max(0, Math.min(255, Math.round(v * 2) + 128));
+  return q(dx) | (q(dy) << 8) | (q(dz) << 16);
+}
+
+export function unpackDelta(v: number): [number, number, number] {
+  return [((v & 255) - 128) / 2, (((v >> 8) & 255) - 128) / 2, (((v >> 16) & 255) - 128) / 2];
 }

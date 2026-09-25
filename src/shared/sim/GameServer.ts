@@ -70,6 +70,7 @@ import { Mechanisms } from './server/mechanisms'; // Fase 7 (mecanismos)
 import { BellResonance } from './server/bellResonance'; // Fase 7 (efectos)
 import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
+import { DeepDark } from './server/deepDark'; // Fase 7.5 (abismo)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -193,6 +194,8 @@ export class GameServer {
   readonly mechanisms: Mechanisms;
   /** Fase 7 (efectos): la campana hace brillar a los saqueadores. */
   private bells: BellResonance;
+  /** Fase 7.5 (abismo): vibraciones, sculk, chilladores, warden y la brújula de recuperación. */
+  readonly deepDark: DeepDark;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -354,6 +357,13 @@ export class GameServer {
     const lightBlock = this.fire.lightBlock.bind(this.fire);
     this.fire.lightBlock = (x, y, z) => mech.light(x, y, z) || lightBlock(x, y, z);
     this.fire.burned = (x, y, z) => mech.light(x, y, z);
+    // Fase 7.5 (abismo): el Deep Dark (los rayos también vibran).
+    const dd = (this.deepDark = new DeepDark(this.ctx, store, rs));
+    const strikeDd = this.storms.onStrike;
+    this.storms.onStrike = (x, y, z) => {
+      strikeDd?.(x, y, z);
+      dd.lightning(x, y, z);
+    };
   }
 
   get seed(): number {
@@ -497,6 +507,7 @@ export class GameServer {
   private fx(kind: string, x: number, y: number, z: number, a?: number, b?: number): void {
     // Fase 7 (efectos): toda campana que suena (tocada o con redstone) pasa por aquí.
     if (kind === 'bell') this.bells?.ring(x, y, z);
+    this.deepDark?.onFx(kind, x, y, z); // Fase 7.5 (abismo): explosiones, notas, campanas… vibran
     const msg: ServerMsg = { t: 'fx', k: kind, p: [r2(x), r2(y), r2(z)] };
     if (a !== undefined) msg.a = a;
     if (b !== undefined) msg.b = b;
@@ -701,7 +712,8 @@ export class GameServer {
         const p = Array.isArray(msg.p) && msg.p.length === 3 ? msg.p.map(Number) : [];
         if (!Number.isInteger(n) || n < 1 || n > 100 || p.length !== 3 || !p.every(Number.isFinite)) break;
         if (!(s.s & STATE_DEAD) || s.mode === 'c' || Math.hypot(p[0] - s.p[0], p[1] - s.p[1], p[2] - s.p[2]) > 4) break;
-        if (this.allow(s, 5)) this.entities.xp.playerDrop(s.id, n, p[0], p[1], p[2], this.now());
+        // Fase 7.5 (abismo): junto a un catalizador de sculk, se la come él.
+        if (this.allow(s, 5) && !this.deepDark.playerXp(p[0], p[1], p[2], n)) this.entities.xp.playerDrop(s.id, n, p[0], p[1], p[2], this.now());
         break;
       }
       // Fase 6 (aldeanos): comercio.
@@ -716,6 +728,7 @@ export class GameServer {
         break;
       case 'died':
         this.raids.onDeath(s); // Fase 6 (asaltos): se pierde el presagio
+        this.deepDark.onDied(s); // Fase 7.5 (abismo): brújula de recuperación
         if (typeof msg.m === 'string' && this.allow(s, 5)) {
           const m = msg.m.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80);
           if (m) this.broadcast({ t: 'chat', id: null, name: '', m: `☠ ${s.name} ${m}.` });
@@ -852,6 +865,7 @@ export class GameServer {
     this.riding.onJoin(s); // Fase 6 (monturas): quién va montado
     this.collections.onJoin(s); // Fase 6.5 (colecciones): los tocadiscos que están sonando
     this.transport.onJoin(s); // Fase 7 (transporte): quién va en cada barca o vagoneta
+    this.deepDark.onJoin(s); // Fase 7.5 (abismo): su última muerte
   }
 
   private loadRecord(name: string): PlayerRecord | null {
@@ -1022,6 +1036,7 @@ export class GameServer {
     this.transport?.rails.onBlockChanged(x, y, z); // Fase 7 (transporte): potencia de los raíles
     this.mechanisms?.onBlockChanged(x, y, z, old, id); // Fase 7 (mecanismos)
     this.redstone?.onBlockChanged(x, y, z, old, id); // Fase 7 (redstone)
+    this.deepDark?.onBlockChanged(x, y, z, old, id, this.actor); // Fase 7.5 (abismo): vibraciones y venas de sculk
   }
 
   // ------------------------------------------------------------------ bucle
@@ -1058,6 +1073,7 @@ export class GameServer {
     this.enchantWork.tick(); // Fase 7 (encantamientos)
     this.redstone.tick(); // Fase 7 (redstone)
     this.mechanisms.tick(); // Fase 7 (mecanismos): después de la redstone (los pulsos cortos llegan antes)
+    this.deepDark.tick(); // Fase 7.5 (abismo)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {
@@ -1137,6 +1153,7 @@ export class GameServer {
     this.banners.flush(this.store);
     this.collections.flush(this.store); // Fase 6.5 (colecciones)
     this.transport.flush(this.store); // Fase 7 (transporte)
+    this.deepDark.flush(this.store); // Fase 7.5 (abismo)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

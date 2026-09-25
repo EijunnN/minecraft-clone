@@ -13,6 +13,7 @@ import { MIN_Y, VOID_Y } from '../../constants';
 import { MonsterAI, isSpiderLike } from './monsterAi';
 import { faunaMobTick, faunaFlags } from './wildlife'; // Fase 6 (fauna)
 import { IllagerAI } from './illagers'; // Fase 6 (asaltos)
+import { WardenAI } from './warden'; // Fase 7.5 (abismo)
 import { CHARGED_POWER, EF_CHARGED, skullDisguises } from '../../collections'; // Fase 6.5 (colecciones)
 import { PT_LONG_SLOWNESS } from '../../potions'; // Fase 7 (pociones)
 import { invisibleRange } from '../../effects';
@@ -22,10 +23,13 @@ export class MobBrain {
   readonly monsters: MonsterAI;
   /** Fase 6 (asaltos): illagers, vex, devastadores, colmillos y zombis contra aldeanos. */
   readonly illagers: IllagerAI;
+  /** Fase 7.5 (abismo): el warden. */
+  readonly warden: WardenAI;
 
   constructor(private m: Entities) {
     this.monsters = new MonsterAI(m, this);
     this.illagers = new IllagerAI(m, this);
+    this.warden = new WardenAI(m, this);
   }
 
   nearestPlayer(e: Entity, players: PlayerView[], max: number, needLos: boolean): PlayerView | null {
@@ -60,6 +64,7 @@ export class MobBrain {
     // Fase 6 (monturas): la montura que guía su jinete ni piensa ni se mueve sola.
     if (this.m.mounts.riddenTick(e, dt)) return;
     if (e.vehicle !== undefined && this.m.seated?.(e)) return; // Fase 7 (transporte): sentada en una barca o vagoneta
+    if (this.warden.tick(e, dt, players)) return; // Fase 7.5 (abismo): el warden lo decide todo solo
     // Ambiente: sol, lava, fuego, caída, vacío.
     if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
     if (e.inLava) {
