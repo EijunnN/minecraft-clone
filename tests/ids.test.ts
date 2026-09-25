@@ -159,6 +159,36 @@ test('los ids de los calderos no cambian', () => {
   assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 4486), 2085594669, 'huella de los bloques');
 });
 
+// Fase 7 (magia y tecnología): soporte para pociones, raíles, mesa de encantamientos, yunques, redstone y
+// mecanismos; pociones, barcas y vagonetas. También los encantamientos (en `data`), los tipos de poción
+// (en `dmg`), los efectos nuevos y las entidades que se guardan.
+import {
+  BREWING_STAND, RAIL, ENCHANTING_TABLE, ANVIL, REDSTONE_WIRE, LEVER, REPEATER, COMPARATOR, REDSTONE_LAMP,
+  PISTON, STICKY_PISTON, OBSERVER, HOPPER, DISPENSER, DROPPER, TNT,
+} from '../src/shared/blocks';
+import { ENCHANTED_BOOK, POTION, TIPPED_ARROW, DRAGON_BREATH, MINECART, TNT_MINECART } from '../src/shared/items';
+import { ENCHANTS, PROTECTION, SHARPNESS, MENDING, VANISHING_CURSE } from '../src/shared/enchantments';
+import { POTIONS, PT_WATER, PT_AWKWARD, PT_SLOW_FALLING, PT_LONG_SLOW_FALLING, ENT_EFFECT_CLOUD } from '../src/shared/potions';
+import { EFFECT_JUMP_BOOST, EFFECT_INSTANT_DAMAGE } from '../src/shared/effects';
+import { ENT_BOAT, ENT_MINECART, ENT_HOPPER_MINECART, ENT_TNT_MINECART } from '../src/shared/vehicles';
+import { ENT_TNT } from '../src/shared/mechanisms';
+
+test('los ids de la fase 7 no cambian', () => {
+  assert.deepEqual([BREWING_STAND, RAIL, ENCHANTING_TABLE, ANVIL, REDSTONE_WIRE, LEVER, REPEATER, COMPARATOR, REDSTONE_LAMP],
+    [4486, 4494, 4540, 4541, 4557, 4599, 4941, 5005, 5022]);
+  assert.deepEqual([PISTON, STICKY_PISTON, OBSERVER, HOPPER, DISPENSER, DROPPER, TNT],
+    [5336, 5348, 5373, 5385, 5395, 5407, 5419]);
+  assert.deepEqual([ENCHANTED_BOOK, POTION, TIPPED_ARROW, DRAGON_BREATH, MINECART, TNT_MINECART], [559, 561, 564, 572, 593, 598]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 5420), 3875630682, 'huella de los bloques');
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 599), 75337293, 'huella de los objetos');
+  assert.deepEqual([PROTECTION, SHARPNESS, MENDING, VANISHING_CURSE], [1, 12, 36, 37]);
+  assert.equal(keyPrint(ENCHANTS.map((e) => e?.key), 0, 38), 2567232971, 'huella de los encantamientos');
+  assert.deepEqual([PT_WATER, PT_AWKWARD, PT_SLOW_FALLING, PT_LONG_SLOW_FALLING], [0, 3, 40, 41]);
+  assert.equal(keyPrint(POTIONS.map((p) => p?.key), 0, 42), 3441642034, 'huella de las pociones');
+  assert.deepEqual([EFFECT_JUMP_BOOST, EFFECT_INSTANT_DAMAGE], [16, 22]);
+  assert.deepEqual([ENT_EFFECT_CLOUD, ENT_BOAT, ENT_MINECART, ENT_HOPPER_MINECART, ENT_TNT_MINECART, ENT_TNT], [150, 160, 162, 165, 166, 180]);
+});
+
 // El estado de la maceta es el índice de su planta en esta lista (se guarda): sólo se añaden al final.
 import { pottablePlants } from '../src/shared/blocks';
 test('las plantas de maceta no cambian de índice', () => {

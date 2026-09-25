@@ -48,7 +48,7 @@ export const ENCHANTS: EnchantDef[] = [];
 
 function ench(key: string, name: string, max: number, weight: number, minCost: [number, number], maxCost: [number, number],
   anvil: number, supported: EnchCategory, o: Partial<Pick<EnchantDef, 'primary' | 'exclusive' | 'treasure' | 'curse'>> = {}): number {
-  const id = ENCHANTS.length + 1;
+  const id = Math.max(ENCHANTS.length, 1);
   ENCHANTS[id] = { id, key, name, max, weight, minCost, maxCost, anvil, supported, ...o };
   return id;
 }
