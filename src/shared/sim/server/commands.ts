@@ -103,7 +103,8 @@ export class Commands {
       case 'summon':
       case 'invocar': {
         const v = norm(args[0] ?? '');
-        const def = MOB_TYPES.map((t) => MOBS[t]).find((m) => m.key === v || norm(m.name) === v);
+        // Fase 6: también con guiones bajos en vez de espacios (como sugiere el autocompletado: gólem_de_hierro).
+        const def = MOB_TYPES.map((t) => MOBS[t]).find((m) => m.key === v || norm(m.name) === v || norm(m.name).replace(/\s+/g, '_') === v);
         if (!def) {
           reply('Uso: /invocar <' + MOB_TYPES.map((t) => norm(MOBS[t].name)).join('|') + '>');
           return;

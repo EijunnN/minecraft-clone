@@ -175,7 +175,7 @@ export class Spawner {
       if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
       total++;
       const d = this.m.nearestPlayer2D(e, players);
-      if (d > ACTIVE_RANGE) far.push([d, e]);
+      if (d > ACTIVE_RANGE && !this.m.companions.keep(e)) far.push([d, e]); // Fase 6: gólems y mascotas no se reciclan
     }
     if (total + n <= MAX_PASSIVE) return true;
     far.sort((a, b) => b[0] - a[0]);

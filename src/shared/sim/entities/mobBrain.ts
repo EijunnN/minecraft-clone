@@ -85,6 +85,8 @@ export class MobBrain {
     ai.think -= dt;
     if (ai.angry > 0) ai.angry -= dt;
     if (ai.panic > 0) ai.panic -= dt;
+    // Fase 6 (gólems/domesticar): gólems y domesticados deciden aparte (dejan la dirección en ai.goalDir).
+    const companion = this.m.companions.decide(e, players, dt);
     // Animales neutrales (lobo, oso polar): si un jugador les pega, en vez de huir se enfadan.
     if (!def.hostile && def.neutral && ai.panic > 0 && e.lastHurtBy && e.age - (e.lastHurtAt ?? -99) < 0.5) this.provoke(e, e.lastHurtBy);
 
@@ -140,6 +142,8 @@ export class MobBrain {
       return;
     }
 
+    // Fase 6 (gólems/domesticar): los creepers huyen de los gatos.
+    if (e.type === MOB_CREEPER && this.m.companions.scaredOfCat(e)) target = null;
     if (target) {
       const dx = target.x - e.x, dz = target.z - e.z;
       const dist = Math.hypot(dx, dz);
@@ -202,8 +206,16 @@ export class MobBrain {
           const dmg = def.damage * this.m.difficultyScale();
           this.m.host.hurtPlayer(target.id, dmg, (dx / (dist || 1)) * 5, 4, (dz / (dist || 1)) * 5, def.key);
           this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
+          this.m.companions.onPlayerHurtBy(target.id, e); // Fase 6 (gólems/domesticar)
         }
       }
+    } else if (companion) {
+      // Fase 6 (gólems/domesticar)
+      moveX = ai.goalDir[0];
+      moveZ = ai.goalDir[1];
+      speed = ai.goalDir[2];
+      jump = ai.goalDir[3] > 0;
+      if (ai.lookAt) lookAt = ai.lookAt;
     } else if (ai.panic > 0) {
       const dx = e.x - ai.panicFrom[0], dz = e.z - ai.panicFrom[1];
       const d = Math.hypot(dx, dz) || 1;
@@ -338,6 +350,7 @@ export class MobBrain {
     if ((e.growAge ?? 0) > 0) f |= EF_BABY;
     if (e.sheared) f |= EF_SHEARED;
     if ((e.love ?? 0) > 0) f |= EF_LOVE;
+    f |= this.m.companions.flags(e); // Fase 6 (gólems/domesticar)
     e.flags = f;
   }
 

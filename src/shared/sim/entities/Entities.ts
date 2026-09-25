@@ -17,6 +17,8 @@ import { AnimalLife } from './animalLife';
 import { Spawner } from './spawner';
 import { XpOrbs } from './xpOrbs';
 import { Projectiles } from './projectiles';
+// Fase 6 (gólems/domesticar)
+import { Companions } from './companions';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -31,6 +33,8 @@ export class Entities {
   readonly spawner = new Spawner(this);
   readonly xp = new XpOrbs(this);
   readonly projectiles = new Projectiles(this);
+  // Fase 6 (gólems/domesticar): gólems y animales domesticados.
+  readonly companions = new Companions(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -214,6 +218,9 @@ export class Entities {
         ai.panicFrom = [fromX, fromZ];
       }
     } else if (typeof attacker === 'string') ai.target = attacker;
+    // Fase 6 (gólems/domesticar): los lobos ayudan a su dueño; gólems y domesticados se defienden.
+    if (typeof attacker === 'string') this.companions.onPlayerAttack(attacker, e);
+    this.companions.onHurt(e, attacker);
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
@@ -364,6 +371,9 @@ export class Entities {
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
       ]);
+      // Fase 6 (gólems/domesticar): dueño, sentado, piel y gólem hecho a mano.
+      const extra = this.companions.save(e);
+      if (extra) (out[out.length - 1] as unknown[]).push(extra);
     }
     return JSON.stringify(out);
   }
@@ -372,10 +382,11 @@ export class Entities {
     if (!json) return;
     try {
       const arr = JSON.parse(json) as number[][];
-      for (const [type, x, y, z, hp, grow, sheared] of arr) {
+      for (const [type, x, y, z, hp, grow, sheared, extra] of arr) {
         if (!MOBS[type] || ![x, y, z].every(Number.isFinite)) continue;
         const e = this.spawnMob(type, x, y, z);
         if (!e) continue;
+        this.companions.restore(e, extra); // Fase 6 (gólems/domesticar)
         if (Number.isFinite(hp)) e.health = Math.max(1, Math.min(e.maxHealth, hp));
         if (Number.isFinite(grow) && grow > 0) this.animals.setBaby(e, Math.min(GROW_SECONDS, grow));
         if (sheared === 1) e.sheared = true;
@@ -391,7 +402,11 @@ export class Entities {
     return this.items.tryPickup(id, p);
   }
 
-  interact(e: Entity, item: number, creative: boolean): InteractResult {
+  /** `who`: nombre del jugador (para domesticar y reconocer al dueño). */
+  interact(e: Entity, item: number, creative: boolean, who?: string): InteractResult {
+    // Fase 6 (gólems/domesticar): domesticar, sentar, curar gólems.
+    const r = this.companions.interact(e, item, creative, who);
+    if (r) return r;
     return this.animals.interact(e, item, creative);
   }
 

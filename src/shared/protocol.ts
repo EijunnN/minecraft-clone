@@ -35,6 +35,14 @@ export const EF_BABY = 64;
 export const EF_SHEARED = 128;
 /** Animal en modo amor (corazones). */
 export const EF_LOVE = 256;
+// Fase 6 (gólems/domesticar): bits altos para no chocar con otros añadidos.
+/** Animal domesticado (lleva collar). */
+export const EF_TAMED = 1 << 12;
+/** Animal domesticado sentado. */
+export const EF_SITTING = 1 << 13;
+/** Piel de la criatura (gatos): 3 bits a partir de este desplazamiento. */
+export const EF_VARIANT_SHIFT = 14;
+export const EF_VARIANT_MASK = 7 << EF_VARIANT_SHIFT;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';

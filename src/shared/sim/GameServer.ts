@@ -36,6 +36,7 @@ import { BlockEdits } from './server/blockEdits';
 import { PlayerActions } from './server/playerActions';
 import { Commands } from './server/commands';
 import { EntitySync } from './server/entitySync';
+import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -93,6 +94,8 @@ export class GameServer {
   private actions: PlayerActions;
   private commands: Commands;
   private entitySync: EntitySync;
+  /** Fase 6 (gólems/domesticar): construir gólems y poblar las aldeas. */
+  readonly golems: Golems;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -146,6 +149,7 @@ export class GameServer {
     this.actions = new PlayerActions(this.ctx);
     this.commands = new Commands(this.ctx);
     this.entitySync = new EntitySync(this.ctx);
+    this.golems = new Golems(this.ctx, store); // Fase 6 (gólems/domesticar)
   }
 
   get seed(): number {
@@ -677,6 +681,7 @@ export class GameServer {
     this.campfires.onBlockChanged(x, y, z, old, id);
     this.signs.onBlockChanged(x, y, z, old, id);
     this.rules.onBlockChanged(x, y, z, id);
+    this.golems.onBlockChanged(x, y, z, id); // Fase 6 (gólems/domesticar)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -694,6 +699,7 @@ export class GameServer {
     this.fishing.tick();
     if (this.tickCount % TICK_RATE === 0) this.spawners.tick();
     this.storms.tick(DT);
+    this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {
