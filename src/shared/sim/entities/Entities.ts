@@ -6,7 +6,7 @@ import {
   MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY,
   type MobDef,
 } from '../../mobs';
-import { ITEMS, ARROW, type ItemStack } from '../../items';
+import { ITEMS, ARROW, SADDLE, type ItemStack } from '../../items';
 import { WHITE_WOOL, BLOCK_FLUID, BLOCK_HARDNESS } from '../../blocks';
 import type { WorldSim } from '../WorldSim';
 import { blockDrops } from '../drops';
@@ -17,6 +17,7 @@ import { AnimalLife } from './animalLife';
 import { Spawner } from './spawner';
 import { XpOrbs } from './xpOrbs';
 import { Projectiles } from './projectiles';
+import { MountLife } from './mounts'; // Fase 6 (monturas)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -31,6 +32,8 @@ export class Entities {
   readonly spawner = new Spawner(this);
   readonly xp = new XpOrbs(this);
   readonly projectiles = new Projectiles(this);
+  /** Fase 6 (monturas): pelaje, silla, doma, mulas y llamas que escupen. */
+  readonly mounts = new MountLife(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -61,6 +64,7 @@ export class Entities {
       e.sheared = false;
       if (type === MOB_CHICKEN) e.eggTimer = 300 + this.rand() * 300;
       if (baby) this.animals.setBaby(e, GROW_SECONDS);
+      this.mounts.init(e); // Fase 6 (monturas)
     }
     e.ai = {
       target: null, goal: null, path: null, pathIdx: 0, repath: 0, think: this.rand() * 2, attackCd: 0, shootCd: 1 + this.rand(),
@@ -239,6 +243,7 @@ export class Entities {
       }
       // Los animales que mueren ardiendo sueltan la carne cocinada.
       if (e.fire > 0) for (const s of stacks) if (ITEMS[s.id]?.smelt && ITEMS[s.id]?.food) s.id = ITEMS[s.id].smelt!;
+      if (e.saddled) stacks.push({ id: SADDLE, count: 1 }); // Fase 6 (monturas): suelta la silla
       this.dropStacks(stacks, e.x, e.y + 0.3, e.z);
     }
     if (drops) this.xp.onMobKilled(e);
@@ -360,10 +365,14 @@ export class Entities {
     const out: number[][] = [];
     for (const e of this.list.values()) {
       if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
-      out.push([
+      const rec = [
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
-      ]);
+      ];
+      // Fase 6 (monturas): octavo campo con pelaje, doma, silla y aptitudes.
+      const mount = this.mounts.save(e);
+      if (mount !== null) rec.push(mount);
+      out.push(rec);
     }
     return JSON.stringify(out);
   }
@@ -372,13 +381,14 @@ export class Entities {
     if (!json) return;
     try {
       const arr = JSON.parse(json) as number[][];
-      for (const [type, x, y, z, hp, grow, sheared] of arr) {
+      for (const [type, x, y, z, hp, grow, sheared, mount] of arr) {
         if (!MOBS[type] || ![x, y, z].every(Number.isFinite)) continue;
         const e = this.spawnMob(type, x, y, z);
         if (!e) continue;
         if (Number.isFinite(hp)) e.health = Math.max(1, Math.min(e.maxHealth, hp));
         if (Number.isFinite(grow) && grow > 0) this.animals.setBaby(e, Math.min(GROW_SECONDS, grow));
         if (sheared === 1) e.sheared = true;
+        if (mount !== undefined) this.mounts.load(e, mount); // Fase 6 (monturas)
       }
     } catch {
       /* ignorar */

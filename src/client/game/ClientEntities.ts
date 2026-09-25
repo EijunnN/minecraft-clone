@@ -29,6 +29,8 @@ export interface ClientEntity {
   item: number;
   count: number;
   health: number;
+  /** Fase 6 (monturas): pelaje (caballos, llamas). */
+  variant: number;
   /** Animación de caminar. */
   walkPhase: number;
   walkAmount: number;
@@ -78,6 +80,7 @@ export class ClientEntities {
         item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN || type === ENT_DISPLAY ? e1 ?? 0 : 0,
         count: type === ENT_ITEM ? e2 ?? 1 : type === ENT_XP ? e1 ?? 1 : 1,
         health: MOBS[type] ? e1 ?? MOBS[type].health : 1,
+        variant: MOBS[type] && Number.isInteger(e2) ? Math.max(0, Math.min(255, e2)) : 0, // Fase 6 (monturas)
         walkPhase: 0, walkAmount: 0, age: 0, hurtT: flags & EF_HURT ? 0 : 99, deathT: flags & EF_DEAD ? 0 : -1,
         actionT: flags & EF_ACTION ? 0 : -1,
         collector: null, collectT: 0, gone: false, seed: (id * 2654435761) % 1000 / 1000, lastX: x, lastZ: z,
@@ -176,11 +179,11 @@ export class ClientEntities {
   }
 
   /** Rayo contra las cajas de las criaturas: devuelve la más cercana antes de maxDist. */
-  raycast(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, maxDist: number): { e: ClientEntity; dist: number } | null {
+  raycast(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, maxDist: number, skip = -1): { e: ClientEntity; dist: number } | null {
     let best: { e: ClientEntity; dist: number } | null = null;
     for (const e of this.list.values()) {
       const def = MOBS[e.type];
-      if (!def || e.gone || e.deathT >= 0) continue;
+      if (!def || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia (fase 6)
       const k = e.flags & EF_BABY ? 0.5 : 1;
       const hw = (def.width * k) / 2 + 0.05;
       const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height * k, e.z + hw];

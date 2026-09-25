@@ -39,6 +39,8 @@ export interface RemotePlayerView {
   light: [number, number];
   /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
   armor?: number[];
+  /** Fase 6 (monturas): sentado en una montura (piernas hacia delante). */
+  riding?: boolean;
 }
 
 interface PartMesh {
@@ -231,7 +233,11 @@ export class EntityRenderer {
     // Piernas
     for (const [part, sx, ang] of [['rightLeg', 2, legSwing], ['leftLeg', -2, -legSwing]] as const) {
       mat4.translate(m, root, [sx * PX, 12 * PX, 0]);
-      mat4.rotateX(m, m, ang);
+      // Fase 6 (monturas): montado, las piernas van hacia delante y algo abiertas.
+      if (p.riding && !p.sleeping) {
+        mat4.rotateY(m, m, sx > 0 ? -0.3 : 0.3);
+        mat4.rotateX(m, m, 1.4);
+      } else mat4.rotateX(m, m, ang);
       fn(part, m);
     }
     // Parte superior (inclinada al agacharse).

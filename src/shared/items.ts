@@ -11,6 +11,7 @@ import {
   WOOD_TYPES, ALL_LOGS, ALL_PLANKS, ALL_SAPLINGS, RED_SAND, CACTUS, LIME_WOOL, CLAY, TERRACOTTA, DOORS, RED_BED, FENCES,
   FENCE_GATES, TRAPDOORS, SLABS, STAIRS, LADDER, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, CAKE, baseBlock,
   PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS, familyBase, CAVE_VINES, COPPER_ORE, DEEPSLATE_ORE, COBBLED_DEEPSLATE, DEEPSLATE,
+  HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod';
@@ -241,6 +242,9 @@ export const EMPTY_MAP = item('map', 'Mapa vacío');
 export const FILLED_MAP = item('filled_map', 'Mapa');
 export const SNOWBALL = item('snowball', 'Bola de nieve', { stack: 16 });
 
+// ------------------------------------------------------------------ Fase 6 (monturas): silla de montar
+export const SADDLE = item('saddle', 'Silla de montar', { stack: 1 });
+
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
 ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
@@ -254,6 +258,12 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   goat: [WHEAT],
   rabbit: [CARROT],
   fox: [GLOW_BERRIES],
+  // Fase 6 (monturas): caballos y burros (domados) con manzanas doradas o trigo; llamas con heno;
+  // camellos con cactus. Las mulas no crían.
+  horse: [GOLDEN_APPLE, WHEAT],
+  donkey: [GOLDEN_APPLE, WHEAT],
+  llama: [HAY_BALE],
+  camel: [CACTUS],
 };
 
 export const ITEM_COUNT = nextId;
@@ -359,6 +369,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD, COD, COOKED_COD,
   SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, COMPASS, EMPTY_MAP,
   SNOWBALL,
+  SADDLE, // Fase 6 (monturas)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

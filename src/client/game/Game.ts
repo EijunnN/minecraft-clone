@@ -43,6 +43,7 @@ import { Effects } from './effects';
 import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
 import { Environment } from './environment';
+import { Riding } from './riding'; // Fase 6 (monturas)
 
 export interface GameConfig {
   room: string;
@@ -78,6 +79,7 @@ export class Game {
   readonly life = new LifeCycle(this);
   readonly network = new ServerEvents(this);
   readonly environment = new Environment(this);
+  readonly riding = new Riding(this); // Fase 6 (monturas)
   readonly xp = new Experience();
   readonly statusEffects = new StatusEffects();
   cfg: GameConfig;
@@ -682,7 +684,7 @@ export class Game {
     const wasInWater = p.inWater;
     const wasGround = p.onGround;
     const ox = p.x, oz = p.z;
-    p.update(dt, {
+    const controls = {
       forward: active && input.isDown(k.forward),
       back: active && input.isDown(k.back),
       left: active && input.isDown(k.left),
@@ -690,8 +692,10 @@ export class Game {
       jump: active && (input.isDown(k.jump) || input.wasPressed(k.jump)),
       sneak: active && (settings.toggleSneak ? this.sneakOn : input.isDown(k.sneak)),
       sprint: active && (settings.toggleSprint ? this.sprintOn : input.isDown(k.sprint)) && (this.creative || surv.canSprint()),
-    }, world);
-    const moved = Math.hypot(p.x - ox, p.z - oz);
+    };
+    // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
+    if (!this.riding.update(dt, controls, active)) p.update(dt, controls, world);
+    const moved = this.riding.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
     // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
     if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
       const bx = Math.floor(p.x), by = Math.floor(p.y - 0.05), bz = Math.floor(p.z);
@@ -726,7 +730,7 @@ export class Game {
     const dir = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
     const reach = this.creative ? REACH_CREATIVE : REACH_SURVIVAL;
     this.hit = surv.dead ? null : raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], reach, (x, y, z) => world.getBlock(x, y, z));
-    const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH);
+    const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH, this.riding.entityId);
     // Las plantas sin colisión (hierba, flores, cultivos) no tapan a las criaturas.
     const hitBlocks = this.hit && BLOCK_RENDER[this.hit.id] !== R_CROSS && BLOCK_RENDER[this.hit.id] !== R_CROP;
     const target = entHit && (!hitBlocks || entHit.dist < this.hit!.dist) ? entHit.e : null;
@@ -742,6 +746,7 @@ export class Game {
     // --- Mundo, jugadores, entidades y partículas ---
     world.update(p.x, p.z, p.yaw, dt);
     this.ents.update(dt, nowS);
+    this.riding.afterEntities(dt); // Fase 6 (monturas)
     this.interaction.autoPickup(nowS);
     this.lookTimer -= dt;
     if (this.lookTimer <= 0 && !surv.dead) {
@@ -753,6 +758,7 @@ export class Game {
     const tags: { id: string; name: string; pos: [number, number] | null }[] = [];
     for (const rp of this.remote.values()) {
       rp.update(dt);
+      this.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
       if (rp.state & STATE_DEAD) continue;
       const v = rp.view;
       const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
@@ -768,6 +774,7 @@ export class Game {
     this.lastSent += dt;
     if (this.net && this.lastSent > 0.125) {
       this.sendPos(false);
+      this.riding.send(); // Fase 6 (monturas): posición de la montura que guía
       this.lastSent = 0;
     }
     this.stateTimer += dt;
@@ -848,6 +855,7 @@ export class Game {
         swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
         use: (this.interaction.use?.kind as 'eat' | 'bow' | 'block' | undefined) ?? null, light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
+        riding: this.riding.active, // Fase 6 (monturas): sentado
       });
     }
 

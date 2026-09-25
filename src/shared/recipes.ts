@@ -13,6 +13,7 @@ import {
   CLAY_BALL, BUCKET, BOW, ARROW, SHEARS, LAPIS, TOOLS, BONE, BREAD, WHEAT, SUGAR, EGG, MILK_BUCKET, BONE_MEAL,
   APPLE, GOLDEN_APPLE, SHIELD, COPPER_INGOT, EMERALD, AMETHYST_SHARD, COMPASS, EMPTY_MAP, SNOWBALL, REDSTONE, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD,
   ARMOR, type ItemStack,
+  SADDLE, // Fase 6 (monturas)
 } from './items';
 
 type Cell = readonly number[] | null;
@@ -188,6 +189,9 @@ mix([POPPY, WHITE_WOOL], RED_WOOL);
 mix([DANDELION, WHITE_WOOL], YELLOW_WOOL);
 mix([CORNFLOWER, WHITE_WOOL], BLUE_WOOL);
 mix([LAPIS, WHITE_WOOL], BLUE_WOOL);
+
+// --- Fase 6 (monturas): silla de montar (cuero y un lingote de hierro, como en Minecraft 1.21.6) ---
+shape(['LLL', ' I '], { L: LEATHER, I: IRON_INGOT }, SADDLE);
 
 export interface RecipeMatch {
   out: ItemStack;

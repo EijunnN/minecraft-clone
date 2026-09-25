@@ -5,6 +5,7 @@ import {
   COAL, IRON_INGOT, GOLD_INGOT, DIAMOND, EMERALD, LAPIS, REDSTONE, BREAD, WHEAT, BONE, ROTTEN_FLESH, STRING, GUNPOWDER,
   GOLDEN_APPLE, BUCKET, WHEAT_SEEDS, MELON_SEEDS, PUMPKIN_SEEDS, BEETROOT_SEEDS, APPLE, PAPER, CARROT, POTATO,
   FLINT, SPIDER_EYE, LEATHER, COD, SALMON, COPPER_INGOT, BOOK, ARMOR, TOOLS, type ItemStack,
+  SADDLE, // Fase 6 (monturas)
 } from './items';
 
 /** Entrada: [objeto, peso, mínimo, máximo]. */
@@ -24,6 +25,7 @@ export const LOOT_TABLES: Readonly<Record<string, LootTable>> = {
     [GUNPOWDER, 20, 1, 8], [IRON_INGOT, 10, 1, 4], [GOLD_INGOT, 5, 1, 4], [BUCKET, 10, 1, 1], [REDSTONE, 15, 1, 4],
     [COAL, 15, 1, 4], [BEETROOT_SEEDS, 10, 2, 4], [MELON_SEEDS, 10, 2, 4], [PUMPKIN_SEEDS, 10, 2, 4], [GOLDEN_APPLE, 3, 1, 1],
     [ARMOR.iron.helmet, 2, 1, 1],
+    [SADDLE, 12, 1, 1], // Fase 6 (monturas)
   ]),
   // Mina abandonada: carbón, raíles no (aún), antorchas, pan y metales.
   mineshaft: T(3, 6, [
@@ -36,6 +38,7 @@ export const LOOT_TABLES: Readonly<Record<string, LootTable>> = {
     [BONE, 25, 4, 6], [ROTTEN_FLESH, 16, 3, 7], [SPIDER_EYE, 16, 1, 3], [GUNPOWDER, 10, 1, 8], [STRING, 10, 1, 8],
     [GOLD_INGOT, 15, 2, 7], [IRON_INGOT, 15, 1, 5], [EMERALD, 15, 1, 3], [DIAMOND, 5, 1, 3], [GOLDEN_APPLE, 20, 1, 1],
     [BOOK, 20, 1, 1],
+    [SADDLE, 15, 1, 1], // Fase 6 (monturas)
   ]),
   // Templo de la jungla: huesos, carne podrida y metales preciosos.
   jungle_temple: T(2, 6, [

@@ -152,6 +152,24 @@ export class Effects {
       case 'compost_empty':
         this.g.audio.playBreak('grass', p);
         break;
+      // Fase 6 (monturas)
+      case 'saddle':
+        this.g.audio.playBreak('wool', p);
+        break;
+      case 'tame':
+        fx.spawnHearts(p[0], p[1], p[2], 7, 0.5);
+        this.g.audio.playPickup();
+        break;
+      case 'mount_angry':
+        fx.spawnSmoke(p[0], p[1], p[2], 8, 0.4, 0.3, 0.35, 0.6);
+        break;
+      case 'llama_spit': {
+        // Escupitajo: una ráfaga de gotas claras desde la boca hacia el objetivo (a = rumbo, b = distancia).
+        const yaw = a ?? 0, dist = Math.min(16, Math.max(1, b ?? 4));
+        for (let d = 0.5; d < dist; d += 0.6) fx.spawnSmoke(p[0] - Math.sin(yaw) * d, p[1] - d * 0.06, p[2] - Math.cos(yaw) * d, 1, 0.05, 0.92, 0.12, 0.1);
+        this.g.audio.playSplash(p, 0.15);
+        break;
+      }
     }
   }
 

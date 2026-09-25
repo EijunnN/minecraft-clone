@@ -6,6 +6,7 @@ import { MOB_VS, MOB_FS, MOB_SHADOW_VS, MOB_SHADOW_FS, MAX_BONES } from './shade
 import { MOBS, boxFaces, type MobDef, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } from '../../shared/mobs';
 import { EF_ACTION, EF_ANGRY, EF_BABY, EF_SHEARED } from '../../shared/protocol';
 import type { ClientEntity } from '../game/ClientEntities';
+import { hiddenMountPart, mountPartAnim, mountRootPose } from './mountPose'; // Fase 6 (monturas)
 
 export interface MobTexture {
   width: number;
@@ -28,11 +29,12 @@ export class MobRenderer {
   private shadowProg: Program;
   private meshes = new Map<number, MobMesh>();
   private skins = new Map<number, WebGLTexture>();
-  private texSource: (id: number) => MobTexture | null;
+  /** Fase 6 (monturas): variant = pelaje; las texturas se guardan por especie y pelaje. */
+  private texSource: (id: number, variant?: number) => MobTexture | null;
   private bones = new Float32Array(MAX_BONES * 16);
   private model = mat4.create();
 
-  constructor(gl: GL, texSource: (id: number) => MobTexture | null) {
+  constructor(gl: GL, texSource: (id: number, variant?: number) => MobTexture | null) {
     this.gl = gl;
     this.texSource = texSource;
     this.prog = new Program(gl, { name: 'mob', vs: MOB_VS, fs: MOB_FS });
@@ -98,11 +100,12 @@ export class MobRenderer {
     return m;
   }
 
-  private skin(def: MobDef): WebGLTexture {
-    let t = this.skins.get(def.id);
+  private skin(def: MobDef, variant = 0): WebGLTexture {
+    const key = def.id * 256 + variant;
+    let t = this.skins.get(key);
     if (t) return t;
     const gl = this.gl;
-    const src = this.texSource(def.id) ?? placeholderTexture(def);
+    const src = this.texSource(def.id, variant) ?? placeholderTexture(def);
     t = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, t);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -111,12 +114,12 @@ export class MobRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.skins.set(def.id, t);
+    this.skins.set(key, t);
     return t;
   }
 
   /** Sustituye las texturas (cuando llega el arte definitivo). */
-  setTextureSource(src: (id: number) => MobTexture | null): void {
+  setTextureSource(src: (id: number, variant?: number) => MobTexture | null): void {
     this.texSource = src;
     for (const t of this.skins.values()) this.gl.deleteTexture(t);
     this.skins.clear();
@@ -208,12 +211,14 @@ export class MobRenderer {
       if (parent >= 0) mat4.copy(m, mats[parent]);
       mat4.translate(m, m, [part.pivot[0] * P, part.pivot[1] * P, part.pivot[2] * P]);
       this.animate(def, e, time, part.name, rot);
+      mountPartAnim(def, e, time, part.name, rot); // Fase 6 (monturas)
       const rest = part.rot ?? [0, 0, 0];
       mat4.rotateY(m, m, rest[1] + rot[1]);
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
       if (part.name === 'wool' && e.flags & EF_SHEARED) mat4.scale(m, m, [0, 0, 0]);
+      else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, [0, 0, 0]); // Fase 6 (monturas): sin silla
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
       b.set(m, i * 16);
@@ -226,6 +231,7 @@ export class MobRenderer {
     mat4.translate(m, m, [e.x - camX, e.y - camY, e.z - camZ]);
     mat4.rotateY(m, m, e.bodyYaw);
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
+    mountRootPose(def, e, m); // Fase 6 (monturas): encabritada
     let s = def.scale;
     if (e.flags & EF_BABY) s *= 0.5;
     if (def.id === MOB_CREEPER && e.actionT >= 0) {
@@ -263,7 +269,7 @@ export class MobRenderer {
       const light = lightAt(e);
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def))
+      p.tex2D('uSkin', this.skin(def, e.variant))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
@@ -286,7 +292,7 @@ export class MobRenderer {
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ);
-      p.tex2D('uSkin', this.skin(def)).m4('uModel', root as Float32Array);
+      p.tex2D('uSkin', this.skin(def, e.variant)).m4('uModel', root as Float32Array);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);

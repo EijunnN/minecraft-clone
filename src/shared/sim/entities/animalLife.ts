@@ -7,6 +7,7 @@ import { breedXp } from '../../experience';
 import { boxCollides } from '../physics';
 import { LOVE_SECONDS, BREED_COOLDOWN, type PlayerView, type InteractResult, type Entity } from './types';
 import type { Entities } from './Entities';
+import { canMate, offspringType } from '../../mounts'; // Fase 6 (monturas)
 
 export class AnimalLife {
   constructor(private m: Entities) {}
@@ -67,7 +68,8 @@ export class AnimalLife {
     if ((e.love ?? 0) > 0) {
       let mate: Entity | null = null, best = 8;
       for (const o of this.m.list.values()) {
-        if (o === e || o.type !== e.type || o.dead || !((o.love ?? 0) > 0) || (o.growAge ?? 0) > 0) continue;
+        // Fase 6 (monturas): caballo y burro también pueden criar juntos (mula).
+        if (o === e || !canMate(e.type, o.type) || o.dead || !((o.love ?? 0) > 0) || (o.growAge ?? 0) > 0) continue;
         const d = Math.hypot(o.x - e.x, o.z - e.z);
         if (d < best && Math.abs(o.y - e.y) < 3) {
           best = d;
@@ -113,7 +115,8 @@ export class AnimalLife {
     a.breedCd = BREED_COOLDOWN;
     b.breedCd = BREED_COOLDOWN;
     const x = (a.x + b.x) / 2, y = Math.max(a.y, b.y), z = (a.z + b.z) / 2;
-    const baby = this.m.spawnMob(a.type, x, y, z, true);
+    const baby = this.m.spawnMob(offspringType(a.type, b.type), x, y, z, true); // Fase 6 (monturas): mula
+    if (baby) this.m.mounts.born(baby, a, b);
     if (baby) baby.yaw = baby.bodyYaw = a.bodyYaw;
     this.m.host.fx('breed', x, y + 0.6, z);
     this.m.xp.spawn(breedXp(this.m.rand), x, y + 0.3, z);
@@ -126,6 +129,9 @@ export class AnimalLife {
   interact(e: Entity, item: number, creative: boolean): InteractResult {
     const def = MOBS[e.type];
     if (!def || e.dead || !e.ai || def.hostile) return { ok: false };
+    // Fase 6 (monturas): silla y doma de las monturas.
+    const mount = this.m.mounts.interact(e, item, creative);
+    if (mount) return mount;
     const baby = (e.growAge ?? 0) > 0;
     const food = BREED_FOOD[def.key];
     if (food && food.includes(item)) {

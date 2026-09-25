@@ -2,7 +2,7 @@
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -35,6 +35,13 @@ export const EF_BABY = 64;
 export const EF_SHEARED = 128;
 /** Animal en modo amor (corazones). */
 export const EF_LOVE = 256;
+// Fase 6 (monturas): bits altos para no chocar con otros añadidos.
+/** Montura con silla puesta. */
+export const EF_SADDLE = 1 << 12;
+/** Montura domada. */
+export const EF_TAMED = 1 << 13;
+/** Montura con jinete. */
+export const EF_RIDDEN = 1 << 14;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';
@@ -131,7 +138,14 @@ export type ClientMsg =
   | { t: 'ctake'; x: number; y: number; z: number; slot: number; max: number; q: number }
   | { t: 'look'; e: number }
   | { t: 'state'; d: PlayerSave }
-  | { t: 'died'; m: string };
+  | { t: 'died'; m: string }
+  // Fase 6 (monturas)
+  /** Montarse en la criatura e. */
+  | { t: 'mount'; e: number }
+  /** Bajarse de la montura. */
+  | { t: 'dismount' }
+  /** El jinete mueve la montura que guía: pies de la montura y orientación. */
+  | { t: 'mpos'; e: number; p: [number, number, number]; r: number };
 
 export type ServerMsg =
   | {
@@ -177,7 +191,12 @@ export type ServerMsg =
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
   | { t: 'ires'; q: number; ok: boolean; take?: number; give?: ItemStack; wear?: number }
   /** Punto de reaparición del jugador (cama); null = el del mundo. */
-  | { t: 'spawn'; p: [number, number, number] | null };
+  | { t: 'spawn'; p: [number, number, number] | null }
+  // Fase 6 (monturas)
+  /** El jugador `id` va en la entidad e (0 = se bajó); c: la guía él; st: [velocidad, salto] de la montura. */
+  | { t: 'ride'; id: string; e: number; c?: boolean; st?: [number, number] }
+  /** Movimiento de la montura rechazado: vuelve a p. */
+  | { t: 'mfix'; e: number; p: [number, number, number] };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

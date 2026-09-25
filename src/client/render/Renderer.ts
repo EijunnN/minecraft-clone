@@ -229,7 +229,7 @@ export class Renderer {
 
   constructor(
     canvas: HTMLCanvasElement, tex: GeneratedTextures, settings: RenderSettings, sprites: ItemSprites,
-    mobTextures: (id: number) => MobTexture | null,
+    mobTextures: (id: number, variant?: number) => MobTexture | null, // Fase 6 (monturas): variant = pelaje
   ) {
     this.canvas = canvas;
     const { gl, caps } = createContext(canvas);

@@ -49,6 +49,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'lightning': return 'fue alcanzado por un rayo';
     case 'arrow': return 'fue abatido por una flecha';
     case 'kill': return 'abandonó este mundo';
+    case 'llama': return 'murió de un escupitajo de llama'; // Fase 6 (monturas)
     default: return mobs[cause] ?? 'murió';
   }
 }

@@ -36,6 +36,7 @@ import { BlockEdits } from './server/blockEdits';
 import { PlayerActions } from './server/playerActions';
 import { Commands } from './server/commands';
 import { EntitySync } from './server/entitySync';
+import { Riding } from './server/riding'; // Fase 6 (monturas)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -93,6 +94,8 @@ export class GameServer {
   private actions: PlayerActions;
   private commands: Commands;
   private entitySync: EntitySync;
+  /** Fase 6 (monturas): quién monta qué. */
+  readonly riding: Riding;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -146,6 +149,7 @@ export class GameServer {
     this.actions = new PlayerActions(this.ctx);
     this.commands = new Commands(this.ctx);
     this.entitySync = new EntitySync(this.ctx);
+    this.riding = new Riding(this.ctx); // Fase 6 (monturas)
   }
 
   get seed(): number {
@@ -343,6 +347,7 @@ export class GameServer {
     if (!s.joined) return;
     this.savePlayer(s);
     this.broadcast({ t: 'leave', id: s.id });
+    this.riding.onLeave(s); // Fase 6 (monturas)
     this.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} salió del mundo.` });
     if (this.playerCount === 0) this.flush(true);
   }
@@ -474,6 +479,16 @@ export class GameServer {
           if (m) this.broadcast({ t: 'chat', id: null, name: '', m: `☠ ${s.name} ${m}.` });
         }
         break;
+      // Fase 6 (monturas)
+      case 'mount':
+        if (this.allow(s, 1)) this.riding.onMount(s, msg);
+        break;
+      case 'dismount':
+        this.riding.dismount(s.id);
+        break;
+      case 'mpos':
+        if (this.allow(s, 0.2)) this.riding.onMove(s, msg);
+        break;
     }
   }
 
@@ -533,6 +548,7 @@ export class GameServer {
     });
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: this.info(s) }, s);
+    this.riding.onJoin(s); // Fase 6 (monturas): quién va montado
   }
 
   private loadRecord(name: string): PlayerRecord | null {
@@ -689,6 +705,7 @@ export class GameServer {
     this.fluids.step(this.fluidWorld);
     this.nature.tick();
     this.entities.tick(DT);
+    this.riding.tick(); // Fase 6 (monturas)
     this.beds.tick();
     this.composters.tick();
     this.fishing.tick();

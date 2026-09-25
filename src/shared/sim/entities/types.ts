@@ -124,6 +124,20 @@ export interface Entity extends Body {
   sheared?: boolean;
   /** Gallinas: segundos hasta el próximo huevo. */
   eggTimer?: number;
+  // Fase 6 (monturas)
+  /** Pelaje (caballos, llamas); se envía a los clientes al darla de alta. */
+  variant?: number;
+  tamed?: boolean;
+  /** Paciencia ganada al montarla o darle de comer (0..100): cuanto más, más fácil domarla. */
+  temper?: number;
+  saddled?: boolean;
+  /** Jugador que la monta. */
+  rider?: string;
+  /** Velocidad (bloques/s) y fuerza de salto de la montura. */
+  mountSpeed?: number;
+  mountJump?: number;
+  /** Segundos que le quedan encabritada (tras tirar al jinete). */
+  rear?: number;
   ai?: AI;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;

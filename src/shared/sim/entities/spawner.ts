@@ -3,6 +3,7 @@
 import {
   MOBS, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
+  MOB_HORSE, MOB_DONKEY, MOB_LLAMA, MOB_CAMEL, // Fase 6 (monturas)
 } from '../../mobs';
 import {
   GRASS, SNOWY_GRASS, SNOW_BLOCK, SAND, STONE, GRAVEL, ICE, PACKED_ICE, SNOW_LAYER, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, WATER,
@@ -15,6 +16,7 @@ import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
+import { mountSpawnFor } from './mounts'; // Fase 6 (monturas)
 
 export class Spawner {
   private spawnTimer = 0;
@@ -141,6 +143,9 @@ export class Spawner {
       const q = this.m.rand();
       return q < 0.3 ? MOB_PIG : q < 0.55 ? MOB_COW : q < 0.85 ? MOB_SHEEP : MOB_CHICKEN;
     };
+    // Fase 6 (monturas): caballos, burros, llamas y camellos según el bioma.
+    const mount = mountSpawnFor(biome, this.m.rand());
+    if (mount) return mount;
     switch (biome) {
       case BIOME_TAIGA:
         return r < 0.25 ? MOB_WOLF : r < 0.5 ? MOB_FOX : farm();
@@ -206,6 +211,11 @@ const GROUP: Record<number, [number, number]> = {
   [MOB_POLAR_BEAR]: [1, 2],
   [MOB_RABBIT]: [2, 3],
   [MOB_WOLF]: [2, 4],
+  // Fase 6 (monturas)
+  [MOB_HORSE]: [2, 4],
+  [MOB_DONKEY]: [1, 2],
+  [MOB_LLAMA]: [2, 4],
+  [MOB_CAMEL]: [1, 1],
 };
 
 /** Suelo natural de los animales salvajes (nieve, roca de montaña, arena del desierto, hielo). */

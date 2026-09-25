@@ -1,6 +1,6 @@
 // Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
 // disparos, teletransporte del enderman, paseo y movimiento con física.
-import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF } from '../../mobs';
+import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA } from '../../mobs';
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
 import { moveBody, lineOfSight } from '../physics';
@@ -37,6 +37,8 @@ export class MobBrain {
     const def = MOBS[e.type];
     const ai = e.ai!;
     const w = this.m.w;
+    // Fase 6 (monturas): la montura que guía su jinete ni piensa ni se mueve sola.
+    if (this.m.mounts.riddenTick(e, dt)) return;
     // Ambiente: sol, lava, fuego, caída, vacío.
     if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
     if (e.inLava) {
@@ -184,6 +186,9 @@ export class MobBrain {
             speed = def.run;
           }
         }
+      } else if (e.type === MOB_LLAMA) {
+        // Fase 6 (monturas): la llama no muerde, escupe.
+        [moveX, moveZ, speed, jump] = this.m.mounts.llamaFight(e, target, dist, los, dt);
       } else {
         // Cuerpo a cuerpo.
         if (dist < 2.5 && Math.abs(dy) < 1.5 && los) {
@@ -338,6 +343,7 @@ export class MobBrain {
     if ((e.growAge ?? 0) > 0) f |= EF_BABY;
     if (e.sheared) f |= EF_SHEARED;
     if ((e.love ?? 0) > 0) f |= EF_LOVE;
+    f |= this.m.mounts.flags(e); // Fase 6 (monturas): silla, domada, con jinete, encabritada
     e.flags = f;
   }
 

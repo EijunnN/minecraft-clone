@@ -15,6 +15,7 @@
 import {
   MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
+  MOB_HORSE, MOB_DONKEY, MOB_MULE, MOB_LLAMA, MOB_CAMEL, // Fase 6 (monturas)
 } from '../../shared/mobs';
 
 export interface MobTexture {
@@ -1272,11 +1273,205 @@ function rabbit(t: Texel): Paint {
 }
 
 // ---------------------------------------------------------------------------
+// Fase 6 (monturas): caballo (7 colores × 5 marcas), burro, mula, llama (4 colores), camello y la
+// silla de montar (también la del cerdo).
+// ---------------------------------------------------------------------------
+
+const SADDLE_LEATHER: RGB[] = [
+  [84, 46, 24],
+  [102, 58, 30],
+  [120, 70, 38],
+  [138, 84, 46],
+];
+const SADDLE_BLANKET: RGB[] = [
+  [164, 44, 36],
+  [214, 150, 48],
+  [48, 84, 150],
+];
+
+/** Silla de cuero con el borde cosido más oscuro, estribos de hierro y, si es alta (camello), manta. */
+function saddlePaint(t: Texel): RGB {
+  if (t.g === 'stirrup') {
+    if (t.y < 2) return t.f === BOTTOM || t.f === TOP ? [120, 120, 126] : [168, 168, 176];
+    return [66, 38, 20];
+  }
+  const c = tone(SADDLE_LEATHER, clamp01(0.25 + 0.5 * vnoise(t.x, t.y, t.z, 2, 4242) + 0.25 * rnd(t, 4243)));
+  if (t.h >= 5 && side(t) && t.y < t.h - 3) {
+    // Manta bajo la silla del camello: franjas de colores.
+    return scale(SADDLE_BLANKET[Math.floor(t.y) % SADDLE_BLANKET.length], 0.9 + 0.15 * rnd(t, 4244));
+  }
+  const edge = t.f === TOP ? t.x < 1 || t.x > t.w - 1 || t.z < 1 || t.z > t.d - 1 : t.y < 1;
+  if (edge) return scale(c, 0.68);
+  if (t.f === TOP && t.z > t.d * 0.25 && t.z < t.d * 0.75) return scale(c, 0.85); // asiento
+  return c;
+}
+
+const HORSE_COATS: RGB[][] = [
+  [[206, 204, 198], [222, 220, 214], [234, 232, 228], [244, 243, 240]],
+  [[186, 150, 104], [204, 170, 122], [218, 186, 138], [230, 202, 156]],
+  [[126, 70, 36], [146, 84, 44], [164, 98, 54], [180, 112, 64]],
+  [[92, 60, 36], [108, 72, 44], [124, 84, 52], [138, 96, 60]],
+  [[26, 24, 26], [36, 34, 36], [46, 44, 46], [58, 56, 58]],
+  [[98, 96, 96], [116, 114, 114], [134, 132, 132], [150, 148, 148]],
+  [[56, 38, 26], [66, 46, 32], [78, 56, 38], [90, 66, 46]],
+];
+const HORSE_MANES: RGB[] = [[204, 202, 196], [150, 112, 70], [84, 44, 22], [48, 32, 20], [18, 16, 18], [58, 56, 56], [34, 24, 18]];
+const HORSE_WHITE: RGB = [236, 234, 228];
+const HORSE_BLACK: RGB = [30, 26, 24];
+
+interface HorseStyle {
+  coat: readonly RGB[];
+  mane: RGB;
+  /** 0 sin marcas, 1 calcetines y lucero, 2 manchas blancas, 3 lunares blancos, 4 lunares negros. */
+  marks: number;
+  seed: number;
+  /** Hocico más claro (burros y mulas). */
+  muzzle?: RGB;
+  /** Raya oscura en el lomo (burro). */
+  dorsal?: boolean;
+}
+
+function horseLike(t: Texel, st: HorseStyle): Paint {
+  const base = (): RGB => fur(t, st.coat, st.seed, 0.8);
+  const coated = (c: RGB): RGB => {
+    switch (st.marks) {
+      case 1:
+        if (t.g === 'leg' && t.y < 4.5 + (rnd(t, st.seed + 6) > 0.6 ? 0.6 : 0)) return HORSE_WHITE;
+        if (t.g === 'mouth' && t.f === TOP && Math.abs(t.x - t.w / 2) < 1) return HORSE_WHITE;
+        if (t.g === 'head' && (t.f === TOP || t.f === FRONT) && Math.abs(t.x - t.w / 2) < 1) return HORSE_WHITE;
+        return c;
+      case 2:
+        return vnoise(t.x, t.y, t.z + (t.g === 'body' ? 0 : 40), 4, st.seed + 7) > 0.62 ? HORSE_WHITE : c;
+      case 3:
+        return t.g !== 'mouth' && rnd(t, st.seed + 8) > 0.9 ? HORSE_WHITE : c;
+      case 4:
+        return t.g !== 'mouth' && rnd(t, st.seed + 9) > 0.9 ? HORSE_BLACK : c;
+      default:
+        return c;
+    }
+  };
+  switch (t.g) {
+    case 'saddle':
+    case 'stirrup':
+      return saddlePaint(t);
+    case 'mane':
+      return scale(st.mane, 0.85 + 0.3 * rnd(t, st.seed + 3));
+    case 'tail':
+      return scale(st.mane, 0.8 + 0.35 * vnoise(t.x, t.y * 0.4, t.z, 1.2, st.seed + 4));
+    case 'leg':
+      if (t.y < 1.5) return t.f === BOTTOM ? [40, 36, 34] : [62, 56, 50]; // cascos
+      return coated(base());
+    case 'mouth': {
+      if (t.f === FRONT) {
+        const n = mapAt(['....', 'N..N', '....', '.mm.'], t, { N: [22, 18, 18], m: scale(st.muzzle ?? base(), 0.7) });
+        if (n) return n;
+      }
+      const c = st.muzzle ? scale(st.muzzle, 0.9 + 0.15 * rnd(t, st.seed + 5)) : base();
+      return coated(t.y < 1 ? scale(c, 0.85) : c);
+    }
+    case 'head':
+      // Ojos a los lados, cerca del hocico; flequillo de la crin arriba.
+      if ((t.f === PX || t.f === NX) && Math.abs(t.z - 1.5) < 0.6 && Math.abs(t.y - 2.5) < 0.6) return [18, 14, 14];
+      if (t.f === TOP && Math.abs(t.x - t.w / 2) < 1 && t.z > t.d * 0.4) return st.mane;
+      return coated(base());
+    case 'ear':
+      if (t.f === FRONT) return scale(base(), 0.7);
+      return t.y > t.h - 1.5 && st.dorsal ? HORSE_BLACK : scale(base(), 0.92);
+    default:
+      if (st.dorsal && t.g === 'body' && t.f === TOP && Math.abs(t.x - t.w / 2) < 1) return scale(st.mane, 1.1);
+      if (st.muzzle && t.f === BOTTOM) return scale(st.muzzle, 0.95);
+      return coated(base());
+  }
+}
+
+function horsePainter(variant: number): Painter {
+  const n = HORSE_COATS.length;
+  const color = ((variant % n) + n) % n;
+  const marks = Math.floor(Math.max(0, variant) / n) % 5;
+  const st: HorseStyle = { coat: HORSE_COATS[color], mane: HORSE_MANES[color], marks, seed: 2525 + color };
+  return (t) => horseLike(t, st);
+}
+
+const DONKEY_STYLE: HorseStyle = {
+  coat: [[98, 88, 78], [116, 106, 94], [132, 122, 110], [146, 136, 124]], mane: [52, 44, 38], marks: 0, seed: 2626,
+  muzzle: [196, 188, 176], dorsal: true,
+};
+const MULE_STYLE: HorseStyle = {
+  coat: [[78, 50, 32], [92, 60, 38], [106, 70, 46], [120, 82, 54]], mane: [38, 26, 18], marks: 0, seed: 2727,
+  muzzle: [150, 120, 96],
+};
+
+const LLAMA_COATS: RGB[][] = [
+  [[196, 176, 136], [212, 194, 154], [224, 208, 170], [236, 222, 186]],
+  [[214, 212, 204], [228, 226, 220], [238, 236, 232], [248, 247, 244]],
+  [[106, 74, 48], [122, 88, 58], [138, 100, 68], [154, 114, 80]],
+  [[118, 114, 108], [136, 132, 126], [152, 148, 142], [168, 164, 158]],
+];
+
+function llama(t: Texel, coat: readonly RGB[]): Paint {
+  const wool = (): RGB => fur(t, coat, 2828, 1.6);
+  switch (t.g) {
+    case 'head':
+      if (t.f === FRONT) return mapAt(['........', '........', '.K....K.', '........', '........', '........'], t, { K: [20, 16, 14] }) ?? wool();
+      return wool();
+    case 'snout':
+      if (t.f === FRONT) return mapAt(['....', 'N..N', '....', '.mm.'], t, { N: [30, 24, 20], m: scale(coat[0], 0.6) }) ?? scale(wool(), 1.04);
+      return scale(wool(), 1.04);
+    case 'ear':
+      return t.f === FRONT ? scale(coat[0], 0.75) : scale(wool(), 0.92);
+    case 'leg':
+      if (t.y < 1) return t.f === BOTTOM ? [46, 40, 36] : [70, 60, 52];
+      return wool();
+    default:
+      return wool();
+  }
+}
+
+const CAMEL_FUR: RGB[] = [
+  [170, 128, 78],
+  [188, 146, 92],
+  [204, 162, 108],
+  [216, 176, 122],
+];
+
+function camel(t: Texel): Paint {
+  const hair = (k = 1): RGB => scale(fur(t, CAMEL_FUR, 2929, 1), k);
+  switch (t.g) {
+    case 'saddle':
+    case 'stirrup':
+      return saddlePaint(t);
+    case 'head':
+      if ((t.f === PX || t.f === NX) && Math.abs(t.z - 4.5) < 0.6 && Math.abs(t.y - 3.5) < 0.6) return [22, 16, 12];
+      if (t.f === FRONT) return mapAt(['......', '.N..N.', '......', '.mmmm.', '......'], t, { N: [40, 28, 18], m: [96, 70, 44] }) ?? hair(1.05);
+      return t.z < 3 ? hair(1.05) : hair();
+    case 'hump':
+      return scale(fur(t, CAMEL_FUR, 2930, 1.8), 0.92);
+    case 'ear':
+      return hair(0.85);
+    case 'tail':
+      return t.y < 2.5 ? [88, 64, 40] : hair(0.95);
+    case 'leg':
+      if (t.y < 1.5) return t.f === BOTTOM ? [96, 74, 50] : [120, 94, 64]; // almohadillas
+      if (t.y > 7 && t.y < 9.5) return hair(0.82); // rodillas
+      return hair();
+    default:
+      if (t.f === BOTTOM) return hair(0.85);
+      return hair();
+  }
+}
+
+/** Pintores con varios pelajes: reciben el número de pelaje. */
+const VARIANT_PAINTERS: Record<number, (variant: number) => Painter> = {
+  [MOB_HORSE]: horsePainter,
+  [MOB_LLAMA]: (v) => (t) => llama(t, LLAMA_COATS[((v % LLAMA_COATS.length) + LLAMA_COATS.length) % LLAMA_COATS.length]),
+};
+
+// ---------------------------------------------------------------------------
 // Entrada
 // ---------------------------------------------------------------------------
 
 const PAINTERS: Record<number, Painter> = {
-  [MOB_PIG]: pig,
+  [MOB_PIG]: (t) => (t.g === 'saddle' ? saddlePaint(t) : pig(t)), // Fase 6 (monturas): con silla
   [MOB_COW]: cow,
   [MOB_SHEEP]: sheep,
   [MOB_CHICKEN]: chicken,
@@ -1293,12 +1488,16 @@ const PAINTERS: Record<number, Painter> = {
   [MOB_POLAR_BEAR]: polarBear,
   [MOB_RABBIT]: rabbit,
   [MOB_WOLF]: wolf,
+  // Fase 6 (monturas)
+  [MOB_DONKEY]: (t) => horseLike(t, DONKEY_STYLE),
+  [MOB_MULE]: (t) => horseLike(t, MULE_STYLE),
+  [MOB_CAMEL]: camel,
 };
 
-/** Genera el atlas de una criatura (tamaño MOBS[id].atlas). */
-export function generateMobTexture(mobId: number): MobTexture {
+/** Genera el atlas de una criatura (tamaño MOBS[id].atlas); `variant`: pelaje (caballos, llamas). */
+export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   const mob = MOBS[mobId];
-  const painter = PAINTERS[mobId];
+  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId]; // Fase 6 (monturas): pelajes
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }

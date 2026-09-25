@@ -13,6 +13,7 @@ export class ServerEvents {
   constructor(private g: Game) {}
 
   onServerMessage(msg: ServerMsg): void {
+    if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
     switch (msg.t) {
       case 'join':
         this.addRemote(msg.p, true);
