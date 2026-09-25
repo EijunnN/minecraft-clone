@@ -125,6 +125,8 @@ registerRedstone(OBSERVER, {
 - Los raíles del transporte: `transport.rails.railPowered` usa `redstone.isPowered`.
 - Proyectiles (`projectileHit`), rayos (`lightningTarget`, `lightning`), cofres que se abren
   (`viewersChanged`) y contenidos que cambian (`analogChanged`) avisan al motor.
+- Los mecanismos (pistones, observadores, tolvas, dispensadores, soltadores y dinamita) usan esta API
+  desde fuera del motor: ver `docs/mecanismos.md`.
 
 ## Rendimiento
 

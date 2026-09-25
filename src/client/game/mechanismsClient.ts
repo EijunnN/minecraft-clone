@@ -3,7 +3,7 @@
 //   dónde sale, qué bloque es y hacia dónde va) y aquí se dibuja suelto mientras su sitio es un «bloque
 //   en movimiento» (invisible) y un poco más, hasta que el bloque asentado ya está en la malla.
 // - Al jugador lo aparta su propio cliente (como en Minecraft): si un bloque que se mueve le alcanza, lo
-//   empuja; si es de slime, lo lanza; si es de miel y lo tiene pegado, se lo lleva.
+//   empuja; si es de slime, lo lanza; si es de miel y lo tiene encima, se lo lleva.
 // - Dinamita encendida: el bloque que parpadea en blanco y se hincha justo antes de explotar.
 // - Efectos: el pistón, el clic y el humo del dispensador y del soltador, y la mecha.
 // - La armadura que le pone al jugador un dispensador ('equip').
@@ -104,17 +104,18 @@ export class MechanismsClient {
       const bx = m.x + ax * k, by = m.y + ay * k, bz = m.z + az * k;
       const touching = p.x + hw > bx - 0.02 && p.x - hw < bx + 1.02 && p.y + h > by - 0.02 && p.y < by + 1.02 && p.z + hw > bz - 0.02 && p.z - hw < bz + 1.02;
       if (!touching) continue;
-      // La miel se lleva al jugador que tiene pegado (encima o a un lado).
-      const ahead = ax * (p.x - (bx + 0.5)) + ay * (p.y + h / 2 - (by + 0.5)) + az * (p.z - (bz + 0.5)) > 0.5;
-      if (m.block === HONEY_BLOCK && !ahead) {
+      // La miel se lleva al jugador que está encima cuando se mueve de lado (como en Minecraft).
+      if (m.block === HONEY_BLOCK && ay === 0 && p.y >= by + 0.98 && p.y < by + 1.5) {
         p.x += ax * (k - prev);
-        p.y += ay * (k - prev);
         p.z += az * (k - prev);
         continue;
       }
+      // Sólo le alcanza si está por delante (no detrás del bloque que se aleja).
+      const front = ax * (p.x - (bx + 0.5)) + ay * (p.y + h / 2 - (by + 0.5)) + az * (p.z - (bz + 0.5)) > -0.6;
+      if (!front) continue;
       // Lo que tiene que moverse para quedar fuera de la cara de delante del bloque.
       const need = ax > 0 ? bx + 1 - (p.x - hw) : ax < 0 ? p.x + hw - bx : ay > 0 ? by + 1 - p.y : ay < 0 ? p.y + h - by : az > 0 ? bz + 1 - (p.z - hw) : p.z + hw - bz;
-      if (need > 0 && need < 1.1 && (ax * (p.x - (bx + 0.5)) + ay * (p.y + h / 2 - (by + 0.5)) + az * (p.z - (bz + 0.5))) > -0.6) {
+      if (need > 0 && need < 1.1) {
         p.x += ax * need;
         p.y += ay * need;
         p.z += az * need;

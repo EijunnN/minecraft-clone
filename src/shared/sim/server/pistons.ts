@@ -244,8 +244,7 @@ export class Pistons {
 
   /**
    * Las entidades que ocupan el sitio al que llega un bloque que choca se apartan hacia donde se mueve (los
-   * jugadores los aparta su cliente); el slime, además, las lanza, y la miel se lleva las que tiene pegadas
-   * (encima o a los lados).
+   * jugadores los aparta su cliente); el slime, además, las lanza, y la miel se lleva las que tiene encima.
    */
   private pushEntities(cells: MovingCell[], dir: number): void {
     if (cells.length === 0) return;
@@ -259,11 +258,10 @@ export class Pistons {
       let need = 0, slime = false, honey = false;
       for (const c of cells) {
         if (BLOCK_COLLIDE[c.block] === 0) continue;
-        if (c.block === HONEY_BLOCK) {
-          // Pegada a la miel (tocando su caja de antes de moverse, salvo por la cara de delante).
-          const ox = c.x - ax, oy = c.y - ay, oz = c.z - az, m = 0.02;
-          const touch = e.x + hw > ox - m && e.x - hw < ox + 1 + m && e.y + h > oy - m && e.y < oy + 1 + m && e.z + hw > oz - m && e.z - hw < oz + 1 + m;
-          if (touch) honey = true;
+        if (c.block === HONEY_BLOCK && ay === 0) {
+          // Encima de la miel que se mueve de lado: se la lleva (como en Minecraft).
+          const ox = c.x - ax, oy = c.y, oz = c.z - az;
+          if (e.x + hw > ox && e.x - hw < ox + 1 && e.z + hw > oz && e.z - hw < oz + 1 && e.y >= oy + 0.98 && e.y < oy + 1.5) honey = true;
         }
         if (e.x + hw <= c.x || e.x - hw >= c.x + 1 || e.y + h <= c.y || e.y >= c.y + 1 || e.z + hw <= c.z || e.z - hw >= c.z + 1) continue;
         const d = ax > 0 ? c.x + 1 - (e.x - hw) : ax < 0 ? e.x + hw - c.x : ay > 0 ? c.y + 1 - e.y : ay < 0 ? e.y + h - c.y
