@@ -53,6 +53,7 @@ export function seatHeight(type: number): number {
  * va algo adelantado y el segundo atrás; solo, en el centro.
  */
 export function seatOffset(type: number, seat: number, occupied: number): number {
+  if (type === ENT_CHEST_BOAT) return 0.15; // delante del cofre
   if (type !== ENT_BOAT || occupied < 2) return 0;
   return seat === 0 ? 0.2 : -0.6;
 }

@@ -615,6 +615,7 @@ export class Renderer {
     this.drawMobHeldItems(s, lightOf, bindLighting);
     this.drawPlayerHeldItems(s, bindLighting);
     this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
+    this.mobs.drawVehicleMasks(s.mobs, s.camX, s.camY, s.camZ, s.time, bindLighting); // Fase 7 (transporte): sin agua dentro de las barcas
     this.signText.draw(s.signs ?? [], s.camX, s.camY, s.camZ);
     this.bannerCloth.draw(s.banners ?? [], s.camX, s.camY, s.camZ, lightOf, bindLighting);
     gl.disable(gl.CULL_FACE);

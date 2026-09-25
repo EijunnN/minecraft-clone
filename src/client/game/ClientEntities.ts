@@ -5,6 +5,7 @@ import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY
 import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd, type EntExtra } from '../../shared/protocol';
 import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
 import { ENT_ARMOR_STAND } from '../../shared/armorStands'; // Fase 6.5 (remate)
+import { isVehicleType, vehicleSize } from '../../shared/vehicles'; // Fase 7 (transporte)
 
 interface Snap {
   t: number;
@@ -95,6 +96,7 @@ export class ClientEntities {
         collector: null, collectT: 0, gone: false, seed: (id * 2654435761) % 1000 / 1000, lastX: x, lastZ: z,
       };
       if (type === ENT_ARMOR_STAND) e.armor = [0, 1, 2, 3].map((k) => Number(a[9 + k]) || 0); // Fase 6.5 (remate)
+      if (isVehicleType(type)) e.variant = Number.isInteger(e1) ? Math.max(0, Math.min(255, e1)) : 0; // Fase 7 (transporte): madera
       this.list.set(id, e);
     }
     for (const u of msg.u ?? []) {
@@ -202,10 +204,12 @@ export class ClientEntities {
     let best: { e: ClientEntity; dist: number } | null = null;
     for (const e of this.list.values()) {
       const def = MOBS[e.type];
-      if (!def || def.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
-      const k = e.flags & EF_BABY ? 0.5 : 1;
-      const hw = (def.width * k) / 2 + 0.05;
-      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height * k, e.z + hw];
+      // Fase 7 (transporte): las barcas y vagonetas también se apuntan (para subirse y golpearlas).
+      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : null;
+      if ((!def && !vs) || def?.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
+      const k = e.flags & EF_BABY && def ? 0.5 : 1;
+      const hw = ((vs ? vs[0] : def!.width) * k) / 2 + 0.05;
+      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + (vs ? vs[1] : def!.height) * k, e.z + hw];
       let tmin = 0, tmax = maxDist;
       const o = [ox, oy, oz], d = [dx, dy, dz];
       let hit = true;

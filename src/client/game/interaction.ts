@@ -40,6 +40,7 @@ import { TRIDENT } from '../../shared/items';
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { materialsUse } from './materialsInteraction'; // Fase 6.5 (materiales)
 import { collectionUse } from './collectionInteraction'; // Fase 6.5 (colecciones)
+import { isVehicleType } from '../../shared/vehicles'; // Fase 7 (transporte)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
@@ -161,6 +162,9 @@ export class Interaction {
     }
     // Fase 6 (monturas): poner la silla o montarse.
     if (pressed && target && this.g.riding.onUse(target, held?.id ?? 0)) return;
+    // Fase 7 (transporte): subirse, abrir el cofre o echar carbón; poner barcas y vagonetas.
+    if (pressed && target && this.g.vehicles.onUse(target, held)) return;
+    if (this.g.vehicles.place(this, pressed, target ? null : hit, held, dir)) return;
     // Criatura delante: dar de comer, esquilar u ordeñar (Fase 6: domesticar y sentar, también con la mano vacía).
     if (pressed && target && this.canInteract(target, held?.id ?? 0)) {
       this.interactEntity(target, held?.id ?? 0);
@@ -498,7 +502,7 @@ export class Interaction {
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.1);
       const tool = ITEMS[this.g.heldId]?.tool;
-      if (tool && !WEARLESS.has(tool.kind)) this.wearHeld(tool.kind === 'sword' ? 1 : 2);
+      if (tool && !WEARLESS.has(tool.kind) && !isVehicleType(e.type)) this.wearHeld(tool.kind === 'sword' ? 1 : 2); // Fase 7: las barcas no gastan
     }
   }
 

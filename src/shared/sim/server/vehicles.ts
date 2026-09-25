@@ -445,6 +445,11 @@ export class Transport {
     }
     const k = Number(msg.k) | 0;
     v.paddles = v.boat ? k & 3 : 0;
+    // Los pasajeros van con ella (sus 'pos' llegan más espaciados: a toda velocidad se quedarían atrás).
+    for (const st of v.seats) {
+      const ps = st && 'player' in st ? [...ctx.sessions()].find((o) => o.id === st.player) : undefined;
+      if (ps) ps.p = [r2(e.x), ps.p[1], r2(e.z)];
+    }
   }
 
   // ------------------------------------------------------------------ cada tick

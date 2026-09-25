@@ -52,6 +52,9 @@ import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
 import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
+import { VehicleClient } from './vehicleClient'; // Fase 7 (transporte)
+import { vehicleFrame } from './vehicleFx';
+import { isVehicleType } from '../../shared/vehicles';
 import { Trading } from './trading'; // Fase 6 (aldeanos)
 import { renderRaidBar, type RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
 // Fase 6.5 (decoración): catalejo, reloj y rayo contra cuadros y marcos.
@@ -100,6 +103,7 @@ export class Game {
   /** Intensidad de la lluvia ahora mismo (0..1), para las salpicaduras. */
   rainNow = 0;
   readonly riding = new Riding(this); // Fase 6 (monturas)
+  readonly vehicles = new VehicleClient(this); // Fase 7 (transporte): barcas y vagonetas
   /** Fase 6 (aldeanos): comercio con los aldeanos. */
   readonly trading = new Trading(this);
   readonly xp = new Experience();
@@ -740,8 +744,9 @@ export class Game {
       sprint: active && (settings.toggleSprint ? this.sprintOn : input.isDown(k.sprint)) && (this.creative || surv.canSprint()),
     };
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
-    if (!this.riding.update(dt, controls, active)) p.update(dt, controls, world);
-    const moved = this.riding.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
+    // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
+    if (!this.riding.update(dt, controls, active) && !this.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
+    const moved = this.riding.active || this.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
     // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
     if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
       const bx = Math.floor(p.x), by = Math.floor(p.y - 0.05), bz = Math.floor(p.z);
@@ -782,7 +787,7 @@ export class Game {
     const dir = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
     const reach = this.creative ? REACH_CREATIVE : REACH_SURVIVAL;
     this.hit = surv.dead ? null : raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], reach, (x, y, z) => world.getBlock(x, y, z));
-    const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH, this.riding.entityId);
+    const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH, this.riding.active ? this.riding.entityId : this.vehicles.skipId); // Fase 7: la barca propia no tapa
     // Las plantas sin colisión (hierba, flores, cultivos) no tapan a las criaturas.
     const hitBlocks = this.hit && BLOCK_RENDER[this.hit.id] !== R_CROSS && BLOCK_RENDER[this.hit.id] !== R_CROP;
     // Fase 6.5 (decoración): los cuadros y marcos también se pueden golpear y usar.
@@ -802,6 +807,8 @@ export class Game {
     world.update(p.x, p.z, p.yaw, dt);
     this.ents.update(dt, nowS);
     this.riding.afterEntities(dt); // Fase 6 (monturas)
+    this.vehicles.afterEntities(dt); // Fase 7 (transporte)
+    vehicleFrame(this, dt);
     this.interaction.autoPickup(nowS);
     this.lookTimer -= dt;
     if (this.lookTimer <= 0 && !surv.dead) {
@@ -814,6 +821,7 @@ export class Game {
     for (const rp of this.remote.values()) {
       rp.update(dt);
       this.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
+      this.vehicles.placeRemote(rp.id, rp.view); // Fase 7 (transporte): en su barca o vagoneta
       if (rp.state & STATE_DEAD) continue;
       const v = rp.view;
       const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
@@ -938,7 +946,7 @@ export class Game {
         swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
         use: ((k) => (k === 'none' ? null : k))(useLook(this.interaction.use).kind), light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
-        riding: this.riding.active, // Fase 6 (monturas): sentado
+        riding: this.riding.active || this.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
       });
     }
 
@@ -979,7 +987,7 @@ export class Game {
     const mobs: ClientEntity[] = [];
     const drops: ClientEntity[] = [];
     for (const e of this.ents.list.values()) {
-      if (MOBS[e.type]) mobs.push(e);
+      if (MOBS[e.type] || isVehicleType(e.type)) mobs.push(e); // Fase 7 (transporte): barcas y vagonetas, con los modelos de cajas
       else drops.push(e);
     }
     const m = this.interaction.mining;
@@ -1113,7 +1121,7 @@ export class Game {
         `Entidades: ${mobs.length} criaturas · ${drops.length} objetos\n` +
         `Modo: ${this.creative ? 'creativo' : 'supervivencia'} · ${this.offline ? 'sin conexión' : `ping ${Math.round(this.net?.latency ?? 0)} ms · ${this.remote.size + 1} jugadores`}\n` +
         (this.hit ? `Mirando: ${BLOCKS[this.hit.id].name} (${this.hit.x}, ${this.hit.y}, ${this.hit.z})\n` : '') +
-        (target ? `Criatura: ${MOBS[target.type].name}\n` : '') +
+        (target ? `Criatura: ${MOBS[target.type]?.name ?? 'transporte'}\n` : '') + // Fase 7: también barcas y vagonetas
         `GPU: ${r.caps.renderer}`,
       );
     } else ui.setDebug(null);

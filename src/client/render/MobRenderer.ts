@@ -17,6 +17,7 @@ import { EF_CHARGED } from '../../shared/collections'; // Fase 6.5 (colecciones)
 import { chargedAuraTexture, AURA_FRAMES } from '../textures/collectionTextures'; // Fase 6.5 (colecciones)
 import { gearTexture, GEAR_INFLATE } from '../textures/gearTextures'; // Fase 6.5 (equipo)
 import { MOB_DROWNED } from '../../shared/mobs';
+import { vehicleModel, vehicleSkinVariant, animateVehicle, vehicleRoot } from './vehicleModels'; // Fase 7 (transporte)
 
 export interface MobTexture {
   width: number;
@@ -158,6 +159,7 @@ export class MobRenderer {
   /** Rotaciones de animación por parte: [x, y, z] añadidas a la de reposo. */
   private animate(def: MobDef, e: ClientEntity, time: number, name: string, out: number[]): void {
     out[0] = out[1] = out[2] = 0;
+    if (animateVehicle(def, e, time, name, out)) return; // Fase 7 (transporte): remos
     if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
     const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
     const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
@@ -282,6 +284,7 @@ export class MobRenderer {
     mat4.identity(m);
     mat4.translate(m, m, [e.x - camX, e.y - camY, e.z - camZ]);
     mat4.rotateY(m, m, e.bodyYaw);
+    vehicleRoot(def, e, m); // Fase 7 (transporte): balanceo e inclinación
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
     mountRootPose(def, e, m); // Fase 6 (monturas): encabritada
     faunaRoot(def, e, m); // Fase 6 (fauna)
@@ -316,16 +319,17 @@ export class MobRenderer {
     const p = bindLighting(this.prog.use());
     const bonesLoc = p.loc('uBones');
     for (const e of list) {
-      const def = MOBS[e.type];
+      const vehicle = MOBS[e.type] ? undefined : vehicleModel(e); // Fase 7 (transporte): barcas y vagonetas
+      const def = MOBS[e.type] ?? vehicle?.def;
       if (!def) continue;
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
-      const hurt = e.hurtT < 0.35 || e.deathT >= 0;
+      const hurt = !vehicle && (e.hurtT < 0.35 || e.deathT >= 0);
       const light = lightAt(e);
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def, e.variant || mobVariant(e)))
+      p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : e.variant || mobVariant(e)))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
@@ -397,17 +401,48 @@ export class MobRenderer {
     const p = this.shadowProg.use();
     const bonesLoc = p.loc('uBones');
     for (const e of list) {
-      const def = MOBS[e.type];
+      const def = MOBS[e.type] ?? vehicleModel(e)?.def; // Fase 7 (transporte)
       if (!def) continue;
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
-      p.tex2D('uSkin', this.skin(def, e.variant)).m4('uModel', root as Float32Array);
+      p.tex2D('uSkin', this.skin(def, MOBS[e.type] ? e.variant : vehicleSkinVariant(e))).m4('uModel', root as Float32Array);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
     }
     gl.bindVertexArray(null);
+  }
+
+  /**
+   * Fase 7 (transporte): tapas invisibles de las barcas (sólo profundidad) para que el agua no se vea
+   * dentro del casco. Se dibujan después de todo lo que puede ir dentro (jugadores, criaturas) y antes
+   * del agua.
+   */
+  drawVehicleMasks(list: ClientEntity[], camX: number, camY: number, camZ: number, time: number, bindLighting: (p: Program) => Program): void {
+    const gl = this.gl;
+    let p: Program | null = null;
+    for (const e of list) {
+      const vm = MOBS[e.type] ? undefined : vehicleModel(e);
+      if (!vm?.mask) continue;
+      if (!p) {
+        p = bindLighting(this.prog.use());
+        gl.colorMask(false, false, false, false);
+        gl.disable(gl.CULL_FACE);
+      }
+      const mesh = this.mesh(vm.mask);
+      const root = this.rootMatrix(vm.def, e, camX, camY, camZ, time);
+      this.bones.set(mat4.create() as Float32Array, 0);
+      p.tex2D('uSkin', this.skin(vm.def, vehicleSkinVariant(e))).m4('uModel', root as Float32Array);
+      gl.uniformMatrix4fv(p.loc('uBones'), false, this.bones, 0, 16);
+      gl.bindVertexArray(mesh.vao);
+      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    }
+    if (p) {
+      gl.colorMask(true, true, true, true);
+      gl.enable(gl.CULL_FACE);
+      gl.bindVertexArray(null);
+    }
   }
 
   /** Matriz (relativa a la cámara) de la mano derecha de un esqueleto, para dibujar su arco. */
