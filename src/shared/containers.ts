@@ -6,6 +6,8 @@ import { stackToWire, stackFromWire, type WireStack } from './protocol';
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
 import { IRON_ORE, GOLD_ORE } from './blocks';
 import { sanitizeItemData, cloneItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
+import { COPPER_ORE, DEEPSLATE_ORE } from './blocks'; // Fase 6.5 (materiales)
+import { RAW_IRON, RAW_GOLD, RAW_COPPER } from './items'; // Fase 6.5 (materiales)
 
 export const CHEST_SLOTS = 27;
 export const FURNACE_IN = 0;
@@ -37,6 +39,8 @@ export function newContainer(kind: ContainerKind, size = kind === 'chest' ? CHES
 export type FurnaceVariant = 0 | 1 | 2;
 /** Lo que funde el alto horno. */
 const BLAST_INPUTS = new Set([IRON_ORE, GOLD_ORE]);
+// Fase 6.5 (materiales): también el mineral en bruto y las menas de cobre y de pizarra profunda.
+for (const id of [RAW_IRON, RAW_GOLD, RAW_COPPER, COPPER_ORE, DEEPSLATE_ORE[IRON_ORE], DEEPSLATE_ORE[GOLD_ORE], DEEPSLATE_ORE[COPPER_ORE]]) BLAST_INPUTS.add(id);
 
 /** ¿Funde este horno lo que hay en la entrada? */
 export function variantSmelts(variant: FurnaceVariant, input: number): boolean {

@@ -128,7 +128,7 @@ export type ClientMsg =
     l?: BannerLayer[];
   }
   /** Clic derecho sobre un bloque (abrir puertas, dormir, labrar con la azada, polvo de hueso). */
-  | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number }
+  | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number; h?: number } // Fase 6.5 (materiales): h, altura del clic
   /** Al morir: soltar orbes con esta experiencia en la posición p. */
   | { t: 'dropxp'; n: number; p: [number, number, number] }
   /** Usar el objeto de la mano sobre una criatura (dar de comer, esquilar, ordeñar). */

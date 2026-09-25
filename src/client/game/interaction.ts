@@ -34,6 +34,7 @@ import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 import { decorUse, decorAfterEat } from './decorInteraction'; // Fase 6.5 (decoración)
 import { leashUse } from './leashInteraction'; // Fase 6.5 (remate)
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { materialsUse } from './materialsInteraction'; // Fase 6.5 (materiales)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -160,6 +161,8 @@ export class Interaction {
     if (pressed && hit && held && useAxeOnWood(this.g, this, hit, held)) return;
     // Fase 6.5 (cobre): encerar con panal o raspar con un hacha.
     if (pressed && hit && held && useOnCopper(this.g, this, hit, held)) return;
+    // Fase 6.5 (materiales): caminos y suelos, tartas con vela, nieve polvo y huevos de rana.
+    if (materialsUse(this.g, this, pressed, hit, held, dir)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       // Fase 6.5 (colores): con la misma vela en la mano se añade otra en vez de encenderla o apagarla.

@@ -10,7 +10,7 @@
 //   colgantes en el techo; liquen luminoso por las paredes de todas las cuevas.
 // Todo es determinista (semilla y posición) y se queda dentro del chunk.
 import {
-  AIR, WATER, ICE, GRASS, SNOWY_GRASS, DIRT, SHORT_GRASS, FERN, OAK_LOG, MOSS_BLOCK, BLOCK_OPAQUE, BLOCK_REPLACEABLE,
+  AIR, WATER, ICE, GRASS, SNOWY_GRASS, SHORT_GRASS, FERN, OAK_LOG, MOSS_BLOCK, BLOCK_OPAQUE, BLOCK_REPLACEABLE,
   BLOCK_RENDER, R_CROSS, CORAL_TYPES, CORALS, KELP_TOP, KELP_STEM, SEAGRASS_SHORT, TALL_SEAGRASS_LOWER, TALL_SEAGRASS_UPPER,
   SUNFLOWER, LILAC, ROSE_BUSH, PEONY, TALL_GRASS, LARGE_FERN, SWEET_BERRY_BUSH, AZALEA_LEAVES, FLOWERING_AZALEA_LEAVES,
   BIG_DRIPLEAF, BIG_DRIPLEAF_STEM, SMALL_DRIPLEAF, GLOW_LICHEN, HANGING_ROOTS, SPORE_BLOSSOM, seaPickleBlock, stateOf,
@@ -24,6 +24,7 @@ import {
   BIOME_BIRCH_FOREST, BIOME_DARK_FOREST, BIOME_TAIGA, BIOME_SNOWY, BIOME_JUNGLE, BIOME_SAVANNA, BIOME_MEADOW,
 } from './biomeIds';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
+import { rootColumn } from './materialDecor'; // Fase 6.5 (materiales)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -186,7 +187,7 @@ function decorateLand(
       // Azaleas encima de las cuevas frondosas (el árbol entero cabe en el chunk).
       if (ground === GRASS && cur === AIR && lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13 && r2 < 0.006 && gen.caveBiomeAt(wx, wz) === 1) {
         azaleaTree(wx, top + 1, wz, r, setLocal);
-        blocks[blockIndex(lx, top, lz)] = DIRT;
+        rootColumn(blocks, lx, top, lz); // Fase 6.5 (materiales): tierra enraizada hasta la cueva
         continue;
       }
       const patch = nz.patch.noise2(wx / 34, wz / 34);

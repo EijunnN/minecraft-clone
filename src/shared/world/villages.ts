@@ -6,11 +6,12 @@
 // dibuja sólo lo que le cae dentro. Las casas y huertos usan la altura del terreno base en su centro
 // (igual para todos los chunks); las calles buscan el suelo de cada columna en el propio chunk.
 import {
-  AIR, WATER, GRAVEL, DIRT, COBBLESTONE, SANDSTONE, CUT_SANDSTONE, CHISELED_SANDSTONE, OAK_PLANKS, OAK_LOG, SPRUCE_PLANKS,
+  AIR, WATER, DIRT, COBBLESTONE, SANDSTONE, CUT_SANDSTONE, CHISELED_SANDSTONE, OAK_PLANKS, OAK_LOG, SPRUCE_PLANKS,
   SPRUCE_LOG, ACACIA_PLANKS, ACACIA_LOG, SNOW_BLOCK, GLASS_PANE, DOORS, STAIRS, SLABS, FENCES, TORCH, WALL_TORCH, BEDS,
   CRAFTING_TABLE, FURNACE, HAY_BALE, FARMLAND, WHEAT_CROP, CARROTS, POTATOES, COLORED_TERRACOTTA, BLOCK_OPAQUE,
   BLOCK_FLUID, isLeaves, isLog, stateOf,
 } from '../blocks';
+import { DIRT_PATH } from '../blocks'; // Fase 6.5 (materiales)
 import {
   COMPOSTER, SMOKER, BLAST_FURNACE, STONECUTTER, LECTERN, CARTOGRAPHY_TABLE, FLETCHING_TABLE, BARREL, LOOM, GRINDSTONE,
   SMITHING_TABLE, CAULDRON,
@@ -83,7 +84,8 @@ interface Style {
 
 function styleFor(biome: number): Style {
   const wood = (planks: number, log: number, key: string, bed: string, ridge = 0): Style => ({
-    planks, log, base: COBBLESTONE, path: GRAVEL, stairs: STAIRS[key], slab: SLABS[key], door: DOORS[key],
+    // Fase 6.5 (materiales): calles de camino de tierra (antes, grava).
+    planks, log, base: COBBLESTONE, path: DIRT_PATH, stairs: STAIRS[key], slab: SLABS[key], door: DOORS[key],
     fence: FENCES[key], flat: false, ridge: ridge || planks, accent: log, bed: BEDS[bed],
   });
   switch (biome) {

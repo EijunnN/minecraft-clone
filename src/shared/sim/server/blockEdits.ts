@@ -35,6 +35,8 @@ export class BlockEdits {
   extraUse: ((s: Session, x: number, y: number, z: number, id: number) => boolean) | null = null;
   /** Fase 6.5 (libros y estandartes): aviso tras colocar (las capas del estandarte colocado). */
   placed: ((s: Session, msg: Extract<ClientMsg, { t: 'place' }>, edits: readonly Edit[]) => void) | null = null;
+  /** Fase 6.5 (materiales): tartas con vela, pala y azada sobre los suelos nuevos (`h`: altura del clic). */
+  materials: ((s: Session, x: number, y: number, z: number, id: number, item: number, h: number) => boolean) | null = null;
 
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
@@ -149,6 +151,9 @@ export class BlockEdits {
       if (!(Number.isInteger(item) && this.campfires.use(x, y, z, item))) ctx.reject(s, x, y, z);
       return;
     }
+    // Fase 6.5 (materiales): tartas con vela, caminos de tierra, tierra gruesa y enraizada.
+    const mat = this.materials;
+    if (mat && ctx.asActor(s.id, () => mat(s, x, y, z, id, item, Number(msg.h)))) return;
     // Fase 6 (fauna): nido o colmena llenos: tijeras (panal) o frasco de cristal (miel).
     if (isBeeHome(id)) {
       const ok = Number.isInteger(item) && ctx.asActor(s.id, () => harvestBeeHome(ctx.entities, x, y, z, item, s.id));

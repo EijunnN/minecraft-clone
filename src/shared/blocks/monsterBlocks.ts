@@ -20,5 +20,10 @@ export const INFESTED_OF: Readonly<Record<number, number>> = {
 };
 
 export function isInfested(id: number): boolean {
-  return id === INFESTED_STONE || id === INFESTED_COBBLESTONE || id === INFESTED_STONE_BRICKS;
+  return INFESTED_OF[id] !== undefined; // Fase 6.5 (materiales): también los que se añaden con addInfested
+}
+
+/** Fase 6.5 (materiales): registra otro bloque infestado (ladrillos agrietados, pizarra profunda…). */
+export function addInfested(block: number, mimics: number): void {
+  (INFESTED_OF as Record<number, number>)[block] = mimics;
 }

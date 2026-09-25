@@ -9,6 +9,7 @@ import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
 import { useTotem } from './raidClient'; // Fase 6 (asaltos)
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { Freezing } from './freezing'; // Fase 6.5 (materiales)
 
 /** Destino de los efectos en creativo: nada hace daño ni cura. */
 const CREATIVE_TARGET: EffectTarget = { health: 20, absorption: 0, heal: () => {}, damage: () => 0, addExhaustion: () => {} };
@@ -18,6 +19,8 @@ export class LifeCycle {
 
   voidTimer = 0;
   suffocateTimer = 0;
+  /** Fase 6.5 (materiales): frío de la nieve polvo. */
+  readonly freezing = new Freezing();
   /** Durmiendo en una cama (t = segundos que lleva). */
   sleeping: { t: number } | null = null;
   /** Cama donde reaparece (pies). */
@@ -148,6 +151,7 @@ export class LifeCycle {
     const g = this.g;
     const p = g.player;
     const surv = g.survival;
+    const cold = surv.dead ? 0 : this.freezing.update(g, dt); // Fase 6.5 (materiales)
     if (!g.creative && !surv.dead) {
       if (p.landedFall > 3 && !p.inWater) {
         // Caer sobre un fardo de heno quita el 80 % del daño y sobre una cama, la mitad.
@@ -187,6 +191,7 @@ export class LifeCycle {
       });
       // Fase 6.5 (océano y plantas): el arbusto de bayas dulces pincha al moverse dentro.
       if (isPricklyBush(feet) && Math.hypot(p.vx, p.vz) > 0.5) surv.damage(1, 'sweet_berry_bush');
+      if (cold > 0) surv.damage(cold, 'freeze', true); // Fase 6.5 (materiales): congelado en la nieve polvo
       if (surv.health < hpBefore) this.hurtFeedback(hpBefore - surv.health);
       if (surv.dead) this.die();
     } else {

@@ -1,5 +1,6 @@
 // Búsqueda de caminos A* para criaturas terrestres sobre la rejilla de bloques.
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_WALKTHROUGH, BLOCK_TALL } from '../blocks';
+import { DIRT_PATH } from '../blocks'; // Fase 6.5 (materiales)
 import type { BlockGetter } from './physics';
 import { posKey } from './posKey';
 
@@ -129,6 +130,8 @@ export function findPath(
       if (ny === -999) continue;
       const nb = w.getBlock(nx, ny, nz);
       if (nb > 0 && BLOCK_FLUID[nb] === 1) extra += 1.5;
+      // Fase 6.5 (materiales): las criaturas prefieren los caminos de tierra (pisarlos cuesta algo menos).
+      else if (w.getBlock(nx, ny - 1, nz) === DIRT_PATH) extra -= cost * 0.3;
       const nk = posKey(nx, ny, nz);
       const ng = cg + cost + extra;
       const old = g.get(nk);

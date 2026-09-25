@@ -52,6 +52,8 @@ import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
 import { Lecterns } from './server/lecterns'; // Fase 6.5 (libros y estandartes)
 import { Banners } from './server/banners'; // Fase 6.5 (libros y estandartes)
+import { Materials } from './server/materials'; // Fase 6.5 (materiales)
+import { Frogspawn } from './server/frogspawn'; // Fase 6.5 (materiales)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -143,6 +145,10 @@ export class GameServer {
   /** Fase 6.5 (libros y estandartes): libros de los atriles y capas de los estandartes. */
   readonly lecterns: Lecterns;
   readonly banners: Banners;
+  /** Fase 6.5 (materiales): suelos, tartas con vela y caminos. */
+  private materials: Materials;
+  /** Fase 6.5 (materiales): cría de las ranas y huevos de rana. */
+  readonly frogspawn: Frogspawn;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -228,6 +234,10 @@ export class GameServer {
     this.edits.placed = (s, msg, edits) => this.banners.onPlaced(s, msg, edits);
     const drop = this.entities.dropStacks.bind(this.entities);
     this.entities.dropStacks = (stacks, x, y, z) => drop(this.banners.decorateDrops(stacks, x, y, z), x, y, z);
+    // Fase 6.5 (materiales).
+    this.materials = new Materials(this.ctx);
+    this.edits.materials = (s, x, y, z, id, item, h) => this.materials.useBlock(s, x, y, z, id, item, h);
+    this.frogspawn = new Frogspawn(this.ctx, this.nature);
   }
 
   get seed(): number {
@@ -826,6 +836,7 @@ export class GameServer {
     this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
     this.lecterns?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (libros y estandartes)
     this.banners?.onBlockChanged(x, y, z, old, id);
+    this.materials?.onBlockChanged(x, y, z, id); // Fase 6.5 (materiales)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -851,6 +862,7 @@ export class GameServer {
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.banners.endTick(); // Fase 6.5 (libros y estandartes)
+    this.frogspawn.tick(); // Fase 6.5 (materiales)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {
