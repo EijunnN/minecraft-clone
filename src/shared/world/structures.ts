@@ -22,6 +22,7 @@ import {
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
+import { buildAncientCity, ancientCitySite, ANCIENT_CITY_RADIUS } from './ancientCity'; // Fase 7.5 (abismo)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -210,6 +211,8 @@ const GRID: GridType[] = [
     },
     build: buildOutpost,
   },
+  // Fase 7.5 (abismo): ciudades antiguas, en el Deep Dark (regiones de 24 chunks, como en Minecraft).
+  { key: 'ancient_city', spacing: 24, separation: 8, salt: 20083232, radius: ANCIENT_CITY_RADIUS, site: (gen, x, z) => ancientCitySite(gen, x, z), build: buildAncientCity },
 ];
 
 /** Nombres en español de las estructuras (y las claves que acepta /localizar). */
@@ -217,6 +220,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   desert_pyramid: 'Templo del desierto', jungle_temple: 'Templo de la jungla', shipwreck: 'Naufragio',
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
   village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
+  ancient_city: 'Ciudad antigua', // Fase 7.5 (abismo)
 };
 
 const startCache = new Map<string, Start | null>();

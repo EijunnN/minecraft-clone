@@ -176,3 +176,8 @@ import { EXPERIENCE_BOTTLE } from './items';
   enchantAll('ruined_portal', [ARMOR.golden.helmet, ARMOR.golden.boots, TOOLS.golden.sword, TOOLS.golden.pickaxe], randomly);
   enchantAll('shipwreck_supply', [ARMOR.leather.helmet, ARMOR.leather.boots], randomly);
 }
+
+// ------------------------------------------------------------------ Fase 7.5 (abismo)
+// Los cofres de las ciudades antiguas (y el de su nevera).
+import { DEEP_DARK_LOOT } from './deepDarkLoot';
+Object.assign(LOOT_TABLES, DEEP_DARK_LOOT);
