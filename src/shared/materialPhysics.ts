@@ -5,6 +5,7 @@
 // camina por encima y dentro se sube saltando (como por una escalera de mano).
 import { ICE, PACKED_ICE, BLUE_ICE, SLIME_BLOCK, POWDER_SNOW } from './blocks';
 import { isFrostedIce } from './blocks'; // Fase 7 (encantamientos)
+import { SOUL_SAND } from './blocks'; // Fase 7.5 (abismo)
 
 export interface BlockReader {
   getBlock(x: number, y: number, z: number): number;
@@ -26,9 +27,9 @@ export function groundGrip(id: number): number {
   return 1;
 }
 
-/** Velocidad al andar por encima (el slime frena como en Minecraft: al 40 %). */
+/** Velocidad al andar por encima (el slime y, Fase 7.5, la arena de alma frenan como en Minecraft: al 40 %). */
 export function groundSpeed(id: number): number {
-  return id === SLIME_BLOCK ? 0.4 : 1;
+  return id === SLIME_BLOCK || id === SOUL_SAND ? 0.4 : 1;
 }
 
 /** Por debajo de esta velocidad de caída (bloques/s) el slime ya no hace rebotar. */

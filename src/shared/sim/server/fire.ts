@@ -9,6 +9,7 @@ import {
   flameEncouragement, familyBase, stateOf, stateProps, CAMPFIRE, isCandle, isLitCandle, candleState, candleCount,
 } from '../../blocks';
 import { ENT_ITEM } from '../../mobs';
+import { SOUL_FIRE, isSoulGround } from '../../blocks'; // Fase 7.5 (abismo)
 import { rainAt } from '../../weather';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { Nature } from './nature';
@@ -68,6 +69,11 @@ export class Fire {
   ignite(x: number, y: number, z: number, age = 0): boolean {
     const w = this.ctx.world;
     if (w.getBlock(x, y, z) !== AIR) return false;
+    // Fase 7.5 (abismo): sobre arena o tierra de alma, fuego de alma (ni se extiende ni se apaga solo).
+    if (isSoulGround(w.getBlock(x, y - 1, z))) {
+      w.setBlock(x, y, z, SOUL_FIRE);
+      return true;
+    }
     if (!fireSupport((dx, dy, dz) => w.getBlock(x + dx, y + dy, z + dz))) return false;
     w.setBlock(x, y, z, fireWithAge(age));
     return true;
@@ -254,15 +260,16 @@ export class Fire {
     const w = ctx.world;
     for (const e of ctx.entities.list.values()) {
       if (e.dead) continue;
-      const inFire = isFire(w.getBlock(Math.floor(e.x), Math.floor(e.y + 0.1), Math.floor(e.z))) ||
-        isFire(w.getBlock(Math.floor(e.x), Math.floor(e.y + e.height * 0.6), Math.floor(e.z)));
-      if (!inFire) continue;
+      const feet = w.getBlock(Math.floor(e.x), Math.floor(e.y + 0.1), Math.floor(e.z));
+      const body = w.getBlock(Math.floor(e.x), Math.floor(e.y + e.height * 0.6), Math.floor(e.z));
+      const soul = feet === SOUL_FIRE || body === SOUL_FIRE; // Fase 7.5 (abismo): el fuego de alma quema el doble
+      if (!isFire(feet) && !isFire(body) && !soul) continue;
       if (e.type === ENT_ITEM) {
         ctx.entities.remove(e.id);
         ctx.fx('burn_item', e.x, e.y, e.z);
       } else if (e.ai && !e.inWater) {
         e.fire = Math.max(e.fire, 8);
-        ctx.entities.damage(e, 1, e.x, e.z, null, 0);
+        ctx.entities.damage(e, soul ? 2 : 1, e.x, e.z, null, 0);
       }
     }
   }

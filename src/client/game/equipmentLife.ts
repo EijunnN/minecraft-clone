@@ -4,6 +4,7 @@
 import { cauldronFill, CAULDRON_LAVA } from '../../shared/blocks'; // Fase 6.5 (calderos)
 import type { Game } from './Game';
 import { isFire } from '../../shared/blocks';
+import { SOUL_FIRE } from '../../shared/blocks'; // Fase 7.5 (abismo)
 import { TURTLE_HELMET } from '../../shared/items';
 import { EFFECT_RESISTANCE, EFFECT_WATER_BREATHING } from '../../shared/effects';
 import { TURTLE_SHELL_BREATH } from '../../shared/equipment';
@@ -32,5 +33,6 @@ export function playerInFire(g: Game): boolean {
   const feet = w.getBlock(x, Math.floor(p.y + 0.05), z);
   // Fase 6.5 (calderos): meterse en un caldero con lava también quema.
   if (cauldronFill(feet)?.kind === CAULDRON_LAVA && p.y - Math.floor(p.y) < 0.95) return true;
-  return isFire(feet) || isFire(w.getBlock(x, Math.floor(p.y + 1), z));
+  const body = w.getBlock(x, Math.floor(p.y + 1), z);
+  return isFire(feet) || isFire(body) || feet === SOUL_FIRE || body === SOUL_FIRE; // Fase 7.5 (abismo): también el de alma
 }

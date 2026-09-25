@@ -20,6 +20,7 @@ import type { Entities } from './Entities';
 import { mountSpawnFor } from './mounts'; // Fase 6 (monturas)
 import { pickMonster, spawnExtraMonsters } from './monsterSpawns'; // Fase 6 (monstruos)
 import { faunaWorldTick, faunaPassiveFor, faunaFloor, FAUNA_GROUPS } from './wildlife'; // Fase 6 (fauna)
+import { isDeepDark } from '../../world/deepDark'; // Fase 7.5 (abismo)
 
 export class Spawner {
   private spawnTimer = 0;
@@ -90,6 +91,7 @@ export class Spawner {
       const exposed = y > top;
       if (exposed && !night) continue;
       if (w.isLitByBlocks(x, y, z)) continue;
+      if (isDeepDark(w.gen, x, y, z)) continue; // Fase 7.5 (abismo): en el Deep Dark no aparece nada
       // Tipo según el bioma.
       const info = w.gen.columnInfo(x, z);
       const r = this.m.rand();
