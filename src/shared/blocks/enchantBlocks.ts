@@ -9,6 +9,7 @@
 // Se registran los últimos (export * al final de index.ts): no mueven ningún id guardado.
 import { family, familyBase, L, R_MODEL, R_TRANSLUCENT } from './registry';
 import { mbox, rotateBoxes, rotateFlat } from '../blockModels';
+import { BLOCK_LEAVES_WATER } from './ocean';
 
 // ------------------------------------------------------------------ mesa de encantamientos
 
@@ -82,6 +83,9 @@ export const FROSTED_ICE = family('frosted_ice', 'Hielo escarchado', [['age', FR
   all: `frosted_ice_${st.age}`, render: R_TRANSLUCENT, lightOpacity: 2, hardness: 0.5, sound: 'glass', noItem: true,
   category: null,
 }));
+
+// Al romperse (o derretirse) deja agua, como el hielo.
+for (let a = 0; a < FROSTED_ICE_AGES; a++) BLOCK_LEAVES_WATER[FROSTED_ICE + a] = 1;
 
 export function isFrostedIce(id: number): boolean {
   return id > 0 && familyBase(id) === FROSTED_ICE;

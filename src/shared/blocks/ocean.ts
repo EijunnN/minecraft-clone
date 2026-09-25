@@ -17,7 +17,6 @@ import { addMaterialShapes } from './building';
 import { addWall } from './decoration';
 import { MAX_BLOCK_ID } from '../constants';
 import { mbox, rotateBoxes, rotateFlat, DIR_X, DIR_Z, type ModelBox } from '../blockModels';
-import { isFrostedIce } from './enchantBlocks'; // Fase 7 (encantamientos)
 
 // ------------------------------------------------------------------ bloques anegados
 
@@ -28,9 +27,13 @@ export function isWaterlogged(id: number): boolean {
   return id > 0 && BLOCK_WATERLOGGED[id] === 1;
 }
 
+// Fase 7 (encantamientos): bloques que dejan agua al quitarlos sin estar anegados (el hielo escarchado). Lo
+// rellena enchantBlocks.ts: importarlo desde aquí lo registraría antes de tiempo y movería los ids.
+export const BLOCK_LEAVES_WATER = new Uint8Array(MAX_BLOCK_ID);
+
 /** Lo que queda en la celda al quitar el bloque: agua si estaba anegado, aire si no. */
 export function emptyAfterBreak(id: number): number {
-  return isWaterlogged(id) || isFrostedIce(id) ? WATER : AIR; // Fase 7 (encantamientos): el hielo escarchado deja agua
+  return isWaterlogged(id) || (id > 0 && BLOCK_LEAVES_WATER[id] === 1) ? WATER : AIR;
 }
 
 /** Marca como anegados los estados de una familia que son fluido (después de registrarla). */
