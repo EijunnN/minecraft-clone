@@ -1,6 +1,8 @@
 // Fase 7 (mecanismos): dispensadores y soltadores en el servidor, como en Minecraft.
 // - Al recibir un pulso (también por el bloque de encima: cuasi-conectividad) esperan 4 ticks y usan un
 //   objeto al azar de sus 9 huecos. Sin nada dentro, sólo hacen «clic».
+// - Como en Minecraft Java, uno que se pone donde ya hay potencia no dispara: sólo mira la potencia cuando
+//   le llega un aviso de un vecino (no tiene onPlace).
 // - El soltador lo suelta delante o, si delante hay algo que guarda objetos, lo mete dentro (uno).
 // - El dispensador según lo que sea: dispara flechas (también con efecto), bolas de nieve, huevos, pociones
 //   arrojadizas y persistentes, botellas con experiencia y cohetes; pone y recoge agua, lava y nieve polvo
@@ -9,7 +11,7 @@
 //   dinamita); pone dinamita encendida y esquila ovejas. Lo demás lo suelta como el soltador.
 import {
   AIR, TNT, WATER, LAVA, POWDER_SNOW, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_REPLACEABLE, DISPENSER, DROPPER, isRail,
-  isDropper, dispenserTriggered, dispenserWith, facingOf,
+  isDropper, dispenserTriggered, dispenserWith, facingOf, familyBase,
 } from '../../blocks';
 import {
   ITEMS, ARROW, TIPPED_ARROW, SNOWBALL, EGG, SPLASH_POTION, LINGERING_POTION, EXPERIENCE_BOTTLE, FIREWORK_ROCKET, BUCKET,
@@ -32,11 +34,17 @@ import type { ServerContext } from './context';
 
 /** Retardo del disparo tras el pulso (Minecraft: 4 ticks). */
 const DISPENSE_DELAY = 4;
+/** Dato de la posición: recién puesto (el primer aviso, el suyo propio, no cuenta). */
+const JUST_PLACED = 1;
 
 const SYSTEMS = new WeakMap<RedstoneApi, Dispensers>();
 
 registerRedstone([DISPENSER, DROPPER], {
-  neighbor: (api, x, y, z, id) => {
+  neighbor: (api, x, y, z, id, sx, sy, sz) => {
+    if (sx === x && sy === y && sz === z && api.getData(x, y, z) === JUST_PLACED) {
+      api.setData(x, y, z, 0);
+      return;
+    }
     const powered = api.isPowered(x, y, z) || api.isPowered(x, y + 1, z);
     const triggered = dispenserTriggered(id);
     if (powered && !triggered) {
@@ -45,6 +53,11 @@ registerRedstone([DISPENSER, DROPPER], {
     } else if (!powered && triggered) api.setBlock(x, y, z, dispenserWith(id, false));
   },
   tick: (api, x, y, z, id) => SYSTEMS.get(api)?.dispense(x, y, z, id),
+  // Recién puesto (no al cargar su chunk ni al cambiar de estado): el aviso a sí mismo no lo dispara.
+  changed: (api, x, y, z, old, id) => {
+    const base = familyBase(id);
+    if ((base === DISPENSER || base === DROPPER) && (old === 0 || (old > 0 && familyBase(old) !== base))) api.setData(x, y, z, JUST_PLACED);
+  },
 });
 
 /** Resultado de usar un objeto: se gastó (o cambió), falló (clic) o se suelta como objeto. */

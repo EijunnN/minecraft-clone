@@ -25,20 +25,32 @@ dinamita. Se enganchan a la redstone con su API (ver `docs/redstone.md`): el mot
 - **Pistones.** Miran la potencia al recibir un aviso (por cualquier lado menos por delante, o la del
   bloque de encima: cuasi-conectividad, con su «BUD»). Lo que mueven pasa 2 ticks como bloque en
   movimiento (`moving_piston`: invisible, no choca, no se rompe ni se mueve) y se asienta después de la
-  redstone del segundo tick; el cliente lo dibuja deslizándose (`fx 'pmove'`). Si se apaga antes de
-  asentarse (un pulso de 1 tick de redstone), lo empujado se queda y el adhesivo no tira: lo «escupe».
+  redstone del segundo tick; el cliente lo dibuja deslizándose (`fx 'pmove'`). Al recogerse, también la
+  base es un bloque en movimiento hasta que entra la cabeza (el cliente la dibuja extendida y quieta,
+  `PMOVE_STILL`). Si se apaga antes de asentarse (un pulso de 1 tick de redstone), lo empujado se queda y
+  el adhesivo no tira: lo «escupe».
+- **Guardar a medio movimiento.** El chunk se guarda con lo que quedará al asentarse (`WorldSim.savedInstead`,
+  sin tocar el mundo) y un chunk que se descarga asienta antes lo que se mueve en él
+  (`WorldSim.onChunkUnload`): no se pierde nada.
 - **Observador.** Cualquier cambio de estado del bloque que vigila (también un bloque que empieza o
   termina de moverse) lo enciende a los 2 ticks durante 2 ticks.
-- **Tolvas.** Cada 8 ticks (periódico de la redstone) pasan un objeto y cogen otro. Lo que llega a una
-  tolva desde otra no sigue hasta la vuelta siguiente.
+- **Tolvas.** Cada una pasa un objeto y coge otro; si movió algo, espera 8 ticks (su `cooldownTime`), y la
+  que recibe de otra estando vacía, 7: una fila de tolvas mueve 2,5 objetos por segundo. Sólo se miran
+  las que acaban su espera o despierta algo (un cambio de bloque a su lado, lo que guarda lo de encima o
+  lo del pico, un objeto tirado encima o una vagoneta al lado); las demás duermen.
 - **Dispensadores y soltadores.** Con un pulso (también por el bloque de encima) disparan a los 4 ticks.
+  Como en Java, uno puesto donde ya hay potencia no dispara hasta que le llega un aviso de un vecino (en
+  Bedrock sí dispararía).
+- **Vagoneta con dinamita.** Rota corriendo (0,1 bloques por tick o más) no se suelta: se enciende con
+  una mecha corta (0 a 38 ticks) y explota. Quieta, se suelta (aunque tenga la mecha encendida).
 - **Explosiones.** 1352 rayos como en Minecraft; hieren según la distancia y la parte de la entidad que
   se ve desde el centro; los bloques rotos sueltan su objeto con probabilidad 1/potencia.
 
 ## Simplificaciones
 
-- La base del pistón que se recoge ya es un pistón recogido mientras la cabeza vuelve (en Minecraft es
-  un bloque en movimiento); mientras dura el movimiento no hace caso a la potencia y la mira al acabar.
-- Un chunk guardado a medio movimiento pierde lo que se movía (el hueco se vacía al cargarlo).
-- Las tolvas pasan objetos todas a la vez (cada 8 ticks del reloj del servidor), no cada una con su espera.
-- La vagoneta con dinamita que se rompe corriendo explota, pero suelta también su objeto.
+- Un chunk guardado o descargado a medio movimiento se queda con el movimiento ya terminado (Minecraft
+  guarda el avance y lo termina al cargar): el resultado es el mismo, pero un pistón guardado así no mira
+  otra vez la potencia al cargar.
+- Una tolva sin espera que no tiene nada que hacer duerme hasta que algo la despierta (en Minecraft lo
+  intenta cada tick); en un mismo tick, las tolvas actúan en el orden en que despertaron, no en el de los
+  bloques con datos del chunk.

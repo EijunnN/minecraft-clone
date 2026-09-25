@@ -1,7 +1,9 @@
 // Fase 7 (mecanismos) en el cliente:
 // - Lo que mueve un pistón se ve deslizarse: el servidor avisa de cada bloque que se mueve ('pmove': de
 //   dónde sale, qué bloque es y hacia dónde va) y aquí se dibuja suelto mientras su sitio es un «bloque
-//   en movimiento» (invisible) y un poco más, hasta que el bloque asentado ya está en la malla.
+//   en movimiento» (invisible) y un poco más, hasta que el bloque asentado ya está en la malla. Al
+//   recogerse, la base extendida se dibuja quieta en su celda (también es un bloque en movimiento) mientras
+//   la cabeza entra en ella.
 // - Al jugador lo aparta su propio cliente (como en Minecraft): si un bloque que se mueve le alcanza, lo
 //   empuja; si es de slime, lo lanza; si es de miel y lo tiene encima, se lo lleva.
 // - Dinamita encendida: el bloque que parpadea en blanco y se hincha justo antes de explotar.
@@ -11,7 +13,7 @@ import { mat4 } from 'gl-matrix';
 import { BLOCK_COLLIDE, SLIME_BLOCK, HONEY_BLOCK, MOVING_BLOCK, isValidBlockId } from '../../shared/blocks';
 import { FACE_X, FACE_Y, FACE_Z } from '../../shared/redstone';
 import { ITEMS } from '../../shared/items';
-import { PISTON_MOVE_TICKS } from '../../shared/mechanisms';
+import { PISTON_MOVE_TICKS, PMOVE_STILL } from '../../shared/mechanisms';
 import { sanitizeStack } from '../../shared/containers';
 import type { ServerMsg } from '../../shared/protocol';
 import type { ItemDraw, ItemRenderer } from '../render/ItemRenderer';
@@ -45,14 +47,19 @@ type LightOf = (x: number, y: number, z: number) => [number, number];
 
 const now = () => performance.now() / 1000;
 
+/** Paso de una dirección de 'pmove' en cada eje (lo que se dibuja quieto no se mueve). */
+const stepX = (dir: number) => (dir === PMOVE_STILL ? 0 : FACE_X[dir]);
+const stepY = (dir: number) => (dir === PMOVE_STILL ? 0 : FACE_Y[dir]);
+const stepZ = (dir: number) => (dir === PMOVE_STILL ? 0 : FACE_Z[dir]);
+
 export class MechanismsClient {
   private moving: Moving[] = [];
 
   constructor(private g: Game) {}
 
-  /** Un bloque empieza a deslizarse desde la celda (x, y, z) hacia `dir`. */
+  /** Un bloque empieza a deslizarse desde la celda (x, y, z) hacia `dir` (PMOVE_STILL: se queda en ella). */
   add(block: number, x: number, y: number, z: number, dir: number): void {
-    if (!isValidBlockId(block) || dir < 0 || dir > 5 || this.moving.length > 512) return;
+    if (!isValidBlockId(block) || dir < 0 || dir > PMOVE_STILL || this.moving.length > 512) return;
     this.moving.push({ block, x, y, z, dir, t0: now(), settled: -1, seen: false, launched: false, lastK: 0 });
   }
 
@@ -86,7 +93,7 @@ export class MechanismsClient {
     const world = this.g.world;
     const p = this.g.player;
     this.moving = this.moving.filter((m) => {
-      const dx = m.x + FACE_X[m.dir], dy = m.y + FACE_Y[m.dir], dz = m.z + FACE_Z[m.dir];
+      const dx = m.x + stepX(m.dir), dy = m.y + stepY(m.dir), dz = m.z + stepZ(m.dir);
       // Se asienta cuando su hueco (que ya se vio) pasa a ser el bloque de verdad; si no llegó a verse, al rato.
       const b = world ? world.getBlock(dx, dy, dz) : MOVING_BLOCK;
       if (b === MOVING_BLOCK) m.seen = true;
@@ -96,7 +103,7 @@ export class MechanismsClient {
     if (this.g.vehicles.active || this.g.riding.active) return;
     const hw = 0.3, h = p.height;
     for (const m of this.moving) {
-      if (!BLOCK_COLLIDE[m.block] || m.settled >= 0) continue;
+      if (!BLOCK_COLLIDE[m.block] || m.settled >= 0 || m.dir === PMOVE_STILL) continue;
       const k = this.progress(m, t);
       const prev = m.lastK;
       m.lastK = k;
@@ -143,7 +150,7 @@ export class MechanismsClient {
       const model = items.stateModel(m.block);
       if (!model) continue;
       const k = this.progress(m, t);
-      const x = m.x + FACE_X[m.dir] * k, y = m.y + FACE_Y[m.dir] * k, z = m.z + FACE_Z[m.dir] * k;
+      const x = m.x + stepX(m.dir) * k, y = m.y + stepY(m.dir) * k, z = m.z + stepZ(m.dir) * k;
       const mm = mat4.create();
       mat4.translate(mm, mm, [x + 0.5 - camX, y + 0.5 - camY, z + 0.5 - camZ]);
       // Un pelo más pequeño: no pelea con el bloque asentado mientras se rehace la malla.
@@ -178,7 +185,7 @@ export function mechanismFx(g: Game, kind: string, p: [number, number, number], 
   const fx = g.renderer.entities.pfx;
   switch (kind) {
     case 'pmove':
-      // Un bloque que empieza a moverse (p: la celda de la que sale; a: el bloque; b: la dirección).
+      // Un bloque que empieza a moverse (p: la celda de la que sale; a: el bloque; b: la dirección o PMOVE_STILL).
       g.mechanisms.add(a ?? 0, Math.round(p[0]), Math.round(p[1]), Math.round(p[2]), b ?? 0);
       return true;
     case 'piston':

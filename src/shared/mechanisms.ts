@@ -12,3 +12,5 @@ export const TNT_SIZE = 0.98;
 
 /** Ticks (1/20 s) que tarda en deslizarse lo que mueve un pistón. */
 export const PISTON_MOVE_TICKS = 2;
+/** Dirección de 'pmove' de lo que se dibuja quieto en su celda (la base extendida del pistón que se recoge). */
+export const PMOVE_STILL = 6;

@@ -84,6 +84,11 @@ export interface CartBehavior {
   load?(v: Vehicle, data: unknown): void;
   /** Lo que suelta además de su objeto al romperla. */
   drops?(v: Vehicle): ItemStack[];
+  /**
+   * Fase 7 (mecanismos): un jugador la rompe (en supervivencia); false si no se rompe (la vagoneta con
+   * dinamita que corre se enciende en lugar de soltarse).
+   */
+  broken?(t: Transport, v: Vehicle): boolean;
   /** Fase 7 (mecanismos): bits de estado propios para los clientes (la mecha de la vagoneta con dinamita). */
   flags?(v: Vehicle): number;
 }
@@ -412,7 +417,7 @@ export class Transport {
     v.hurt = 10;
     v.hurtFlip = !v.hurtFlip;
     const creative = s.mode === 'c';
-    if (creative || v.damage > 40) {
+    if ((creative || v.damage > 40) && (creative || CART_BEHAVIORS[v.e.type]?.broken?.(this, v) !== false)) {
       this.ctx.fx('vehicle_break', v.e.x, v.e.y + 0.3, v.e.z, v.e.type);
       this.destroy(v, true, !creative);
     } else this.ctx.fx('vehicle_hit', v.e.x, v.e.y + 0.3, v.e.z, v.e.type);

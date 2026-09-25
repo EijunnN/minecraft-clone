@@ -3,7 +3,8 @@
 //   suelta nada: se vacía con una tolva debajo del raíl). Un raíl activador encendido la bloquea y uno
 //   apagado la desbloquea. Su inventario (5 huecos) se abre como el de la vagoneta con cofre.
 // - Con dinamita: un raíl activador encendido o un mechero le encienden la mecha (4 s, parpadea); una
-//   explosión, una más corta. Explota también al chocar fuerte y al romperla mientras corre. Cuanto más
+//   explosión, una más corta. Explota también al chocar fuerte. Rota mientras corre no se suelta: se
+//   enciende con una mecha corta (quieta, sí se suelta, aunque tenga la mecha encendida). Cuanto más
 //   deprisa va, más fuerte explota (Minecraft: 4 + hasta 1,5 × velocidad).
 import { FLINT_AND_STEEL } from '../../items';
 import { ENT_HOPPER_MINECART, ENT_TNT_MINECART, VF_PRIMED, vehicleContainerPos } from '../../vehicles';
@@ -93,7 +94,6 @@ function prime(v: Vehicle, fuse: number, t: Transport): void {
 CART_BEHAVIORS[ENT_TNT_MINECART] = {
   tick(t, v) {
     const x = extraOf(v);
-    x.transport = t;
     const speed = speedOf(v);
     const prev = num(x.speed, 0);
     x.speed = speed;
@@ -115,11 +115,13 @@ CART_BEHAVIORS[ENT_TNT_MINECART] = {
     return { ok: true, wear: s.mode === 'c' ? 0 : 1 };
   },
   flags: (v) => (num(v.extra?.fuse, -1) >= 0 ? VF_PRIMED : 0),
-  // Romperla mientras corre (o con la mecha encendida) la hace explotar.
-  drops(v) {
-    const t = v.extra?.transport as Transport | undefined;
-    if (t && (speedOf(v) >= CRASH_SPEED || num(v.extra?.fuse, -1) >= 0)) boom(t, v);
-    return [];
+  // Rota mientras corre (0,1 bloques por tick o más): no se suelta, se enciende con una mecha corta
+  // (MinecartTNT.destroy de Minecraft). Quieta se suelta (y se apaga, si estaba encendida).
+  broken(t, v) {
+    if (speedOf(v) < CRASH_SPEED) return true;
+    const s = SYSTEMS.get(t);
+    if (s) prime(v, s.tnt.shortCartFuse(), t);
+    return false;
   },
   save: (v) => (num(v.extra?.fuse, -1) >= 0 ? Math.round(num(v.extra?.fuse, -1)) : undefined),
   load(v, d) {

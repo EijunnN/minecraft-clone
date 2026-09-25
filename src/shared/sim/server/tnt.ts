@@ -99,6 +99,11 @@ export class Explosives {
     this.pending.push([v, speed]);
   }
 
+  /** Mecha corta (ticks) de la vagoneta con dinamita que enciende una explosión o que se rompe corriendo (0 a 38). */
+  shortCartFuse(): number {
+    return Math.floor(this.ctx.rand() * 20) + Math.floor(this.ctx.rand() * 20);
+  }
+
   /** La vagoneta con dinamita `v` se enciende. */
   primedCart(v: Vehicle): void {
     this.ctx.fx('tnt_primed', v.e.x, v.e.y + 0.5, v.e.z);
@@ -226,7 +231,7 @@ export class Explosives {
     if (!v) return;
     if (e.type === ENT_TNT_MINECART) {
       const x = (v.extra ??= {});
-      if (typeof x.fuse !== 'number' || x.fuse < 0) x.fuse = Math.floor(this.ctx.rand() * 20) + Math.floor(this.ctx.rand() * 20) + 1;
+      if (typeof x.fuse !== 'number' || x.fuse < 0) x.fuse = this.shortCartFuse() + 1;
       return;
     }
     if (dmg >= 4) this.transport.destroy(v, true, true);

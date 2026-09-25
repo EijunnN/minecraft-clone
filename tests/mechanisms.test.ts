@@ -162,6 +162,54 @@ test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime
   assert.equal(resolvePush(g, 0, 0, 0, EAST, true), null, 'con uno más pegado encima, 13: no');
 });
 
+test('pistón: guardar a medio movimiento no pierde nada (y la base que se recoge también se mueve)', () => {
+  const { h, c, bx, by, bz, set, get } = lab();
+  const x = bx - 10, z = bz;
+  // Uno que se extiende empujando una fila y un adhesivo que se recoge tirando de su bloque.
+  set(x, by, z, facingState(PISTON, EAST));
+  set(x + 1, by, z, COBBLESTONE);
+  set(x + 2, by, z, DIRT);
+  const z2 = z + 4;
+  set(x, by, z2, facingState(STICKY_PISTON, EAST));
+  set(x + 1, by, z2, SAND);
+  set(x - 1, by, z2, REDSTONE_BLOCK);
+  h.tick(4);
+  assert.equal(get(x + 2, by, z2), SAND, 'el adhesivo lo ha empujado');
+  set(x - 1, by, z2, AIR);
+  set(x - 1, by, z, REDSTONE_BLOCK);
+  h.tick(1);
+  assert.equal(get(x + 1, by, z), MOVING_BLOCK, 'la cabeza sale');
+  assert.equal(get(x + 3, by, z), MOVING_BLOCK, 'la tierra se mueve');
+  assert.equal(get(x, by, z2), MOVING_BLOCK, 'la base que se recoge es un bloque en movimiento');
+  assert.equal(get(x + 1, by, z2), MOVING_BLOCK, 'la arena vuelve');
+  // Se guarda a medio movimiento (sin tocar el mundo) y se carga en otro servidor.
+  h.gs.flush(true);
+  assert.equal(get(x + 3, by, z), MOVING_BLOCK, 'guardar no cambia el mundo');
+  const h2 = makeServer(4242, h.store);
+  const c2 = h2.join('Ingeniera', 'c');
+  c2.pos(bx + 0.5, by + 30, bz + 0.5);
+  h2.tick(60);
+  const get2 = (a: number, b: number, d: number) => h2.gs.world.getBlock(a, b, d);
+  assert.ok(pistonExtended(get2(x, by, z)), 'extendido');
+  assert.ok(isPistonHead(get2(x + 1, by, z)), 'con su cabeza');
+  assert.deepEqual([get2(x + 2, by, z), get2(x + 3, by, z)], [COBBLESTONE, DIRT], 'la fila, donde iba');
+  assert.ok(isPiston(get2(x, by, z2)) && !pistonExtended(get2(x, by, z2)), 'el adhesivo, recogido');
+  assert.deepEqual([get2(x + 1, by, z2), get2(x + 2, by, z2)], [SAND, AIR], 'con la arena pegada');
+  // Un chunk que se descarga a medio movimiento lo asienta antes (el mundo guarda sus ediciones).
+  h.tick(4);
+  set(x - 1, by, z, AIR);
+  h.tick(1);
+  assert.equal(get(x, by, z), MOVING_BLOCK);
+  c.pos(bx + 5000.5, by + 30, bz + 0.5);
+  h.gs.world.unloadUnused(h.clock.now + 60_000, () => false);
+  assert.equal(h.gs.mechanisms.pistons.pending, 0, 'nada a medias');
+  assert.equal(h.gs.world.getBlock(x, by, z), -1, 'descargado');
+  c.pos(bx + 0.5, by + 30, bz + 0.5);
+  h.tick(40);
+  assert.ok(isPiston(get(x, by, z)) && !pistonExtended(get(x, by, z)), 'recogido al volver');
+  assert.equal(get(x + 1, by, z), AIR, 'sin cabeza');
+});
+
 test('pistón: cuasi-conectividad (el bloque de encima cuenta) y empuja a las criaturas', () => {
   const { h, bx, by, bz, set, get } = lab();
   const x = bx + 4, z = bz - 8;
@@ -210,19 +258,25 @@ test('observador: pulso de 2 ticks cuando cambia lo que vigila', () => {
 test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por el comparador', () => {
   const { h, bx, by, bz, set, get } = lab();
   const inv = h.gs.mechanisms.inventories;
+  // Lo que se mete a mano se guarda con done() (como todo lo que cambia un contenedor: despierta a las tolvas).
+  const fill = (a: number, b: number, d: number, slot: number, st: { id: number; count: number }) => {
+    const o = inv.open(a, b, d)!;
+    o.state.slots[slot] = st;
+    o.done();
+  };
   const x = bx - 4, z = bz + 10;
   // Cofre arriba → tolva que apunta al este → cofre.
   set(x, by + 1, z, CHEST);
   set(x, by, z, stateOf(HOPPER, { facing: 2 }));
   set(x + 1, by, z, CHEST);
   h.tick(2);
-  inv.open(x, by + 1, z)!.state.slots[0] = { id: COBBLESTONE, count: 3 };
+  fill(x, by + 1, z, 0, { id: COBBLESTONE, count: 3 });
   h.tick(60);
   const dest = inv.open(x + 1, by, z)!.state.slots;
   assert.equal(dest.reduce((n, s) => n + (s?.count ?? 0), 0), 3, 'los tres pasan al cofre de al lado');
   assert.ok(inv.open(x, by + 1, z)!.state.slots.every((s) => !s), 'el de arriba queda vacío');
   // Ritmo: un objeto cada 8 ticks.
-  inv.open(x, by + 1, z)!.state.slots[0] = { id: DIRT, count: 64 };
+  fill(x, by + 1, z, 0, { id: DIRT, count: 64 });
   h.tick(80);
   const moved = inv.open(x + 1, by, z)!.state.slots.filter((s) => s?.id === DIRT).reduce((n, s) => n + s!.count, 0);
   assert.ok(moved >= 8 && moved <= 11, `unos 10 en 80 ticks (${moved})`);
@@ -232,8 +286,8 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   set(fx, by + 1, z, stateOf(HOPPER, { facing: 0 }));
   set(fx - 1, by, z, stateOf(HOPPER, { facing: 2 }));
   h.tick(2);
-  inv.open(fx, by + 1, z)!.state.slots[0] = { id: IRON_ORE_ITEM, count: 2 };
-  inv.open(fx - 1, by, z)!.state.slots[0] = { id: COAL, count: 1 };
+  fill(fx, by + 1, z, 0, { id: IRON_ORE_ITEM, count: 2 });
+  fill(fx - 1, by, z, 0, { id: COAL, count: 1 });
   h.tick(20);
   const furnace = inv.open(fx, by, z)!.state;
   assert.equal(furnace.slots[0]?.id, IRON_ORE_ITEM, 'el mineral entra por arriba');
@@ -246,7 +300,7 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   set(lx, by, z - 1, REDSTONE_BLOCK);
   h.tick(2);
   assert.ok(hopperLocked(get(lx, by, z)), 'bloqueada');
-  inv.open(lx, by + 1, z)!.state.slots[0] = { id: DIRT, count: 5 };
+  fill(lx, by + 1, z, 0, { id: DIRT, count: 5 });
   h.tick(40);
   assert.equal(inv.open(lx, by + 1, z)!.state.slots[0]?.count, 5, 'no se mueve nada');
   set(lx, by, z - 1, AIR);
@@ -258,11 +312,59 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   set(x + 1, by, cz, stateOf(COMPARATOR, { facing: 1 }));
   set(x + 2, by, cz, wireState(0, false));
   h.tick(2);
-  const o = inv.open(x, by, cz)!;
-  o.state.slots[0] = { id: DIRT, count: 64 };
-  o.done();
+  fill(x, by, cz, 0, { id: DIRT, count: 64 });
   h.tick(4);
   assert.equal(wirePower(get(x + 2, by, cz)), 3);
+});
+
+test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las que no tienen nada que hacer duermen', () => {
+  const { h, bx, by, bz, set } = lab();
+  const inv = h.gs.mechanisms.inventories;
+  const hoppers = h.gs.mechanisms.hoppers;
+  const count = (a: number, b: number, d: number) => inv.open(a, b, d)!.state.slots.reduce((n, st) => n + (st?.count ?? 0), 0);
+  const fill = (a: number, b: number, d: number, n: number) => {
+    const o = inv.open(a, b, d)!;
+    o.state.slots[0] = { id: DIRT, count: n };
+    o.done();
+  };
+  // Tolva A → tolva B → cofre, hacia el este.
+  const x = bx - 12, z = bz - 14;
+  set(x, by, z, stateOf(HOPPER, { facing: 2 }));
+  set(x + 1, by, z, stateOf(HOPPER, { facing: 2 }));
+  set(x + 2, by, z, CHEST);
+  h.tick(4);
+  assert.equal(hoppers.awakeCount, 0, 'sin nada que hacer, duermen');
+  fill(x, by, z, 2);
+  h.tick(1);
+  assert.deepEqual([count(x, by, z), count(x + 1, by, z)], [1, 1], 'A pasa uno en el acto');
+  h.tick(6);
+  assert.equal(count(x + 2, by, z), 0, 'B, vacía, lo recibió y espera 7 ticks');
+  h.tick(1);
+  assert.deepEqual([count(x + 1, by, z), count(x + 2, by, z)], [0, 1], 'a los 7 lo pasa');
+  assert.equal(count(x, by, z), 1, 'A aún espera (8)');
+  h.tick(1);
+  assert.deepEqual([count(x, by, z), count(x + 1, by, z)], [0, 1], 'a los 8, A pasa el segundo');
+  h.tick(7);
+  assert.equal(count(x + 2, by, z), 2);
+  h.tick(10);
+  assert.equal(hoppers.awakeCount, 0, 'y vuelven a dormir');
+  // Cada una a su ritmo: una fila de 4 tolvas desde un cofre lleno, 2,5 objetos por segundo.
+  const z2 = z + 3;
+  set(x, by + 1, z2, CHEST);
+  for (let i = 0; i < 4; i++) set(x + i, by, z2, stateOf(HOPPER, { facing: 2 }));
+  set(x + 4, by, z2, CHEST);
+  h.tick(2);
+  fill(x, by + 1, z2, 64);
+  h.tick(200);
+  const through = count(x + 4, by, z2);
+  assert.ok(through >= 22 && through <= 25, `unos 25 − 3 en 200 ticks (${through})`);
+  // Un objeto tirado encima de una tolva dormida la despierta.
+  const z3 = z + 6;
+  set(x, by, z3, stateOf(HOPPER, { facing: 0 }));
+  h.tick(4);
+  h.gs.entities.spawnItem({ id: DIAMOND, count: 1 }, x + 0.5, by + 1.2, z3 + 0.5);
+  h.tick(20);
+  assert.equal(inv.open(x, by, z3)!.state.slots[0]?.id, DIAMOND, 'lo coge');
 });
 
 test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar', () => {
@@ -329,6 +431,22 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
   inv.open(x, by, mz)!.state.slots[0] = { id: FLINT_AND_STEEL, count: 1 };
   pulse(x, mz);
   assert.equal(inv.open(x, by, mz)!.state.slots[0]?.dmg, 1, 'se desgasta');
+  // Como en Minecraft Java: puesto donde ya hay potencia no dispara hasta que le llega un aviso.
+  const pz = z + 20;
+  const shot = () => [...h.gs.entities.list.values()].filter((e) => e.type === ENT_ARROW).length;
+  const before = shot();
+  set(x - 1, by, pz, REDSTONE_BLOCK);
+  h.tick(2);
+  set(x, by, pz, facingState(DISPENSER, EAST));
+  const o = inv.open(x, by, pz)!;
+  o.state.slots[0] = { id: ARROW, count: 2 };
+  o.done();
+  h.tick(6);
+  assert.ok(!dispenserTriggered(get(x, by, pz)), 'puesto con potencia, no se dispara');
+  assert.equal(shot(), before);
+  set(x, by, pz + 1, STONE);
+  h.tick(6);
+  assert.equal(shot(), before + 1, 'con un aviso, sí');
 });
 
 test('dinamita: mecha, explosión como en Minecraft, cadena y agua', () => {
@@ -399,6 +517,53 @@ test('vagonetas con tolva y con dinamita', () => {
   h.tick(90);
   assert.ok(![...h.gs.entities.list.values()].some((e) => e.type === ENT_TNT_MINECART), 'ha explotado');
 });
+
+test('vagoneta con dinamita: rota corriendo se enciende y no se suelta; quieta, sí', () => {
+  const { h, c, bx, by, bz, set } = lab();
+  const x = bx - 20, z = bz - 20;
+  for (let i = 0; i < 40; i++) {
+    set(x + i, by, z, railState(1, RAIL_EW));
+    set(x + i, by, z + 6, railState(1, RAIL_EW));
+  }
+  h.tick(2);
+  const minera = h.join('Minera', 's');
+  minera.send({ t: 'chat', m: '/gamemode supervivencia' });
+  const place = (pz: number, q: number) => {
+    c.pos(x + 2.5, by, pz + 2.5);
+    c.send({ t: 'vplace', item: TNT_MINECART, p: [x + 2.5, by + 0.1, pz + 0.5], b: [x + 2, by, pz], yaw: -Math.PI / 2, q });
+    h.tick(2);
+    const e = [...h.gs.entities.list.values()].find((o) => o.type === ENT_TNT_MINECART && Math.floor(o.z) === pz)!;
+    assert.ok(e, 'puesta');
+    return e;
+  };
+  const cartItems = () => [...h.gs.entities.list.values()].filter((e) => e.type === ENT_ITEM && e.stack?.id === TNT_MINECART).length;
+  const hit = (id: number, speed: number) => {
+    for (let i = 0; i < 6 && h.gs.transport.vehicleOf(id) && num(h.gs.transport.vehicleOf(id)!.extra?.fuse) < 0; i++) {
+      const v = h.gs.transport.vehicleOf(id)!;
+      v.cart!.vx = speed;
+      minera.pos(v.e.x, by, v.e.z + 1.5);
+      minera.send({ t: 'attack', e: id, item: 0 });
+      h.tick(1);
+    }
+  };
+  // Corriendo (8 bloques/s): se enciende con una mecha corta, no suelta nada y explota.
+  const fast = place(z, 3);
+  hit(fast.id, 8);
+  assert.ok(h.gs.transport.vehicleOf(fast.id), 'no se rompe');
+  assert.ok(num(h.gs.transport.vehicleOf(fast.id)!.extra?.fuse) >= 0, 'se enciende');
+  assert.equal(cartItems(), 0, 'no se suelta');
+  h.tick(45);
+  assert.ok(!h.gs.entities.list.has(fast.id), 'explota');
+  assert.equal(cartItems(), 0, 'y no suelta su objeto');
+  // Quieta: se suelta sin explotar.
+  const still = place(z + 6, 4);
+  hit(still.id, 0);
+  assert.ok(!h.gs.transport.vehicleOf(still.id), 'rota');
+  assert.equal(cartItems(), 1, 'suelta la vagoneta con dinamita');
+  assert.equal([...h.gs.entities.list.values()].filter((e) => e.type === ENT_TNT).length, 0);
+});
+
+const num = (v: unknown) => (typeof v === 'number' ? v : -1);
 
 test('registro: recetas, colocación, huecos y texturas', () => {
   const C = COBBLESTONE, R = REDSTONE, P = ITEMS.findIndex((i) => i?.key === 'oak_planks');

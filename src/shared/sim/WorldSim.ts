@@ -41,6 +41,13 @@ export class WorldSim {
   onVillagers: ((villagers: VillagerSpawn[]) => void) | null = null;
   /** Fase 7 (redstone): un chunk acaba de cargarse (sus componentes se apuntan y reprograman). */
   onChunkLoaded: ((c: SimChunk) => void) | null = null;
+  /** Fase 7 (mecanismos): un chunk se va a descargar (lo que mueven los pistones en él se asienta ya). */
+  onChunkUnload: ((c: SimChunk) => void) | null = null;
+  /**
+   * Fase 7 (mecanismos): bloques que se guardan en lugar de los que hay, [x, y, z, bloque] (lo que se está
+   * moviendo, tal como quedará al asentarse).
+   */
+  savedInstead: (() => [number, number, number, number][]) | null = null;
   generatedCount = 0;
 
   constructor(seed: number, store: ServerStore) {
@@ -83,11 +90,25 @@ export class WorldSim {
   }
 
   flush(): void {
+    // Fase 7 (mecanismos): lo que se mueve se guarda ya asentado (sin tocar el mundo).
+    const instead = new Map<string, Map<number, number>>();
+    for (const [x, y, z, id] of this.savedInstead?.() ?? []) {
+      const cx = Math.floor(x / CHUNK_SIZE), cz = Math.floor(z / CHUNK_SIZE);
+      const key = chunkKey(cx, cz);
+      let m = instead.get(key);
+      if (!m) instead.set(key, (m = new Map()));
+      m.set(blockIndex(x - cx * CHUNK_SIZE, y, z - cz * CHUNK_SIZE), id);
+      this.dirty.add(key);
+    }
     for (const key of this.dirty) {
-      const m = this.edits.get(key);
+      let m = this.edits.get(key);
+      const over = instead.get(key);
+      if (m && over) m = new Map([...m, ...over]);
       if (m) this.store.saveChunkEdits(key, encodeChunkEdits(m));
     }
     this.dirty.clear();
+    // Los chunks guardados así se vuelven a guardar cuando se asienten de verdad.
+    for (const key of instead.keys()) this.dirty.add(key);
   }
 
   // ------------------------------------------------------------------ chunks
@@ -148,6 +169,7 @@ export class WorldSim {
     let n = 0;
     for (const [key, c] of this.chunks) {
       if (!keep(c.cx, c.cz) && now - c.lastUsed > 5000) {
+        this.onChunkUnload?.(c); // Fase 7 (mecanismos)
         this.chunks.delete(key);
         n++;
       }

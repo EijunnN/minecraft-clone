@@ -67,7 +67,16 @@ export class Mechanisms {
     const { ctx, redstone } = d;
     this.inventories = new Inventories(ctx, d.containers, d.composters, d.collections, d.shelves);
     this.pistons = new Pistons(ctx, redstone, d.rules);
+    // Lo que se mueve no se pierde: se guarda ya asentado y, si el chunk se descarga, se asienta antes.
+    ctx.world.savedInstead = () => this.pistons.settledCells();
+    ctx.world.onChunkUnload = (c) => this.pistons.settleChunk(c.cx, c.cz);
     this.hoppers = new Hoppers(ctx, redstone, this.inventories);
+    // Lo que cambia en un contenedor despierta a las tolvas que sacan de él o meten en él.
+    const contentsChanged = d.containers.contentsChanged;
+    d.containers.contentsChanged = (x, y, z) => {
+      contentsChanged?.(x, y, z);
+      this.hoppers.contentsChanged(x, y, z);
+    };
     this.explosives = new Explosives(ctx, redstone, d.transport);
     this.dispensers = new Dispensers(ctx, redstone, this.inventories, this.explosives, d.fire, d.transport, d.stands, { fertilize: d.fertilize });
     bindCarts(d.transport, { inv: this.inventories, containers: d.containers, tnt: this.explosives });
@@ -91,9 +100,14 @@ export class Mechanisms {
     }
   }
 
-  /** Cada tick (después de la redstone): se asienta lo que movieron los pistones y explotan las vagonetas. */
+  /**
+   * Cada tick (después de la redstone): se asienta lo que movieron los pistones, las tolvas mueven lo suyo
+   * (y los comparadores se enteran en el acto, como en Minecraft) y explotan las vagonetas.
+   */
   tick(): void {
     this.pistons.tick();
+    this.hoppers.tick();
+    this.d.redstone.flush();
     this.explosives.tick();
   }
 
