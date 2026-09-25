@@ -17,9 +17,8 @@ import { CHARGED_POWER, EF_CHARGED, skullDisguises } from '../../collections'; /
 import { PT_LONG_SLOWNESS } from '../../potions'; // Fase 7 (pociones)
 import { invisibleRange } from '../../effects';
 // Fase 7.5 (fauna): murciélagos, ocelotes, llamas de comerciante, caballos no muertos y jinetes esqueleto.
-import { critterTick, critterFlags } from './critters';
+import { critterTick, critterFlags, isFeline, isLlamaLike } from './critters';
 import { wearsHelmet, sinksInWater } from './skeletonTrap';
-import { isFeline, isLlamaLike } from '../../critters';
 
 export class MobBrain {
   /** Fase 6 (monstruos). */

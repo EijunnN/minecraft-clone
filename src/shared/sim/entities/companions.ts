@@ -9,7 +9,7 @@ import { isGolem, isTameable, variantBits, CAT_SKINS } from '../../companions';
 import type { PlayerView, InteractResult, Entity } from './types';
 import type { Entities } from './Entities';
 import { GolemBrain } from './golemBrain';
-import { isFeline } from '../../critters'; // Fase 7.5 (fauna): los ocelotes también asustan a los creepers
+import { isFeline } from './critters'; // Fase 7.5 (fauna): los ocelotes también asustan a los creepers
 import { Tameable } from './tameable';
 
 /** Enemigo resuelto: una criatura o un jugador, con su posición y tamaño. */

@@ -19,6 +19,7 @@ import { gearTexture, GEAR_INFLATE } from '../textures/gearTextures'; // Fase 6.
 import { MOB_DROWNED } from '../../shared/mobs';
 import { EF_INVISIBLE } from '../../shared/potions'; // Fase 7 (remate)
 import { vehicleModel, vehicleSkinVariant, animateVehicle, vehicleRoot } from './vehicleModels'; // Fase 7 (transporte)
+import { critterAnimate, critterPart, critterRoot } from './critterPose'; // Fase 7.5 (fauna)
 
 export interface MobTexture {
   width: number;
@@ -162,6 +163,7 @@ export class MobRenderer {
     out[0] = out[1] = out[2] = 0;
     if (animateVehicle(def, e, time, name, out)) return; // Fase 7 (transporte): remos
     if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
+    if (critterAnimate(def, e, time, name, out)) return; // Fase 7.5 (fauna): murciélago
     const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
     const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
     const acting = (e.flags & EF_ACTION) !== 0;
@@ -250,6 +252,7 @@ export class MobRenderer {
         animateIllager(def, e, time, name, out);
     }
     companionPart(def, e, time, name, out); // Fase 6 (gólems/domesticar)
+    critterPart(def, e, name, out); // Fase 7.5 (fauna): el jinete esqueleto, sentado
   }
 
   private pose(def: MobDef, mesh: MobMesh, e: ClientEntity, time: number): void {
@@ -289,6 +292,7 @@ export class MobRenderer {
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
     mountRootPose(def, e, m); // Fase 6 (monturas): encabritada
     faunaRoot(def, e, m); // Fase 6 (fauna)
+    critterRoot(def, e, m); // Fase 7.5 (fauna): murciélago colgado
     let s = def.scale;
     if (e.flags & EF_BABY) s *= 0.5;
     if (def.id === MOB_CREEPER && e.actionT >= 0) {

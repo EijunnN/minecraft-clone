@@ -221,7 +221,7 @@ const GRID: GridType[] = [
   },
   {
     key: 'fossil', spacing: 6, separation: 2, salt: 14357921, radius: FOSSIL_RADIUS,
-    site: (gen, x, z, inf) => fossilSite(gen.seed, x, z, inf.biome, gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp))),
+    site: (gen, x, z, inf) => fossilSite(gen, x, z, inf.biome, gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp))),
     build: (c, s, gen) => buildFossil(c, s, gen.seed),
   },
 ];

@@ -11,6 +11,7 @@ import { villagerSound } from './villagerVoice'; // Fase 6 (aldeanos)
 import { buildMonsterSound } from './monsterSounds'; // Fase 6 (monstruos)
 import { buildIllagerSound } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildWildlifeSound } from './wildlife'; // Fase 6 (fauna)
+import { buildCritterSound } from './critterSounds'; // Fase 7.5 (fauna)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
 function playFootstep(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number, weight: number): AudioScheduledSourceNode[] {
@@ -480,7 +481,10 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
         if (monster.length) return monster;
         // Fase 6 (asaltos): illagers, vex y devastador.
         const raider = buildIllagerSound(ctx, noise, kind, event, destination, now);
-        return raider.length ? raider : buildWildlifeSound(ctx, noise, kind, event, destination, now);
+        if (raider.length) return raider;
+        // Fase 7.5 (fauna): murciélago, ocelote y caballos no muertos.
+        const critter = buildCritterSound(ctx, noise, kind, event, destination, now);
+        return critter.length ? critter : buildWildlifeSound(ctx, noise, kind, event, destination, now);
       }
   }
 }

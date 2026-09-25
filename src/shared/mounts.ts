@@ -1,7 +1,7 @@
 // Fase 6 (monturas): lo que el servidor y el cliente saben de cada montura (asiento, si se doma, si
 // lleva silla, si se guía, velocidad y salto) y los pelajes de caballos y llamas.
 import { MOB_PIG, MOB_HORSE, MOB_DONKEY, MOB_MULE, MOB_LLAMA, MOB_CAMEL } from './mobs';
-import { MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE, isLlamaLike } from './critters'; // Fase 7.5 (fauna)
+import { MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE } from './critters'; // Fase 7.5 (fauna)
 
 export interface MountDef {
   /** Altura del asiento (donde apoya la cadera el jinete) sobre los pies de la montura, en bloques. */
@@ -67,7 +67,8 @@ export function offspringType(a: number, b: number): number {
 
 /** ¿Pueden criar juntos? Misma especie o caballo con burro (Fase 7.5: y llamas con llamas de comerciante). */
 export function canMate(a: number, b: number): boolean {
-  return a === b || offspringType(a, b) === MOB_MULE || (isLlamaLike(a) && isLlamaLike(b));
+  const llama = (t: number) => t === MOB_LLAMA || t === MOB_TRADER_LLAMA;
+  return a === b || offspringType(a, b) === MOB_MULE || (llama(a) && llama(b));
 }
 
 export function isSaddlePart(name: string): boolean {

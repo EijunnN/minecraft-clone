@@ -21,7 +21,7 @@ interface VoiceOpts {
 }
 
 /** Voz con vibrato y formante (oscilador → paso banda → envolvente). */
-function voice(ctx: AudioContext, dest: AudioNode, now: number, o: VoiceOpts): Sources {
+export function voice(ctx: AudioContext, dest: AudioNode, now: number, o: VoiceOpts): Sources {
   const attack = o.attack ?? 0.03;
   const osc = ctx.createOscillator();
   osc.type = o.wave ?? 'sawtooth';
@@ -58,7 +58,7 @@ function voice(ctx: AudioContext, dest: AudioNode, now: number, o: VoiceOpts): S
 }
 
 /** Paso: golpe de ruido grave, más pesado cuanto mayor es `weight` (0..1). */
-function step(ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number, weight: number): Sources {
+export function step(ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number, weight: number): Sources {
   const w = Math.max(0, Math.min(1, weight));
   const out: Sources = [];
   if (w > 0.5) out.push(playTonalBlip(ctx, { destination: dest, now, freq: randRange(50, 80), wave: 'sine', attack: 0.002, decay: 0.08 + 0.06 * w, gain: 0.2 * w }));
@@ -70,7 +70,7 @@ function step(ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: numb
 }
 
 /** Varios sonidos seguidos (ladridos, píos): `make(t, i)` da las fuentes de cada uno. */
-function series(n: number, gapMin: number, gapMax: number, now: number, make: (t: number, i: number) => Sources): Sources {
+export function series(n: number, gapMin: number, gapMax: number, now: number, make: (t: number, i: number) => Sources): Sources {
   const out: Sources = [];
   let t = now;
   for (let i = 0; i < n; i++) {

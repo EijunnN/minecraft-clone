@@ -17,7 +17,7 @@ import {
   MOBS, MOB_COW, MOB_SKELETON, MOB_CHICKEN, MOB_TURTLE, MOB_LLAMA, MOB_WITCH,
   MOB_BAT, MOB_OCELOT, MOB_MOOSHROOM, MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE,
   EF_BAT_HANGING, EF_BROWN_MOOSHROOM, EF_HORSEMAN, MOOSHROOM_SHEAR_MUSHROOMS, OCELOT_TRUST_CHANCE, TRADER_LLAMA_SECONDS,
-  batLightOk, isHalloween, isFeline, isLlamaLike,
+  MOB_CAT, batLightOk, isHalloween,
 } from '../../mobs';
 import {
   GRASS, MYCELIUM, RED_MUSHROOM, BROWN_MUSHROOM, BLOCK_SOLID, BLOCK_OPAQUE, BLOCK_FLUID, isLeaves,
@@ -25,7 +25,9 @@ import {
 import { SHEARS, BOWL, BUCKET, MILK_BUCKET, MUSHROOM_STEW, SUSPICIOUS_STEW, BREED_FOOD, type ItemStack } from '../../items';
 import { SUSPICIOUS_FLOWERS } from '../../decorFood';
 import { BIOME_JUNGLE, BIOME_MUSHROOM_FIELDS } from '../../world/biomeIds';
-import { inSwampHut } from '../../world/swampHut';
+import { inHutBox } from '../../world/swampHut';
+import { locateStructure } from '../../world/structures';
+import type { TerrainGenerator } from '../../world/terrain';
 import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { moveBody, lineOfSight } from '../physics';
 import { standable } from '../pathfind';
@@ -35,6 +37,16 @@ import {
   undeadHorseTick, horsemanTick, horsemanKilled, isHorseman, undeadHorseSave, undeadHorseRestore,
 } from './skeletonTrap';
 import type { Entities } from './Entities';
+
+/** Felinos: los creepers huyen de ellos y los phantoms no se les acercan; caen de pie. */
+export function isFeline(type: number): boolean {
+  return type === MOB_CAT || type === MOB_OCELOT;
+}
+
+/** ¿Es una llama o una llama de comerciante? (crían entre ellas y escupen igual). */
+export function isLlamaLike(type: number): boolean {
+  return type === MOB_LLAMA || type === MOB_TRADER_LLAMA;
+}
 
 interface CritterState {
   /** Murciélago: colgado del techo y punto hacia el que revolotea. */
@@ -546,6 +558,13 @@ export function critterFloor(type: number, floor: number): boolean | undefined {
 /** Los campos de champiñones no tienen monstruos (como en Minecraft). */
 export function biomeWithoutMonsters(biome: number): boolean {
   return biome === BIOME_MUSHROOM_FIELDS;
+}
+
+/** ¿Está (x, y, z) dentro de alguna cabaña de bruja? */
+export function inSwampHut(gen: TerrainGenerator, x: number, y: number, z: number): boolean {
+  const o = locateStructure(gen, 'swamp_hut', Math.floor(x), Math.floor(z), 1);
+  if (!o || Math.abs(o[0] - x) > 8 || Math.abs(o[2] - z) > 8) return false;
+  return inHutBox(gen.seed, o[0], o[1], o[2], x, y, z);
 }
 
 /** Dentro de una cabaña de bruja sólo aparecen brujas (el monstruo elegido cambia por la bruja). */

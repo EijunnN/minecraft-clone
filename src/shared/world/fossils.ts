@@ -10,6 +10,7 @@ import {
 } from '../blocks';
 import { MIN_Y, hash2, hash3 } from '../constants';
 import type { VillageCanvas, VillageStart } from './villages';
+import type { TerrainGenerator } from './terrain';
 import { BIOME_DESERT, BIOME_SWAMP } from './biomeIds';
 
 /** Radio de la caja alrededor del origen (el espinazo más largo mide 13). */
@@ -23,12 +24,25 @@ type Piece = [number, number, number, 'x' | 'y' | 'z'];
 
 type Canvas = Pick<VillageCanvas, 'get' | 'set'>;
 
-/** Candidata: en desiertos y pantanos. La mitad son fósiles de arriba y la mitad hondos (bajo y = 0). */
-export function fossilSite(seed: number, x: number, z: number, biome: number, surface: number): number | null {
+/**
+ * Candidata: en desiertos y pantanos. La mitad son fósiles de arriba y la mitad hondos (bajo y = 0). Como en
+ * Minecraft, no vale si más de 4 de las 8 esquinas de su caja caen en una cueva.
+ */
+export function fossilSite(gen: TerrainGenerator, x: number, z: number, biome: number, surface: number): number | null {
   if (biome !== BIOME_DESERT && biome !== BIOME_SWAMP) return null;
-  const h = hash2(x, z, seed ^ 0xf055);
-  if (h % 2 === 0) return Math.max(surface - 15 - ((h >>> 3) % 10), MIN_Y + 10);
-  return -56 + ((h >>> 5) % 47);
+  const h = hash2(x, z, gen.seed ^ 0xf055);
+  const y = h % 2 === 0 ? Math.max(surface - 15 - ((h >>> 3) % 10), MIN_Y + 10) : -56 + ((h >>> 5) % 47);
+  const { pieces } = fossilPieces(gen.seed, x, z);
+  const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (const p of pieces) {
+    for (let k = 0; k < 3; k++) {
+      lo[k] = Math.min(lo[k], p[k] as number);
+      hi[k] = Math.max(hi[k], p[k] as number);
+    }
+  }
+  let empty = 0;
+  for (const cx of [lo[0], hi[0]]) for (const cy of [lo[1], hi[1]]) for (const cz of [lo[2], hi[2]]) if (gen.caveAt(x + cx, y + cy, z + cz)) empty++;
+  return empty > 4 ? null : y;
 }
 
 // ------------------------------------------------------------------ formas

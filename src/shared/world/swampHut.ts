@@ -2,7 +2,7 @@
 // abeto sobre cuatro postes de roble (que bajan hasta el fondo), con porche de vallas, ventanas, un tejado
 // con reborde de escaleras, mesa de trabajo, caldero y una maceta con un champiñón rojo.
 // Al generarse aparecen una bruja y un gato negro (server/critterWorld.ts) y dentro de su caja sólo salen
-// brujas (sim/entities/critters.ts). Se reparte por regiones como el resto (structures.ts).
+// brujas (sim/entities/critters.ts, con inHutBox). Se reparte por regiones como el resto (structures.ts).
 import {
   AIR, SPRUCE_PLANKS, OAK_LOG, FENCES, STAIRS, CRAFTING_TABLE, CAULDRON, RED_MUSHROOM, potWith, stateOf,
 } from '../blocks';
@@ -10,7 +10,6 @@ import { SEA_LEVEL, hash2 } from '../constants';
 import type { TerrainGenerator } from './terrain';
 import type { VillageCanvas, VillageStart } from './villages';
 import { BIOME_SWAMP } from './biomeIds';
-import { locateStructure } from './structures';
 
 /** Radio de la caja alrededor del origen (bloques): 7 × 9 de planta. */
 export const SWAMP_HUT_RADIUS = 5;
@@ -127,11 +126,4 @@ export function inHutBox(seed: number, ox: number, oy: number, oz: number, x: nu
   if (y < oy || y >= oy + HEIGHT) return false;
   const [a, b] = toLocal(turnOf(seed, ox, oz), ox, oz, Math.floor(x), Math.floor(z));
   return Math.abs(a) <= 3 && Math.abs(b) <= 4;
-}
-
-/** ¿Está (x, y, z) dentro de alguna cabaña de bruja? */
-export function inSwampHut(gen: TerrainGenerator, x: number, y: number, z: number): boolean {
-  const o = locateStructure(gen, 'swamp_hut', Math.floor(x), Math.floor(z), 1);
-  if (!o || Math.abs(o[0] - x) > 8 || Math.abs(o[2] - z) > 8) return false;
-  return inHutBox(gen.seed, o[0], o[1], o[2], x, y, z);
 }

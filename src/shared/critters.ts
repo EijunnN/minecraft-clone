@@ -4,7 +4,6 @@
 // mobs.ts los registra; su comportamiento va en sim/entities/critters.ts y la trampa del rayo en
 // sim/entities/skeletonTrap.ts.
 import type { MobDef, ModelPart } from './mobs';
-import { MOB_CAT, MOB_LLAMA, MOB_COW, MOB_HORSE } from './mobs';
 import { packParts } from './aquaticMobs';
 import { LEATHER, RAW_BEEF, BONE, ROTTEN_FLESH } from './items';
 import { EF_FAUNA_A, EF_FAUNA_B } from './fauna';
@@ -39,19 +38,9 @@ export const TRAP_HORSEMEN = 4;
 /** Una llama de comerciante sin comerciante ni dueño se va a los 40 minutos. */
 export const TRADER_LLAMA_SECONDS = 2400;
 
-/** Felinos: los creepers huyen de ellos y los phantoms no se les acercan. */
-export function isFeline(type: number): boolean {
-  return type === MOB_CAT || type === MOB_OCELOT;
-}
-
 /** Criaturas del ambiente (murciélagos): no se guardan, no cuentan como animales y desaparecen lejos. */
 export function isAmbientCritter(type: number): boolean {
   return type === MOB_BAT;
-}
-
-/** ¿Es una llama de comerciante o una llama? (crían entre ellas). */
-export function isLlamaLike(type: number): boolean {
-  return type === MOB_LLAMA || type === MOB_TRADER_LLAMA;
 }
 
 /** Caballos no muertos: no crían, no comen y no se ahogan (el esqueleto camina bajo el agua). */
@@ -110,10 +99,11 @@ const clone = (parts: readonly ModelPart[]): ModelPart[] => parts.map((p) => ({ 
 /**
  * Definiciones de las criaturas nuevas. `base` es la lista de criaturas ya registradas: el ocelote usa
  * el modelo del gato, la champiñaca el de la vaca, la llama de comerciante el de la llama y los caballos
- * no muertos el del caballo (mobs.ts la llama al final, con todas las demás ya puestas).
+ * no muertos el del caballo (mobs.ts la llama al final, con todas las demás ya puestas). Este módulo no
+ * importa nada de mobs.ts en tiempo de ejecución: mobs.ts lo importa a él.
  */
-export function critterMobs(base: readonly MobDef[]): MobDef[] {
-  const cat = base[MOB_CAT], cow = base[MOB_COW], llama = base[MOB_LLAMA], horse = base[MOB_HORSE];
+export function critterMobs(base: readonly MobDef[], ids: { cat: number; cow: number; llama: number; horse: number }): MobDef[] {
+  const cat = base[ids.cat], cow = base[ids.cow], llama = base[ids.llama], horse = base[ids.horse];
   const bat = packParts(32, batSpecs());
   const horseLike = (b: Base): MobDef => ({ ...b, parts: clone(horse.parts), atlas: [horse.atlas[0], horse.atlas[1]] });
   return [

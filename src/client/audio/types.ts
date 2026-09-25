@@ -58,7 +58,12 @@ export type MobSoundKind =
   // Fase 6 (asaltos).
   | 'illager'
   | 'vex'
-  | 'ravager';
+  | 'ravager'
+  // Fase 7.5 (fauna).
+  | 'bat'
+  | 'ocelot'
+  | 'skeleton_horse'
+  | 'zombie_horse';
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
  * (p. ej. el creeper no tiene voz de `idle`); los combos no aplicables caen a un sonido genérico
