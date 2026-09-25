@@ -22,6 +22,7 @@ import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { placeInfested } from './infested'; // Fase 6 (monstruos)
 import { placeBeeNest } from './beeNests'; // Fase 6 (fauna)
 import { placeWoodTree, growWoodTree, placeBamboo } from './woodTrees'; // Fase 6.5 (maderas)
+import { placeStones } from './stones'; // Fase 6.5 (piedras)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -622,6 +623,7 @@ export class TerrainGenerator {
     const cb = infos[8 * 16 + 8].biome;
     if (cb === BIOME_MOUNTAINS || cb === BIOME_SNOWY_PEAKS) vein(EMERALD_ORE, 8, -16, 200, 1, STONE);
     placeInfested(blocks, cx, cz, seed, cb); // Fase 6 (monstruos): piedra infestada en las montañas
+    placeStones(blocks, x0, z0, seed, infos, tops, this.caveBiomeAt(x0 + 8, z0 + 8)); // Fase 6.5 (piedras): barro y azufre
 
     this.decorateCaves(blocks, tops, x0, z0);
     this.placeGeodes(blocks, cx, cz);

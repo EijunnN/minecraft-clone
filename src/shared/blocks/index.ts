@@ -134,3 +134,7 @@ export * from './woods2';
 import { COLOR_INVENTORY } from './colors';
 export * from './colors';
 (INVENTORY_ORDER as number[]).push(...COLOR_INVENTORY);
+// Fase 6.5 (piedras): piedras del mundo normal y sus formas (se registran las últimas: ids guardados).
+import { STONE_INVENTORY } from './stoneBlocks';
+export * from './stoneBlocks';
+(INVENTORY_ORDER as number[]).push(...STONE_INVENTORY);

@@ -8,7 +8,7 @@ import { mbox, rotateBoxes, rotateFlat, DIR_X, DIR_Z, type ModelBox } from '../b
 
 // ------------------------------------------------------------------ muros
 
-interface WallMaterial {
+export interface WallMaterial {
   key: string;
   name: string;
   block: number;
@@ -36,7 +36,8 @@ function wallConnects(id: number): boolean {
   return id > 0 && (WALL_IDS.has(id) || isFenceGate(id) || BLOCK_OPAQUE[id] === 1);
 }
 
-for (const m of WALL_MATERIALS) {
+/** Muro de un material (los materiales nuevos se añaden al final: ids guardados). */
+export function addWall(m: WallMaterial): number {
   const t = texOf(m.block);
   const post = mbox(4, 0, 4, 12, 16, 12, t);
   const side = (d: number) => rotateBoxes([mbox(5, 0, 0, 11, 14, 8, t)], d);
@@ -70,7 +71,9 @@ for (const m of WALL_MATERIALS) {
   WALLS[m.key] = wall;
   WALL_SOURCE[wall] = m.block;
   WALL_IDS.add(wall);
+  return wall;
 }
+for (const m of WALL_MATERIALS) addWall(m);
 
 // ------------------------------------------------------------------ camas de colores
 

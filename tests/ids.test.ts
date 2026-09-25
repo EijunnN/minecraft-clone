@@ -26,6 +26,9 @@ import {
 
 const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate'];
 NEW_WOODS.push('mangrove', 'pale_oak', 'bamboo', 'bamboo_mosaic'); // Fase 6.5 (maderas): ids nuevos, sin fijar
+// Fase 6.5 (piedras): las losas y escaleras de las piedras nuevas tampoco son de la fase 3.
+import { SMOOTH_STONE } from '../src/shared/blocks';
+NEW_WOODS.push(...Object.keys(SLABS).filter((k) => SLABS[k] > SMOOTH_STONE));
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).

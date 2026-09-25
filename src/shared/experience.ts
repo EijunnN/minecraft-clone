@@ -130,3 +130,11 @@ export function smeltXp(item: number, count: number, rand: Rand = Math.random): 
 export function deathXp(level: number): number {
   return Math.min(7 * Math.max(0, Math.floor(level)), 100);
 }
+
+// Fase 6.5 (piedras): 0,1 de experiencia por cada piedra fundida (como en Minecraft).
+import {
+  SMOOTH_STONE, CRACKED_STONE_BRICKS, CRACKED_DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_TILES, SMOOTH_SANDSTONE, SMOOTH_RED_SANDSTONE,
+} from './blocks';
+for (const id of [SMOOTH_STONE, CRACKED_STONE_BRICKS, CRACKED_DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_TILES, SMOOTH_SANDSTONE, SMOOTH_RED_SANDSTONE]) {
+  (SMELT_XP as Record<number, number>)[id] = 0.1;
+}

@@ -303,6 +303,14 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...COLOR_KEYS_65.map((c): TextureDef => ({ name: `${c}_glazed_terracotta` })),
   { name: 'candle' },
   { name: 'candle_flame' },
+  // Fase 6.5 (piedras): piedras del mundo normal (piedra lisa, pulidas, pizarra profunda, toba, areniscas,
+  // barro, cinabrio y azufre).
+  ...['smooth_stone', 'smooth_stone_slab_side', 'chiseled_stone_bricks', 'polished_granite', 'polished_diorite',
+    'polished_andesite', 'polished_deepslate', 'deepslate_bricks', 'cracked_deepslate_bricks', 'deepslate_tiles',
+    'cracked_deepslate_tiles', 'chiseled_deepslate', 'polished_tuff', 'tuff_bricks', 'chiseled_tuff', 'chiseled_tuff_top',
+    'chiseled_tuff_bricks', 'chiseled_tuff_bricks_top', 'cut_red_sandstone', 'chiseled_red_sandstone', 'mud', 'packed_mud',
+    'mud_bricks', 'cinnabar', 'polished_cinnabar', 'cinnabar_bricks', 'chiseled_cinnabar', 'sulfur', 'polished_sulfur',
+    'sulfur_bricks', 'chiseled_sulfur'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

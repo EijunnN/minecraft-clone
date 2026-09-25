@@ -17,6 +17,10 @@ import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
 import { BAMBOO, BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_MOSAIC } from './blocks'; // Fase 6.5 (maderas)
 // Fase 6.5 (colores)
 import { DYE_COLORS, COLOR_NAMES, COLORED_TERRACOTTA, GLAZED_TERRACOTTA, CARPETS, BANNERS, type DyeColor } from './blocks';
+import { // Fase 6.5 (piedras)
+  STONE_BRICKS, SANDSTONE, RED_SANDSTONE, SMOOTH_STONE, CRACKED_STONE_BRICKS, DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_BRICKS,
+  DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES, SMOOTH_SANDSTONE, SMOOTH_RED_SANDSTONE,
+} from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -449,3 +453,10 @@ fuel(DOORS.bamboo, 10);
 // lima) y la terracota de color, en terracota esmaltada.
 smelt(CACTUS, DYES.green);
 for (const c of DYE_COLORS) smelt(COLORED_TERRACOTTA[c], GLAZED_TERRACOTTA[c]);
+// Fase 6.5 (piedras): fundición de piedras (como en Minecraft).
+smelt(STONE, SMOOTH_STONE);
+smelt(STONE_BRICKS, CRACKED_STONE_BRICKS);
+smelt(DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_BRICKS);
+smelt(DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES);
+smelt(SANDSTONE, SMOOTH_SANDSTONE);
+smelt(RED_SANDSTONE, SMOOTH_RED_SANDSTONE);

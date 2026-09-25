@@ -25,6 +25,14 @@ import {
   CANDLES, BANNERS, FLOWERS, PINK_PETALS, GRAVEL, type DyeColor,
 } from './blocks';
 import { DYES, BEETROOT } from './items';
+// Fase 6.5 (piedras).
+import {
+  VINE, MOSSY_COBBLESTONE, MOSSY_STONE_BRICKS, GRANITE, DIORITE, ANDESITE, TUFF, CUT_SANDSTONE, CHISELED_SANDSTONE,
+  SMOOTH_STONE, CHISELED_STONE_BRICKS, POLISHED_GRANITE, POLISHED_DIORITE, POLISHED_ANDESITE, POLISHED_DEEPSLATE,
+  DEEPSLATE_BRICKS, DEEPSLATE_TILES, CHISELED_DEEPSLATE, POLISHED_TUFF, TUFF_BRICKS, CHISELED_TUFF, CHISELED_TUFF_BRICKS,
+  CUT_RED_SANDSTONE, CHISELED_RED_SANDSTONE, MUD, PACKED_MUD, MUD_BRICKS, CINNABAR, POLISHED_CINNABAR, CINNABAR_BRICKS,
+  CHISELED_CINNABAR, SULFUR, POLISHED_SULFUR, SULFUR_BRICKS, CHISELED_SULFUR,
+} from './blocks';
 
 type Cell = readonly number[] | null;
 
@@ -285,6 +293,46 @@ shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
     shape(['WWW', 'WWW', ' S '], { W: WOOL[c], S: STICK }, BANNERS[c]);
     if (!WOOL_OF[c] && c !== 'red') shape(['WWW', 'PPP'], { W: WOOL[c], P: PLANKS }, BEDS[c]);
   }
+}
+
+// --- Fase 6.5 (piedras): piedras pulidas, ladrillos, azulejos, cinceladas, losas sueltas y barro ---
+// (las losas, escaleras y muros de MATERIALS y WALLS ya salen de los bucles de arriba)
+{
+  const four = (from: number, to: number) => shape(['SS', 'SS'], { S: from }, to, 4);
+  four(GRANITE, POLISHED_GRANITE);
+  four(DIORITE, POLISHED_DIORITE);
+  four(ANDESITE, POLISHED_ANDESITE);
+  four(COBBLED_DEEPSLATE, POLISHED_DEEPSLATE);
+  four(POLISHED_DEEPSLATE, DEEPSLATE_BRICKS);
+  four(DEEPSLATE_BRICKS, DEEPSLATE_TILES);
+  four(TUFF, POLISHED_TUFF);
+  four(POLISHED_TUFF, TUFF_BRICKS);
+  four(SANDSTONE, CUT_SANDSTONE);
+  four(RED_SANDSTONE, CUT_RED_SANDSTONE);
+  four(PACKED_MUD, MUD_BRICKS);
+  four(CINNABAR, POLISHED_CINNABAR);
+  four(POLISHED_CINNABAR, CINNABAR_BRICKS);
+  four(SULFUR, POLISHED_SULFUR);
+  four(POLISHED_SULFUR, SULFUR_BRICKS);
+  // Cinceladas: dos losas una encima de otra.
+  const chisel = (slab: number, to: number) => shape(['S', 'S'], { S: slab }, to);
+  chisel(SLABS.stone_brick, CHISELED_STONE_BRICKS);
+  chisel(SLABS.cobbled_deepslate, CHISELED_DEEPSLATE);
+  chisel(SLABS.tuff, CHISELED_TUFF);
+  chisel(SLABS.tuff_brick, CHISELED_TUFF_BRICKS);
+  chisel(SLABS.sandstone, CHISELED_SANDSTONE);
+  chisel(SLABS.red_sandstone, CHISELED_RED_SANDSTONE);
+  chisel(SLABS.cinnabar, CHISELED_CINNABAR);
+  chisel(SLABS.sulfur, CHISELED_SULFUR);
+  // Losas sueltas (sin escaleras).
+  shape(['MMM'], { M: SMOOTH_STONE }, SLABS.smooth_stone, 6);
+  shape(['MMM'], { M: CUT_SANDSTONE }, SLABS.cut_sandstone, 6);
+  shape(['MMM'], { M: CUT_RED_SANDSTONE }, SLABS.cut_red_sandstone, 6);
+  // Musgo, andesita y barro compacto.
+  mix([COBBLESTONE, [MOSS_BLOCK, VINE]], MOSSY_COBBLESTONE);
+  mix([STONE_BRICKS, [MOSS_BLOCK, VINE]], MOSSY_STONE_BRICKS);
+  mix([DIORITE, COBBLESTONE], ANDESITE, 2);
+  mix([MUD, WHEAT], PACKED_MUD);
 }
 
 export interface RecipeMatch {

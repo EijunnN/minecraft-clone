@@ -39,6 +39,7 @@ import { AQUATIC_GENERATORS } from './genAquatic'; // Fase 6 (acuáticos)
 import { BEE_GENERATORS } from './genBees';
 import { WOODS2_GENERATORS } from './genWoods2'; // Fase 6.5 (maderas)
 import { COLOR_GENERATORS } from './genColors'; // Fase 6.5 (colores)
+import { STONES_GENERATORS } from './genStones'; // Fase 6.5 (piedras)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -70,6 +71,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...BEE_GENERATORS, // Fase 6 (fauna)
   ...WOODS2_GENERATORS, // Fase 6.5 (maderas)
   ...COLOR_GENERATORS, // Fase 6.5 (colores)
+  ...STONES_GENERATORS, // Fase 6.5 (piedras)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */
