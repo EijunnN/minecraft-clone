@@ -14,6 +14,8 @@ import { standable } from '../pathfind';
 import { roomFor } from './monsterAi';
 import type { PlayerView } from './types';
 import type { Entities } from './Entities';
+import { locateStructure } from '../../world/structures'; // Fase 7.5 (océano)
+import { inMonumentBox } from '../../world/monument';
 
 /** Límite de monstruos cerca de un jugador (el mismo que usa Spawner). */
 export function hostileCap(difficulty: number, playerCount: number): number {
@@ -74,5 +76,8 @@ export function spawnExtraMonsters(m: Entities, p: PlayerView, playerCount: numb
   const night = m.host.sunHeight() < -0.02;
   if (!night && y > SEA_LEVEL - 12) return;
   if (w.isLitByBlocks(x, y, z)) return;
+  // Fase 7.5 (océano): dentro de un monumento sólo aparecen guardianes (server/monuments.ts).
+  const mon = locateStructure(w.gen, 'monument', x, z, 1);
+  if (mon && inMonumentBox(mon[0], mon[2], x, y, z)) return;
   m.spawnMob(MOB_DROWNED, x + 0.5, y, z + 0.5);
 }

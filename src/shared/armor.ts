@@ -38,7 +38,9 @@ export const ARMOR_STATS: Readonly<Record<ArmorMaterial, { points: readonly numb
 };
 
 /** Causas de daño que la armadura no reduce (como en Minecraft). */
-export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'starve', 'kill', 'poison', 'wither']);
+export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'starve', 'kill', 'poison', 'wither',
+  'guardian_laser', // Fase 7.5 (océano): el daño mágico del láser del guardián
+]);
 
 /**
  * Daño tras la armadura (fórmula de Minecraft):

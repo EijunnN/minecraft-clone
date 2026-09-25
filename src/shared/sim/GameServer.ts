@@ -71,6 +71,7 @@ import { BellResonance } from './server/bellResonance'; // Fase 7 (efectos)
 import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
 import { DeepDark } from './server/deepDark'; // Fase 7.5 (abismo)
+import { OceanMonuments } from './server/monuments'; // Fase 7.5 (océano)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -196,6 +197,8 @@ export class GameServer {
   private bells: BellResonance;
   /** Fase 7.5 (abismo): vibraciones, sculk, chilladores, warden y la brújula de recuperación. */
   readonly deepDark: DeepDark;
+  /** Fase 7.5 (océano): criaturas de estructura, guardianes de los monumentos y maldición del anciano. */
+  readonly monuments: OceanMonuments;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -364,6 +367,8 @@ export class GameServer {
       strikeDd?.(x, y, z);
       dd.lightning(x, y, z);
     };
+    this.monuments = new OceanMonuments(this.ctx); // Fase 7.5 (océano)
+    this.world.onStructureMobs = (m) => this.monuments.spawnStructureMobs(m);
   }
 
   get seed(): number {
@@ -1074,6 +1079,7 @@ export class GameServer {
     this.redstone.tick(); // Fase 7 (redstone)
     this.mechanisms.tick(); // Fase 7 (mecanismos): después de la redstone (los pulsos cortos llegan antes)
     this.deepDark.tick(); // Fase 7.5 (abismo)
+    this.monuments.tick(); // Fase 7.5 (océano)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

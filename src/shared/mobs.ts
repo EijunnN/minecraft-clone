@@ -19,6 +19,9 @@ export * from './illagers';
 // Fase 7.5 (abismo): el warden (id 70).
 import { WARDEN_DEF } from './warden';
 export * from './warden';
+// Fase 7.5 (océano): guardián y guardián anciano (ids 73–74).
+import { OCEAN_MOBS } from './oceanMobs';
+export * from './oceanMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -107,7 +110,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'golem'
   | 'flyer' // Fase 6 (fauna): abejas y loros
   | 'illager' | 'vex' | 'ravager' | 'fangs' // Fase 6 (asaltos)
-  | 'warden'; // Fase 7.5 (abismo)
+  | 'warden' // Fase 7.5 (abismo)
+  | 'guardian'; // Fase 7.5 (océano)
 
 export interface MobDef {
   id: number;
@@ -139,6 +143,8 @@ export interface MobDef {
   flying?: boolean;
   /** Fase 6 (asaltos): sin vida ni IA propia (colmillos del evocador): no se le puede golpear ni apuntar. */
   inert?: boolean;
+  /** Fase 7.5 (océano): experiencia al matarla (si no, 5 los monstruos y 1–3 los animales). */
+  xp?: number;
 }
 
 const quadLegs = (h: number, xs: number, zs: [number, number], uv: [number, number], w = 4): ModelPart[] => [
@@ -632,6 +638,7 @@ mob({
 // Fase 6 (asaltos): definiciones en illagers.ts.
 for (const d of ILLAGER_MOBS) mob(d);
 mob(WARDEN_DEF); // Fase 7.5 (abismo)
+for (const d of OCEAN_MOBS) mob(d); // Fase 7.5 (océano)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

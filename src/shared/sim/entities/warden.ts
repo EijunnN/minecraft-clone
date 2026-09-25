@@ -103,6 +103,8 @@ export class WardenAI {
         attackCd: 0, sonicCd: 0, tendrils: 0, strollCd: 60, stroll: null, listening: false, t: 0, darkAt: new Map(),
       };
       this.states.set(e, s);
+      // No desaparece por estar lejos y se guarda con el mundo (se hunde él solo).
+      e.persist = true;
     }
     return s;
   }

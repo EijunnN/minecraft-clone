@@ -77,9 +77,11 @@ export const SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
 export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime_small', 'evoker_fangs']);
 
 /**
- * Fase 7.5 (abismo): huevos de las criaturas nuevas. Van aparte porque sus objetos se registran al final
- * (items.ts), después de todos los de SPAWN_EGG_DEFS: así no se mueve ningún id guardado.
+ * Fase 7.5: huevos de las criaturas nuevas. Van en otra lista porque sus objetos se registran al final de
+ * items.ts (añadirlos a la de arriba movería los ids de todo lo registrado después).
  */
-export const DEEP_DARK_SPAWN_EGGS: readonly SpawnEggDef[] = [
-  egg('warden', 'warden', [15, 70, 73], [57, 214, 224]),
+export const LATE_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
+  egg('guardian', 'guardián', [90, 130, 114], [241, 125, 48]), // Fase 7.5 (océano)
+  egg('elder_guardian', 'guardián anciano', [206, 205, 186], [116, 118, 147]),
+  egg('warden', 'warden', [15, 70, 73], [57, 214, 224]), // Fase 7.5 (abismo)
 ];

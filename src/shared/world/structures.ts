@@ -23,6 +23,7 @@ import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
 import { buildAncientCity, ancientCitySite, ANCIENT_CITY_RADIUS } from './ancientCity'; // Fase 7.5 (abismo)
+import { OCEAN_STRUCTURES, OCEAN_STRUCTURE_NAMES } from './oceanStructures'; // Fase 7.5 (océano)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -32,8 +33,16 @@ export interface StructureChest {
   table: string;
 }
 
+/** Fase 7.5 (océano): criatura que aparece con la estructura al generarse su chunk (se guarda y no desaparece). */
+export interface StructureMob {
+  type: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
 /** Lienzo de un chunk: escribe sólo dentro del chunk y anota los cofres. */
-class Canvas {
+export class Canvas {
   constructor(
     readonly blocks: Uint16Array,
     readonly x0: number,
@@ -41,7 +50,14 @@ class Canvas {
     readonly chests: StructureChest[],
     /** Fase 6 (aldeanos): aldeanos que aparecen con el chunk. */
     readonly villagers: VillagerSpawn[] = [],
+    /** Fase 7.5 (océano): criaturas de estructura que aparecen con el chunk. */
+    readonly mobs: StructureMob[] = [],
   ) {}
+
+  /** Fase 7.5 (océano): criatura de la estructura en (x, y, z) (la anota el chunk que la contiene). */
+  mob(type: number, x: number, y: number, z: number): void {
+    if (this.inside(Math.floor(x), Math.floor(y), Math.floor(z))) this.mobs.push({ type, x, y, z });
+  }
 
   inside(x: number, y: number, z: number): boolean {
     return x >= this.x0 && x < this.x0 + CHUNK_SIZE && z >= this.z0 && z < this.z0 + CHUNK_SIZE && y > MIN_Y + 4 && y < MAX_Y;
@@ -100,7 +116,7 @@ class Canvas {
 
 // ------------------------------------------------------------------ tipos de estructura
 
-interface Start {
+export interface Start {
   key: string;
   x: number;
   y: number;
@@ -110,7 +126,7 @@ interface Start {
   box: [number, number, number, number];
 }
 
-interface GridType {
+export interface GridType {
   key: string;
   spacing: number;
   separation: number;
@@ -213,6 +229,7 @@ const GRID: GridType[] = [
   },
   // Fase 7.5 (abismo): ciudades antiguas, en el Deep Dark (regiones de 24 chunks, como en Minecraft).
   { key: 'ancient_city', spacing: 24, separation: 8, salt: 20083232, radius: ANCIENT_CITY_RADIUS, site: (gen, x, z) => ancientCitySite(gen, x, z), build: buildAncientCity },
+  ...OCEAN_STRUCTURES, // Fase 7.5 (océano): monumentos, ruinas oceánicas y tesoros enterrados
 ];
 
 /** Nombres en español de las estructuras (y las claves que acepta /localizar). */
@@ -221,6 +238,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
   village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
   ancient_city: 'Ciudad antigua', // Fase 7.5 (abismo)
+  ...OCEAN_STRUCTURE_NAMES, // Fase 7.5 (océano)
 };
 
 const startCache = new Map<string, Start | null>();
@@ -250,10 +268,11 @@ function gridStart(gen: TerrainGenerator, t: GridType, rx: number, rz: number): 
 export function placeStructures(
   gen: TerrainGenerator, blocks: Uint16Array, cx: number, cz: number, tops: Int16Array,
   villagers: VillagerSpawn[] = [], // Fase 6 (aldeanos)
+  mobs: StructureMob[] = [], // Fase 7.5 (océano)
 ): StructureChest[] {
   const chests: StructureChest[] = [];
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
-  const c = new Canvas(blocks, x0, z0, chests, villagers);
+  const c = new Canvas(blocks, x0, z0, chests, villagers, mobs);
   placeDungeon(gen, c, cx, cz, tops);
   for (const m of mineshaftsNear(gen, cx, cz)) buildMineshaft(c, m, tops);
   for (const t of GRID) {
@@ -635,6 +654,9 @@ function buildShipwreck(c: Canvas, s: Start): void {
   const [tx, tz] = P(half - 3, 0);
   c.chest(sx, oy + 1, sz, along ? 1 : 2, 'shipwreck_supply');
   c.chest(tx, oy + 1, tz, along ? 3 : 0, 'shipwreck_treasure');
+  // Fase 7.5 (océano): el cofre de los mapas, junto al mástil (siempre con un mapa del tesoro).
+  const [mcx, mcz] = P(1, 1);
+  c.chest(mcx, oy + 1, mcz, along ? 2 : 1, 'shipwreck_map');
 }
 
 // ------------------------------------------------------------------ portal en ruinas

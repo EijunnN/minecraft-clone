@@ -20,6 +20,9 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   aldea: 'village',
   puesto: 'pillager_outpost', puesto_de_saqueadores: 'pillager_outpost', puesto_saqueador: 'pillager_outpost', // Fase 6 (asaltos)
   ciudad_antigua: 'ancient_city', ciudad: 'ancient_city', // Fase 7.5 (abismo)
+  // Fase 7.5 (océano)
+  monumento: 'monument', monumento_oceanico: 'monument', ruinas: 'ocean_ruins', ruinas_oceanicas: 'ocean_ruins',
+  tesoro: 'buried_treasure', tesoro_enterrado: 'buried_treasure',
 };
 
 export class Commands {
@@ -168,7 +171,7 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|ciudad_antigua>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|ciudad_antigua>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];

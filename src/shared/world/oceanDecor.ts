@@ -25,6 +25,10 @@ import {
 } from './biomeIds';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
 import { rootColumn } from './materialDecor'; // Fase 6.5 (materiales)
+import { PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE, SEA_LANTERN } from '../blocks'; // Fase 7.5 (océano)
+
+/** Fase 7.5 (océano): sobre los monumentos no crecen algas ni plantas marinas. */
+const MONUMENT_SURFACE: ReadonlySet<number> = new Set([PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE, SEA_LANTERN]);
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -79,7 +83,7 @@ function decorateOcean(seed: number, nz: Noises, blocks: Uint16Array, infos: Col
       const surface = y;
       while (y > MIN_Y + 2 && blocks[blockIndex(lx, y, lz)] === WATER) y--;
       const floor = blocks[blockIndex(lx, y, lz)];
-      if (!BLOCK_OPAQUE[floor]) continue;
+      if (!BLOCK_OPAQUE[floor] || MONUMENT_SURFACE.has(floor)) continue; // Fase 7.5 (océano)
       const fy = y + 1; // primera celda de agua sobre el fondo
       const depth = surface - y;
       const wx = x0 + lx, wz = z0 + lz;
