@@ -19,6 +19,12 @@ import {
 // Fase 6 (fauna).
 import { BEEHIVE, HONEY_BLOCK, HONEYCOMB_BLOCK } from './blocks';
 import { GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, BRUSH, RABBIT_HIDE } from './items';
+// Fase 6.5 (colores).
+import {
+  DYE_COLORS, WOOL, CARPETS, CONCRETE_POWDER, STAINED_GLASS, STAINED_GLASS_PANES, COLORED_TERRACOTTA, TERRACOTTA, CANDLE,
+  CANDLES, BANNERS, FLOWERS, PINK_PETALS, GRAVEL, type DyeColor,
+} from './blocks';
+import { DYES, BEETROOT } from './items';
 
 type Cell = readonly number[] | null;
 
@@ -217,6 +223,56 @@ mix([HONEY_BOTTLE], SUGAR, 3);
 shape(['CC', 'CC'], { C: HONEYCOMB }, HONEYCOMB_BLOCK);
 shape(['F', 'C', 'S'], { F: FEATHER, C: COPPER_INGOT, S: STICK }, BRUSH);
 shape(['HH', 'HH'], { H: RABBIT_HIDE }, LEATHER);
+
+// --- Fase 6.5 (colores): tintes y todo lo que se tiñe ---
+{
+  const D = DYES;
+  // Tintes de flores y plantas (las flores nuevas traen sus recetas con ellas).
+  const fromPlant: [number, DyeColor, number][] = [
+    [BONE_MEAL, 'white', 1], [FLOWERS.lily_of_the_valley, 'white', 1], [FLOWERS.orange_tulip, 'orange', 1],
+    [FLOWERS.allium, 'magenta', 1], [FLOWERS.blue_orchid, 'light_blue', 1], [DANDELION, 'yellow', 1],
+    [FLOWERS.pink_tulip, 'pink', 1], [PINK_PETALS, 'pink', 1], [FLOWERS.azure_bluet, 'light_gray', 1],
+    [FLOWERS.oxeye_daisy, 'light_gray', 1], [FLOWERS.white_tulip, 'light_gray', 1], [LAPIS, 'blue', 1],
+    [CORNFLOWER, 'blue', 1], [POPPY, 'red', 1], [FLOWERS.red_tulip, 'red', 1], [BEETROOT, 'red', 1],
+  ];
+  for (const [plant, c, n] of fromPlant) mix([plant], D[c], n);
+  // Mezclas de tintes (como en Minecraft).
+  mix([D.red, D.yellow], D.orange, 2);
+  mix([D.purple, D.pink], D.magenta, 2);
+  mix([D.blue, D.red, D.pink], D.magenta, 3);
+  mix([D.blue, D.red, D.red, D.white], D.magenta, 4);
+  mix([D.blue, D.white], D.light_blue, 2);
+  mix([D.green, D.white], D.lime, 2);
+  mix([D.red, D.white], D.pink, 2);
+  mix([D.black, D.white], D.gray, 2);
+  mix([D.gray, D.white], D.light_gray, 2);
+  mix([D.black, D.white, D.white], D.light_gray, 3);
+  mix([D.blue, D.green], D.cyan, 2);
+  mix([D.blue, D.red], D.purple, 2);
+
+  const ANY_WOOL = DYE_COLORS.map((c) => WOOL[c]);
+  const ANY_CARPET = DYE_COLORS.map((c) => CARPETS[c]);
+  const ANY_BED = DYE_COLORS.map((c) => BEDS[c]);
+  const ANY_CANDLE = [CANDLE, ...DYE_COLORS.map((c) => CANDLES[c])];
+  shape(['S', 'H'], { S: STRING, H: HONEYCOMB }, CANDLE);
+  for (const c of DYE_COLORS) {
+    const dye = D[c];
+    // Teñir: lana, cama y vela de uno en uno; alfombras, cristal, paneles y terracota de ocho en ocho.
+    mix([dye, ANY_WOOL], WOOL[c]);
+    mix([dye, ANY_BED], BEDS[c]);
+    mix([dye, ANY_CANDLE], CANDLES[c]);
+    shape(['CCC', 'CDC', 'CCC'], { C: ANY_CARPET, D: dye }, CARPETS[c], 8);
+    shape(['GGG', 'GDG', 'GGG'], { G: GLASS, D: dye }, STAINED_GLASS[c], 8);
+    shape(['GGG', 'GDG', 'GGG'], { G: GLASS_PANE, D: dye }, STAINED_GLASS_PANES[c], 8);
+    shape(['TTT', 'TDT', 'TTT'], { T: TERRACOTTA, D: dye }, COLORED_TERRACOTTA[c], 8);
+    mix([dye, SAND, SAND, SAND, SAND, GRAVEL, GRAVEL, GRAVEL, GRAVEL], CONCRETE_POWDER[c], 8);
+    // Con la lana o el cristal de su color.
+    shape(['WW'], { W: WOOL[c] }, CARPETS[c], 3);
+    shape(['GGG', 'GGG'], { G: STAINED_GLASS[c] }, STAINED_GLASS_PANES[c], 16);
+    shape(['WWW', 'WWW', ' S '], { W: WOOL[c], S: STICK }, BANNERS[c]);
+    if (!WOOL_OF[c] && c !== 'red') shape(['WWW', 'PPP'], { W: WOOL[c], P: PLANKS }, BEDS[c]);
+  }
+}
 
 export interface RecipeMatch {
   out: ItemStack;

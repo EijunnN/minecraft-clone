@@ -10,6 +10,7 @@ import {
 } from '../blocks';
 // Fase 6 (monstruos): los bloques infestados no sueltan nada (sale una lepisma).
 import { isInfested } from '../blocks';
+import { colorBlockDrops } from '../blocks'; // Fase 6.5 (colores)
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -21,6 +22,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   const b = BLOCKS[block];
   if (!b || b.hardness < 0 || BLOCK_FLUID[block]) return [];
   if (isInfested(block)) return []; // Fase 6 (monstruos)
+  // Fase 6.5 (colores): el cristal de color no se recoge; las velas sueltan todas las que hay.
+  const colored = colorBlockDrops(block);
+  if (colored) return colored;
   const tool = toolId > 0 ? ITEMS[toolId]?.tool : undefined;
   // Bloques que exigen un pico de cierto nivel.
   if (b.tier > 0 && !(tool && tool.kind === 'pickaxe' && tool.tier >= b.tier)) return [];

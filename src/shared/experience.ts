@@ -6,6 +6,8 @@ import {
   COAL, DIAMOND, LAPIS, REDSTONE, IRON_INGOT, GOLD_INGOT, CHARCOAL, BRICK, COOKED_PORKCHOP, STEAK, COOKED_CHICKEN,
   COOKED_MUTTON, BAKED_POTATO,
 } from './items';
+import { DYES } from './items'; // Fase 6.5 (colores)
+import { DYE_COLORS, GLAZED_TERRACOTTA } from './blocks'; // Fase 6.5 (colores)
 
 type Rand = () => number;
 
@@ -109,6 +111,9 @@ export const SMELT_XP: Readonly<Record<number, number>> = {
   [BRICK]: 0.3,
   [TERRACOTTA]: 0.35,
   [LIME_WOOL]: 1,
+  // Fase 6.5 (colores): tinte verde (cactus) y terracota esmaltada.
+  [DYES.green]: 1,
+  ...Object.fromEntries(DYE_COLORS.map((c) => [GLAZED_TERRACOTTA[c], 0.1])),
 };
 
 /** Sacar `count` objetos `item` del horno: la fracción se redondea al azar (como Minecraft). */

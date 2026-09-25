@@ -13,6 +13,8 @@ import {
 import { DIR_X, DIR_Z } from './blockModels';
 import { isBeeHome } from './blocks'; // Fase 6 (fauna)
 import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
+// Fase 6.5 (colores): velas (hasta 4 por bloque, se encienden y apagan) y terracota esmaltada.
+import { isCandle, canAddCandle, candleCount, isLitCandle, candleState, isGlazedTerracotta } from './blocks';
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -84,6 +86,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     const t = stateProps(hit.id)!.type;
     if ((t === 0 && hit.ny === 1) || (t === 1 && hit.ny === -1)) return [[hit.x, hit.y, hit.z, stateOf(base, { type: 2 })]];
   }
+  // Fase 6.5 (colores): una vela sobre otra igual: una más en el mismo bloque (hasta 4).
+  if (canAddCandle(base, hit.id)) return [[hit.x, hit.y, hit.z, candleState(hit.id, candleCount(hit.id) + 1, isLitCandle(hit.id))]];
   let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) {
     x = hit.x;
@@ -203,6 +207,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   }
   // Fase 6 (fauna): nidos y colmenas con la entrada hacia el jugador.
   if (isBeeHome(base)) return one(stateOf(familyBase(base), { facing: (facing + 2) & 3 }));
+  // Fase 6.5 (colores): terracota esmaltada hacia el jugador; las velas se ponen ya encendidas.
+  if (isGlazedTerracotta(base)) return one(stateOf(base, { facing: (facing + 2) & 3 }));
+  if (isCandle(base)) return blockSupported(base, rel(get, x, y, z)) ? one(candleState(base, 1, true)) : null;
   // Bloques con apoyo a medida (amatista, alfombra de musgo, nenúfar…).
   if (BLOCK_NEEDS_SUPPORT[base] && !blockSupported(base, rel(get, x, y, z))) return null;
   return one(orientedFor(base, yaw));
@@ -220,9 +227,10 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
   return null;
 }
 
-/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores, carteles). */
+/** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores, carteles, velas). */
 export function isUsable(id: number): boolean {
-  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id);
+  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id) ||
+    isCandle(id); // Fase 6.5 (colores): encender o apagar velas
 }
 
 /** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */
@@ -248,6 +256,7 @@ export function toggleEdits(get: GetBlock, x: number, y: number, z: number, yaw:
     return out;
   }
   if (isTrapdoor(id)) return [[x, y, z, stateOf(base, { ...st, open: st.open ? 0 : 1 })]];
+  if (isCandle(id)) return [[x, y, z, candleState(id, candleCount(id), !isLitCandle(id))]]; // Fase 6.5 (colores)
   if (isCake(id)) return [[x, y, z, st.bites >= 6 ? 0 : stateOf(base, { bites: st.bites + 1 })]];
   if (isFenceGate(id)) {
     if (st.open) return [[x, y, z, stateOf(base, { ...st, open: 0 })]];

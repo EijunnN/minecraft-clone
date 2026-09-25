@@ -245,6 +245,8 @@ export const BLOCK_WALKTHROUGH = new Uint8Array(MAX_BLOCK_ID);
 export const BLOCK_WALL = new Int8Array(MAX_BLOCK_ID);
 /** El modelo usa texturas con recorte (pasada de recortes). */
 export const BLOCK_MODEL_CUTOUT = new Uint8Array(MAX_BLOCK_ID);
+/** Fase 6.5 (colores): el modelo usa texturas translúcidas (paneles de cristal de color: pasada translúcida). */
+export const BLOCK_MODEL_TRANSLUCENT = new Uint8Array(MAX_BLOCK_ID);
 export const STATIC_COLLISION: (number[] | undefined)[] = [];
 /** Tipo de bloque con estados: 1 puerta, 2 trampilla, 3 portillo, 4 cama, 5 losa, 6 escalera. */
 const KIND_DOOR = 1, KIND_TRAPDOOR = 2, KIND_GATE = 3, KIND_BED = 4, KIND_SLAB = 5, KIND_STAIRS = 6;
@@ -291,6 +293,8 @@ export function finalizeBlocks(kindOf: ReadonlyMap<number, number>): void {
     const boxes = b.model ?? b.itemModel ?? [];
     BLOCK_MODEL_CUTOUT[b.id] = boxes.some((m) => m.tex.some((l) => l >= 0 && !!TEXTURE_DEFS[l]?.cutout)) ||
       (b.render === R_MODEL && b.tex.some((n) => !!TEXTURE_DEFS[textureLayer(n)]?.cutout)) ? 1 : 0;
+    // Fase 6.5 (colores)
+    BLOCK_MODEL_TRANSLUCENT[b.id] = b.render === R_MODEL && b.tex.some((n) => (TEXTURE_DEFS[textureLayer(n)]?.special ?? 0) >= 3) ? 1 : 0;
     if (b.render === R_MODEL && !b.shape) STATIC_COLLISION[b.id] = typeof b.collision === 'object' ? b.collision : flatBoxes(b.model ?? []);
   }
 }

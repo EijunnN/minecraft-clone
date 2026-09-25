@@ -122,3 +122,9 @@ export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
 // Troncos tumbados (se registran los últimos: ids guardados).
 export * from './logAxis';
+// Fase 6.5 (colores): lanas y terracotas que faltaban, alfombras, hormigón, cristal de color, terracota
+// esmaltada, camas, velas y estandartes (se registran los últimos: ids guardados) y su sitio en el
+// inventario creativo.
+import { COLOR_INVENTORY } from './colors';
+export * from './colors';
+(INVENTORY_ORDER as number[]).push(...COLOR_INVENTORY);

@@ -7,7 +7,8 @@
 // wave:    0 = estático, 1 = hojas (oscilación suave de todo el bloque),
 //          2 = planta (los vértices superiores se mueven con el viento).
 // sss:     0..1 cantidad de dispersión subsuperficial (luz que atraviesa hojas/plantas).
-// special: 0 = normal, 1 = agua, 2 = lava, 3 = hielo (translúcido).
+// special: 0 = normal, 1 = agua, 2 = lava, 3 = hielo (translúcido),
+//          4 = cristal de color (translúcido, sin la absorción azulada del hielo; Fase 6.5).
 // cutout:  true si la textura usa alpha 0/255 como recorte (hojas, plantas, cristal...).
 
 export interface TextureDef {
@@ -15,9 +16,17 @@ export interface TextureDef {
   tint?: 0 | 1 | 2 | 3;
   wave?: 0 | 1 | 2;
   sss?: number;
-  special?: 0 | 1 | 2 | 3;
+  special?: 0 | 1 | 2 | 3 | 4;
   cutout?: boolean;
 }
+
+// Fase 6.5 (colores): los 16 colores de Minecraft (en su orden) y los que ya tenían lana o terracota.
+const COLOR_KEYS_65 = [
+  'white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray', 'light_gray', 'cyan', 'purple', 'blue',
+  'brown', 'green', 'red', 'black',
+];
+const OLD_WOOL_65 = ['white', 'black', 'red', 'orange', 'yellow', 'lime', 'blue', 'purple'];
+const OLD_TERRACOTTA_65 = ['white', 'orange', 'yellow', 'brown', 'red', 'light_gray'];
 
 export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Piedras
@@ -256,6 +265,16 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
   ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
     'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (colores): lanas y terracotas que faltaban, hormigón, hormigón en polvo, cristal de color,
+  // terracota esmaltada y velas (las alfombras, camas y estandartes reutilizan la lana).
+  ...COLOR_KEYS_65.filter((c) => !OLD_WOOL_65.includes(c)).map((c): TextureDef => ({ name: `${c}_wool` })),
+  ...COLOR_KEYS_65.filter((c) => !OLD_TERRACOTTA_65.includes(c)).map((c): TextureDef => ({ name: `${c}_terracotta` })),
+  ...COLOR_KEYS_65.map((c): TextureDef => ({ name: `${c}_concrete` })),
+  ...COLOR_KEYS_65.map((c): TextureDef => ({ name: `${c}_concrete_powder` })),
+  ...COLOR_KEYS_65.map((c): TextureDef => ({ name: `${c}_stained_glass`, special: 4 })),
+  ...COLOR_KEYS_65.map((c): TextureDef => ({ name: `${c}_glazed_terracotta` })),
+  { name: 'candle' },
+  { name: 'candle_flame' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);
