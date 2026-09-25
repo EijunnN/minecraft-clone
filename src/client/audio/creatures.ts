@@ -12,6 +12,7 @@ import { buildMonsterSound } from './monsterSounds'; // Fase 6 (monstruos)
 import { buildIllagerSound } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildWildlifeSound } from './wildlife'; // Fase 6 (fauna)
 import { buildGuardianSound } from './oceanSounds'; // Fase 7.5 (océano)
+import { buildWardenSound } from './deepDarkSounds'; // Fase 7.5 (abismo)
 import { buildCritterSound } from './critterSounds'; // Fase 7.5 (fauna)
 import { buildAllaySound } from './allaySounds'; // Fase 7.5 (mansión)
 
@@ -481,6 +482,7 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
       {
         const guardian = buildGuardianSound(ctx, noise, kind, event, destination, now); // Fase 7.5 (océano)
         if (guardian.length || kind === 'guardian' || kind === 'elder_guardian') return guardian;
+        if (kind === 'warden') return buildWardenSound(ctx, noise, kind, event, destination, now); // Fase 7.5 (abismo)
         const monster = buildMonsterSound(ctx, noise, kind, event, destination, now);
         if (monster.length) return monster;
         // Fase 6 (asaltos): illagers, vex y devastador.

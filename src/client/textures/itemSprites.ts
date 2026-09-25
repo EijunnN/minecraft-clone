@@ -28,6 +28,7 @@ import { TRANSPORT_SPRITES } from './transportSprites'; // Fase 7 (transporte)
 import { ENCHANT_SPRITES } from './enchantSprites'; // Fase 7 (encantamientos)
 import { REDSTONE_SPRITES } from './redstoneSprites'; // Fase 7 (redstone)
 import { MECHANISM_SPRITES } from './mechanismSprites'; // Fase 7 (mecanismos)
+import { DEEP_DARK_SPRITES } from './deepDarkSprites'; // Fase 7.5 (abismo)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2290,6 +2291,8 @@ Object.assign(SPRITES, ENCHANT_SPRITES);
 Object.assign(SPRITES, REDSTONE_SPRITES);
 // Fase 7 (mecanismos): tolva y vagonetas con tolva y con dinamita.
 Object.assign(SPRITES, MECHANISM_SPRITES);
+// Fase 7.5 (abismo): fragmento de eco, brújula de recuperación y fragmento del disco 5.
+Object.assign(SPRITES, DEEP_DARK_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

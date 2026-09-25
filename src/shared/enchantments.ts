@@ -42,12 +42,14 @@ export interface EnchantDef {
   /** Sólo en tesoros, comercio y pesca (nunca en la mesa). */
   treasure?: boolean;
   curse?: boolean;
+  /** Fase 7.5 (abismo): no sale al azar en el botín ni en el comercio (sigilo rápido: sólo en las ciudades antiguas). */
+  special?: boolean;
 }
 
 export const ENCHANTS: EnchantDef[] = [];
 
 function ench(key: string, name: string, max: number, weight: number, minCost: [number, number], maxCost: [number, number],
-  anvil: number, supported: EnchCategory, o: Partial<Pick<EnchantDef, 'primary' | 'exclusive' | 'treasure' | 'curse'>> = {}): number {
+  anvil: number, supported: EnchCategory, o: Partial<Pick<EnchantDef, 'primary' | 'exclusive' | 'treasure' | 'curse' | 'special'>> = {}): number {
   const id = Math.max(ENCHANTS.length, 1);
   ENCHANTS[id] = { id, key, name, max, weight, minCost, maxCost, anvil, supported, ...o };
   return id;
@@ -91,6 +93,9 @@ export const QUICK_CHARGE = ench('quick_charge', 'Carga rápida', 3, 5, [12, 20]
 export const PIERCING = ench('piercing', 'Perforación', 4, 10, [1, 10], [50, 0], 1, 'crossbow', { exclusive: 'crossbow' });
 export const MENDING = ench('mending', 'Reparación', 1, 2, [25, 25], [75, 25], 4, 'durability', { treasure: true });
 export const VANISHING_CURSE = ench('vanishing_curse', 'Maldición de desaparición', 1, 1, [25, 0], [50, 0], 8, 'vanishing', { treasure: true, curse: true });
+// Fase 7.5 (abismo): sigilo rápido (grebas): +15 % de velocidad agachado por nivel. Sólo en los libros de las
+// ciudades antiguas: ni en la mesa, ni al azar en otros cofres, ni en el comercio.
+export const SWIFT_SNEAK = ench('swift_sneak', 'Sigilo rápido', 3, 1, [25, 25], [75, 25], 8, 'legs', { treasure: true, special: true });
 
 /** Número de encantamientos registrados (el mayor id). */
 export const ENCHANT_COUNT = ENCHANTS.length - 1;
@@ -117,7 +122,7 @@ export const TOOLTIP_ORDER: readonly number[] = [
   BINDING_CURSE, VANISHING_CURSE, RIPTIDE, CHANNELING, FROST_WALKER, SHARPNESS, SMITE, BANE_OF_ARTHROPODS, IMPALING, POWER,
   PIERCING, SWEEPING_EDGE, MULTISHOT, FIRE_ASPECT, FLAME, KNOCKBACK, PUNCH, PROTECTION, BLAST_PROTECTION, FIRE_PROTECTION,
   PROJECTILE_PROTECTION, FEATHER_FALLING, FORTUNE, LOOTING, SILK_TOUCH, LUCK_OF_THE_SEA, EFFICIENCY, QUICK_CHARGE, LURE,
-  RESPIRATION, AQUA_AFFINITY, DEPTH_STRIDER, THORNS, LOYALTY, UNBREAKING, INFINITY, MENDING,
+  RESPIRATION, AQUA_AFFINITY, SWIFT_SNEAK, DEPTH_STRIDER, THORNS, LOYALTY, UNBREAKING, INFINITY, MENDING, // Fase 7.5: sigilo rápido
 ];
 
 /** Nivel máximo de un encantamiento que se admite en una pila (Minecraft deja hasta 255 con comandos). */

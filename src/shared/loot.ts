@@ -191,6 +191,10 @@ import { EXPERIENCE_BOTTLE } from './items';
   enchantAll('shipwreck_supply', [ARMOR.leather.helmet, ARMOR.leather.boots], randomly);
 }
 
+// ------------------------------------------------------------------ Fase 7.5 (abismo)
+// Los cofres de las ciudades antiguas (y el de su nevera).
+import { DEEP_DARK_LOOT } from './deepDarkLoot';
+Object.assign(LOOT_TABLES, DEEP_DARK_LOOT);
 // ------------------------------------------------------------------ Fase 7.5 (océano)
 // Ruinas oceánicas (pequeñas y grandes), tesoro enterrado y el cofre de los mapas de los naufragios,
 // con las tablas de Minecraft Java por montones. Los mapas del tesoro se resuelven al llenar el cofre

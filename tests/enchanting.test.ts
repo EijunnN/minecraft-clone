@@ -60,8 +60,9 @@ test('registro: bloques, objetos, texturas, recetas y encantamientos', () => {
   assert.equal(matchRecipe([0, BOOK, 0, D, O, D, O, O, O], 3)?.out.id, ENCHANTING_TABLE);
   assert.equal(matchRecipe([B, B, B, 0, I, 0, I, I, I], 3)?.out.id, ANVIL);
   // Los encantamientos de esta fase (37) y los que se dejan fuera.
-  assert.equal(ENCHANT_IDS.length, 37);
-  for (const k of ['soul_speed', 'swift_sneak', 'density', 'breach', 'wind_burst', 'lunge']) assert.equal(enchantByName(k), undefined, k);
+  // Los de esta fase (37) más sigilo rápido (fase 7.5).
+  assert.equal(ENCHANT_IDS.length, 38);
+  for (const k of ['soul_speed', 'density', 'breach', 'wind_burst', 'lunge']) assert.equal(enchantByName(k), undefined, k);
   assert.equal(enchantByName('toque_de_seda')?.id, SILK_TOUCH);
   assert.equal(enchantByName('Protección')?.id, PROTECTION);
   assert.equal(enchantName(SHARPNESS, 3), 'Filo III');

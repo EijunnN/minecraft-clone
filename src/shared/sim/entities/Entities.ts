@@ -97,6 +97,8 @@ export class Entities {
   readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
   explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
+  /** Fase 7.5 (abismo): un catalizador de sculk cercano se come la experiencia de la criatura que muere (devuelve true). */
+  xpEater: ((e: Entity) => boolean) | null = null;
   /** Fase 7.5 (mansión): alays (objetos que recogen, bailes y duplicación). */
   readonly allays = new AllayLife(this);
 
@@ -297,6 +299,7 @@ export class Entities {
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
     this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
     this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
+    this.mobs.warden.onDamaged(e, attacker); // Fase 7.5 (abismo): el warden se enfada (y no retrocede)
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.killer = attacker; // Fase 6.5 (colecciones)
@@ -327,7 +330,7 @@ export class Entities {
       if (e.saddled) stacks.push({ id: SADDLE, count: 1 }); // Fase 6 (monturas): suelta la silla
       this.dropStacks(stacks, e.x, e.y + 0.3, e.z);
     }
-    if (drops) this.xp.onMobKilled(e);
+    if (drops && !this.xpEater?.(e)) this.xp.onMobKilled(e); // Fase 7.5 (abismo): o se la come un catalizador
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
     if (drops) collectionDrops(this, e, this.killer); // Fase 6.5 (colecciones): cabezas y discos

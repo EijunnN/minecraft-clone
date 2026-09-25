@@ -36,7 +36,8 @@ export type SoundMaterial =
   | 'metal'
   | 'leaves'
   | 'water'
-  | 'lava';
+  | 'lava'
+  | 'sculk'; // Fase 7.5 (abismo)
 
 export type BlockCategory = 'construccion' | 'naturaleza' | 'minerales' | 'decoracion' | 'colores'
   | 'redstone'; // Fase 7 (redstone)
@@ -100,7 +101,7 @@ export interface BlockDef {
   support?: (get: NeighborGet) => boolean;
 }
 
-export type ToolKind = 'pickaxe' | 'axe' | 'shovel';
+export type ToolKind = 'pickaxe' | 'axe' | 'shovel' | 'hoe'; // Fase 7.5 (abismo): la azada, para el sculk
 
 export type Opts = Partial<Omit<BlockDef, 'id' | 'key' | 'name' | 'tex'>> & {
   all?: string;

@@ -443,7 +443,8 @@ export const GLOW_INK_SAC = item('glow_ink_sac', 'Saco de tinta brillante');
 /** Marco brillante: como el marco, pero el objeto que muestra se ve a plena luz aunque esté a oscuras. */
 export const GLOW_ITEM_FRAME = item('glow_item_frame', 'Marco brillante');
 /** Discos de música, en el orden de DISCS (discs.ts); el título va en la descripción. */
-export const MUSIC_DISCS: readonly number[] = DISCS.map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
+// Fase 7.5 (abismo): el disco 5 se registra al final (su objeto no puede ir aquí sin mover los ids de detrás).
+export const MUSIC_DISCS: readonly number[] = DISCS.filter((d) => d.key !== '5').map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
 // Las cabezas se llevan en el hueco del casco (sin puntos de armadura ni desgaste).
 for (const k of SKULL_KINDS) ITEMS[SKULLS[k]].armor = { slot: 0, material: 'leather', points: 0, toughness: 0, durability: 0 };
 
@@ -559,8 +560,18 @@ export const QUARTZ = item('quartz', 'Cuarzo del Nether');
 ITEMS[HOPPER].sprite = 'hopper';
 export const HOPPER_MINECART = item('hopper_minecart', 'Vagoneta con tolva', { stack: 1 });
 export const TNT_MINECART = item('tnt_minecart', 'Vagoneta con dinamita', { stack: 1 });
-// Fase 7.5: huevos generadores de las criaturas nuevas (océano: guardianes; fauna: murciélago, ocelote…).
+// Fase 7.5: huevos generadores de las criaturas nuevas (océano: guardianes; fauna: murciélago, ocelote…; abismo: warden).
 for (const e of LATE_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
+
+// ------------------------------------------------------------------ Fase 7.5 (abismo)
+/** Fragmento de eco (sólo en las ciudades antiguas): ocho alrededor de una brújula dan la de recuperación. */
+export const ECHO_SHARD = item('echo_shard', 'Fragmento de eco');
+/** Brújula de recuperación: apunta a donde murió el jugador por última vez (gira sin rumbo si no hay). */
+export const RECOVERY_COMPASS = item('recovery_compass', 'Brújula de recuperación');
+/** Fragmento del disco 5: nueve hacen el disco. */
+export const DISC_FRAGMENT_5 = item('disc_fragment_5', 'Fragmento de disco');
+export const MUSIC_DISC_5 = item('music_disc_5', 'Disco de música', { stack: 1 });
+(MUSIC_DISCS as number[]).push(MUSIC_DISC_5);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -752,3 +763,6 @@ Object.assign(BREED_FOOD as Record<string, readonly number[]>, { ocelot: [COD, S
 (CREATIVE_ITEMS as number[]).push(QUARTZ);
 (CREATIVE_ITEMS as number[]).push(HOPPER_MINECART, TNT_MINECART); // Fase 7 (mecanismos)
 (CREATIVE_ITEMS as number[]).push(...LATE_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob])); // Fase 7.5 (océano)
+
+// ------------------------------------------------------------------ Fase 7.5 (abismo)
+(CREATIVE_ITEMS as number[]).push(ECHO_SHARD, RECOVERY_COMPASS, DISC_FRAGMENT_5, MUSIC_DISC_5);

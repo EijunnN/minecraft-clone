@@ -22,6 +22,7 @@ import {
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
+import { buildAncientCity, ancientCitySite, ANCIENT_CITY_RADIUS } from './ancientCity'; // Fase 7.5 (abismo)
 import { OCEAN_STRUCTURES, OCEAN_STRUCTURE_NAMES } from './oceanStructures'; // Fase 7.5 (océano)
 // Fase 7.5 (fauna): cabañas de bruja y fósiles.
 import { buildSwampHut, swampHutSite, SWAMP_HUT_RADIUS, SWAMP_HUT_SALT } from './swampHut';
@@ -232,6 +233,8 @@ const GRID: GridType[] = [
     },
     build: buildOutpost,
   },
+  // Fase 7.5 (abismo): ciudades antiguas, en el Deep Dark (regiones de 24 chunks, como en Minecraft).
+  { key: 'ancient_city', spacing: 24, separation: 8, salt: 20083232, radius: ANCIENT_CITY_RADIUS, site: (gen, x, z) => ancientCitySite(gen, x, z), build: buildAncientCity },
   ...OCEAN_STRUCTURES, // Fase 7.5 (océano): monumentos, ruinas oceánicas y tesoros enterrados
   // Fase 7.5 (fauna): cabañas de bruja en los pantanos y fósiles enterrados (desiertos y pantanos).
   {
@@ -257,6 +260,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   desert_pyramid: 'Templo del desierto', jungle_temple: 'Templo de la jungla', shipwreck: 'Naufragio',
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
   village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
+  ancient_city: 'Ciudad antigua', // Fase 7.5 (abismo)
   ...OCEAN_STRUCTURE_NAMES, // Fase 7.5 (océano)
   swamp_hut: 'Cabaña de bruja', fossil: 'Fósil', // Fase 7.5 (fauna)
   mansion: 'Mansión del bosque', // Fase 7.5 (mansión)

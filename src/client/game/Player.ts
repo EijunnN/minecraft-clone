@@ -66,6 +66,8 @@ export class Player {
   leatherBoots = false;
   /** Fase 7 (encantamientos): Agilidad acuática (0..1: cuánto se anda en el agua como en tierra). */
   depthStrider = 0;
+  /** Fase 7.5 (abismo): velocidad agachado o gateando respecto a la de andar (Sigilo rápido la sube). */
+  sneakFactor = 0.3;
   /** Distancia horizontal recorrida en el suelo (para pasos y balanceo). */
   walkDistance = 0;
   /** 0..1: cuánto se está moviendo (para animaciones). */
@@ -276,7 +278,9 @@ export class Player {
     } else {
       // Fase 6.5 (materiales): el hielo resbala y el slime frena.
       const under = this.onGround ? blockUnder(world, this.x, this.y, this.z) : 0;
-      const speed = (this.pose === 'crawl' ? CRAWL_SPEED : this.sneaking ? 1.31 : this.sprinting ? 5.61 : 4.32) * this.slow * groundSpeed(under);
+      // Fase 7.5 (abismo): agachado y gateando, al 30 % de andar (más con Sigilo rápido).
+      const slowWalk = 4.32 * this.sneakFactor;
+      const speed = (this.pose === 'crawl' ? Math.max(CRAWL_SPEED, slowWalk) : this.sneaking ? Math.max(1.31, slowWalk) : this.sprinting ? 5.61 : 4.32) * this.slow * groundSpeed(under);
       const k = 1 - Math.exp(-dt * (this.onGround ? 16 * groundGrip(under) : 3.2));
       this.vx += (wx * speed - this.vx) * k;
       this.vz += (wz * speed - this.vz) * k;

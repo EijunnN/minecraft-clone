@@ -430,6 +430,16 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'observer_back_on', 'hopper_outside', 'hopper_inside', 'hopper_top', 'dispenser_front', 'dispenser_front_vertical', 'dropper_front',
     'dropper_front_vertical', 'tnt_side', 'tnt_top', 'tnt_bottom'].map((name): TextureDef => ({ name })),
   ...['piston_side', 'observer_top'].flatMap((k) => ['', '_r1', '_r2', '_r3'].map((r): TextureDef => ({ name: k + r }))),
+  // Fase 7.5 (abismo): sculk, catalizador, sensores (los zarcillos y la amatista, con recorte), chillador,
+  // pizarra reforzada y los bloques de alma (el fuego de alma, animado como el fuego).
+  ...['sculk', 'sculk_catalyst_top', 'sculk_catalyst_side', 'sculk_catalyst_bottom', 'sculk_catalyst_top_bloom',
+    'sculk_catalyst_side_bloom', 'sculk_sensor_top', 'sculk_sensor_side', 'sculk_sensor_bottom', 'calibrated_sculk_sensor_top',
+    'calibrated_sculk_sensor_side', 'calibrated_sculk_sensor_input_side', 'sculk_shrieker_top', 'sculk_shrieker_side',
+    'sculk_shrieker_bottom', 'sculk_shrieker_inner_top', 'sculk_shrieker_can_summon_inner_top', 'reinforced_deepslate_top',
+    'reinforced_deepslate_side', 'reinforced_deepslate_bottom', 'soul_sand', 'soul_soil', 'soul_lantern'].map((name): TextureDef => ({ name })),
+  ...['sculk_vein', 'sculk_sensor_tendril', 'sculk_sensor_tendril_active', 'calibrated_sculk_sensor_amethyst',
+    'calibrated_sculk_sensor_amethyst_active', 'soul_torch'].map((name): TextureDef => ({ name, cutout: true })),
+  { name: 'soul_fire', special: 5, cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

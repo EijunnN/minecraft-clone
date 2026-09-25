@@ -25,6 +25,7 @@ import { placeWoodTree, growWoodTree, placeBamboo } from './woodTrees'; // Fase 
 import { placeStones } from './stones'; // Fase 6.5 (piedras)
 import { decorate65 } from './oceanDecor'; // Fase 6.5 (océano y plantas)
 import { decorateMaterials } from './materialDecor'; // Fase 6.5 (materiales)
+import { deepDarkColumn, decorateDeepDark } from './deepDark'; // Fase 7.5 (abismo)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -151,8 +152,9 @@ export class TerrainGenerator {
     return Math.min(level, top - 14, SEA_LEVEL - 12);
   }
 
-  /** Bioma de cueva de una columna: 1 frondosa, 2 de goteo, 0 normal. */
+  /** Bioma de cueva de una columna: 1 frondosa, 2 de goteo, 0 normal; Fase 7.5 (abismo): 3 Deep Dark. */
   caveBiomeAt(x: number, z: number): number {
+    if (deepDarkColumn(this, x, z)) return 3;
     if (this.nLush.noise2(x / 240, z / 240) > 0.4) return 1;
     if (this.nDrip.noise2(x / 240 + 31.7, z / 240 - 12.1) > 0.42) return 2;
     return 0;
@@ -685,6 +687,7 @@ export class TerrainGenerator {
     placeStones(blocks, x0, z0, seed, infos, tops, this.caveBiomeAt(x0 + 8, z0 + 8)); // Fase 6.5 (piedras): barro y azufre
 
     this.decorateCaves(blocks, tops, x0, z0);
+    decorateDeepDark(this, blocks, x0, z0); // Fase 7.5 (abismo): sculk en las cuevas del Deep Dark
     this.placeGeodes(blocks, cx, cz);
 
     // --- 7. Plantas y flores ---
@@ -1325,7 +1328,7 @@ export class TerrainGenerator {
       for (let lx = 0; lx < 16; lx++) {
         const wx = x0 + lx, wz = z0 + lz;
         const kind = this.caveBiomeAt(wx, wz);
-        if (kind === 0) continue;
+        if (kind === 0 || kind === 3) continue; // Fase 7.5 (abismo): el Deep Dark lleva su sculk aparte
         const top = tops[lz * 16 + lx];
         for (let y = MIN_Y + 6; y < top - 12; y++) {
           const i = blockIndex(lx, y, lz);

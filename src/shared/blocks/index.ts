@@ -206,3 +206,8 @@ export * from './redstoneBlocks';
 import { MECHANISM_INVENTORY } from './mechanismBlocks';
 export * from './mechanismBlocks';
 (INVENTORY_ORDER as number[]).push(...MECHANISM_INVENTORY);
+// Fase 7.5 (abismo): sculk, sensores, chillador, pizarra reforzada y bloques de alma (registrados los últimos:
+// ids nuevos) y su sitio en el inventario creativo.
+import { DEEP_DARK_INVENTORY } from './deepDarkBlocks';
+export * from './deepDarkBlocks';
+(INVENTORY_ORDER as number[]).push(...DEEP_DARK_INVENTORY);

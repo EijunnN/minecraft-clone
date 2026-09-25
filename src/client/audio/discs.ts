@@ -17,6 +17,8 @@
 //   11        roto e inquietante: estática, pasos, un latido y fragmentos que se deshacen.
 //   wait      nostálgico y esperanzado: arpegios de piano y una melodía que sube.
 //   otherside enérgico: bajo de corcheas, bombo a negras, arpegios rápidos y un solo.
+//   5         (Fase 7.5) de las profundidades: bordón y ecos que rebotan, un latido que se acelera, pasos y
+//             un piano frigio que al final se queda solo.
 import { DISCS } from '../../shared/discs';
 
 export type Inst =
@@ -558,8 +560,46 @@ const otherside: Composer = (seconds, rng) => {
   return s.song();
 };
 
+/** 5 (Fase 7.5): oscuro y tenso, con ecos, un latido que se acelera y un piano frigio. */
+const five: Composer = (seconds, rng) => {
+  const s = new Score(rng, 45, 'phrygian', 72, 4, seconds);
+  const total = s.bars;
+  const prog = [0, 1, 0, 6];
+  // Bordón grave y viento todo el rato.
+  for (let bar = 0; bar < total; bar += 2) s.note(bar * 4, 8, 'drone', s.deg(0, -1), 0.22);
+  for (let t = rng.range(2, 5); t < seconds - 4; t += rng.range(9, 16)) s.at(t, rng.range(3, 6), 'wind', rng.range(250, 500), 0.18);
+  // Ecos: una campana que rebota y se apaga (como un fragmento de eco).
+  for (let t = rng.range(3, 6); t < seconds - 8; t += rng.range(7, 12)) {
+    const f = mtof(s.deg(rng.pick([0, 2, 4, 7]), 1));
+    for (let k = 0; k < 5; k++) s.at(t + k * 0.42, 1.2, 'bell', f, 0.22 * Math.pow(0.6, k));
+  }
+  // Latido: lento al principio, cada vez más deprisa en el centro y lento otra vez al final.
+  const third = seconds / 3;
+  for (let t = third * 0.6; t < seconds - 12;) {
+    const x = Math.min(1, Math.max(0, 1 - Math.abs(t - third * 1.6) / (third * 0.9)));
+    s.at(t, 0.12, 'thud', 58, 0.2 + 0.25 * x);
+    s.at(t + 0.2, 0.1, 'thud', 52, 0.15 + 0.2 * x);
+    t += 1.8 - 1.2 * x;
+  }
+  // Pasos lejanos que se paran de golpe.
+  for (let t = third * 0.4; t < seconds - 30; t += rng.range(28, 40)) {
+    const n = rng.int(5, 9);
+    for (let k = 0; k < n; k++) s.at(t + k * 0.6, 0.1, 'thud', 95, 0.12);
+  }
+  // Piano frigio: entra con el latido, crece con cuerdas y al final se queda solo.
+  const m = s.motif(8, 4, 2);
+  const start = Math.floor(total * 0.25), end = Math.floor(total * 0.85);
+  s.melody(start, end - start, prog, m, 8, 'piano', 0, 0.3, 2, 1.1);
+  s.pads(Math.floor(total * 0.45), Math.floor(total * 0.3), prog, 'strings', -1, 0.08);
+  for (let bar = Math.floor(total * 0.5); bar < Math.floor(total * 0.7); bar++) s.note(bar * 4 + 2, 1.5, 'woozy', s.deg(1, 0), 0.08);
+  s.melody(end, total - end - 1, [0], m, 8, 'piano', 0, 0.2, 0, 1.4);
+  s.at(seconds - 3, 2.5, 'drone', mtof(s.deg(0, -2)), 0.3);
+  return s.song();
+};
+
 const COMPOSERS: Readonly<Record<string, Composer>> = {
   '13': thirteen, cat, blocks, chirp, far, mall, mellohi, stal, strad, ward, '11': eleven, wait, otherside,
+  '5': five, // Fase 7.5 (abismo)
 };
 
 const cache = new Map<number, Song>();

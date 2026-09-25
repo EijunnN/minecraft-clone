@@ -26,6 +26,7 @@ const SILK_KEYS = new Set([
   'melon', 'cobweb', 'campfire', 'bee_nest', 'beehive', 'turtle_egg', 'red_mushroom_block', 'brown_mushroom_block',
   'mushroom_stem', 'amethyst_bud', 'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'emerald_ore',
   'copper_ore',
+  'sculk', 'sculk_vein', 'sculk_catalyst', 'sculk_sensor', 'calibrated_sculk_sensor', 'sculk_shrieker', // Fase 7.5 (abismo)
 ]);
 const SILK_PATTERNS = [/_leaves$/, /_ore$/, /_stained_glass(_pane)?$/, /coral/];
 

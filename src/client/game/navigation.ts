@@ -9,6 +9,7 @@ import { structureMapArea } from '../../shared/structureMapData'; // Fase 7.5 (m
 import { structureMarkIcon } from './explorerMarks';
 import type { Game } from './Game';
 import '../ui/navigation.css';
+import { updateRecoveryCompass } from './recoveryCompass'; // Fase 7.5 (abismo)
 
 export class Navigation {
   private mapEl: HTMLDivElement | null = null;
@@ -27,6 +28,7 @@ export class Navigation {
     const compass = main?.id === COMPASS || off?.id === COMPASS;
     this.updateMap(mapKey);
     this.updateCompass(compass && !mapKey);
+    updateRecoveryCompass(g, !!mapKey); // Fase 7.5 (abismo)
   }
 
   /**

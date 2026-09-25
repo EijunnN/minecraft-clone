@@ -62,6 +62,7 @@ export type MobSoundKind =
   // Fase 7.5 (océano).
   | 'guardian'
   | 'elder_guardian'
+  | 'warden' // Fase 7.5 (abismo)
   // Fase 7.5 (fauna).
   | 'bat'
   | 'ocelot'

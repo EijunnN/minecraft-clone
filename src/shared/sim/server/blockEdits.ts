@@ -30,6 +30,7 @@ import { isWaterlogged, emptyAfterPlayerBreak, withWater, WATER } from '../../bl
 import { enchantedBlockDrops } from '../enchantDrops';
 import { sanitizeHeldEnchants, levelIn } from '../../enchantEffects';
 import { SILK_TOUCH } from '../../enchantments';
+import { sculkXp } from '../../blocks'; // Fase 7.5 (abismo)
 
 export class BlockEdits {
   /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
@@ -97,7 +98,8 @@ export class BlockEdits {
         ctx.world.setBlock(x, y, z, emptyAfterPlayerBreak(cur, below, !creative, levelIn(en, SILK_TOUCH) > 0));
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
         // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
-        const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand());
+        // Fase 7.5 (abismo): el sculk sin Toque de seda también da experiencia.
+        const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand()) + (levelIn(en, SILK_TOUCH) > 0 ? 0 : sculkXp(cur));
         if (xp > 0) ctx.entities.xp.spawn(xp, x + 0.5, y + 0.3, z + 0.5);
       } else {
         // Fase 7: el cubo de agua sobre un bloque que se puede anegar (conducto, corales) lo anega.

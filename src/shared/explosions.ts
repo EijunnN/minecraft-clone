@@ -13,6 +13,7 @@ import { posKey } from './sim/posKey';
 const RESISTANCE: Record<string, number> = {
   hopper: 4.8, dried_kelp_block: 2.5, cocoa: 3, packed_mud: 3, mud_bricks: 3, pointed_dripstone: 3, dripstone_block: 1,
   terracotta: 4.2, basalt: 4.2, polished_basalt: 4.2, end_stone: 9, end_stone_bricks: 9, iron_bars: 6, iron_chain: 6,
+  reinforced_deepslate: 1200, sculk_catalyst: 3, sculk_shrieker: 3, soul_lantern: 3.5, // Fase 7.5 (abismo)
 };
 
 let TABLE: Float32Array | null = null;

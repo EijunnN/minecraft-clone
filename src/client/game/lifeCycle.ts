@@ -55,7 +55,8 @@ export class LifeCycle {
     this.leaveBed(true);
     if (this.g.survival.dead || (this.g.creative && cause !== 'kill')) return;
     // Escudo levantado: bloquea golpes, flechas y explosiones que llegan de frente.
-    if (cause !== 'kill' && Array.isArray(k) && k.every(Number.isFinite) && this.g.interaction.blockHit(amount, k)) return;
+    // Fase 7.5 (abismo): el estampido sónico del warden atraviesa el escudo.
+    if (cause !== 'kill' && cause !== 'sonic_boom' && Array.isArray(k) && k.every(Number.isFinite) && this.g.interaction.blockHit(amount, k)) return;
     const dmg = this.g.survival.damage(amount, cause, cause === 'kill');
     if (dmg <= 0) return;
     faunaOnHurt(this.g, cause); // Fase 6 (fauna): veneno de las abejas

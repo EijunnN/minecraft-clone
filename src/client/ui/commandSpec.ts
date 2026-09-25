@@ -41,6 +41,7 @@ const STRUCTURES: [string, string][] = [
   ['aldea', 'village'], ['puesto', 'pillager_outpost'], ['templo_del_desierto', 'desert_pyramid'],
   ['templo_de_la_jungla', 'jungle_temple'], ['naufragio', 'shipwreck'], ['portal_en_ruinas', 'ruined_portal'],
   ['iglu', 'igloo'], ['pozo', 'desert_well'], ['mina', 'mineshaft'],
+  ['ciudad_antigua', 'ancient_city'], // Fase 7.5 (abismo)
   ['monumento', 'monument'], ['ruinas', 'ocean_ruins'], ['tesoro', 'buried_treasure'], // Fase 7.5 (océano)
   ['cabana_de_bruja', 'swamp_hut'], ['fosil', 'fossil'], // Fase 7.5 (fauna)
   ['mansion', 'mansion'], // Fase 7.5 (mansión)
