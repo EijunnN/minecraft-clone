@@ -80,7 +80,7 @@ esquilar, ordeñar, huevos y generadores de monstruos.
 | Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
 | Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento por arma; falta el barrido) |
-| Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha y arco) |
+| Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha, arco, ballesta y tridente) |
 | Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (33 efectos con sus mecánicas, iconos y `/efecto`; faltan los de las cámaras de desafío y los presagios de 1.21, fase 9) |
 | Modos: supervivencia, creativo, aventura, espectador, extremo (hardcore) | 🟡 (supervivencia y creativo) |
 | Dificultad pacífica, fácil, normal y difícil | ✅ |
@@ -131,21 +131,22 @@ Polvo de redstone, antorchas, repetidores, comparadores, palancas, botones, plac
 pistones y pistones pegajosos, observadores, tolvas, dispensadores, soltadores, lámparas, TNT,
 detector de luz solar, bloque musical, raíles y vagonetas (con cofre, tolva, TNT), puertas,
 trampillas, puertas de valla, sensores de sculk, bombillas de cobre y fabricador automático.
-**VoxelCraft: nada** ❌. Existe el polvo de redstone como objeto, pero sin función.
+**VoxelCraft:** ✅ todo salvo el sculk (fase 7.5) y el crafteador (fase 9). Ver `docs/redstone.md` y
+`docs/mecanismos.md`.
 
 ### 2.9 Encantamientos y pociones
 
 Mesa de encantamientos con librerías, libros encantados, yunque, afiladora, ~40 encantamientos,
 soporte para pociones, verruga del Nether, más de 30 efectos de estado, pociones arrojadizas y
-persistentes, flechas con efecto. **VoxelCraft: nada** ❌. El lapislázuli y las librerías ya
-existen como bloques y objetos.
+persistentes, flechas con efecto. **VoxelCraft:** ✅ (37 encantamientos, 42 pociones, 33 efectos);
+faltan los encantamientos del Nether, del Deep Dark y de la maza y las pociones de 1.21 (fases 7.5, 8 y 9).
 
 ### 2.10 Transporte y exploración
 
 | Elemento | Estado |
 | --- | --- |
 | Caballos, burros, mulas, camellos, cerdos y striders montables; nautilo bajo el agua; ghast feliz volador | ❌ |
-| Barcas (y con cofre, balsas de bambú), vagonetas y raíles | ❌ |
+| Barcas (y con cofre, balsas de bambú), vagonetas y raíles | ✅ |
 | Élitros y cohetes, perla de ender (teletransporte al lanzarla) | ❌ |
 | Arqueología (cepillo, arena sospechosa, vasijas decoradas) | ❌ |
 | Mapas y brújulas, barra de localización | 🟡 (mapas y brújula) |
@@ -451,10 +452,30 @@ Antes de empezar se amplió el motor: hasta 1024 texturas (10 bits en el vértic
   (la prismarina y las esponjas sólo salen en creativo), la mansión del bosque, el tesoro enterrado y
   los mapas de explorador van en la fase 7.5.
 
-### Fase 7 — Magia y técnica (XL) · 🟡 en curso
+### Fase 7 — Magia y técnica (XL) · ✅ hecha
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,
 antorchas, repetidores, comparadores, pistones, observadores, tolvas, dispensadores, TNT, lámparas),
 raíles y vagonetas, barcas.
+
+- ✅ **Pociones.** Soporte para pociones con polvo de blaze, 42 pociones (también arrojadizas,
+  persistentes con su nube y flechas con efecto) con los ingredientes y tiempos de Minecraft;
+  invisibilidad (se ve la armadura), supersalto, caída lenta, suerte y los instantáneos.
+- ✅ **Encantamientos.** Mesa con librerías (hasta 15, glifos y libro animado), los 37 encantamientos
+  del mundo normal con sus efectos reales, libros encantados, yunque (combinar, reparar, renombrar,
+  se desgasta) y afiladora; brillo en la mano, en la armadura y en el suelo.
+- ✅ **Redstone.** Polvo, antorchas, repetidores, comparadores (comparar, restar y leer contenedores),
+  palancas, botones y placas de todas las maderas y pesadas, lámparas, detector de luz solar, diana,
+  bloque musical, cuerda trampa, cofre trampa, puertas y trampillas de hierro, bombillas de cobre y
+  pararrayos. Motor con cuasi-conectividad y actualizaciones en orden (`docs/redstone.md`).
+- ✅ **Mecanismos.** Pistones y adhesivos (12 bloques, slime y miel, se deslizan), observadores,
+  tolvas (8 ticks cada una), dispensadores y soltadores, dinamita con la explosión de Minecraft
+  (`docs/mecanismos.md`).
+- ✅ **Transporte.** Raíles (normales, propulsores, detectores y activadores), vagonetas (también con
+  cofre, horno, tolva y dinamita), barcas y balsas de bambú de las 10 maderas (con cofre): sólidas,
+  se puede estar de pie encima y se atan con la correa.
+- ✅ **Efectos.** 33 efectos con sus mecánicas e iconos: prisa, fatiga minera, náuseas, ceguera,
+  saturación, brillo (la campana ilumina a los saqueadores), gracia del delfín, salud mejorada,
+  oscuridad, marchitamiento y levitación; estofado sospechoso según la flor y pez globo con náuseas.
 
 Fuera de la fase 7 (anotado para que no se pierda):
 - **Fase 8 (Nether y End):** conseguir en supervivencia la verruga del Nether, el polvo de blaze, la

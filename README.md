@@ -22,7 +22,7 @@ Objects). Pensado para PC (teclado y ratón).
   llevarlo en la mano; la brújula apunta al punto de aparición. Diez maderas (roble, abedul, abeto, jungla, acacia, roble oscuro, cerezo,
   mangle, roble pálido y bambú). 384 bloques
   de alto como en Minecraft actual: de y = −64 (lecho de roca) a 319.
-- **Catálogo del mundo normal** (unos 780 bloques y 950 objetos, ver [`docs/cobertura.md`](docs/cobertura.md)):
+- **Catálogo del mundo normal** (unos 920 bloques y 1160 objetos, ver [`docs/cobertura.md`](docs/cobertura.md)):
   los 16 colores (tintes, lana, alfombras, hormigón que se endurece en el agua, cristal tintado,
   terracota esmaltada, camas, velas y estandartes), todas las piedras con escaleras, losas y muros, el
   cobre que se oxida (el panal lo encera y el hacha lo raspa) con sus herramientas y armadura,
@@ -90,10 +90,23 @@ Objects). Pensado para PC (teclado y ratón).
   los jugadores (también sobre los demás) y tienen su barra en el HUD.
 - **Escudo**: se levanta con clic derecho mantenido, frena el paso y para los golpes, flechas y
   explosiones que llegan de frente (no por la espalda); se desgasta con cada golpe fuerte.
-- **Efectos de estado**: velocidad, lentitud, fuerza, debilidad, regeneración, veneno, hambre,
-  resistencia al fuego, visión nocturna, respiración acuática y absorción (corazones dorados), con
-  sus iconos y el tiempo restante en el HUD. Los dan la manzana dorada, el ojo de araña, la carne
-  podrida y el pollo crudo; la leche los quita.
+- **Efectos de estado**: 33 efectos de Minecraft (velocidad, fuerza, regeneración, veneno,
+  invisibilidad, supersalto, caída lenta, prisa, náuseas, ceguera, brillo, levitación,
+  marchitamiento…) con sus mecánicas, sus iconos y el tiempo restante en el HUD. Los dan las
+  pociones, la comida (manzana dorada, pez globo, estofado sospechoso según la flor), la campana a
+  los saqueadores y los delfines al nadar; la leche los quita.
+- **Pociones**: soporte para pociones con polvo de blaze y 42 pociones con los ingredientes de
+  Minecraft; se beben, se arrojan, dejan nubes persistentes y se ponen en las flechas.
+- **Encantamientos**: mesa de encantamientos con librerías, los 37 encantamientos del mundo normal
+  con sus efectos reales, libros encantados, yunque (combinar, reparar y renombrar) y afiladora; lo
+  encantado brilla.
+- **Redstone y mecanismos**: polvo, antorchas, repetidores, comparadores, palancas, botones, placas,
+  lámparas, detector de luz solar, bloque musical, cuerda trampa, puertas de hierro y bombillas de
+  cobre; pistones y adhesivos (con slime y miel), observadores, tolvas, dispensadores, soltadores y
+  dinamita con la explosión de Minecraft. Ver [`docs/redstone.md`](docs/redstone.md) y
+  [`docs/mecanismos.md`](docs/mecanismos.md).
+- **Barcas y vagonetas**: barcas y balsas de las 10 maderas (también con cofre), con remos; raíles
+  normales, propulsores, detectores y activadores; vagonetas con cofre, horno, tolva y dinamita.
 - **Experiencia**: orbes al matar criaturas, criar animales, minar menas y sacar lo fundido del horno;
   niveles con las fórmulas de Minecraft, barra con el nivel y al morir se suelta parte.
 - **Mundo vivo**: la arena y la grava caen, las plantas y antorchas necesitan apoyo, las hojas se
@@ -158,7 +171,9 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Muestrario de maderas, colores, piedras, cobre, prismarina y corales, con flores altas y decoración](docs/screenshots/catalog.png) | ![Macetas, faroles, campana, andamios, un cuadro y un marco de noche](docs/screenshots/decoration.png) |
 | ![Arrecife de coral con pepinos de mar que brillan](docs/screenshots/coral_reef.png) | ![Bosque de algas en un océano templado](docs/screenshots/kelp_forest.png) |
 | ![Carteles colgantes, estantería cincelada, soporte con armadura y un cerdo con nombre atado a una valla](docs/screenshots/finishing.png) | ![Saco con objetos dentro en el inventario](docs/screenshots/bundle.png) |
-| ![Calderos con agua, lava y nieve polvo, cabezas de criaturas y bloques nuevos de noche](docs/screenshots/cauldrons.png) | |
+| ![Calderos con agua, lava y nieve polvo, cabezas de criaturas y bloques nuevos de noche](docs/screenshots/cauldrons.png) | ![Barcas en el agua y vagonetas sobre raíles, con una poción en la mano](docs/screenshots/transport.png) |
+| ![Mesa de encantamientos rodeada de librerías, con una espada encantada](docs/screenshots/enchanting.png) | ![Palanca, polvo de redstone y repetidor que encienden una lámpara de noche](docs/screenshots/redstone.png) |
+| ![Pistón extendido empujando una fila de piedra, con tolva, dispensador y observador](docs/screenshots/pistons.png) | ![Dinamita explotando en cadena junto a un pistón](docs/screenshots/tnt.png) |
 
 ## Controles
 
@@ -290,8 +305,8 @@ preocupaciones.
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
 - 52 tipos de criatura (no las ~80 de Minecraft): sin criaturas del Nether y el End, ni jefes.
-- Sin redstone, encantamientos (la experiencia todavía no se gasta en nada), pociones, estructuras
-  generadas, barcas ni vagonetas, ni Nether o End.
+- Sin Nether ni End: los ingredientes de pociones que vienen de allí (verruga, polvo de blaze…)
+  sólo se consiguen en creativo. Tampoco hay todavía Deep Dark, monumentos oceánicos ni mansiones.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores
