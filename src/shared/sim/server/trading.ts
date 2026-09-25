@@ -26,6 +26,8 @@ export class Trading {
 
   /** Fase 6 (asaltos): ¿es héroe de la aldea este jugador? (rebaja del 30 % en las esmeraldas). */
   heroOf: (name: string) => boolean = () => false;
+  /** Fase 7.5 (fauna): acaba de llegar un comerciante ambulante (trae sus llamas). */
+  onTraderSpawn: ((trader: Entity) => void) | null = null;
 
   constructor(private ctx: ServerContext) {}
 
@@ -167,7 +169,9 @@ export class Trading {
       if (y < -60 || !standable(w, x, y, z, 2)) continue;
       const floor = w.getBlock(x, y - 1, z);
       if (floor <= 0 || BLOCK_FLUID[floor]) continue;
-      return ctx.entities.villagers.spawn(x + 0.5, y, z + 0.5, null, [x, y, z], MOB_WANDERING_TRADER);
+      const trader = ctx.entities.villagers.spawn(x + 0.5, y, z + 0.5, null, [x, y, z], MOB_WANDERING_TRADER);
+      if (trader) this.onTraderSpawn?.(trader); // Fase 7.5 (fauna): sus dos llamas
+      return trader;
     }
     return null;
   }

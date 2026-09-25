@@ -15,11 +15,16 @@ import {
 import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
 import { isWaterAmbient } from '../../aquaticMobs'; // Fase 6 (acuáticos)
+import { isAmbientCritter } from '../../critters'; // Fase 7.5 (fauna)
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 import { mountSpawnFor } from './mounts'; // Fase 6 (monturas)
 import { pickMonster, spawnExtraMonsters } from './monsterSpawns'; // Fase 6 (monstruos)
 import { faunaWorldTick, faunaPassiveFor, faunaFloor, FAUNA_GROUPS } from './wildlife'; // Fase 6 (fauna)
+// Fase 7.5 (fauna): murciélagos, ocelotes, champiñacas y brujas en las cabañas.
+import {
+  critterWorldTick, critterPassiveFor, critterFloor, CRITTER_GROUPS, biomeWithoutMonsters, structureMonster,
+} from './critters';
 
 export class Spawner {
   private spawnTimer = 0;
@@ -34,6 +39,7 @@ export class Spawner {
     this.squidTimer -= dt;
     if (players.length === 0) return;
     faunaWorldTick(this.m, dt, players); // Fase 6 (fauna): abejas y nidos
+    critterWorldTick(this.m, dt, players); // Fase 7.5 (fauna): murciélagos en las cuevas
     if (this.spawnTimer <= 0) {
       // Un intento cada ~2.5 s por jugador: la noche es peligrosa pero no una avalancha.
       this.spawnTimer = 1.5 + this.m.rand() * 2;
@@ -92,6 +98,7 @@ export class Spawner {
       if (w.isLitByBlocks(x, y, z)) continue;
       // Tipo según el bioma.
       const info = w.gen.columnInfo(x, z);
+      if (biomeWithoutMonsters(info.biome)) continue; // Fase 7.5 (fauna): campos de champiñones
       const r = this.m.rand();
       let type: number;
       if (r < 0.34) type = info.biome === 8 ? MOB_HUSK : MOB_ZOMBIE;
@@ -100,6 +107,7 @@ export class Spawner {
       else if (r < 0.95) type = MOB_CREEPER;
       else type = MOB_ENDERMAN;
       type = pickMonster(this.m, type, info.biome, x, y, z); // Fase 6 (monstruos): brujas, slimes, aldeanos zombi
+      type = structureMonster(this.m, type, x, y, z); // Fase 7.5 (fauna): en las cabañas de bruja, brujas
       const def = MOBS[type];
       if (!standable(w, x, y, z, Math.ceil(def.height))) continue;
       if (type === MOB_SPIDER && !this.spaceFor(x, y, z, 1)) continue;
@@ -145,6 +153,9 @@ export class Spawner {
 
   /** Animal que aparece en un bioma (0: ninguno). Los de granja salen en casi todos. */
   passiveFor(biome: number): number {
+    // Fase 7.5 (fauna): ocelotes en la jungla y champiñacas en los campos de champiñones.
+    const critter = critterPassiveFor(biome, this.m.rand);
+    if (critter) return critter;
     // Fase 6 (fauna): pandas y loros en la jungla, armadillos en sabanas y tierras baldías.
     const fauna = faunaPassiveFor(biome, this.m.rand);
     if (fauna) return fauna;
@@ -187,7 +198,7 @@ export class Spawner {
     const far: [number, Entity][] = [];
     let total = 0;
     for (const e of this.m.list.values()) {
-      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) continue;
+      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type) || isAmbientCritter(e.type)) continue; // Fase 7.5: murciélagos aparte
       if (e.villager) continue; // Fase 6 (aldeanos): los aldeanos no se reciclan ni cuentan
       total++;
       const d = this.m.nearestPlayer2D(e, players);
@@ -229,6 +240,7 @@ const GROUP: Record<number, [number, number]> = {
   [MOB_CAMEL]: [1, 1],
 };
 Object.assign(GROUP, FAUNA_GROUPS); // Fase 6 (fauna)
+Object.assign(GROUP, CRITTER_GROUPS); // Fase 7.5 (fauna)
 
 /** Suelo natural de los animales salvajes (nieve, roca de montaña, arena del desierto, hielo). */
 const WILD_FLOORS = new Set<number>([GRASS, SNOWY_GRASS, SNOW_BLOCK, SAND, STONE, GRAVEL, ICE, PACKED_ICE]);
@@ -238,6 +250,8 @@ for (let i = 0; i < 8; i++) WILD_FLOORS.add(SNOW_LAYER + i);
 function floorFor(type: number, floor: number): boolean {
   const fauna = faunaFloor(type, floor); // Fase 6 (fauna)
   if (fauna !== undefined) return fauna;
+  const critter = critterFloor(type, floor); // Fase 7.5 (fauna)
+  if (critter !== undefined) return critter;
   if (type in GROUP) return WILD_FLOORS.has(floor);
   return floor === GRASS || floor === SNOWY_GRASS;
 }

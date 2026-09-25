@@ -1,6 +1,7 @@
 // Fase 6 (monturas): lo que el servidor y el cliente saben de cada montura (asiento, si se doma, si
 // lleva silla, si se guía, velocidad y salto) y los pelajes de caballos y llamas.
 import { MOB_PIG, MOB_HORSE, MOB_DONKEY, MOB_MULE, MOB_LLAMA, MOB_CAMEL } from './mobs';
+import { MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE, isLlamaLike } from './critters'; // Fase 7.5 (fauna)
 
 export interface MountDef {
   /** Altura del asiento (donde apoya la cadera el jinete) sobre los pies de la montura, en bloques. */
@@ -19,6 +20,8 @@ export interface MountDef {
   chargeJump: boolean;
   /** Número de pelajes. */
   variants: number;
+  /** Fase 7.5 (fauna): anda bajo el agua (no flota y el jinete no se baja): el caballo esqueleto. */
+  underwater?: boolean;
 }
 
 export const MOUNTS: Readonly<Record<number, MountDef>> = {
@@ -28,6 +31,10 @@ export const MOUNTS: Readonly<Record<number, MountDef>> = {
   [MOB_LLAMA]: { seat: 1.22, tameable: true, saddle: false, steer: false, speed: [0, 0], jump: [0, 0], chargeJump: false, variants: 4 },
   [MOB_CAMEL]: { seat: 2.2, tameable: false, saddle: true, steer: true, speed: [6, 6], jump: [9, 9], chargeJump: false, variants: 1 },
   [MOB_PIG]: { seat: 0.94, tameable: false, saddle: true, steer: false, speed: [0, 0], jump: [0, 0], chargeJump: false, variants: 1 },
+  // Fase 7.5 (fauna): la llama de comerciante, como la llama; los caballos no muertos, a paso fijo y con el salto del caballo.
+  [MOB_TRADER_LLAMA]: { seat: 1.22, tameable: true, saddle: false, steer: false, speed: [0, 0], jump: [0, 0], chargeJump: false, variants: 4 },
+  [MOB_SKELETON_HORSE]: { seat: 1.38, tameable: true, saddle: true, steer: true, speed: [8.5, 8.5], jump: [9.5, 15], chargeJump: true, variants: 1, underwater: true },
+  [MOB_ZOMBIE_HORSE]: { seat: 1.38, tameable: true, saddle: true, steer: true, speed: [8.5, 8.5], jump: [9.5, 15], chargeJump: true, variants: 1 },
 };
 
 export function mountDef(type: number): MountDef | undefined {
@@ -58,9 +65,9 @@ export function offspringType(a: number, b: number): number {
   return pair[0] === MOB_HORSE && pair[1] === MOB_DONKEY ? MOB_MULE : a;
 }
 
-/** ¿Pueden criar juntos? Misma especie o caballo con burro. */
+/** ¿Pueden criar juntos? Misma especie o caballo con burro (Fase 7.5: y llamas con llamas de comerciante). */
 export function canMate(a: number, b: number): boolean {
-  return a === b || offspringType(a, b) === MOB_MULE;
+  return a === b || offspringType(a, b) === MOB_MULE || (isLlamaLike(a) && isLlamaLike(b));
 }
 
 export function isSaddlePart(name: string): boolean {

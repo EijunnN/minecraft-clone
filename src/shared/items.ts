@@ -28,7 +28,7 @@ import { CHAINMAIL_ARMOR, TURTLE_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
-import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
+import { SPAWN_EGG_DEFS, EARLY_SPAWN_EGGS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
@@ -398,7 +398,7 @@ export const PAINTING = item('painting', 'Cuadro');
 export const ITEM_FRAME = item('item_frame', 'Marco');
 /** Huevos generadores por clave de criatura: al usarlos sobre un bloque aparece la criatura. */
 export const SPAWN_EGGS: Record<string, number> = {};
-for (const e of SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
+for (const e of SPAWN_EGG_DEFS.slice(0, EARLY_SPAWN_EGGS)) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 /** Clave de la criatura de un huevo generador ('' si no lo es). */
 export function spawnEggMob(id: number): string {
   const k = ITEMS[id]?.key ?? '';
@@ -559,6 +559,8 @@ export const QUARTZ = item('quartz', 'Cuarzo del Nether');
 ITEMS[HOPPER].sprite = 'hopper';
 export const HOPPER_MINECART = item('hopper_minecart', 'Vagoneta con tolva', { stack: 1 });
 export const TNT_MINECART = item('tnt_minecart', 'Vagoneta con dinamita', { stack: 1 });
+// Fase 7.5 (fauna): huevos generadores de las criaturas nuevas (al final: los ids anteriores no se mueven).
+for (const e of SPAWN_EGG_DEFS.slice(EARLY_SPAWN_EGGS)) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -732,6 +734,9 @@ smelt(RAW_IRON, IRON_INGOT);
 smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
+// Fase 7.5 (fauna): el ocelote con bacalao o salmón crudos (confianza y cría), la champiñaca con trigo y la
+// llama de comerciante con heno, como la llama.
+Object.assign(BREED_FOOD as Record<string, readonly number[]>, { ocelot: [COD, SALMON], mooshroom: [WHEAT], trader_llama: [HAY_BALE] });
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
 // Fase 7 (pociones): los ingredientes (las pociones, con cada tipo, las añade el inventario creativo).
 (CREATIVE_ITEMS as number[]).push(

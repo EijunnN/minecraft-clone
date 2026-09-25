@@ -41,6 +41,7 @@ const STRUCTURES: [string, string][] = [
   ['aldea', 'village'], ['puesto', 'pillager_outpost'], ['templo_del_desierto', 'desert_pyramid'],
   ['templo_de_la_jungla', 'jungle_temple'], ['naufragio', 'shipwreck'], ['portal_en_ruinas', 'ruined_portal'],
   ['iglu', 'igloo'], ['pozo', 'desert_well'], ['mina', 'mineshaft'],
+  ['cabana_de_bruja', 'swamp_hut'], ['fosil', 'fossil'], // Fase 7.5 (fauna)
 ];
 
 export const COMMAND_SPECS: CommandSpec[] = [

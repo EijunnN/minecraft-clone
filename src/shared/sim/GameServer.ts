@@ -70,6 +70,7 @@ import { Mechanisms } from './server/mechanisms'; // Fase 7 (mecanismos)
 import { BellResonance } from './server/bellResonance'; // Fase 7 (efectos)
 import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
+import { CritterWorld } from './server/critterWorld'; // Fase 7.5 (fauna)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -193,6 +194,8 @@ export class GameServer {
   readonly mechanisms: Mechanisms;
   /** Fase 7 (efectos): la campana hace brillar a los saqueadores. */
   private bells: BellResonance;
+  /** Fase 7.5 (fauna): trampa del rayo, llamas del comerciante y cabañas de bruja. */
+  readonly critters: CritterWorld;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -354,6 +357,7 @@ export class GameServer {
     const lightBlock = this.fire.lightBlock.bind(this.fire);
     this.fire.lightBlock = (x, y, z) => mech.light(x, y, z) || lightBlock(x, y, z);
     this.fire.burned = (x, y, z) => mech.light(x, y, z);
+    this.critters = new CritterWorld(this.ctx, store, this.storms, this.trading); // Fase 7.5 (fauna)
   }
 
   get seed(): number {
@@ -1047,6 +1051,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     if (this.tickCount % TICK_RATE === 0) this.collections.tick(); // Fase 6.5 (colecciones)
+    if (this.tickCount % TICK_RATE === 0) this.critters.tick(); // Fase 7.5 (fauna)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.banners.endTick(); // Fase 6.5 (libros y estandartes)

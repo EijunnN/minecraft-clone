@@ -36,6 +36,10 @@ import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
+// Fase 7.5 (fauna): murciélagos (del ambiente), jinetes esqueleto y lo que se guarda de las criaturas nuevas.
+import { isAmbientCritter } from '../../critters';
+import { critterKilled, critterSave, critterRestore } from './critters';
+import { horsemanAbsorb } from './skeletonTrap';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -240,7 +244,7 @@ export class Entities {
       if (dx * dx + dz * dz > r2) continue;
       const def = MOBS[e.type];
       if (e.type === MOB_SQUID) squid++;
-      else if (isWaterAmbient(e.type)) continue; // Fase 6 (acuáticos): tienen sus propios límites.
+      else if (isWaterAmbient(e.type) || isAmbientCritter(e.type)) continue; // Fase 6 (acuáticos), 7.5 (murciélagos): sus propios límites.
       else if (def.hostile) hostile++;
       else passive++;
     }
@@ -254,6 +258,7 @@ export class Entities {
     if (e.dead || !e.ai || MOBS[e.type].inert) return false;
     if (e.invuln > 0) return false;
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
+    amount = horsemanAbsorb(e, amount); // Fase 7.5 (fauna): el casco del jinete esqueleto
     amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
     e.health -= amount;
     e.invuln = 0.5;
@@ -318,6 +323,7 @@ export class Entities {
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
     if (drops) collectionDrops(this, e, this.killer); // Fase 6.5 (colecciones): cabezas y discos
+    if (drops) critterKilled(this, e); // Fase 7.5 (fauna): equipo del jinete esqueleto (antes de que se lo quite gear)
     if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
   }
 
@@ -386,7 +392,7 @@ export class Entities {
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
-      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
+      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && (MOBS[e.type].hostile || this.aquatic.despawns(e) || isAmbientCritter(e.type))) {
         if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
           this.remove(e.id);
           continue;
@@ -448,7 +454,7 @@ export class Entities {
     const out: number[][] = [];
     for (const e of this.list.values()) {
       // Fase 6.5 (remate): los que llevan nombre se guardan siempre (también monstruos y calamares).
-      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) && !e.customName)) continue;
+      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type) || isAmbientCritter(e.type)) && !e.customName)) continue;
       const row = [
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
@@ -467,6 +473,9 @@ export class Entities {
       // Fase 6.5 (equipo): armadura de caballo o de lobo.
       const gear = this.gear.save(e);
       if (gear) (row as unknown[]).push(gear);
+      // Fase 7.5 (fauna): confianza del ocelote, color de la champiñaca, trampa del caballo esqueleto…
+      const crit = critterSave(e);
+      if (crit) (row as unknown[]).push(crit);
       out.push(row);
     }
     return JSON.stringify(out);
@@ -497,6 +506,7 @@ export class Entities {
           if (Array.isArray(f) && f.length === 3 && f.every(Number.isInteger)) e.leash = [f[0], f[1], f[2]];
         }
         if (Array.isArray(row)) this.gear.restore(e, row as unknown[]); // Fase 6.5 (equipo)
+        if (Array.isArray(row)) critterRestore(e, row as unknown[]); // Fase 7.5 (fauna)
       }
     } catch {
       /* ignorar */

@@ -16,6 +16,9 @@ export * from './aquaticMobs';
 // Fase 6 (asaltos): saqueadores, vindicadores, evocadores, vex, devastadores y colmillos (ids 60–69).
 import { ILLAGER_MOBS } from './illagers';
 export * from './illagers';
+// Fase 7.5 (fauna): murciélago, ocelote, champiñaca, llama de comerciante y caballos no muertos (ids 78–83).
+import { critterMobs } from './critters';
+export * from './critters';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -627,6 +630,8 @@ mob({
 
 // Fase 6 (asaltos): definiciones en illagers.ts.
 for (const d of ILLAGER_MOBS) mob(d);
+// Fase 7.5 (fauna): definiciones en critters.ts (reutilizan los modelos del gato, la vaca, la llama y el caballo).
+for (const d of critterMobs(MOBS)) mob(d);
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

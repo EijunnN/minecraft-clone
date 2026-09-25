@@ -71,7 +71,20 @@ export const SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('evoker', 'evocador', [149, 154, 151], [30, 30, 30]),
   egg('vex', 'vex', [122, 144, 164], [232, 237, 241]),
   egg('ravager', 'devastador', [117, 114, 110], [91, 80, 74]),
+  // Fase 7.5 (fauna): sus objetos se registran al final de items.ts (ver EARLY_SPAWN_EGGS).
+  egg('bat', 'murciélago', [76, 62, 48], [15, 15, 15]),
+  egg('ocelot', 'ocelote', [239, 222, 125], [86, 68, 52]),
+  egg('mooshroom', 'champiñaca', [160, 15, 16], [183, 183, 183]),
+  egg('trader_llama', 'llama de comerciante', [234, 164, 48], [69, 98, 150]),
+  egg('skeleton_horse', 'caballo esqueleto', [104, 104, 79], [229, 229, 216]),
+  egg('zombie_horse', 'caballo zombi', [49, 82, 52], [151, 194, 132]),
 ];
+
+/**
+ * Huevos de la fase 6.5 (los primeros de la lista): sus objetos van en medio del registro de objetos.
+ * Los que vienen después se registran al final (los ids de objeto se guardan y no pueden moverse).
+ */
+export const EARLY_SPAWN_EGGS = 53;
 
 /** Criaturas sin huevo propio: los slimes pequeños salen al dividirse y los colmillos, del evocador. */
 export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime_small', 'evoker_fangs']);

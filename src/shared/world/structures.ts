@@ -22,6 +22,9 @@ import {
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
+// Fase 7.5 (fauna): cabañas de bruja y fósiles.
+import { buildSwampHut, swampHutSite, SWAMP_HUT_RADIUS, SWAMP_HUT_SALT } from './swampHut';
+import { buildFossil, fossilSite, FOSSIL_RADIUS } from './fossils';
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -210,6 +213,17 @@ const GRID: GridType[] = [
     },
     build: buildOutpost,
   },
+  // Fase 7.5 (fauna): cabañas de bruja en los pantanos y fósiles enterrados (desiertos y pantanos).
+  {
+    key: 'swamp_hut', spacing: 32, separation: 8, salt: SWAMP_HUT_SALT, radius: SWAMP_HUT_RADIUS,
+    site: (gen, x, z, inf) => swampHutSite(inf.biome, gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp))),
+    build: buildSwampHut,
+  },
+  {
+    key: 'fossil', spacing: 6, separation: 2, salt: 14357921, radius: FOSSIL_RADIUS,
+    site: (gen, x, z, inf) => fossilSite(gen.seed, x, z, inf.biome, gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp))),
+    build: (c, s, gen) => buildFossil(c, s, gen.seed),
+  },
 ];
 
 /** Nombres en español de las estructuras (y las claves que acepta /localizar). */
@@ -217,6 +231,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   desert_pyramid: 'Templo del desierto', jungle_temple: 'Templo de la jungla', shipwreck: 'Naufragio',
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
   village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
+  swamp_hut: 'Cabaña de bruja', fossil: 'Fósil', // Fase 7.5 (fauna)
 };
 
 const startCache = new Map<string, Start | null>();

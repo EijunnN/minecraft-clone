@@ -110,6 +110,11 @@ export class Leashes {
   /** Punto del que tira la correa (jugador o valla), o null si ya no existe. */
   private holderPos(e: Entity): [number, number, number] | null {
     const h = e.leash!;
+    // Fase 7.5 (fauna): llama atada a una criatura ('@' + id): la del comerciante ambulante.
+    if (typeof h === 'string' && h.startsWith('@')) {
+      const t = this.ctx.entities.list.get(Number(h.slice(1)));
+      return t && !t.dead ? [t.x, t.y + t.height * 0.55, t.z] : null;
+    }
     if (Array.isArray(h)) {
       const b = this.ctx.world.getBlock(h[0], h[1], h[2]);
       if (b >= 0 && !isFence(b)) return null; // la valla se rompió

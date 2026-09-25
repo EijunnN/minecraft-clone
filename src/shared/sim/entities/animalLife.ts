@@ -9,6 +9,7 @@ import { LOVE_SECONDS, BREED_COOLDOWN, type PlayerView, type InteractResult, typ
 import type { Entities } from './Entities';
 import { canMate, offspringType } from '../../mounts'; // Fase 6 (monturas)
 import { faunaInteract } from './wildlife'; // Fase 6 (fauna)
+import { critterInteract, critterBorn } from './critters'; // Fase 7.5 (fauna)
 
 export class AnimalLife {
   constructor(private m: Entities) {}
@@ -119,6 +120,7 @@ export class AnimalLife {
     const x = (a.x + b.x) / 2, y = Math.max(a.y, b.y), z = (a.z + b.z) / 2;
     const baby = this.m.spawnMob(offspringType(a.type, b.type), x, y, z, true); // Fase 6 (monturas): mula
     if (baby) this.m.mounts.born(baby, a, b);
+    if (baby) critterBorn(this.m, baby, a, b); // Fase 7.5 (fauna): color de la champiñaca, pelaje de la llama de comerciante
     if (baby) baby.yaw = baby.bodyYaw = a.bodyYaw;
     this.m.host.fx('breed', x, y + 0.6, z);
     this.m.xp.spawn(breedXp(this.m.rand), x, y + 0.3, z);
@@ -138,6 +140,9 @@ export class AnimalLife {
     // Fase 6 (fauna): cepillar armadillos.
     const fauna = faunaInteract(this.m, e, item, creative);
     if (fauna) return fauna;
+    // Fase 7.5 (fauna): confianza del ocelote; tijeras, cuenco, cubo y flores con la champiñaca.
+    const critter = critterInteract(this.m, e, item, creative);
+    if (critter) return critter;
     const food = BREED_FOOD[def.key];
     if (food && food.includes(item)) {
       if (baby) {
