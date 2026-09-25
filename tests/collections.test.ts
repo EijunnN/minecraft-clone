@@ -43,8 +43,9 @@ test('registro: cabezas, tocadiscos, discos, saco de tinta brillante y marco bri
   assert.deepEqual(SKULL_KINDS.map((k) => ITEMS[SKULLS[k]].name), ['Cabeza de zombi', 'Cráneo de esqueleto', 'Cabeza de creeper', 'Cabeza de jugador']);
   assert.equal(ITEMS[JUKEBOX].name, 'Tocadiscos');
   assert.ok(INVENTORY_ORDER.includes(JUKEBOX));
-  assert.equal(MUSIC_DISCS.length, 13);
-  assert.deepEqual(DISCS.map((d) => d.key), ['13', 'cat', 'blocks', 'chirp', 'far', 'mall', 'mellohi', 'stal', 'strad', 'ward', '11', 'wait', 'otherside']);
+  // Fase 7.5 (abismo): con el disco 5 al final.
+  assert.equal(MUSIC_DISCS.length, 14);
+  assert.deepEqual(DISCS.map((d) => d.key), ['13', 'cat', 'blocks', 'chirp', 'far', 'mall', 'mellohi', 'stal', 'strad', 'ward', '11', 'wait', 'otherside', '5']);
   MUSIC_DISCS.forEach((id, i) => {
     assert.equal(ITEMS[id].name, 'Disco de música');
     assert.equal(ITEMS[id].stack, 1);

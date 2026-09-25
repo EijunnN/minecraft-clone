@@ -7,6 +7,7 @@ import {
   AIR, STONE, SANDSTONE, MOSSY_COBBLESTONE, COBBLESTONE, MOB_SPAWNER, COBWEB, OBSIDIAN, SNOW_BLOCK, FENCES, OAK_PLANKS,
   isChest, DARK_OAK_LOG,
   PRISMARINE_BRICKS, // Fase 7.5 (océano)
+  REINFORCED_DEEPSLATE, // Fase 7.5 (abismo)
 } from '../src/shared/blocks';
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
 import { TerrainGenerator } from '../src/shared/world/terrain';
@@ -49,6 +50,7 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     monument: (c) => (c.get(PRISMARINE_BRICKS) ?? 0) > 200,
     ocean_ruins: (_c, ch) => ch.some((t) => t.startsWith('underwater_ruin')),
     buried_treasure: (_c, ch) => ch.includes('buried_treasure'),
+    ancient_city: (c, ch) => (c.get(REINFORCED_DEEPSLATE) ?? 0) > 20 || ch.includes('ancient_city'), // Fase 7.5 (abismo)
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);
