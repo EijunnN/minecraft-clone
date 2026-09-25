@@ -112,7 +112,11 @@ export class VehicleClient {
       const ent = this.g.ents.list.get(e);
       if (ent) this.type = ent.type;
       // Delante: este cliente la mueve (también si pasa delante porque se bajó el de delante).
-      if (mine === 0 && (!again || !wasDriving || !this.body)) this.startBody(ent);
+      // (Si aún no se ve la entidad, el cuerpo se crea en afterEntities, cuando llegue.)
+      if (mine === 0 && (!again || !wasDriving || !this.body)) {
+        if (ent) this.startBody(ent);
+        else this.body = null;
+      }
       if (mine !== 0) this.body = null;
       if (!again) {
         this.g.ui.toast(isBoatType(this.type) ? 'W/A/S/D: remar · Mayús: bajarse' : 'Mayús: bajarse');

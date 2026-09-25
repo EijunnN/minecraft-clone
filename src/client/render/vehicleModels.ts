@@ -154,7 +154,8 @@ export function vehicleModel(e: ClientEntity): VehicleModel | undefined {
     if (e.type === ENT_BOAT) return MODELS.get(RAFT_MODEL);
     if (e.type === ENT_CHEST_BOAT) return MODELS.get(CHEST_RAFT_MODEL);
   }
-  return MODELS.get(e.type);
+  // Vagonetas nuevas (tolva, TNT…) sin modelo propio todavía: la normal (se les añade con add(model(…))).
+  return MODELS.get(e.type) ?? (isCartType(e.type) ? MODELS.get(ENT_MINECART) : undefined);
 }
 
 /** ¿Es un id de modelo de transporte? (para la fuente de texturas). */
