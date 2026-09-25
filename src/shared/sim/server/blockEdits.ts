@@ -25,10 +25,11 @@ import { copperInfo } from '../../blocks';
 import { partnerOf } from '../../placement';
 import type { Copper } from './copper';
 import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
-import { isWaterlogged, emptyAfterBreak, withWater, WATER } from '../../blocks'; // Fase 6.5 (océano y plantas) y 7
+import { isWaterlogged, emptyAfterPlayerBreak, withWater, WATER } from '../../blocks'; // Fase 6.5 (océano y plantas) y 7
 // Fase 7 (encantamientos): Toque de seda y Fortuna.
 import { enchantedBlockDrops } from '../enchantDrops';
-import { sanitizeHeldEnchants } from '../../enchantEffects';
+import { sanitizeHeldEnchants, levelIn } from '../../enchantEffects';
+import { SILK_TOUCH } from '../../enchantments';
 
 export class BlockEdits {
   /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
@@ -91,7 +92,9 @@ export class BlockEdits {
         const en = toolId ? sanitizeHeldEnchants(toolId, msg.en) : []; // Fase 7 (encantamientos)
         const drops = !creative && (!BLOCK_FLUID[cur] || wet) ? enchantedBlockDrops(cur, toolId, en, () => ctx.rand()) : [];
         this.beforeBreak?.(x, y, z, cur, toolId); // Fase 7 (redstone)
-        ctx.world.setBlock(x, y, z, emptyAfterBreak(cur)); // Fase 7: también el hielo escarchado deja agua
+        // Fase 7: el hielo escarchado y las plantas anegadas dejan agua; el hielo, si tiene algo debajo.
+        const below = ctx.world.getBlock(x, y - 1, z);
+        ctx.world.setBlock(x, y, z, emptyAfterPlayerBreak(cur, below, !creative, levelIn(en, SILK_TOUCH) > 0));
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
         // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
         const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand());

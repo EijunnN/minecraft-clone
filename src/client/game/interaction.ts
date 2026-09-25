@@ -37,8 +37,10 @@ import { cauldronClick } from './cauldronInteraction'; // Fase 6.5 (calderos)
 import { equipmentUse, equipmentHold, equipmentRelease, EQUIPMENT_WEARLESS } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { ENT_TRIDENT } from '../../shared/equipment';
 import { TRIDENT } from '../../shared/items';
-import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
-import { withWater } from '../../shared/blocks'; // Fase 7: el cubo de agua anega el conducto y los corales
+import { SWEET_BERRY_BUSH, isWaterlogged } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { withWater, emptyAfterPlayerBreak } from '../../shared/blocks'; // Fase 7: anegar con el cubo y el hielo que deja agua
+import { levelIn } from '../../shared/enchantEffects';
+import { SILK_TOUCH } from '../../shared/enchantments';
 import { materialsUse } from './materialsInteraction'; // Fase 6.5 (materiales)
 import { collectionUse } from './collectionInteraction'; // Fase 6.5 (colecciones)
 import { potionUse, drinkPotion, hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
@@ -470,7 +472,9 @@ export class Interaction {
     const { x, y, z, id } = hit;
     this.g.swing(false);
     if (id === BEDROCK || BLOCK_HARDNESS[id] < 0) return;
-    world.setBlock(x, y, z, emptyAfterBreak(id)); // Fase 6.5: una planta anegada deja el agua
+    // Fase 6.5: una planta anegada deja el agua; fase 7: el hielo roto en supervivencia, también.
+    const silk = levelIn(this.g.enchant.held(), SILK_TOUCH) > 0;
+    world.setBlock(x, y, z, emptyAfterPlayerBreak(id, world.getBlock(x, y - 1, z), !this.g.creative, silk));
     // La otra mitad de una puerta o de una cama cae con ella (el servidor lo confirma).
     const pp = partnerOf(x, y, z, id);
     if (pp && familyBase(world.getBlock(pp[0], pp[1], pp[2])) === familyBase(id)) world.setBlock(pp[0], pp[1], pp[2], AIR);

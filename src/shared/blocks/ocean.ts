@@ -9,10 +9,10 @@
 // El estado 0 de cada familia es el seco (el que se obtiene como objeto).
 // Se registran al final de index.ts para no mover ningún id guardado.
 import {
-  family, defs, L, familyBase, stateOf, stateProps, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_MODEL, type Opts,
+  family, defs, L, familyBase, stateOf, stateProps, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_MODEL, BLOCK_FLUID, type Opts,
   type NeighborGet,
 } from './registry';
-import { AIR, WATER } from './classic';
+import { AIR, WATER, ICE } from './classic';
 import { addMaterialShapes } from './building';
 import { addWall } from './decoration';
 import { MAX_BLOCK_ID } from '../constants';
@@ -45,6 +45,16 @@ export function withWater(id: number, wet: boolean): number {
   const st = id > 0 ? stateProps(id) : null;
   if (!st || st.water === undefined || (st.water === 1) === wet) return 0;
   return stateOf(familyBase(id), { ...st, water: wet ? 1 : 0 });
+}
+
+/**
+ * Lo que queda al romper un jugador el bloque. El hielo roto en supervivencia sin Toque de seda se
+ * convierte en agua si debajo hay un bloque sólido o un líquido (como IceBlock.playerDestroy de
+ * Minecraft); sobre el aire desaparece. En creativo, con Toque de seda o por una explosión no deja agua.
+ */
+export function emptyAfterPlayerBreak(id: number, below: number, survival: boolean, silk: boolean): number {
+  if (id === ICE && survival && !silk) return below < 0 || BLOCK_SOLID[below] === 1 || BLOCK_FLUID[below] ? WATER : AIR;
+  return emptyAfterBreak(id);
 }
 
 /** Marca como anegados los estados de una familia que son fluido (después de registrarla). */
