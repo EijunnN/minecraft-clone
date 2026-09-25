@@ -131,7 +131,7 @@ export type AnalogReader = (api: RedstoneApi, x: number, y: number, z: number, i
 export type UseHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => boolean;
 /**
  * El bloque de (x, y, z) pasó de `old` a `id` (uno de los dos es de esta familia): se colocó, se quitó
- * o cambió de estado. Al cargar su chunk se llama con old = 0. No debe cambiar bloques (sólo anotar y programar).
+ * o cambió de estado. Al cargar su chunk se llama con old = −1 (y entonces no debe cambiar bloques: sólo anotar y programar).
  */
 export type ChangeHandler = (api: RedstoneApi, x: number, y: number, z: number, old: number, id: number) => void;
 /** Hay al menos una entidad en la celda (x, y, z) este tick (se llama una vez por tick y celda). */

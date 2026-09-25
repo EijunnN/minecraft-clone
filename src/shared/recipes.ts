@@ -563,7 +563,7 @@ mix([PAPER, EMPTY_MAP], BANNER_PATTERN_ITEMS.globe);
 mix([PAPER, VINE], BANNER_PATTERN_ITEMS.curly_border);
 mix([PAPER, BRICKS], BANNER_PATTERN_ITEMS.bricks);
 // ------------------------------------------------------------------ Fase 6.5 (equipo)
-// Mechero, ballesta (sin gancho de cuerda en el juego: lleva un segundo lingote en su lugar), caparazón
+// Mechero, ballesta (Fase 7: ya con su gancho de cuerda), caparazón
 // de tortuga, armadura de cuero para caballo, armadura para lobo, caña con zanahoria y conducto (como
 // en Minecraft). Los fuegos artificiales van aparte (fireworkCraft): sus colores viajan en la pila.
 import {
@@ -571,9 +571,10 @@ import {
   NAUTILUS_SHELL, HEART_OF_THE_SEA, FIREWORK_ROCKET, FIREWORK_STAR, GUNPOWDER as FW_GUNPOWDER, PAPER as FW_PAPER,
 } from './items';
 import { CONDUIT } from './blocks';
+import { TRIPWIRE_HOOK } from './blocks'; // Fase 7 (redstone)
 import { fireworkData, fireworkColors } from './equipment';
 mix([IRON_INGOT, FLINT], FLINT_AND_STEEL);
-shape(['SIS', 'TIT', ' S '], { S: STICK, I: IRON_INGOT, T: STRING }, CROSSBOW);
+shape(['SIS', 'THT', ' S '], { S: STICK, I: IRON_INGOT, T: STRING, H: TRIPWIRE_HOOK }, CROSSBOW); // Fase 7 (redstone): con gancho
 shape(['SSS', 'S S'], { S: TURTLE_SCUTE }, TURTLE_HELMET);
 shape(['L L', 'LLL', 'L L'], { L: LEATHER }, HORSE_ARMOR.leather);
 shape(['S  ', 'SSS', 'S S'], { S: ARMADILLO_SCUTE }, WOLF_ARMOR);
@@ -610,4 +611,48 @@ export function fireworkCraft(grid: readonly (ItemStack | null)[]): ItemStack | 
 /** Colores (máscara de tintes) de una estrella o de un cohete. */
 export function fireworkMask(s: ItemStack): number {
   return s.id === FIREWORK_STAR ? (s.dmg ?? 0) & 0xffff : s.id === FIREWORK_ROCKET ? fireworkColors(s.dmg) : 0;
+}
+
+// ------------------------------------------------------------------ Fase 7 (redstone)
+// Componentes de redstone como en Minecraft. La bombilla de cobre lleva vara de blaze: sólo se añade si
+// ese objeto existe (llega con el Nether); el cuarzo del Nether, de momento, sólo sale en creativo.
+import {
+  REDSTONE_TORCH, LEVER, BUTTONS, PRESSURE_PLATES, LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE, REPEATER, COMPARATOR,
+  REDSTONE_BLOCK, REDSTONE_LAMP, DAYLIGHT_DETECTOR, TARGET, NOTE_BLOCK, TRAPPED_CHEST, LIGHTNING_ROD, COPPER_BULB, IRON_DOOR,
+  IRON_TRAPDOOR, GLOWSTONE, COBBLESTONE as RS_COBBLESTONE, STONE as RS_STONE, GLASS as RS_GLASS, HAY_BALE as RS_HAY,
+  CHEST as RS_CHEST, COPPER as RS_COPPER, WOODS as RS_WOODS, SLABS as RS_SLABS, OXIDATION_STAGES as RS_STAGES,
+} from './blocks';
+import { QUARTZ, REDSTONE as RS_DUST, STICK as RS_STICK, IRON_INGOT as RS_IRON, GOLD_INGOT as RS_GOLD, COPPER_INGOT as RS_COPPER_INGOT } from './items';
+import { ITEMS as RS_ITEMS } from './items';
+{
+  const R = RS_DUST;
+  shape(['R', 'S'], { R, S: RS_STICK }, REDSTONE_TORCH);
+  shape(['S', 'C'], { S: RS_STICK, C: RS_COBBLESTONE }, LEVER);
+  mix([RS_STONE], BUTTONS.stone);
+  shape(['SS'], { S: RS_STONE }, PRESSURE_PLATES.stone);
+  for (const w of RS_WOODS) {
+    mix([w.block], BUTTONS[w.key]);
+    shape(['PP'], { P: w.block }, PRESSURE_PLATES[w.key]);
+  }
+  shape(['GG'], { G: RS_GOLD }, LIGHT_WEIGHTED_PLATE);
+  shape(['II'], { I: RS_IRON }, HEAVY_WEIGHTED_PLATE);
+  shape(['TRT', 'SSS'], { T: REDSTONE_TORCH, R, S: RS_STONE }, REPEATER);
+  shape([' T ', 'TQT', 'SSS'], { T: REDSTONE_TORCH, Q: QUARTZ, S: RS_STONE }, COMPARATOR);
+  shape(['RRR', 'RRR', 'RRR'], { R }, REDSTONE_BLOCK);
+  mix([REDSTONE_BLOCK], R, 9);
+  shape([' R ', 'RGR', ' R '], { R, G: GLOWSTONE }, REDSTONE_LAMP);
+  shape(['GGG', 'QQQ', 'WWW'], { G: RS_GLASS, Q: QUARTZ, W: RS_WOODS.map((w) => RS_SLABS[w.key]) }, DAYLIGHT_DETECTOR);
+  shape([' R ', 'RHR', ' R '], { R, H: RS_HAY }, TARGET);
+  shape(['I', 'S', 'P'], { I: RS_IRON, S: RS_STICK, P: PLANKS }, TRIPWIRE_HOOK, 2);
+  shape(['PPP', 'PRP', 'PPP'], { P: PLANKS, R }, NOTE_BLOCK);
+  mix([RS_CHEST, TRIPWIRE_HOOK], TRAPPED_CHEST);
+  shape(['C', 'C', 'C'], { C: RS_COPPER_INGOT }, LIGHTNING_ROD[0][0]);
+  shape(['II', 'II', 'II'], { I: RS_IRON }, IRON_DOOR, 3);
+  shape(['II', 'II'], { I: RS_IRON }, IRON_TRAPDOOR);
+  const blazeRod = RS_ITEMS.findIndex((i) => i?.key === 'blaze_rod');
+  if (blazeRod > 0) {
+    for (let s = 0; s < RS_STAGES; s++) {
+      shape([' C ', 'CBC', ' R '], { C: RS_COPPER.block[0][s], B: blazeRod, R }, COPPER_BULB[0][s], 4);
+    }
+  }
 }

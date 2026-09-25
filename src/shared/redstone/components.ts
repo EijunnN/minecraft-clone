@@ -79,7 +79,7 @@ registerRedstone([REDSTONE_TORCH, REDSTONE_WALL_TORCH], {
     } else if (!powered && list.length < BURNOUT_TOGGLES) api.setBlock(x, y, z, torchWithLit(id, true));
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0) api.updateAt(x, y, z); // al cargar el chunk, que mire si le toca cambiar
+    if (old < 0) api.updateAt(x, y, z); // al cargar el chunk, que mire si le toca cambiar
   },
 });
 
@@ -127,7 +127,7 @@ registerRedstone(Object.values(BUTTONS), {
     center(api, 'button', x, y, z, 0, isWoodenButton(id) ? 1 : 0);
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0 && mountedPowered(id)) api.schedule(x, y, z, buttonTicks(id));
+    if (old < 0 && mountedPowered(id)) api.schedule(x, y, z, buttonTicks(id));
   },
 });
 
@@ -167,7 +167,7 @@ registerRedstone([...Object.values(PRESSURE_PLATES), LIGHT_WEIGHTED_PLATE, HEAVY
     if (platePower(id) > 0) checkPlate(api, x, y, z, id);
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0 && platePower(id) > 0) api.schedule(x, y, z, 1);
+    if (old < 0 && platePower(id) > 0) api.schedule(x, y, z, 1);
   },
 });
 
@@ -256,7 +256,7 @@ registerRedstone(TRIPWIRE, {
     if (tripwirePowered(id)) checkTripwire(api, x, y, z, id);
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0) {
+    if (old < 0) {
       if (tripwirePowered(id)) api.schedule(x, y, z, 1);
       return;
     }
@@ -276,7 +276,7 @@ registerRedstone(TRIPWIRE, {
 registerRedstone(TRIPWIRE_HOOK, {
   tick: (api, x, y, z) => updateHook(api, x, y, z),
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0) {
+    if (old < 0) {
       if (hookPowered(id)) api.schedule(x, y, z, 1);
       return;
     }
@@ -352,7 +352,7 @@ registerRedstone(REPEATER, {
     return true;
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0) api.updateAt(x, y, z);
+    if (old < 0) api.updateAt(x, y, z);
   },
 });
 
@@ -425,7 +425,7 @@ registerRedstone(COMPARATOR, {
     return true;
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0) api.schedule(x, y, z, 1);
+    if (old < 0) api.schedule(x, y, z, 1);
   },
 });
 
@@ -443,7 +443,7 @@ registerRedstone(REDSTONE_LAMP, {
     if (lampLit(id) && !api.isPowered(x, y, z)) api.setBlock(x, y, z, REDSTONE_LAMP);
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0) api.updateAt(x, y, z);
+    if (old < 0) api.updateAt(x, y, z);
   },
 });
 
@@ -531,7 +531,7 @@ registerRedstone(TARGET, {
     if (id !== TARGET) api.setBlock(x, y, z, TARGET);
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > TARGET) api.schedule(x, y, z, 1);
+    if (old < 0 && id > TARGET) api.schedule(x, y, z, 1);
   },
 });
 
@@ -542,7 +542,7 @@ registerRedstone(LIGHTNING_ROD.flat(), {
     if (rodPowered(id)) api.setBlock(x, y, z, rodWith(id, false));
   },
   changed: (api, x, y, z, old, id) => {
-    if (old === 0 && id > 0 && rodPowered(id)) api.schedule(x, y, z, 1);
+    if (old < 0 && rodPowered(id)) api.schedule(x, y, z, 1);
   },
 });
 

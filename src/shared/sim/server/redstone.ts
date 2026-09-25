@@ -324,7 +324,7 @@ export class Redstone implements RedstoneApi {
       const x = ox + (i & 15), y = indexY(i), z = oz + ((i >> 4) & 15);
       this.track(x, y, z, id, true);
       const hs = changeHandlers(id);
-      if (hs) for (const h of hs) h(this, x, y, z, 0, id);
+      if (hs) for (const h of hs) h(this, x, y, z, -1, id);
     }
   }
 
@@ -410,6 +410,14 @@ export class Redstone implements RedstoneApi {
       }
     }
     return top;
+  }
+
+  /**
+   * Atiende ya los avisos pendientes: tras la acción de un jugador (palanca, bloque puesto o quitado) la
+   * redstone reacciona en el acto, como en Minecraft, sin esperar al tick.
+   */
+  flush(): void {
+    this.drain({ n: MAX_UPDATES_PER_TICK });
   }
 
   /** Ticks pendientes (para las pruebas). */

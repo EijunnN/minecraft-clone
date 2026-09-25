@@ -535,6 +535,7 @@ export class GameServer {
     } catch (err) {
       console.error('Error procesando mensaje', err);
     }
+    this.redstone.flush(); // Fase 7 (redstone): la redstone reacciona en el acto a lo que hizo el jugador
     this.flushQueue();
   }
 
