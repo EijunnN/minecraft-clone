@@ -9,6 +9,7 @@ import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
 import { buildEquipmentSfx } from './equipmentSounds'; // Fase 6.5 (equipo)
+import { buildEnchantSfx } from './enchantSounds'; // Fase 7 (encantamientos)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -452,6 +453,11 @@ export class AudioEngine {
       }
     }
     this.safe(() => this.spawnPositional(p, (ctx, noise, dest, now) => buildEquipmentSfx(ctx, noise, kind, dest, now, a), far ? 0.6 : 0.3));
+  }
+
+  /** Fase 7 (encantamientos): mesa de encantamientos, yunque, afiladora, botella con experiencia y espinas. */
+  playEnchantSfx(kind: string, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildEnchantSfx(ctx, noise, kind, dest, now), 0.3));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

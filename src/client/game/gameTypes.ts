@@ -24,6 +24,8 @@ export interface Use {
   slot: number;
   item: number;
   soundT: number;
+  /** Fase 7 (encantamientos): segundos que tarda en cargarse la ballesta (Carga rápida). */
+  charge?: number;
 }
 
 /** Color de camiseta aclarado para el nombre en el chat. */

@@ -401,6 +401,9 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'chipped_anvil_top' },
   { name: 'damaged_anvil_top' },
   ...[0, 1, 2, 3].map((a): TextureDef => ({ name: `frosted_ice_${a}`, special: 3 })),
+  // Fase 7 (encantamientos): el libro que flota sobre la mesa (tapas y hojas).
+  { name: 'enchanting_book_cover' },
+  { name: 'enchanting_book_pages' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

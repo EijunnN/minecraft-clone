@@ -62,6 +62,8 @@ export class Player {
   /** Fase 6.5 (materiales): dentro de la nieve polvo, y si lleva botas de cuero (camina por encima). */
   inPowder = false;
   leatherBoots = false;
+  /** Fase 7 (encantamientos): Agilidad acuática (0..1: cuánto se anda en el agua como en tierra). */
+  depthStrider = 0;
   /** Distancia horizontal recorrida en el suelo (para pasos y balanceo). */
   walkDistance = 0;
   /** 0..1: cuánto se está moviendo (para animaciones). */
@@ -246,7 +248,9 @@ export class Player {
       this.vz += ((-cy * cp) * s - sy * str * 2 - this.vz) * k;
       this.vy += (Math.sin(this.pitch) * s + (c.jump ? 2.5 : 0) - (c.sneak ? 2.5 : 0) - this.vy) * k;
     } else if (this.inWater || this.inLava) {
-      const speed = (this.inLava ? 1.2 : this.sprinting ? 3.6 : 2.4) * this.slow;
+      // Fase 7 (encantamientos): con Agilidad acuática se anda casi como en tierra (la mitad si no se toca el fondo).
+      const ds = this.inLava ? 0 : this.depthStrider * (this.onGround ? 1 : 0.5);
+      const speed = (this.inLava ? 1.2 : (this.sprinting ? 3.6 : 2.4) * (1 - ds) + (this.sprinting ? 5.61 : 4.32) * ds) * this.slow;
       const k = 1 - Math.exp(-dt * 6);
       // La corriente arrastra (velocidad objetivo desplazada en su dirección).
       this.vx += (wx * speed + this.flowX * 2.2 - this.vx) * k;

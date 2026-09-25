@@ -44,6 +44,10 @@ import { LightningRenderer, type Bolt } from './LightningRenderer';
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
 import { WHITE_WOOL, RED_WOOL, BLACK_WOOL, WOOL } from '../../shared/blocks';
+// Fase 7 (encantamientos): brillo de los objetos encantados y bloques con forma que caen.
+import { EF_GLINT } from '../../shared/protocol';
+import { R_MODEL, BLOCK_RENDER as F7_BLOCK_RENDER } from '../../shared/blocks';
+import { itemForBlock } from '../../shared/items';
 
 export interface RenderSettings {
   renderScale: number;
@@ -118,6 +122,11 @@ export interface FrameState {
   handUseKind: 'none' | 'bow' | 'eat' | 'block';
   /** Mano secundaria: objeto y su uso (comer o cubrirse con el escudo). */
   offhandItem?: number;
+  /** Fase 7 (encantamientos): brillo de lo que se lleva en la mano principal y en la secundaria. */
+  heldGlint?: boolean;
+  offhandGlint?: boolean;
+  /** Fase 7 (encantamientos): el libro que flota sobre las mesas de encantamientos. */
+  enchantBooks?: ItemDraw[];
   offhandUseKind?: 'none' | 'eat' | 'block';
   offhandUse?: number;
   /** Bloque que se está minando y fase de la grieta (0..9). */
@@ -838,7 +847,7 @@ export class Renderer {
           mat4.rotateY(m, m, spin);
           if (model.flat) mat4.translate(m, m, [0, 0, c * 0.05]);
           mat4.scale(m, m, [size, size, size]);
-          out.push({ model, m, light });
+          out.push({ model, m, light, glint: (e.flags & EF_GLINT) !== 0 }); // Fase 7: brillo
         }
       } else if (e.type === ENT_ARROW) {
         const model = this.items.model(ARROW);
@@ -859,7 +868,7 @@ export class Renderer {
         mat4.translate(m, m, [rx, ry + 0.12, rz]);
         mat4.rotateY(m, m, Math.atan2(-rx, -rz));
         mat4.scale(m, m, [0.3, 0.3, 0.3]);
-        out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
+        out.push({ model, m, light: lightOf(e.x, e.y, e.z), glint: (e.flags & EF_GLINT) !== 0 }); // Fase 7: brillo
       } else if (e.type === ENT_DISPLAY && e.item > 0) {
         // Comida asándose en una fogata: tumbada encima.
         const model = this.items.model(e.item);
@@ -869,7 +878,7 @@ export class Renderer {
         mat4.rotateY(m, m, e.yaw);
         mat4.rotateX(m, m, -Math.PI / 2);
         mat4.scale(m, m, [0.36, 0.36, 0.36]);
-        out.push({ model, m, light: lightOf(e.x, e.y + 0.3, e.z) });
+        out.push({ model, m, light: lightOf(e.x, e.y + 0.3, e.z), glint: (e.flags & EF_GLINT) !== 0 }); // Fase 7: brillo
       } else if (e.type === ENT_BOBBER) {
         // Flotador: mitad de abajo blanca y mitad de arriba roja.
         const light = lightOf(e.x, e.y + 0.1, e.z);
@@ -880,7 +889,8 @@ export class Renderer {
           out.push({ model: this.items.blockModel(block), m, light });
         }
       } else if (e.type === ENT_FALLING && e.item > 0) {
-        const model = this.items.blockModel(e.item);
+        // Fase 7 (encantamientos): los bloques con forma (el yunque) caen con su forma.
+        const model = F7_BLOCK_RENDER[e.item] === R_MODEL ? this.items.model(itemForBlock(e.item)) ?? this.items.blockModel(e.item) : this.items.blockModel(e.item);
         const m = mat4.create();
         mat4.translate(m, m, [rx, ry + 0.49, rz]);
         mat4.scale(m, m, [0.98, 0.98, 0.98]);
@@ -892,8 +902,13 @@ export class Renderer {
         pushStandDraws(out, e, this.items, rx, ry, rz, lightOf);
         const v = standArmorView(e, lightOf(e.x, e.y + 1, e.z));
         if (v) this.standViews.push(v);
-      } else pushEquipmentDraws(out, e, this.items, rx, ry, rz, lightOf); // Fase 6.5 (equipo): tridentes y cohetes
+      } else {
+        const n0 = out.length;
+        pushEquipmentDraws(out, e, this.items, rx, ry, rz, lightOf); // Fase 6.5 (equipo): tridentes y cohetes
+        if (e.flags & EF_GLINT) for (let k = n0; k < out.length; k++) out[k].glint = true; // Fase 7: tridente encantado
+      }
     }
+    if (s.enchantBooks) out.push(...s.enchantBooks); // Fase 7 (encantamientos)
     for (const l of s.fishLines ?? []) this.pushFishLine(out, s, l, lightOf);
     // Fase 6.5 (remate): correas, más gruesas y de cuero, y el nudo de cada valla.
     const lead = this.items.blockModel(WOOL.brown);
@@ -943,6 +958,7 @@ export class Renderer {
       for (const [id, left] of [[p.held ?? 0, false], [p.offhand ?? 0, true]] as const) {
         const model = id > 0 ? this.items.model(id) : null;
         if (!model) continue;
+        const glint = ((p.glint ?? 0) & (left ? 2 : 1)) !== 0; // Fase 7 (encantamientos)
         const m = this.entities.handMatrix(p, s.camX, s.camY, s.camZ, left);
         if (ITEMS[id]?.tool?.kind === 'shield') {
           // El escudo, de cara hacia delante sobre el antebrazo.
@@ -960,7 +976,7 @@ export class Renderer {
           mat4.rotateY(m, m, Math.PI / 4);
           mat4.scale(m, m, [0.28, 0.28, 0.28]);
         }
-        list.push({ model, m, light: p.light });
+        list.push({ model, m, light: p.light, glint });
       }
     }
     // Fase 6.5 (colecciones): cabezas puestas en el hueco del casco (jugadores y soportes para armadura).
@@ -998,14 +1014,14 @@ export class Renderer {
 
   /** Objetos en las manos: la principal a la derecha y la secundaria reflejada a la izquierda. */
   private drawHeld(s: FrameState, aspect: number, bindLighting: (p: Program) => Program): void {
-    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false);
+    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false, !!s.heldGlint);
     const off = s.offhandItem ?? 0;
-    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true);
+    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true, !!s.offhandGlint);
   }
 
   private drawHand(
     s: FrameState, aspect: number, bindLighting: (p: Program) => Program, item: number,
-    useKind: FrameState['handUseKind'], handUse: number, handSwing: number, equip: number, left: boolean,
+    useKind: FrameState['handUseKind'], handUse: number, handSwing: number, equip: number, left: boolean, glint = false,
   ): void {
     const model = this.items.model(item);
     if (!model) return;
@@ -1081,7 +1097,7 @@ export class Renderer {
     }
     if (model.flat) gl.disable(gl.CULL_FACE);
     else gl.enable(gl.CULL_FACE);
-    this.items.drawHand(model, mv, proj, lv, s.lightAtEye, s.grassTint, bindLighting);
+    this.items.drawHand(model, mv, proj, lv, s.lightAtEye, s.grassTint, bindLighting, glint); // Fase 7: brillo
     gl.disable(gl.CULL_FACE);
     gl.frontFace(gl.CCW);
   }

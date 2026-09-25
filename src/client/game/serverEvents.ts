@@ -8,6 +8,7 @@ import { ITEMS } from '../../shared/items';
 import type { PlayerInfo, ServerMsg, GameMode } from '../../shared/protocol';
 import { lighten } from './gameTypes';
 import type { Game } from './Game';
+import { totalForLevel, xpToNext } from '../../shared/experience'; // Fase 7 (encantamientos)
 
 export class ServerEvents {
   constructor(private g: Game) {}
@@ -15,6 +16,7 @@ export class ServerEvents {
   onServerMessage(msg: ServerMsg): void {
     if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
     if (this.g.books.onMessage(msg)) return; // Fase 6.5 (libros y estandartes): 'banner' y 'lbook'
+    if (this.g.enchant.onServer(msg)) return; // Fase 7 (encantamientos): /encantar
     switch (msg.t) {
       case 'join':
         this.addRemote(msg.p, true);
@@ -23,7 +25,7 @@ export class ServerEvents {
         this.removeRemote(msg.id);
         break;
       case 'pos':
-        this.g.remote.get(msg.id)?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o);
+        this.g.remote.get(msg.id)?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o, msg.g); // Fase 7: g, el brillo
         break;
       case 'set':
         this.applyRemoteSet(msg.id, msg.x, msg.y, msg.z, msg.b);
@@ -49,6 +51,7 @@ export class ServerEvents {
         break;
       case 'hurt':
         this.g.life.onHurt(msg.a, msg.k, msg.c);
+        if (msg.th) this.g.enchant.onThorns(msg.th); // Fase 7 (encantamientos): Espinas
         break;
       case 'picked':
         this.g.interaction.onPicked(msg.s);
@@ -127,10 +130,19 @@ export class ServerEvents {
         break;
       }
       case 'xp': {
+        // Fase 7 (encantamientos): /experiencia en niveles (l) y Reparación, que se come parte de los orbes.
+        const l = Number(msg.l);
+        if (Number.isInteger(l) && l > 0) {
+          const xp = this.g.xp;
+          xp.total = totalForLevel(xp.level + Math.min(l, 10000)) + Math.floor(xp.progress * xpToNext(xp.level + l));
+          this.g.audio.playLevelUp();
+          break;
+        }
         const n = Number(msg.n);
         if (!Number.isInteger(n) || n <= 0) break;
         this.g.audio.playXpOrb();
-        if (this.g.xp.add(n)) this.g.audio.playLevelUp();
+        const rest = this.g.enchant.mend(n);
+        if (rest > 0 && this.g.xp.add(rest)) this.g.audio.playLevelUp();
         break;
       }
     }

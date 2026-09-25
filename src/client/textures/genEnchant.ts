@@ -190,6 +190,28 @@ function frostedIce(age: number): Generator {
   };
 }
 
+/** Tapas del libro de la mesa: cuero violeta con un canto dorado. */
+function bookCover(t: Tex): void {
+  const px = pixelNoise(t.rng());
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    const edge = x === 0 || x === 15 || y === 0 || y === 15;
+    t.setI(i, edge ? scale(GOLD, 0.8 + 0.2 * px[i]) : mix([74, 30, 96], [120, 58, 142], px[i]));
+    t.smooth[i] = edge ? 150 : 70;
+    t.f0[i] = edge ? 200 : 12;
+  }
+}
+
+/** Hojas del libro: papel claro con renglones. */
+function bookPages(t: Tex): void {
+  const px = pixelNoise(t.rng());
+  for (let i = 0; i < N; i++) {
+    const y = i >> 4;
+    t.setI(i, (y & 3) === 2 ? [196, 186, 160] : mix([236, 228, 206], [250, 246, 230], px[i]));
+    t.smooth[i] = 40;
+  }
+}
+
 export const ENCHANT_GENERATORS: Readonly<Record<string, Generator>> = {
   enchanting_table_top: tableTop,
   enchanting_table_side: tableSide,
@@ -202,4 +224,6 @@ export const ENCHANT_GENERATORS: Readonly<Record<string, Generator>> = {
   frosted_ice_1: frostedIce(1),
   frosted_ice_2: frostedIce(2),
   frosted_ice_3: frostedIce(3),
+  enchanting_book_cover: bookCover,
+  enchanting_book_pages: bookPages,
 };

@@ -60,6 +60,10 @@ import { renderFrostHud } from '../ui/frostHud'; // Fase 6.5 (materiales)
 import { Freezing } from './freezing'; // Fase 6.5 (materiales)
 import { raycastHangings } from './decorInteraction';
 import { CLOCK } from '../../shared/items';
+// Fase 7 (encantamientos)
+import { EnchantClient } from './enchantClient';
+import { EnchantBooks } from './enchantBooks';
+import { hasGlint } from '../../shared/enchantments';
 
 export interface GameConfig {
   room: string;
@@ -137,6 +141,9 @@ export class Game {
   readonly namePrompt = new NamePrompt(MAX_NAME);
   /** Fase 6.5 (libros y estandartes): libros, atriles, telar y estandartes con dibujos. */
   readonly books = new BooksClient(this);
+  /** Fase 7 (encantamientos): mesa, yunque, afiladora, efectos de los encantamientos y el libro de la mesa. */
+  readonly enchant = new EnchantClient(this);
+  readonly enchantBooks = new EnchantBooks(this);
   selected = 0;
   time: WorldTime = { base: 0.08, at: Date.now(), rate: 1 / DAY_LENGTH_SECONDS };
   private running = false;
@@ -193,6 +200,7 @@ export class Game {
       drop: (s) => this.interaction.throwStack(s, false),
       sound: (k) => (k === 'craft' ? this.audio.playCraft() : this.audio.playUi('click')),
       keys: () => this.cfg.settings.keys,
+      work: this.enchant.host, // Fase 7 (encantamientos)
     }, this.inv);
     this.survival.armor = this.interaction.armor;
     this.ents.playerPos = (id) => {
@@ -330,6 +338,7 @@ export class Game {
       this.inv.armorFromWire(save.armor);
       this.inv.offhandFromWire(save.off);
       this.xp.total = Math.max(0, Math.floor(Number(save.xp) || 0));
+      this.enchant.restore(save); // Fase 7 (encantamientos): semilla de encantamiento
       this.survival.reset();
       this.survival.health = Math.max(0, Math.min(20, save.hp));
       this.survival.food = Math.max(0, Math.min(20, save.food));
@@ -593,6 +602,7 @@ export class Game {
         inv: this.inv.toWire(), hp: s.health, food: s.food, sat: Math.round(s.saturation * 10) / 10, air: Math.round(s.air),
         pos: [p.x, p.y, p.z], rot: [p.yaw, p.pitch], fly: p.flying, sel: this.selected, dead: s.dead,
         armor: this.inv.armorToWire(), off: this.inv.offhandToWire(), xp: this.xp.total, fx: this.statusEffects.toWire(), abs: s.absorption,
+        es: this.enchant.seed, // Fase 7 (encantamientos)
       },
     });
   }
@@ -605,9 +615,10 @@ export class Game {
     const q = (v: number, step: number) => Math.round(v / step);
     const armor = this.inv.armorIds();
     const off = this.inv.offhand?.id ?? 0;
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor}`;
+    const g = this.enchant.glintBits(); // Fase 7 (encantamientos): qué brilla
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${g}`;
     if (!force && key === this.lastSentKey) return;
-    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor });
+    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor, ...(g ? { g } : {}) });
     this.lastSentKey = key;
   }
 
@@ -773,6 +784,8 @@ export class Game {
     const worldTime = worldTimeAt(this.time, Date.now() + (this.net?.serverOffset ?? 0));
     const rain = this.environment.weatherAt(worldTime);
     this.rainNow = rain;
+    this.enchant.update(dt); // Fase 7 (encantamientos): Respiración, Agilidad acuática, Paso helado, runas
+    this.enchantBooks.update(dt);
     this.life.tickSurvival(dt, moved, wasGround, rain);
     this.audio.setHeartbeat(!this.creative && !surv.dead && surv.health <= 6 ? (7 - surv.health) / 6 : 0);
 
@@ -939,6 +952,7 @@ export class Game {
         use: ((k) => (k === 'none' ? null : k))(useLook(this.interaction.use).kind), light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
         riding: this.riding.active, // Fase 6 (monturas): sentado
+        glint: this.enchant.glintBits(), // Fase 7 (encantamientos)
       });
     }
 
@@ -1017,6 +1031,12 @@ export class Game {
       handUse: useLook(mainUse).amount, // Fase 6.5 (equipo): con la ballesta y el tridente
       handUseKind: useLook(mainUse).kind,
       offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
+      heldGlint: hasGlint(this.heldStack), // Fase 7 (encantamientos)
+      offhandGlint: hasGlint(this.inv.offhand),
+      enchantBooks: this.enchantBooks.draws(this.renderer.items, camX, camY, camZ, (x, y, z) => {
+        const l = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
+        return [(l >> 4) / 15, (l & 15) / 15];
+      }),
       offhandUseKind: offUse ? (offUse.kind === 'block' ? 'block' : 'eat') : 'none',
       offhandUse: offUse ? (offUse.kind === 'block' ? offUse.t : offUse.t / 1.6) : 0,
       crack,

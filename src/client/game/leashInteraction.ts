@@ -24,6 +24,11 @@ export function leashUse(
   const me = g.net?.id ?? null;
   if (target && MOBS[target.type] && target.deathT < 0) {
     if (heldId === NAME_TAG) {
+      // Fase 7 (encantamientos): la etiqueta renombrada en el yunque pone su nombre directamente.
+      if (held?.data?.name) {
+        ia.interactEntity(target, NAME_TAG, held.data.name);
+        return true;
+      }
       g.openNamePrompt(target.name ?? '', (name) => {
         if (name) ia.interactEntity(target, NAME_TAG, name);
       });
