@@ -49,9 +49,15 @@ export function gatherBoxes(
   return out;
 }
 
-/** ¿La caja (x0..x1, y0..y1, z0..z1) se solapa con alguna caja de colisión? */
-export function boxBlocked(w: BlockGetter, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): boolean {
+/**
+ * ¿La caja (x0..x1, y0..y1, z0..z1) se solapa con alguna caja de colisión? Fase 7 (remate): `extra`, cajas
+ * que no son bloques (las barcas, sólidas para el jugador), con el mismo formato.
+ */
+export function boxBlocked(
+  w: BlockGetter, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, extra?: readonly number[],
+): boolean {
   const boxes = gatherBoxes(w, x0, y0, z0, x1, y1, z1, scratch);
+  if (extra) for (let i = 0; i < extra.length; i++) boxes.push(extra[i]);
   for (let i = 0; i < boxes.length; i += 6) {
     if (boxes[i + 3] > x0 + EPS && boxes[i] < x1 - EPS && boxes[i + 4] > y0 + EPS && boxes[i + 1] < y1 - EPS &&
       boxes[i + 5] > z0 + EPS && boxes[i + 2] < z1 - EPS) return true;
@@ -119,10 +125,11 @@ function sweep(boxes: number[], b: number[], dx: number, dy: number, dz: number)
 /**
  * Mueve una caja (centro de la base en x, y, z; ancho w; alto h) con recorte por colisiones.
  * `stepHeight` > 0 permite subir escalones (losas, escaleras) sin saltar si estaba en el suelo.
+ * Fase 7 (remate): `extra`, cajas que no son bloques (ver boxBlocked).
  */
 export function moveBox(
   w: BlockGetter, x: number, y: number, z: number, width: number, height: number,
-  dx: number, dy: number, dz: number, stepHeight: number, grounded: boolean,
+  dx: number, dy: number, dz: number, stepHeight: number, grounded: boolean, extra?: readonly number[],
 ): MoveResult {
   const hw = width / 2;
   const boxes = gatherBoxes(
@@ -132,6 +139,7 @@ export function moveBox(
     Math.max(z + hw, z + hw + dz) + 0.001,
     gathered,
   );
+  if (extra) for (let i = 0; i < extra.length; i++) boxes.push(extra[i]);
   bb[0] = x - hw; bb[1] = y; bb[2] = z - hw; bb[3] = x + hw; bb[4] = y + height; bb[5] = z + hw;
   let [rx, ry, rz] = sweep(boxes, bb, dx, dy, dz);
   const onGroundNow = dy < 0 && ry > dy + EPS;

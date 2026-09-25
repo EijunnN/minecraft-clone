@@ -1,6 +1,7 @@
 // Fase 6.5 (remate): correas dibujadas. De la mano de quien la lleva (o del nudo en la valla) hasta la
 // criatura atada; el renderizador las dibuja combadas, como los sedales pero más gruesas.
 import { MOBS } from '../../shared/mobs';
+import { isBoatType, BOAT_WIDTH } from '../../shared/vehicles'; // Fase 7 (remate)
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import type { ClientEntity } from './ClientEntities';
 import type { FishLine, LocalRod } from './fishingLines';
@@ -39,10 +40,11 @@ export function leashLines(
     }
     if (!a) continue;
     const def = MOBS[e.type];
-    // Al cuello: por delante del centro, a tres cuartos de su altura.
-    const fwd = def ? def.width * 0.35 : 0;
+    // Al cuello: por delante del centro, a tres cuartos de su altura. Fase 7 (remate): la barca, de la proa.
+    const boat = isBoatType(e.type);
+    const fwd = def ? def.width * 0.35 : boat ? BOAT_WIDTH * 0.45 : 0;
     const bx = e.x - Math.sin(e.bodyYaw) * fwd, bz = e.z - Math.cos(e.bodyYaw) * fwd;
-    lines.push([a[0], a[1], a[2], bx, e.y + (def ? def.height * 0.75 : 0.5), bz]);
+    lines.push([a[0], a[1], a[2], bx, e.y + (def ? def.height * 0.75 : boat ? 0.45 : 0.5), bz]);
   }
   return { lines, knots };
 }

@@ -96,6 +96,8 @@ export class Player {
   /** Fase 7 (pociones): velocidad extra del salto (Supersalto) y Caída lenta; los pone el juego cada frame. */
   jumpBoost = 0;
   slowFall = false;
+  /** Fase 7 (remate): cajas de las barcas cercanas (6 números por caja): sólidas, se puede estar encima. */
+  entityBoxes: number[] = [];
 
   /** Altura del cuerpo según la postura. */
   get height(): number {
@@ -126,9 +128,9 @@ export class Player {
     return false;
   }
 
-  /** ¿Hay suelo bajo la caja si el jugador estuviera en (px, pz)? */
+  /** ¿Hay suelo bajo la caja si el jugador estuviera en (px, pz)? (Fase 7: también una barca). */
   private groundBelow(px: number, pz: number, world: BlockSource): boolean {
-    return this.collides(px - HW, this.y - 0.6, pz - HW, px + HW, this.y - 0.01, pz + HW, world);
+    return boxBlocked(world, px - HW, this.y - 0.6, pz - HW, px + HW, this.y - 0.01, pz + HW, this.entityBoxes);
   }
 
   /** Altura de la superficie de un fluido en la celda (1 si hay fluido encima). */
@@ -348,7 +350,7 @@ export class Player {
     const prevVy = this.vy;
     const ox = this.x, oy = this.y, oz = this.z;
     // Colisión por cajas con subida automática de escalones de hasta 0,6 bloques.
-    const r = moveBox(world, this.x, this.y, this.z, PLAYER_WIDTH, this.height, dx, dy, dz, this.flying ? 0 : 0.6, wasGround);
+    const r = moveBox(world, this.x, this.y, this.z, PLAYER_WIDTH, this.height, dx, dy, dz, this.flying ? 0 : 0.6, wasGround, this.entityBoxes);
     this.x += r.dx;
     this.y += r.dy;
     this.z += r.dz;

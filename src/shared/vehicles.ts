@@ -67,6 +67,19 @@ export function seatPos(
   return [x - Math.sin(yaw) * f, y + seatHeight(type, variant), z - Math.cos(yaw) * f];
 }
 
+/**
+ * Fase 7 (remate): empujón entre dos entidades que se solapan (Entity.push de Minecraft): dirección de
+ * (ax, az) lejos de (bx, bz), más fuerte cuanto más cerca (hasta 1); [0, 0] si están en el mismo sitio.
+ */
+export function pushApart(ax: number, az: number, bx: number, bz: number): [number, number] {
+  const dx = ax - bx, dz = az - bz;
+  const m = Math.max(Math.abs(dx), Math.abs(dz));
+  if (m < 0.01) return [0, 0];
+  const d = Math.sqrt(m);
+  const k = Math.min(1, 1 / d);
+  return [(dx / d) * k, (dz / d) * k];
+}
+
 /** Bits de estado propios (se suman a EF_HURT, recién golpeada): remos que reman y horno encendido. */
 export const VF_PADDLE_L = 1 << 24;
 export const VF_PADDLE_R = 1 << 25;

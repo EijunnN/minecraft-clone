@@ -16,8 +16,9 @@ import { boatStep, paddlesOf, BOAT_IN_WATER, type BoatBody, type BoatInput } fro
 import { cartStep, type CartBody } from '../../shared/sim/vehicles/cartPhysics';
 import {
   ENT_BOAT, ENT_CHEST_BOAT, ENT_CHEST_MINECART, ENT_FURNACE_MINECART, isBoatType, isCartType, isVehicleType, seatPos, vehicleSize,
-  vehicleContainerPos, vehicleOfContainer, VF_PADDLE_L, VF_PADDLE_R,
+  vehicleContainerPos, vehicleOfContainer, VF_PADDLE_L, VF_PADDLE_R, pushApart,
 } from '../../shared/vehicles';
+import { PLAYER_WIDTH } from '../../shared/constants'; // Fase 7 (remate)
 import { vehicleForItem, isRideable, vehicleTitle } from '../../shared/vehicleItems';
 import { ENT_HOPPER_MINECART } from '../../shared/vehicles'; // Fase 7 (mecanismos)
 import { RIDER_HIP } from '../../shared/mounts';
@@ -34,6 +35,11 @@ import type { Game } from './Game';
 
 const TICK = 1 / 20;
 const TAU = Math.PI * 2;
+/**
+ * Fase 7 (remate): empujón de una barca o vagoneta que se solapa con el jugador (bloques/s² con el
+ * empujón a tope; Minecraft: 0,05 bloques/tick en cada tick).
+ */
+const PUSH_ACCEL = 20;
 /** Cuánto puede girar la cabeza respecto a la barca (Minecraft: 105°). */
 const BOAT_LOOK = (105 * Math.PI) / 180;
 const NO_INPUT: BoatInput = { forward: false, back: false, left: false, right: false };
@@ -437,6 +443,35 @@ export class VehicleClient {
     v.walkAmount = 0;
     v.riding = true;
     return true;
+  }
+
+  /**
+   * Fase 7 (remate): antes de mover al jugador (a pie): las barcas cercanas son cajas sólidas (se choca con
+   * ellas y se puede estar de pie encima, como en Minecraft) y las vagonetas (y la barca que se le mete
+   * encima) le apartan si se solapan. A ellas las empuja el servidor (Transport.collide).
+   */
+  collidePlayer(dt: number): void {
+    const g = this.g, p = g.player, boxes = p.entityBoxes;
+    boxes.length = 0;
+    if (this.active || g.riding.active || g.survival.dead) return;
+    const hw = PLAYER_WIDTH / 2;
+    for (const e of g.ents.list.values()) {
+      if (!isVehicleType(e.type) || e.gone) continue;
+      const [w, h] = vehicleSize(e.type);
+      const ew = w / 2;
+      if (Math.abs(e.x - p.x) > ew + 3 || Math.abs(e.z - p.z) > ew + 3 || Math.abs(e.y - p.y) > 4) continue;
+      if (isBoatType(e.type)) boxes.push(e.x - ew, e.y, e.z - ew, e.x + ew, e.y + h, e.z + ew);
+      const overlap = Math.abs(e.x - p.x) < ew + hw && Math.abs(e.z - p.z) < ew + hw && p.y < e.y + h - 0.01 && p.y + p.height > e.y;
+      if (!overlap) continue;
+      // De pie encima de una barca que sube un poco (se mece en el agua): sigue encima, no la atraviesa.
+      if (isBoatType(e.type) && p.vy <= 0 && p.y > e.y + h - 0.3) {
+        p.y = e.y + h;
+        continue;
+      }
+      const [kx, kz] = pushApart(p.x, p.z, e.x, e.z);
+      p.kx += kx * PUSH_ACCEL * dt;
+      p.kz += kz * PUSH_ACCEL * dt;
+    }
   }
 
   /** Entidad que no debe tapar el rayo del jugador (la suya). */

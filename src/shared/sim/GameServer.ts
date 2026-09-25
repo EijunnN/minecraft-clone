@@ -304,6 +304,7 @@ export class GameServer {
       container: (x, y, z, s) => this.transport.container(x, y, z, s),
       changed: () => this.transport.containerChanged(),
     };
+    this.transport.leash = (s, e, msg) => this.leashes.onInteract(s, e, msg); // Fase 7 (remate): barcas atadas
     const interact2 = this.farming.extraInteract;
     this.farming.extraInteract = (s, e, msg) => this.transport.onInteract(s, e, msg) ?? interact2?.(s, e, msg) ?? null;
     // Fase 7 (encantamientos): mesa, yunque, afiladora, yunques que caen, Paso helado y Conductividad.
