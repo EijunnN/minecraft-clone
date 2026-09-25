@@ -16,6 +16,7 @@ import {
 } from '../../../shared/blocks';
 import { WATER, BLOCK_WATERLOGGED } from '../../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { skullPose } from '../../../shared/blocks'; // Fase 6.5 (colecciones)
+import { R_RAIL, RAIL_SHAPE } from '../../../shared/blocks'; // Fase 7 (transporte)
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2, MIN_Y, WORLD_HEIGHT, CHUNK_VOLUME } from '../../../shared/constants';
 
@@ -331,6 +332,10 @@ export class Mesher {
               break;
             case R_CACTUS:
               this.emitCactus(i, id, x, y, z);
+              emitted = true;
+              break;
+            case R_RAIL: // Fase 7 (transporte)
+              this.emitRail(i, id, x, y, z);
               emitted = true;
               break;
           }
@@ -684,6 +689,38 @@ export class Mesher {
       }
     }
     return any;
+  }
+
+  /**
+   * Fase 7 (transporte): raíl. Un plano a 1/16 del suelo (o en cuesta, de 1/16 a 17/16) con la textura
+   * girada según la forma: las rectas se dibujan de norte a sur y la curva de sur a este; se ve por las
+   * dos caras (desde abajo, a través del cristal o en las cuestas).
+   */
+  private emitRail(i: number, id: number, x: number, y: number, z: number): void {
+    const shape = RAIL_SHAPE[id];
+    const layer = BLOCK_TEX[id * 6 + 2];
+    const sl = this.sky[i], bl = this.blk[i];
+    const bx = x * 16, by = y * 16, bz = z * 16;
+    // Cuartos de vuelta de la textura (en el sentido de las agujas del reloj visto desde arriba).
+    const turns = shape >= 6 ? shape - 6 : shape === 1 || shape === 2 || shape === 3 ? 1 : 0;
+    // Esquinas (x, z en 1/16) en el orden BL, BR, TR, TL de la cara de arriba y su altura.
+    const cx = [0, 16, 16, 0], cz = [16, 16, 0, 0];
+    const h = [1, 1, 1, 1];
+    for (let k = 0; k < 4; k++) {
+      if ((shape === 2 && cx[k] === 16) || (shape === 3 && cx[k] === 0) || (shape === 4 && cz[k] === 0) || (shape === 5 && cz[k] === 16)) h[k] = 17;
+    }
+    const buf = this.cutout;
+    buf.ensure(16);
+    const us = this.tU, vs = this.tV;
+    for (let k = 0; k < 4; k++) {
+      // UV: el punto de la textura sin girar que cae en esta esquina (girar hacia atrás `turns` veces).
+      let u = cx[k] - 8, v = cz[k] - 8;
+      for (let t = 0; t < turns; t++) [u, v] = [v, -u];
+      us[k] = u + 8;
+      vs[k] = v + 8;
+    }
+    for (let k = 0; k < 4; k++) this.pushVertex(buf, bx + cx[k], by + h[k], bz + cz[k], us[k], vs[k], layer, 2, 3, sl, bl);
+    for (let k = 3; k >= 0; k--) this.pushVertex(buf, bx + cx[k], by + h[k], bz + cz[k], us[k], vs[k], layer, 3, 3, sl, bl);
   }
 
   private emitCactus(i: number, id: number, x: number, y: number, z: number): void {

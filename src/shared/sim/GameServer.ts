@@ -62,6 +62,7 @@ import { potionView, effectColorFrom } from './server/potionPlayers'; // Fase 7 
 import { STATE_INVISIBLE } from '../potions';
 import { Conduits } from './server/conduits';
 import { Equipment } from './server/equipment';
+import { Transport } from './server/vehicles'; // Fase 7 (transporte)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -165,6 +166,8 @@ export class GameServer {
   readonly fire: Fire;
   readonly conduits: Conduits;
   private equipment: Equipment;
+  /** Fase 7 (transporte): barcas, vagonetas y raíles. */
+  readonly transport: Transport;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -274,6 +277,14 @@ export class GameServer {
     };
     const interact = this.farming.extraInteract;
     this.farming.extraInteract = (s, e, msg) => this.equipment.onInteract(s, e, msg) ?? interact?.(s, e, msg) ?? null;
+    // Fase 7 (transporte): barcas y vagonetas (sus cofres se abren como los de bloque) y raíles.
+    this.transport = new Transport(this.ctx, store, this.riding);
+    this.containers.virtual = {
+      container: (x, y, z, s) => this.transport.container(x, y, z, s),
+      changed: () => this.transport.containerChanged(),
+    };
+    const interact2 = this.farming.extraInteract;
+    this.farming.extraInteract = (s, e, msg) => this.transport.onInteract(s, e, msg) ?? interact2?.(s, e, msg) ?? null;
   }
 
   get seed(): number {
@@ -485,6 +496,7 @@ export class GameServer {
     this.riding.onLeave(s); // Fase 6 (monturas)
     this.raids.onLeave(s); // Fase 6 (asaltos)
     this.leashes.onLeave(s); // Fase 6.5 (remate)
+    this.transport.onLeave(s); // Fase 7 (transporte)
     this.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} salió del mundo.` });
     if (this.playerCount === 0) this.flush(true);
   }
@@ -562,7 +574,8 @@ export class GameServer {
         break;
       case 'attack':
         // Fase 6.5 (decoración): los golpes a cuadros y marcos los atiende su sistema.
-        if (this.allow(s, 1) && !this.hangings.onAttack(s, Number(msg.e)) && !this.stands.onAttack(s, Number(msg.e))) this.actions.onAttack(s, msg);
+        if (this.allow(s, 1) && !this.hangings.onAttack(s, Number(msg.e)) && !this.stands.onAttack(s, Number(msg.e)) &&
+          !this.transport.onAttack(s, Number(msg.e), Number(msg.item))) this.actions.onAttack(s, msg); // Fase 7: barcas y vagonetas
         break;
       case 'pickup':
         if (this.allow(s, 0.5)) this.actions.onPickup(s, Number(msg.e));
@@ -635,7 +648,10 @@ export class GameServer {
         break;
       // Fase 6 (monturas)
       case 'mount':
-        if (this.allow(s, 1)) this.riding.onMount(s, msg);
+        if (this.allow(s, 1)) {
+          this.transport.leave(s.id); // Fase 7 (transporte)
+          this.riding.onMount(s, msg);
+        }
         break;
       case 'dismount':
         this.riding.dismount(s.id);
@@ -673,6 +689,19 @@ export class GameServer {
         break;
       case 'boost':
         if (this.allow(s, 1)) this.equipment.onBoost(s, msg);
+        break;
+      // Fase 7 (transporte): poner, subirse, bajarse y mover la que lleva el jugador.
+      case 'vplace':
+        if (this.allow(s, 1)) this.transport.onPlace(s, msg);
+        break;
+      case 'vride':
+        if (this.allow(s, 1)) this.transport.onRide(s, msg);
+        break;
+      case 'vleave':
+        this.transport.leave(s.id);
+        break;
+      case 'vpos':
+        if (this.allow(s, 0.2)) this.transport.onMove(s, msg);
         break;
     }
   }
@@ -736,6 +765,7 @@ export class GameServer {
     this.broadcast({ t: 'join', p: this.info(s) }, s);
     this.riding.onJoin(s); // Fase 6 (monturas): quién va montado
     this.collections.onJoin(s); // Fase 6.5 (colecciones): los tocadiscos que están sonando
+    this.transport.onJoin(s); // Fase 7 (transporte): quién va en cada barca o vagoneta
   }
 
   private loadRecord(name: string): PlayerRecord | null {
@@ -894,6 +924,7 @@ export class GameServer {
     this.collections?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (colecciones)
     this.fire?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (equipo)
     this.conduits?.onBlockChanged(x, y, z, old, id);
+    this.transport?.rails.onBlockChanged(x, y, z); // Fase 7 (transporte): potencia de los raíles
   }
 
   // ------------------------------------------------------------------ bucle
@@ -909,6 +940,7 @@ export class GameServer {
     this.leashes.tick(DT); // Fase 6.5 (remate)
     this.cauldrons.tick(); // Fase 6.5 (calderos)
     this.riding.tick(); // Fase 6 (monturas)
+    this.transport.tick(); // Fase 7 (transporte)
     this.beds.tick();
     this.composters.tick();
     this.fishing.tick();
@@ -1003,6 +1035,7 @@ export class GameServer {
     this.lecterns.flush(this.store); // Fase 6.5 (libros y estandartes)
     this.banners.flush(this.store);
     this.collections.flush(this.store); // Fase 6.5 (colecciones)
+    this.transport.flush(this.store); // Fase 7 (transporte)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

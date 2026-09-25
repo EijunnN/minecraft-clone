@@ -15,6 +15,7 @@ export class ServerEvents {
 
   onServerMessage(msg: ServerMsg): void {
     if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
+    if (this.g.vehicles.onMessage(msg)) return; // Fase 7 (transporte): 'vpass' y 'vfix'
     if (this.g.books.onMessage(msg)) return; // Fase 6.5 (libros y estandartes): 'banner' y 'lbook'
     switch (msg.t) {
       case 'join':
@@ -71,7 +72,7 @@ export class ServerEvents {
           // Fase 6 (aldeanos): el barril se abre como un cofre con su propio título.
           const barrel = isBarrel(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
           if (c.kind === 'brewing') this.g.openScreen('brewing', pos); // Fase 7 (pociones): alambique
-          else this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, barrel ? 'Barril' : c.kind === 'chest' ? '' : ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]);
+          else this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, barrel ? 'Barril' : this.g.vehicles.containerTitle(pos) ?? (c.kind === 'chest' ? '' : ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)])); // Fase 7: barcas y vagonetas con cofre
           this.g.audio.playUi('open');
         }
         if (this.g.screen.isOpen() && same(this.g.screen.containerPos)) this.g.screen.setContainer(c);

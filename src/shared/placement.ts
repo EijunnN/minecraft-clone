@@ -24,6 +24,8 @@ import { planMaterial } from './materialPlacement'; // Fase 6.5 (materiales)
 import { isCandleCake } from './blocks'; // Fase 6.5 (materiales)
 import { skullPlacement } from './blocks'; // Fase 6.5 (colecciones)
 import { CONDUIT, conduitFor } from './blocks'; // Fase 6.5 (equipo)
+import { isRailItem, planRail } from './rails'; // Fase 7 (transporte)
+import { BLOCK_COLLIDE } from './blocks';
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -124,6 +126,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   const upper = face === 'down' || (face === 'side' && hit.py - y > 0.5);
   const facing = facingFromYaw(yaw);
   const one = (id: number): Edit[] => [[x, y, z, id]];
+  // Fase 7 (transporte): los raíles se unen solos a los vecinos (y éstos se tuercen hacia el nuevo).
+  if (isRailItem(base)) return planRail(get, x, y, z, base, facing, (id) => id < 0 || (BLOCK_SOLID[id] === 1 && BLOCK_COLLIDE[id] === 1));
   // Fase 6.5 (decoración): faroles, campanas, cadenas y andamios.
   const deco = planDecor(get, hit, base, x, y, z, face, facing);
   if (deco !== undefined) return deco;

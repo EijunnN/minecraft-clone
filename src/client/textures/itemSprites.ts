@@ -24,6 +24,7 @@ import { MATERIAL_SPRITES } from './materialSprites'; // Fase 6.5 (materiales)
 import { COLLECTION_SPRITES } from './collectionSprites'; // Fase 6.5 (colecciones)
 import { EQUIPMENT_SPRITES } from './equipmentSprites'; // Fase 6.5 (equipo)
 import { POTION_SPRITES, POTION_VARIANTS } from './potionSprites'; // Fase 7 (pociones)
+import { TRANSPORT_SPRITES } from './transportSprites'; // Fase 7 (transporte)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2278,6 +2279,8 @@ Object.assign(SPRITES, DECOR_SPRITES);
 Object.assign(SPRITES, EQUIPMENT_SPRITES);
 // Fase 7 (pociones): frascos, flecha con efecto, ingredientes y alambique.
 Object.assign(SPRITES, POTION_SPRITES);
+// Fase 7 (transporte): barcas, balsas y vagonetas.
+Object.assign(SPRITES, TRANSPORT_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

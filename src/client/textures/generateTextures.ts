@@ -49,6 +49,7 @@ import { MATERIAL_GENERATORS } from './genMaterials'; // Fase 6.5 (materiales)
 import { COLLECTION_GENERATORS } from './genCollections'; // Fase 6.5 (colecciones)
 import { EQUIPMENT_GENERATORS } from './genEquipment'; // Fase 6.5 (equipo)
 import { BREWING_GENERATORS } from './genBrewing'; // Fase 7 (pociones)
+import { TRANSPORT_GENERATORS } from './genTransport'; // Fase 7 (transporte)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -90,6 +91,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...COLLECTION_GENERATORS, // Fase 6.5 (colecciones)
   ...EQUIPMENT_GENERATORS, // Fase 6.5 (equipo)
   ...BREWING_GENERATORS, // Fase 7 (pociones)
+  ...TRANSPORT_GENERATORS, // Fase 7 (transporte)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

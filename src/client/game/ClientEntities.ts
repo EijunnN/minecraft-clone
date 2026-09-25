@@ -6,6 +6,7 @@ import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd, type En
 import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
 import { ENT_ARMOR_STAND } from '../../shared/armorStands'; // Fase 6.5 (remate)
 import { ENT_EFFECT_CLOUD } from '../../shared/potions'; // Fase 7 (pociones)
+import { isVehicleType, vehicleSize } from '../../shared/vehicles'; // Fase 7 (transporte)
 
 interface Snap {
   t: number;
@@ -108,6 +109,7 @@ export class ClientEntities {
         e.cloudColor = Number.isInteger(e1) ? e1 : 0;
         e.cloudRadius = Number.isFinite(e2) ? Math.max(0, Math.min(8, e2 / 100)) : 0;
       }
+      if (isVehicleType(type)) e.variant = Number.isInteger(e1) ? Math.max(0, Math.min(255, e1)) : 0; // Fase 7 (transporte): madera
       this.list.set(id, e);
     }
     for (const u of msg.u ?? []) {
@@ -216,10 +218,12 @@ export class ClientEntities {
     let best: { e: ClientEntity; dist: number } | null = null;
     for (const e of this.list.values()) {
       const def = MOBS[e.type];
-      if (!def || def.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
-      const k = e.flags & EF_BABY ? 0.5 : 1;
-      const hw = (def.width * k) / 2 + 0.05;
-      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height * k, e.z + hw];
+      // Fase 7 (transporte): las barcas y vagonetas también se apuntan (para subirse y golpearlas).
+      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : null;
+      if ((!def && !vs) || def?.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
+      const k = e.flags & EF_BABY && def ? 0.5 : 1;
+      const hw = ((vs ? vs[0] : def!.width) * k) / 2 + 0.05;
+      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + (vs ? vs[1] : def!.height) * k, e.z + hw];
       let tmin = 0, tmax = maxDist;
       const o = [ox, oy, oz], d = [dx, dy, dz];
       let hit = true;

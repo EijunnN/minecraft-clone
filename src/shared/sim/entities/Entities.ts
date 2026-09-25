@@ -35,6 +35,7 @@ import { ENT_TRIDENT, ENT_FIREWORK } from '../../equipment';
 import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
+import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -73,6 +74,11 @@ export class Entities {
   readonly effects = new MobEffects(this);
   /** Fase 7 (pociones): arrojadizas, persistentes (nubes) y flechas con efecto. */
   readonly potions = new PotionLife(this);
+  /**
+   * Fase 7 (transporte): criatura sentada en una barca o vagoneta: la coloca en su asiento el sistema de
+   * transporte (devuelve true y la criatura ni piensa ni se mueve sola).
+   */
+  seated: ((e: Entity) => boolean) | null = null;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -394,6 +400,7 @@ export class Entities {
       else if (e.type === ENT_TRIDENT || e.type === ENT_FIREWORK) this.gearShots.tick(e, dt, players); // Fase 6.5 (equipo)
       else if (e.type === ENT_EFFECT_CLOUD) this.potions.cloudTick(e, dt, players); // Fase 7 (pociones)
       else if (e.effects) this.effects.tickWith(e, dt, () => this.mobs.mobTick(e, dt, players)); // Fase 7 (pociones)
+      else if (isVehicleType(e.type)) continue; // Fase 7 (transporte): las mueve su sistema
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

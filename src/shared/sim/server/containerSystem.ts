@@ -31,6 +31,12 @@ interface View {
 export class ContainerSystem {
   private containers = new Map<number, ContainerState>();
   private dirty = new Set<number>();
+  /**
+   * Fase 7 (transporte): contenedores que no son bloques (barcas y vagonetas con cofre) en posiciones que
+   * no existen en el mundo. container: su contenido (undefined si la posición no es de éstas; null si ya no
+   * está o, con `s`, si está lejos del jugador); changed: se tocó.
+   */
+  virtual: { container(x: number, y: number, z: number, s?: Session): ContainerState | null | undefined; changed(x: number, y: number, z: number): void } | null = null;
 
   constructor(private ctx: ServerContext, store: ServerStore) {
     for (const [key, data] of store.loadContainers()) {
@@ -86,6 +92,8 @@ export class ContainerSystem {
 
   /** Lo que se ve al abrir (x, y, z): el contenedor o el cofre grande. */
   private viewAt(x: number, y: number, z: number): View | null {
+    const vc = this.virtual?.container(x, y, z); // Fase 7 (transporte)
+    if (vc !== undefined) return vc ? { parts: [[posKey(x, y, z), vc]], state: vc } : null;
     const c = this.containerAt(x, y, z);
     if (!c) return null;
     const k = posKey(x, y, z);
@@ -151,7 +159,13 @@ export class ContainerSystem {
 
   onOpen(s: Session, msg: Extract<ClientMsg, { t: 'open' }>): void {
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z);
-    if (![x, y, z].every(Number.isInteger) || !this.ctx.reachOk(s, x, y, z, 8)) return;
+    if (![x, y, z].every(Number.isInteger)) return;
+    // Fase 7 (transporte): el cofre de una barca o vagoneta mira la distancia a la entidad.
+    const vc = this.virtual?.container(x, y, z, s);
+    if (vc === undefined ? !this.ctx.reachOk(s, x, y, z, 8) : !vc) {
+      if (vc === null) this.ctx.send(s, { t: 'cclose' });
+      return;
+    }
     if (!this.viewAt(x, y, z)) {
       this.ctx.send(s, { t: 'cclose' });
       return;
@@ -193,7 +207,8 @@ export class ContainerSystem {
     }
     this.commit(v);
     if (before) this.smeltReward(s, before.id, before.count - (c.slots[FURNACE_OUT]?.count ?? 0));
-    for (const [pk] of v.parts) this.dirty.add(pk);
+    if (this.virtual?.container(x, y, z) !== undefined) this.virtual.changed(x, y, z); // Fase 7 (transporte)
+    else for (const [pk] of v.parts) this.dirty.add(pk);
     this.sendView(k);
   }
 

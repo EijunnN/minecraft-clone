@@ -215,6 +215,8 @@ export interface Entity extends Body {
   cloudRadius?: number;
   cloudWait?: number;
   cloudVictims?: Map<string | number, number>;
+  /** Fase 7 (transporte): barca o vagoneta en la que va sentada la criatura (id de la entidad). */
+  vehicle?: number;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

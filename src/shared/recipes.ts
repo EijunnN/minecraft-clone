@@ -623,3 +623,26 @@ mix([BLAZE_ROD], BLAZE_POWDER, 2);
 mix([BLAZE_POWDER, SLIME_BALL], MAGMA_CREAM);
 mix([SPIDER_EYE, BROWN_MUSHROOM, SUGAR], FERMENTED_SPIDER_EYE);
 shape(['GG', 'GG'], { G: GLOWSTONE_DUST }, GLOWSTONE);
+// ------------------------------------------------------------------ Fase 7 (transporte)
+// Barcas (con los tablones de su madera; la balsa, con los de bambú), barcas con cofre, vagonetas y raíles
+// (como en Minecraft). El raíl detector y el activador necesitan la placa de presión de piedra y la antorcha
+// de redstone: sus recetas se registran si esos bloques existen (los trae la redstone).
+import { BOAT_ITEMS, CHEST_BOAT_ITEMS, MINECART, CHEST_MINECART, FURNACE_MINECART, GOLD_INGOT as RAIL_GOLD } from './items';
+import { RAIL, POWERED_RAIL, DETECTOR_RAIL, ACTIVATOR_RAIL } from './blocks';
+for (const [wood, boat] of Object.entries(BOAT_ITEMS)) {
+  const planks = wood === 'bamboo' ? BAMBOO_PLANKS : WOOD_TYPES.find((w) => w.key === wood)?.planks;
+  if (planks === undefined) continue;
+  shape(['P P', 'PPP'], { P: planks }, boat);
+  mix([boat, CHEST], CHEST_BOAT_ITEMS[wood]);
+}
+shape(['I I', 'III'], { I: IRON_INGOT }, MINECART);
+mix([MINECART, CHEST], CHEST_MINECART);
+mix([MINECART, FURNACE], FURNACE_MINECART);
+shape(['I I', 'ISI', 'I I'], { I: IRON_INGOT, S: STICK }, RAIL, 16);
+shape(['G G', 'GSG', 'GRG'], { G: RAIL_GOLD, S: STICK, R: REDSTONE }, POWERED_RAIL, 6);
+{
+  const byKey = (key: string) => ITEMS.findIndex((it) => it?.key === key);
+  const plate = byKey('stone_pressure_plate'), torch = byKey('redstone_torch');
+  if (plate > 0) shape(['I I', 'IPI', 'IRI'], { I: IRON_INGOT, P: plate, R: REDSTONE }, DETECTOR_RAIL, 6);
+  if (torch > 0) shape(['ISI', 'ITI', 'ISI'], { I: IRON_INGOT, S: STICK, T: torch }, ACTIVATOR_RAIL, 6);
+}

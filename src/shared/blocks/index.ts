@@ -187,3 +187,7 @@ export * from './cauldrons';
 import { BREWING_STAND } from './brewingBlocks';
 export * from './brewingBlocks';
 (INVENTORY_ORDER as number[]).push(BREWING_STAND);
+// Fase 7 (transporte): raíles normal, propulsor, detector y activador (registrados los últimos: ids nuevos).
+import { RAIL_INVENTORY } from './rails';
+export * from './rails';
+(INVENTORY_ORDER as number[]).push(...RAIL_INVENTORY);

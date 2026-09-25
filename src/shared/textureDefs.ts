@@ -397,6 +397,9 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'brewing_stand_rod' },
   { name: 'brewing_stand_bottle' },
   { name: 'brewing_stand_bottle_top' },
+  // Fase 7 (transporte): raíles (recortes).
+  ...['rail', 'rail_corner', 'powered_rail', 'powered_rail_on', 'detector_rail', 'detector_rail_on', 'activator_rail',
+    'activator_rail_on'].map((name): TextureDef => ({ name, cutout: true })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);
