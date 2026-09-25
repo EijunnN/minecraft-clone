@@ -38,6 +38,9 @@ export interface RemotePlayerView {
   /** Objetos en la mano principal y en la secundaria (0 = nada). */
   held?: number;
   offhand?: number;
+  /** Fase 7 (remate): tipo de poción de lo que lleva en cada mano (el color del frasco o de la flecha). */
+  heldDmg?: number;
+  offhandDmg?: number;
   /** Lo que está usando: comer, tensar el arco o cubrirse con el escudo. */
   use?: 'eat' | 'bow' | 'block' | null;
   light: [number, number];
@@ -47,6 +50,8 @@ export interface RemotePlayerView {
   riding?: boolean;
   /** Fase 7 (encantamientos): qué brilla (bit 0 mano, 1 mano secundaria, 2..5 armadura de la cabeza a los pies). */
   glint?: number;
+  /** Fase 7 (remate): invisible (poción): no se dibuja el cuerpo, pero sí la armadura y lo que lleva en las manos. */
+  invisible?: boolean;
 }
 
 interface PartMesh {
@@ -325,6 +330,7 @@ export class EntityRenderer {
     const gl = this.gl;
     const prog = bindLighting(this.pEntity.use());
     for (const p of players) {
+      if (p.invisible) continue; // Fase 7 (remate): sólo su armadura
       prog.tex2D('uSkin', this.skinFor(p)).f2('uLightLevel', p.light[0], p.light[1]).f3('uTint', 1, 1, 1);
       this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
     }
@@ -352,8 +358,10 @@ export class EntityRenderer {
     const gl = this.gl;
     const prog = this.pEntityShadow.use();
     for (const p of players) {
-      prog.tex2D('uSkin', this.skinFor(p));
-      this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
+      if (!p.invisible) {
+        prog.tex2D('uSkin', this.skinFor(p));
+        this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
+      }
       let bound: ArmorMaterial | null = null;
       this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
         if (mat !== bound) prog.tex2D('uSkin', this.armorTex.get(mat)!);

@@ -84,6 +84,9 @@ export interface PlayerInfo {
   a?: number[];
   /** Fase 7 (encantamientos): brillo (bit 0 mano, 1 mano secundaria, 2..5 armadura de la cabeza a los pies). */
   g?: number;
+  /** Fase 7 (remate): tipo de poción de lo que lleva en la mano y en la secundaria (pociones y flechas con efecto; 0 agua). */
+  hp?: number;
+  op?: number;
 }
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
@@ -130,7 +133,10 @@ export type EntExtra = [number, string, string | [number, number, number] | 0] |
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
-  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number } // Fase 7: ec (pociones), g (brillo)
+  | {
+    t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number;
+    hp?: number; op?: number;
+  } // Fase 7: ec (pociones), g (brillo); hp y op, el tipo de poción en cada mano (remate)
   /** Fase 7 (encantamientos): en, encantamientos de la herramienta (Toque de seda, Fortuna). */
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number; en?: [number, number][] }
   /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
@@ -238,7 +244,10 @@ export type ServerMsg =
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
-  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number } // Fase 7
+  | {
+    t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number;
+    hp?: number; op?: number;
+  } // Fase 7
   | { t: 'set'; id: string; x: number; y: number; z: number; b: number }
   | { t: 'sets'; l: number[] }
   | { t: 'chat'; id: string | null; name: string; m: string }

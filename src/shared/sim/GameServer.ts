@@ -59,7 +59,7 @@ import { Collections } from './server/collections'; // Fase 6.5 (colecciones)
 // Fase 6.5 (equipo): fuego, conductos y el equipo de los jugadores.
 import { Fire } from './server/fire';
 import { potionView, effectColorFrom } from './server/potionPlayers'; // Fase 7 (pociones)
-import { STATE_INVISIBLE } from '../potions';
+import { STATE_INVISIBLE, potionKind, isPotionType } from '../potions';
 import { Conduits } from './server/conduits';
 import { Equipment } from './server/equipment';
 import { Transport } from './server/vehicles'; // Fase 7 (transporte)
@@ -80,6 +80,17 @@ const GEN_PER_TICK = 2;
  */
 const MAX_MESSAGE = 1 << 20;
 const STALE_MS = 40_000;
+
+/** Fase 7 (remate): tipo de poción válido del objeto `item` en la mano (0 si no es una poción o no vale). */
+function heldPotionType(item: number, raw: unknown): number {
+  const t = Number(raw);
+  return potionKind(item) && Number.isInteger(t) && isPotionType(t) ? t : 0;
+}
+
+/** Fase 7 (remate): campos hp y op de un jugador (sólo los que no son agua). */
+function handPotions(s: Session): { hp?: number; op?: number } {
+  return { ...(s.hp ? { hp: s.hp } : {}), ...(s.op ? { op: s.op } : {}) };
+}
 
 export interface GameServerOptions {
   seed?: number;
@@ -509,7 +520,7 @@ export class GameServer {
   }
 
   private info(s: Session): PlayerInfo {
-    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.g ? { g: s.g } : {}) }; // Fase 7: g
+    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.g ? { g: s.g } : {}), ...handPotions(s) }; // Fase 7: g
   }
 
   /** Envía las ediciones pendientes respetando el orden en que se aplicaron. */
@@ -869,6 +880,9 @@ export class GameServer {
     const h = Number(msg.h), o = Number(msg.o);
     s.h = Number.isInteger(h) && isValidItem(h) ? h : 0;
     s.o = Number.isInteger(o) && isValidItem(o) ? o : 0;
+    // Fase 7 (remate): el tipo de poción de cada mano, sólo si lleva una poción o una flecha con efecto.
+    s.hp = heldPotionType(s.h, msg.hp);
+    s.op = heldPotionType(s.o, msg.op);
     // Armadura visible: cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies); lo demás es 0.
     const a = Array.isArray(msg.a) ? msg.a : [];
     s.a = [0, 1, 2, 3].map((slot) => {
@@ -878,7 +892,7 @@ export class GameServer {
     // Fase 7 (encantamientos): qué brilla (mano, mano secundaria y cada pieza de armadura).
     const g = Number(msg.g);
     s.g = Number.isInteger(g) ? g & 0x3f : 0;
-    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.ec ? { ec: s.ec } : {}), ...(s.g ? { g: s.g } : {}) }, s);
+    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.ec ? { ec: s.ec } : {}), ...(s.g ? { g: s.g } : {}), ...handPotions(s) }, s);
   }
 
   /** Distancia del ojo del jugador al centro del bloque. */

@@ -6,6 +6,7 @@ import {
 } from '../../shared/items';
 import { DYE_COLORS, COLOR_NAMES, CONDUIT } from '../../shared/blocks';
 import { HORSE_ARMOR_POINTS, fireworkFlight, fireworkColors, colorList, hornTune } from '../../shared/equipment';
+import { potionName } from '../../shared/potions'; // Fase 7 (remate)
 
 const dim = (t: string) => `<span class="tt-dim">${t}</span>`;
 const colorNames = (mask: number) => colorList(mask).map((i) => COLOR_NAMES[DYE_COLORS[i]][0]).join(', ');
@@ -19,6 +20,8 @@ export function equipmentTooltip(s: ItemStack): string[] {
       break;
     case CROSSBOW_CHARGED:
       out.push(dim('Cargada: clic derecho para disparar'));
+      // Fase 7 (remate): la flecha con efecto que lleva cargada.
+      if (s.data?.ap !== undefined) out.push(dim(`Proyectil: ${potionName('arrow', s.data.ap)}`));
       break;
     case TRIDENT:
       out.push(dim('Mantén el clic derecho y suelta para lanzarlo'));

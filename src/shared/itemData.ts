@@ -2,11 +2,12 @@
 // libro escrito, además, título, autor y generación; el estandarte, sus capas de dibujos. Viajan con la
 // pila (5.º campo de WireStack), se guardan con ella (inventario, cofres, objetos en el suelo) y se
 // validan y acotan cada vez que llegan de la red o del almacenamiento.
-import { WRITABLE_BOOK, WRITTEN_BOOK, itemName, type ItemStack } from './items';
+import { WRITABLE_BOOK, WRITTEN_BOOK, CROSSBOW, CROSSBOW_CHARGED, itemName, type ItemStack } from './items';
 import { BANNER_PATTERNS, MAX_BANNER_LAYERS, isBannerItem, type BannerLayer } from './bannerPatterns';
 // Fase 7 (encantamientos): encantamientos, libros encantados, nombres del yunque y coste de trabajo previo.
 import { ENCHANTED_BOOK } from './items';
 import { sanitizeEnchList, isEnchantable } from './enchantments';
+import { isPotionType } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta
 
 export interface ItemData {
   /** Libros: el texto de cada página. */
@@ -26,6 +27,8 @@ export interface ItemData {
   name?: string;
   /** Penalización por trabajo previo en el yunque (coste que se suma cada vez). */
   rc?: number;
+  /** Fase 7 (remate): ballesta cargada con una flecha con efecto: el tipo de poción de la flecha. */
+  ap?: number;
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -98,7 +101,7 @@ export function sanitizeItemData(id: number, raw: unknown): ItemData | undefined
   return Object.keys(out).length ? out : undefined;
 }
 
-/** Datos propios de cada objeto (páginas de los libros, capas de los estandartes). */
+/** Datos propios de cada objeto (páginas de los libros, capas de los estandartes, flecha de la ballesta). */
 function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
   if (id === WRITABLE_BOOK) {
     const pages = sanitizePages(r.pages);
@@ -117,6 +120,10 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
     const layers = sanitizeLayers(r.layers);
     return layers ? { layers } : undefined;
   }
+  if (id === CROSSBOW_CHARGED) {
+    const ap = Number(r.ap);
+    return r.ap !== undefined && isPotionType(ap) ? { ap } : undefined;
+  }
   return undefined;
 }
 
@@ -133,6 +140,7 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.stored) c.stored = d.stored.map((e): [number, number] => [e[0], e[1]]);
   if (d.name !== undefined) c.name = d.name;
   if (d.rc !== undefined) c.rc = d.rc;
+  if (d.ap !== undefined) c.ap = d.ap; // Fase 7 (remate)
   return c;
 }
 
@@ -144,4 +152,23 @@ export function stackName(s: ItemStack): string {
   if (s.data?.name) return s.data.name;
   if (s.id === WRITTEN_BOOK && s.data?.title) return s.data.title;
   return itemName(s.id);
+}
+
+/**
+ * Fase 7 (remate): la ballesta cargada con una flecha (`ap`: tipo de la flecha con efecto, −1 normal). La
+ * flecha va en sus datos para que no se pierda al moverla de hueco ni al guardar; conserva el resto.
+ */
+export function loadCrossbow(s: ItemStack, ap: number): ItemStack {
+  const data = s.data ? cloneItemData(s.data) : {};
+  delete data.ap;
+  if (ap >= 0) data.ap = ap;
+  const out: ItemStack = { ...s, id: CROSSBOW_CHARGED, count: 1 };
+  if (Object.keys(data).length) out.data = data;
+  else delete out.data;
+  return out;
+}
+
+/** Fase 7 (remate): la ballesta después de disparar: descargada y sin la flecha con efecto. */
+export function unloadCrossbow(s: ItemStack): ItemStack {
+  return { ...loadCrossbow(s, -1), id: CROSSBOW };
 }

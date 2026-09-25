@@ -22,7 +22,7 @@ import { EFFECTS, jumpBoostVelocity, unpackColor, packColor } from '../../shared
 import { ENT_ARROW, MOBS } from '../../shared/mobs';
 import { EF_PICKABLE } from '../../shared/protocol';
 import {
-  ENT_EFFECT_CLOUD, EF_INVISIBLE, STATE_INVISIBLE, potionEffects, potionColor, potionStack, potionType, PT_WATER,
+  ENT_EFFECT_CLOUD, EF_INVISIBLE, STATE_INVISIBLE, potionEffects, potionColor, potionStack, potionType, PT_WATER, potionKind,
 } from '../../shared/potions';
 
 type RGB = readonly [number, number, number];
@@ -89,6 +89,12 @@ export function potionPosState(g: Game): { s: number; ec: number } {
   const fx = g.statusEffects;
   const c = fx.swirlColor;
   return { s: fx.invisible ? STATE_INVISIBLE : 0, ec: c ? packColor(c) : 0 };
+}
+
+/** Fase 7 (remate): tipo de poción de lo que lleva en cada mano (0 si no es una poción), para que los demás lo vean. */
+export function handPotionTypes(g: Game): { hp: number; op: number } {
+  const t = (st: ItemStack | null | undefined) => (st && potionKind(st.id) ? st.dmg ?? 0 : 0);
+  return { hp: t(g.heldStack), op: t(g.inv.offhand) };
 }
 
 let swirlAcc = 0;
@@ -279,6 +285,3 @@ export function takeArrow(g: Game, infinity = false): number | null {
   }
   return g.creative ? -1 : null;
 }
-
-/** Ballestas cargadas con una flecha con efecto (la pila de la ballesta → tipo de poción). */
-export const LOADED_TIPPED = new WeakMap<ItemStack, number>();

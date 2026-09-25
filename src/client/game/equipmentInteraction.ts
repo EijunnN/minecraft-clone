@@ -18,7 +18,8 @@ import {
 import { MOB_HORSE, MOB_WOLF, MOB_PIG } from '../../shared/mobs';
 import { EF_TAMED, EF_BABY } from '../../shared/protocol';
 import { CROSSBOW_CHARGE, TRIDENT_MIN_CHARGE, GOAT_HORN_COOLDOWN } from '../../shared/equipment';
-import { hasArrows, takeArrow, LOADED_TIPPED } from './potionClient'; // Fase 7 (pociones)
+import { hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
+import { loadCrossbow, unloadCrossbow } from '../../shared/itemData'; // Fase 7 (remate)
 import { RIPTIDE, QUICK_CHARGE, enchLevel, enchantsOf } from '../../shared/enchantments'; // Fase 7 (encantamientos)
 import { riptideSpeed, crossbowChargeTime } from '../../shared/enchantEffects';
 
@@ -119,12 +120,12 @@ function fireCrossbow(g: Game, ia: Interaction, held: ItemStack): void {
   const p = g.player;
   const cp = Math.cos(p.pitch);
   const d = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
-  // Fase 7: la flecha con efecto cargada (pociones) y Multidisparo y Perforación (encantamientos, los aplica
-  // el servidor); la ballesta conserva sus datos.
-  const ap = LOADED_TIPPED.get(held);
+  // Fase 7: la flecha con efecto cargada (pociones; va en los datos de la ballesta) y Multidisparo y
+  // Perforación (encantamientos, los aplica el servidor); la ballesta conserva el resto de sus datos.
+  const ap = held.data?.ap;
   const en = enchantsOf(held);
   g.net?.send({ t: 'shoot', p: [p.x + d[0] * 0.3, p.eyeY - 0.1, p.z + d[2] * 0.3], d: [d[0], d[1], d[2]], f: 1, c: 1, ...(ap !== undefined ? { ap } : {}), ...(en.length ? { en } : {}) });
-  g.inv.set(g.selected, { ...held, id: CROSSBOW, count: 1 });
+  g.inv.set(g.selected, unloadCrossbow(held));
   ia.wearHeld(1);
   g.swing(false);
   g.shake = Math.max(g.shake, 0.15);
@@ -136,13 +137,11 @@ export function equipmentHold(g: Game, ia: Interaction, u: Use): void {
   const s = g.inv.get(u.slot);
   ia.use = null;
   if (!s || s.id !== CROSSBOW) return;
-  // Fase 7 (pociones): la primera flecha que haya; si es con efecto, la ballesta la recuerda. Conserva sus
-  // encantamientos.
+  // Fase 7 (pociones): la primera flecha que haya; si es con efecto, la ballesta la recuerda (en sus datos,
+  // así sobrevive a moverla de hueco y a guardar la partida). Conserva sus encantamientos.
   const ap = takeArrow(g);
   if (ap === null) return;
-  const charged: ItemStack = { ...s, id: CROSSBOW_CHARGED, count: 1 };
-  if (ap >= 0) LOADED_TIPPED.set(charged, ap);
-  g.inv.set(u.slot, charged);
+  g.inv.set(u.slot, loadCrossbow(s, ap));
   g.audio.playEquipSfx('crossbow_load', [g.player.x, g.player.eyeY, g.player.z]);
 }
 
