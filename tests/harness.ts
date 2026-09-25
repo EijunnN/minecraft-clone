@@ -55,7 +55,15 @@ export interface Client {
 
 export function makeServer(seed = 12345, store = new MemoryStore()): Harness {
   const clock = { now: 1_000_000 };
-  const gs = new GameServer(store, { seed, now: () => clock.now, flushSeconds: 5 });
+  // Azar con semilla: las pruebas salen siempre igual (con Math.random algunas fallaban de vez en cuando).
+  let r = (seed ^ 0x9e3779b9) >>> 0;
+  const rand = (): number => {
+    r = (r + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(r ^ (r >>> 15), 1 | r);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const gs = new GameServer(store, { seed, now: () => clock.now, flushSeconds: 5, rand });
   const clients: Client[] = [];
   const h: Harness = {
     store,
