@@ -461,11 +461,14 @@ Fuera de la fase 7 (anotado para que no se pierda):
   crema de magma y la lágrima de ghast (la fase 7 hace el sistema de pociones completo, pero esos
   ingredientes sólo se obtienen allí); el faro (necesita la estrella del Nether); la ancla de
   reaparición; la piedra imán; el encantamiento de velocidad de alma; los botones y placas de piedra
-  negra pulida.
+  negra pulida; la carga de fuego (polvo de blaze) y la flecha espectral (polvo de piedra luminosa),
+  también como munición del dispensador; los efectos que sólo dan criaturas o bloques de allí
+  (marchitamiento, levitación, brillo, prisa y fatiga minera del faro).
 - **Fase 7.5 (estructuras del mundo normal):** el sculk (sensores, catalizador, chillador) y el
   encantamiento de sigilo rápido, que salen del Deep Dark.
 - **Fase 9 (novedades de 2025–2026):** el crafteador, la maza y sus encantamientos (brecha, densidad,
-  estallido de viento), las lanzas y los encantamientos que se añadan con ellas.
+  estallido de viento), las lanzas y los encantamientos que se añadan con ellas; las pociones de las
+  cámaras de desafío (supuración, tejido, infestación y carga de viento) y sus efectos.
 
 ### Fase 7.5 — Estructuras y criaturas del mundo normal (L)
 Lo del mundo normal que no tenía fase y que depende de la fase 7 (su botín son libros encantados y el
