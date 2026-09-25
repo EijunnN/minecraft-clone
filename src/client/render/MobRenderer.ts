@@ -7,6 +7,7 @@ import { MOBS, boxFaces, type MobDef, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } fro
 import { EF_ACTION, EF_ANGRY, EF_BABY, EF_SHEARED } from '../../shared/protocol';
 import type { ClientEntity } from '../game/ClientEntities';
 import { hiddenMountPart, mountPartAnim, mountRootPose } from './mountPose'; // Fase 6 (monturas)
+import { animateMonster, monsterRoot } from './monsterAnim'; // Fase 6 (monstruos)
 
 export interface MobTexture {
   width: number;
@@ -209,6 +210,9 @@ export class MobRenderer {
           out[2] = -Math.cos(a) * open;
         }
         break;
+      default:
+        // Fase 6 (monstruos): slime, phantom y lepisma.
+        animateMonster(def, e, time, name, out);
     }
   }
 
@@ -257,7 +261,8 @@ export class MobRenderer {
       mat4.rotateX(m, m, Math.max(-1, Math.min(1, e.pitch)) * 0.8);
       mat4.translate(m, m, [0, -0.5, 0]);
     }
-    mat4.scale(m, m, [s, s, s]);
+    const k = monsterRoot(def, e, m); // Fase 6 (monstruos): picado del phantom, slime que se estira
+    mat4.scale(m, m, [s * k[0], s * k[1], s * k[2]]);
     return m;
   }
 

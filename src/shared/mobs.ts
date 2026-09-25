@@ -5,6 +5,8 @@ import {
   ENDER_PEARL, SPIDER_EYE, COD, SALMON,
 } from './items';
 import { WHITE_WOOL } from './blocks';
+// Fase 6 (monstruos): botín de los monstruos nuevos.
+import { STICK, SUGAR, REDSTONE, SLIME_BALL, PHANTOM_MEMBRANE } from './items';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -33,6 +35,17 @@ export const MOB_DONKEY = 26;
 export const MOB_MULE = 27;
 export const MOB_LLAMA = 28;
 export const MOB_CAMEL = 29;
+// Fase 6 (monstruos): ids 40–49.
+export const MOB_DROWNED = 40;
+export const MOB_WITCH = 41;
+/** Slime grande (tamaño 4); al morir se divide en medianos (47) y éstos en pequeños (48). */
+export const MOB_SLIME = 42;
+export const MOB_PHANTOM = 43;
+export const MOB_SILVERFISH = 44;
+export const MOB_CAVE_SPIDER = 45;
+export const MOB_ZOMBIE_VILLAGER = 46;
+export const MOB_SLIME_MEDIUM = 47;
+export const MOB_SLIME_SMALL = 48;
 /** Entidades que no son criaturas. */
 export const ENT_ITEM = 100;
 export const ENT_ARROW = 101;
@@ -64,7 +77,9 @@ export interface ModelPart {
 }
 
 export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid'
-  | 'villager'; // Fase 6 (aldeanos)
+  | 'villager' // Fase 6 (aldeanos)
+  // Fase 6 (monstruos)
+  | 'slime' | 'phantom' | 'silverfish';
 
 export interface MobDef {
   id: number;
@@ -90,6 +105,8 @@ export interface MobDef {
   /** Escala global del modelo. */
   scale: number;
   aquatic?: boolean;
+  /** Fase 6 (monstruos): voz (clave de sonido) si no es la propia clave (el ahogado suena como un zombi). */
+  sound?: string;
 }
 
 const quadLegs = (h: number, xs: number, zs: [number, number], uv: [number, number], w = 4): ModelPart[] => [
@@ -394,6 +411,87 @@ mob({
 });
 /** ¿Aldeano o comerciante ambulante (se comercia con ellos)? */
 export const isVillagerType = (type: number): boolean => type === MOB_VILLAGER || type === MOB_WANDERING_TRADER;
+// ---------------------------------------------------------------- Fase 6 (monstruos)
+/** Cabeza de aldeano (alargada, con nariz) sobre un cuerpo de túnica: aldeano zombi y bruja. */
+const villagerLike = (): ModelPart[] => [
+  { name: 'head', pivot: [0, 24, 0], from: [-4, 0, -4], size: [8, 10, 8], uv: [0, 0] },
+  { name: 'nose', parent: 'head', pivot: [0, 0, 0], from: [-1, 1, -6], size: [2, 4, 2], uv: [32, 0] },
+  { name: 'body', pivot: [0, 12, 0], from: [-4, 0, -3], size: [8, 12, 6], uv: [16, 20] },
+  { name: 'armR', pivot: [6, 22, 0], from: [-2, -10, -2], size: [4, 12, 4], uv: [44, 22] },
+  { name: 'armL', pivot: [-6, 22, 0], from: [-2, -10, -2], size: [4, 12, 4], uv: [44, 22] },
+  { name: 'legR', pivot: [2, 12, 0], from: [-2, -12, -2], size: [4, 12, 4], uv: [0, 22] },
+  { name: 'legL', pivot: [-2, 12, 0], from: [-2, -12, -2], size: [4, 12, 4], uv: [0, 22] },
+];
+
+/** Slimes: el mismo cubo a escala 4, 2 o 1 (grande, mediano, pequeño). Sólo los pequeños sueltan bolas. */
+const slime = (id: number, key: string, name: string, size: number, health: number, damage: number): void => mob({
+  id, key, name, hostile: true, health, walk: 1.2, run: 2.2 + size * 0.1, width: 0.51 * size, height: 0.51 * size, damage,
+  burnsInSun: false, drops: size === 1 ? [[SLIME_BALL, 0, 2]] : [], atlas: [32, 16], anim: 'slime', scale: size, sound: 'slime',
+  parts: [{ name: 'body', pivot: [0, 0, 0], from: [-4, 0, -4], size: [8, 8, 8], uv: [0, 0] }],
+});
+
+mob({
+  id: MOB_DROWNED, key: 'drowned', name: 'Ahogado', hostile: true, health: 20, walk: 1.0, run: 2.2, width: 0.6, height: 1.95,
+  damage: 3, burnsInSun: true, drops: [[ROTTEN_FLESH, 0, 2]], atlas: [64, 64], anim: 'zombie', scale: 1, sound: 'zombie',
+  parts: humanoid(false),
+});
+mob({
+  id: MOB_WITCH, key: 'witch', name: 'Bruja', hostile: true, health: 26, walk: 1.0, run: 1.7, width: 0.6, height: 1.95,
+  damage: 0, burnsInSun: false, atlas: [64, 72], anim: 'humanoid', scale: 1,
+  drops: [[STICK, 0, 2], [SUGAR, 0, 2], [GUNPOWDER, 0, 1], [REDSTONE, 0, 2], [SPIDER_EYE, 0, 1]],
+  parts: [
+    ...villagerLike(),
+    // Sombrero puntiagudo, algo torcido hacia atrás.
+    { name: 'hat1', parent: 'head', pivot: [0, 10, 0], from: [-5, 0, -5], size: [10, 2, 10], uv: [0, 40] },
+    { name: 'hat2', parent: 'hat1', pivot: [0, 2, 0.5], from: [-3.5, 0, -3.5], size: [7, 4, 7], uv: [0, 54], rot: [-0.08, 0, 0.04] },
+    { name: 'hat3', parent: 'hat2', pivot: [0, 4, 0.5], from: [-2, 0, -2], size: [4, 4, 4], uv: [44, 0], rot: [-0.14, 0, 0.06] },
+    { name: 'hat4', parent: 'hat3', pivot: [0, 4, 0.5], from: [-0.5, 0, -0.5], size: [1, 2, 1], uv: [40, 0], rot: [-0.22, 0, 0.1] },
+  ],
+});
+slime(MOB_SLIME, 'slime', 'Slime', 4, 16, 4);
+slime(MOB_SLIME_MEDIUM, 'slime_medium', 'Slime mediano', 2, 4, 2);
+slime(MOB_SLIME_SMALL, 'slime_small', 'Slime pequeño', 1, 1, 0);
+mob({
+  id: MOB_PHANTOM, key: 'phantom', name: 'Phantom', hostile: true, health: 20, walk: 5, run: 9, width: 0.9, height: 0.5,
+  damage: 4, burnsInSun: true, drops: [[PHANTOM_MEMBRANE, 0, 1]], atlas: [64, 48], anim: 'phantom', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 4, 0], from: [-2.5, -1.5, -4.5], size: [5, 3, 9], uv: [0, 8] },
+    { name: 'head', parent: 'body', pivot: [0, 0, -4.5], from: [-3.5, -1, -5], size: [7, 3, 5], uv: [0, 0] },
+    { name: 'wingR', parent: 'body', pivot: [2.5, 1, -4.5], from: [0, -1, 0], size: [6, 2, 9], uv: [0, 20] },
+    { name: 'wingTipR', parent: 'wingR', pivot: [6, 0, 0], from: [0, -0.5, 0], size: [13, 1, 9], uv: [0, 32] },
+    { name: 'wingL', parent: 'body', pivot: [-2.5, 1, -4.5], from: [-6, -1, 0], size: [6, 2, 9], uv: [0, 20] },
+    { name: 'wingTipL', parent: 'wingL', pivot: [-6, 0, 0], from: [-13, -0.5, 0], size: [13, 1, 9], uv: [0, 32] },
+    { name: 'tail', parent: 'body', pivot: [0, 0.5, 4.5], from: [-1.5, -1, 0], size: [3, 2, 6], uv: [30, 20] },
+    { name: 'tailTip', parent: 'tail', pivot: [0, 0, 6], from: [-0.5, -0.5, 0], size: [1, 1, 6], uv: [48, 20] },
+  ],
+});
+mob({
+  id: MOB_SILVERFISH, key: 'silverfish', name: 'Lepisma', hostile: true, health: 8, walk: 1.3, run: 2.8, width: 0.4, height: 0.3,
+  damage: 1, burnsInSun: false, drops: [], atlas: [32, 32], anim: 'silverfish', scale: 1,
+  // Siete segmentos de la cabeza (delante, -Z) a la cola: [tamaño, z del centro, uv].
+  parts: ([
+    [[3, 2, 2], -7, [0, 0]], [[4, 3, 2], -5, [0, 4]], [[6, 4, 3], -2.5, [0, 9]], [[3, 3, 3], 0.5, [0, 16]],
+    [[2, 2, 3], 3.5, [0, 22]], [[2, 1, 2], 6, [12, 0]], [[1, 1, 2], 8, [20, 0]],
+  ] as [[number, number, number], number, [number, number]][]).map(([size, z, uv], i): ModelPart => ({
+    name: `seg${i}`, pivot: [0, 0, z], from: [-size[0] / 2, 0, -size[2] / 2], size, uv,
+  })),
+});
+mob({
+  id: MOB_CAVE_SPIDER, key: 'cave_spider', name: 'Araña de cueva', hostile: true, neutral: true, health: 12, walk: 1.3, run: 3.1,
+  width: 0.7, height: 0.5, damage: 2, burnsInSun: false, drops: [[STRING, 0, 2], [SPIDER_EYE, 0, 1]], atlas: [64, 64],
+  anim: 'spider', scale: 0.7, sound: 'spider',
+  parts: [
+    { name: 'thorax', pivot: [0, 9, 0], from: [-3, -3, -3], size: [6, 6, 6], uv: [0, 0] },
+    { name: 'head', parent: 'thorax', pivot: [0, 0, -3], from: [-4, -4, -8], size: [8, 8, 8], uv: [32, 4] },
+    { name: 'abdomen', parent: 'thorax', pivot: [0, 0, 3], from: [-5, -4, 0], size: [10, 8, 12], uv: [0, 20] },
+    ...spiderLegs(),
+  ],
+});
+mob({
+  id: MOB_ZOMBIE_VILLAGER, key: 'zombie_villager', name: 'Aldeano zombi', hostile: true, health: 20, walk: 1.0, run: 2.4,
+  width: 0.6, height: 2.0, damage: 3, burnsInSun: true, drops: [[ROTTEN_FLESH, 0, 2]], atlas: [64, 64], anim: 'zombie', scale: 1,
+  sound: 'zombie', parts: villagerLike(),
+});
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

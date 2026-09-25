@@ -244,6 +244,13 @@ export const SNOWBALL = item('snowball', 'Bola de nieve', { stack: 16 });
 
 // ------------------------------------------------------------------ Fase 6 (monturas): silla de montar
 export const SADDLE = item('saddle', 'Silla de montar', { stack: 1 });
+// ------------------------------------------------------------------ Fase 6 (monstruos): botín y pociones de bruja
+export const SLIME_BALL = item('slime_ball', 'Bola de slime');
+export const PHANTOM_MEMBRANE = item('phantom_membrane', 'Membrana de phantom');
+/** Pociones arrojadizas que lanzan las brujas (al romperse dan su efecto alrededor). */
+export const SPLASH_HARMING = item('splash_potion_harming', 'Poción arrojadiza de daño', { stack: 1 });
+export const SPLASH_SLOWNESS = item('splash_potion_slowness', 'Poción arrojadiza de lentitud', { stack: 1 });
+export const SPLASH_POISON = item('splash_potion_poison', 'Poción arrojadiza de veneno', { stack: 1 });
 
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
@@ -370,6 +377,8 @@ export const CREATIVE_ITEMS: readonly number[] = [
   SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, COMPASS, EMPTY_MAP,
   SNOWBALL,
   SADDLE, // Fase 6 (monturas)
+  // Fase 6 (monstruos)
+  SLIME_BALL, PHANTOM_MEMBRANE,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

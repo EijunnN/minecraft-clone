@@ -8,6 +8,8 @@ import {
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
   PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE,
 } from '../blocks';
+// Fase 6 (monstruos): los bloques infestados no sueltan nada (sale una lepisma).
+import { isInfested } from '../blocks';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -18,6 +20,7 @@ import {
 export function blockDrops(block: number, toolId: number, rand: () => number = Math.random): ItemStack[] {
   const b = BLOCKS[block];
   if (!b || b.hardness < 0 || BLOCK_FLUID[block]) return [];
+  if (isInfested(block)) return []; // Fase 6 (monstruos)
   const tool = toolId > 0 ? ITEMS[toolId]?.tool : undefined;
   // Bloques que exigen un pico de cierto nivel.
   if (b.tier > 0 && !(tool && tool.kind === 'pickaxe' && tool.tier >= b.tier)) return [];

@@ -108,3 +108,5 @@ export const DEFAULT_HOTBAR: readonly number[] = [
 // Fase 6 (aldeanos): bloques de trabajo de los aldeanos (se registran los últimos).
 import { VILLAGER_BLOCKS } from './villagerBlocks';
 export * from './villagerBlocks';
+// Fase 6 (monstruos): bloques infestados (se registran los últimos: ids guardados).
+export * from './monsterBlocks';

@@ -35,6 +35,10 @@ export function deathMessage(cause: DamageCause): string {
     zombie: 'fue devorado por un zombi', husk: 'fue devorado por un zombi momificado', skeleton: 'fue abatido por un esqueleto',
     stray: 'fue abatido por un esqueleto errante', spider: 'fue mordido por una araña', enderman: 'fue destrozado por un enderman',
     creeper: 'voló por los aires por un creeper',
+    // Fase 6 (monstruos)
+    drowned: 'fue arrastrado al fondo por un ahogado', witch: 'fue hechizado por una bruja', slime: 'fue aplastado por un slime',
+    phantom: 'fue atacado por un phantom', silverfish: 'fue devorado por lepismas', cave_spider: 'fue mordido por una araña de cueva',
+    zombie_villager: 'fue devorado por un aldeano zombi',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

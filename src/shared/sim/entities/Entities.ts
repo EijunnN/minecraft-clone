@@ -222,6 +222,7 @@ export class Entities {
       }
     } else if (typeof attacker === 'string') ai.target = attacker;
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
+    this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.kill(e, true);
@@ -250,6 +251,7 @@ export class Entities {
       this.dropStacks(stacks, e.x, e.y + 0.3, e.z);
     }
     if (drops) this.xp.onMobKilled(e);
+    if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
   }
 
   // ------------------------------------------------------------------ explosiones

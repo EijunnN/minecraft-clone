@@ -17,6 +17,7 @@ import { standable } from '../pathfind';
 import { TAU, MAX_PASSIVE, ACTIVE_RANGE, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 import { mountSpawnFor } from './mounts'; // Fase 6 (monturas)
+import { pickMonster, spawnExtraMonsters } from './monsterSpawns'; // Fase 6 (monstruos)
 
 export class Spawner {
   private spawnTimer = 0;
@@ -34,6 +35,8 @@ export class Spawner {
       // Un intento cada ~2.5 s por jugador: la noche es peligrosa pero no una avalancha.
       this.spawnTimer = 1.5 + this.m.rand() * 2;
       if (this.m.host.difficulty() > 0) for (const p of players) if (p.alive) this.spawnHostiles(p, players.length);
+      // Fase 6 (monstruos): slimes de los chunks de slime y ahogados.
+      if (this.m.host.difficulty() > 0) for (const p of players) if (p.alive) spawnExtraMonsters(this.m, p, players.length);
     }
     if (this.passiveTimer <= 0) {
       this.passiveTimer = 4;
@@ -93,6 +96,7 @@ export class Spawner {
       else if (r < 0.8) type = MOB_SPIDER;
       else if (r < 0.95) type = MOB_CREEPER;
       else type = MOB_ENDERMAN;
+      type = pickMonster(this.m, type, info.biome, x, y, z); // Fase 6 (monstruos): brujas, slimes, aldeanos zombi
       const def = MOBS[type];
       if (!standable(w, x, y, z, Math.ceil(def.height))) continue;
       if (type === MOB_SPIDER && !this.spaceFor(x, y, z, 1)) continue;

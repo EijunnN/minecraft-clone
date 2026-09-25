@@ -1,6 +1,6 @@
 // Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
 // disparos, teletransporte del enderman, paseo y movimiento con física.
-import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA } from '../../mobs';
+import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA } from '../../mobs';
 import { isVillagerType } from '../../mobs'; // Fase 6 (aldeanos)
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
@@ -9,9 +9,16 @@ import { findPath, standable } from '../pathfind';
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type AI, type Entity } from './types';
 import type { Entities } from './Entities';
 import { MIN_Y, VOID_Y } from '../../constants';
+// Fase 6 (monstruos): comportamiento de los monstruos nuevos.
+import { MonsterAI, isSpiderLike } from './monsterAi';
 
 export class MobBrain {
-  constructor(private m: Entities) {}
+  /** Fase 6 (monstruos). */
+  readonly monsters: MonsterAI;
+
+  constructor(private m: Entities) {
+    this.monsters = new MonsterAI(m, this);
+  }
 
   nearestPlayer(e: Entity, players: PlayerView[], max: number, needLos: boolean): PlayerView | null {
     let best: PlayerView | null = null;
@@ -92,13 +99,16 @@ export class MobBrain {
     if (ai.panic > 0) ai.panic -= dt;
     // Animales neutrales (lobo, oso polar): si un jugador les pega, en vez de huir se enfadan.
     if (!def.hostile && def.neutral && ai.panic > 0 && e.lastHurtBy && e.age - (e.lastHurtAt ?? -99) < 0.5) this.provoke(e, e.lastHurtBy);
+    // Fase 6 (monstruos): los monstruos nuevos deciden y se mueven solos.
+    if (this.monsters.tick(e, dt, players)) return;
+    const spiderLike = isSpiderLike(e.type);
 
     // --- Decisión ---
     let moveX = 0, moveZ = 0, speed = 0, jump = false;
     let lookAt: [number, number, number] | null = null;
     const hostileNow = (def.hostile || !!def.neutral) && (
       !def.neutral || ai.angry > 0 ||
-      (e.type === MOB_SPIDER && (this.m.host.sunHeight() < 0.05 || w.skyTop(Math.floor(e.x), Math.floor(e.z)) > e.y + 2))
+      (spiderLike && (this.m.host.sunHeight() < 0.05 || w.skyTop(Math.floor(e.x), Math.floor(e.z)) > e.y + 2))
     );
     if (e.type === MOB_ENDERMAN) {
       for (const p of players) {
@@ -113,7 +123,8 @@ export class MobBrain {
     if (hostileNow) {
       if (ai.target) target = players.find((p) => p.id === ai.target && p.alive && !p.creative) ?? null;
       if (target && Math.hypot(target.x - e.x, target.z - e.z) > 40) target = null;
-      if (!target && (def.neutral ? ai.angry > 0 : true)) target = this.nearestPlayer(e, players, e.type === MOB_SPIDER ? 16 : 24, true);
+      // (Fase 6: las arañas, neutrales de día, a oscuras buscan presa sin que las provoquen.)
+      if (!target && (def.neutral ? ai.angry > 0 || spiderLike : true)) target = this.nearestPlayer(e, players, spiderLike ? 16 : 24, true);
       ai.target = target ? target.id : null;
     } else ai.target = null;
 
@@ -199,7 +210,7 @@ export class MobBrain {
           moveZ = dz / (dist || 1);
         } else [moveX, moveZ, jump] = this.followPath(e, target, dt);
         speed = e.type === MOB_ENDERMAN ? def.run * 1.2 : def.run;
-        if (e.type === MOB_SPIDER && dist < 4 && dist > 2 && e.onGround && this.m.rand() < dt * 1.5) {
+        if (spiderLike && dist < 4 && dist > 2 && e.onGround && this.m.rand() < dt * 1.5) {
           // Salto de ataque.
           e.vy = 6;
           e.vx += (dx / dist) * 4;
@@ -210,6 +221,7 @@ export class MobBrain {
           const dmg = def.damage * this.m.difficultyScale();
           this.m.host.hurtPlayer(target.id, dmg, (dx / (dist || 1)) * 5, 4, (dz / (dist || 1)) * 5, def.key);
           this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
+          this.monsters.onMelee(e, target); // Fase 6 (monstruos): veneno de la araña de cueva
         }
       }
     } else if (ai.panic > 0) {
@@ -289,9 +301,9 @@ export class MobBrain {
       if (e.vy < -60) e.vy = -60;
     }
     if (e.onGround && (jump || (e.hitWall && wantMove && speed > 0))) {
-      if (e.type === MOB_CHICKEN || e.type === MOB_SPIDER || ai.stuck > 0.1 || jump || e.hitWall) e.vy = 8.6;
+      if (e.type === MOB_CHICKEN || spiderLike || ai.stuck > 0.1 || jump || e.hitWall) e.vy = 8.6;
     } else if (e.type === MOB_RABBIT && e.onGround && wantMove && speed > 0) e.vy = 5.2; // el conejo va a saltitos
-    if (e.type === MOB_SPIDER && e.hitWall && wantMove) e.vy = Math.max(e.vy, 3.2);
+    if (spiderLike && e.hitWall && wantMove) e.vy = Math.max(e.vy, 3.2);
     if (e.type === MOB_CHICKEN && !e.onGround && e.vy < -2 && !e.inWater) e.vy = -2; // aleteo
     const wasGround = e.onGround;
     const prevVy = e.vy;

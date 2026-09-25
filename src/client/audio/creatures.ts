@@ -8,6 +8,7 @@ import { noiseOffset, noiseSource, type NoiseBuffers } from './noise';
 import { buildBowTwang } from './combat';
 import { randRange, type MobSoundEvent, type MobSoundKind } from './types';
 import { villagerSound } from './villagerVoice'; // Fase 6 (aldeanos)
+import { buildMonsterSound } from './monsterSounds'; // Fase 6 (monstruos)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
 function playFootstep(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number, weight: number): AudioScheduledSourceNode[] {
@@ -470,6 +471,7 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
     case 'wandering_trader':
       return villagerSound(ctx, noise, event, destination, now);
     default:
-      return [];
+      // Fase 6 (monstruos): bruja, slime, phantom y lepisma.
+      return buildMonsterSound(ctx, noise, kind, event, destination, now);
   }
 }
