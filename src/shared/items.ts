@@ -14,6 +14,7 @@ import {
   HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
 import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
+import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -303,6 +304,37 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   armadillo: [SPIDER_EYE],
 };
 
+// ------------------------------------------------------------------ Fase 6.5 (decoración)
+// Comida (valores de Minecraft), pepitas, cuenco, catalejo, reloj, cuadros, marcos y huevos generadores.
+export const BOWL = item('bowl', 'Cuenco', { fuel: 5 });
+export const IRON_NUGGET = item('iron_nugget', 'Pepita de hierro');
+export const GOLD_NUGGET = item('gold_nugget', 'Pepita de oro');
+export const COCOA_BEANS = item('cocoa_beans', 'Granos de cacao');
+export const COOKIE = item('cookie', 'Galleta', { food: { hunger: 2, saturation: 0.4 } });
+/** Estofados y sopas: no se apilan y devuelven el cuenco al comerlos. */
+export const MUSHROOM_STEW = item('mushroom_stew', 'Estofado de champiñones', { stack: 1, food: { hunger: 6, saturation: 7.2 } });
+export const RABBIT_STEW = item('rabbit_stew', 'Estofado de conejo', { stack: 1, food: { hunger: 10, saturation: 12 } });
+export const BEETROOT_SOUP = item('beetroot_soup', 'Sopa de remolacha', { stack: 1, food: { hunger: 6, saturation: 7.2 } });
+/** Estofado sospechoso: el efecto depende de la flor con que se hizo (va en `dmg`, ver decorFood.ts). */
+export const SUSPICIOUS_STEW = item('suspicious_stew', 'Estofado sospechoso', { stack: 1, food: { hunger: 6, saturation: 7.2, always: true } });
+export const GOLDEN_CARROT = item('golden_carrot', 'Zanahoria dorada', { food: { hunger: 6, saturation: 14.4 } });
+export const GLISTERING_MELON_SLICE = item('glistering_melon_slice', 'Rodaja de sandía reluciente');
+/** Catalejo: con el clic derecho mantenido se mira de lejos. */
+export const SPYGLASS = item('spyglass', 'Catalejo', { stack: 1 });
+/** Reloj: en la mano muestra la hora del mundo. */
+export const CLOCK = item('clock', 'Reloj');
+/** Cuadro y marco: se cuelgan en una pared (entidades). */
+export const PAINTING = item('painting', 'Cuadro');
+export const ITEM_FRAME = item('item_frame', 'Marco');
+/** Huevos generadores por clave de criatura: al usarlos sobre un bloque aparece la criatura. */
+export const SPAWN_EGGS: Record<string, number> = {};
+for (const e of SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
+/** Clave de la criatura de un huevo generador ('' si no lo es). */
+export function spawnEggMob(id: number): string {
+  const k = ITEMS[id]?.key ?? '';
+  return k.endsWith('_spawn_egg') && SPAWN_EGGS[k.slice(0, -10)] === id ? k.slice(0, -10) : '';
+}
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -415,6 +447,9 @@ export const CREATIVE_ITEMS: readonly number[] = [
   // Fase 6 (fauna).
   GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, RAW_RABBIT, COOKED_RABBIT, RABBIT_HIDE, ARMADILLO_SCUTE, BRUSH,
   OMINOUS_BOTTLE, TOTEM_OF_UNDYING, // Fase 6 (asaltos)
+  // Fase 6.5 (decoración).
+  BOWL, IRON_NUGGET, GOLD_NUGGET, COCOA_BEANS, COOKIE, MUSHROOM_STEW, RABBIT_STEW, BEETROOT_SOUP, SUSPICIOUS_STEW, GOLDEN_CARROT,
+  GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, ...Object.values(SPAWN_EGGS),
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

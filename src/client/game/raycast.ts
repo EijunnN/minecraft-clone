@@ -5,6 +5,7 @@ import {
   BLOCK_RENDER, BLOCK_FLUID_LEVEL, R_CUBE, R_CUTOUT, R_TRANSLUCENT, R_WATER, R_LAVA, AIR, blockSelectionBoxes,
 } from '../../shared/blocks';
 import { unionBox } from '../../shared/blockModels';
+import { isScaffolding } from '../../shared/blocks'; // Fase 6.5 (decoración)
 
 export interface RayHit {
   x: number;
@@ -71,7 +72,8 @@ export function raycast(
   let t = 0;
   for (let i = 0; i < 256 && t <= maxDist; i++) {
     const id = getBlock(x, y, z);
-    if (id > AIR) {
+    // Fase 6.5 (decoración): desde dentro de un andamio se ve a través de él.
+    if (id > AIR && !(i === 0 && isScaffolding(id))) {
       const r = BLOCK_RENDER[id];
       if (fluids && (r === R_WATER || r === R_LAVA) && BLOCK_FLUID_LEVEL[id] === 0) {
         return { x, y, z, nx, ny, nz, id, dist: t, px: ox + dx * t, py: oy + dy * t, pz: oz + dz * t, box: FULL };

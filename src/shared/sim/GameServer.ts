@@ -42,6 +42,7 @@ import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 import { Raids } from './server/raids'; // Fase 6 (asaltos)
+import { Hangings } from './server/hangings'; // Fase 6.5 (decoración)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -109,6 +110,8 @@ export class GameServer {
   readonly golems: Golems;
   /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
   readonly raids: Raids;
+  /** Fase 6.5 (decoración): cuadros y marcos colgados. */
+  readonly hangings: Hangings;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -172,6 +175,7 @@ export class GameServer {
     this.raids = new Raids(this.ctx, store); // Fase 6 (asaltos)
     this.trading.heroOf = (name) => this.raids.isHero(name);
     this.commands.raids = this.raids;
+    this.hangings = new Hangings(this.ctx, store); // Fase 6.5 (decoración)
   }
 
   get seed(): number {
@@ -455,7 +459,8 @@ export class GameServer {
         if (this.allow(s, 0.5)) this.broadcast({ t: 'swing', id: s.id }, s);
         break;
       case 'attack':
-        if (this.allow(s, 1)) this.actions.onAttack(s, msg);
+        // Fase 6.5 (decoración): los golpes a cuadros y marcos los atiende su sistema.
+        if (this.allow(s, 1) && !this.hangings.onAttack(s, Number(msg.e))) this.actions.onAttack(s, msg);
         break;
       case 'pickup':
         if (this.allow(s, 0.5)) this.actions.onPickup(s, Number(msg.e));
@@ -534,6 +539,13 @@ export class GameServer {
         break;
       case 'mpos':
         if (this.allow(s, 0.2)) this.riding.onMove(s, msg);
+        break;
+      // Fase 6.5 (decoración): colgar cuadros y marcos, y usar un marco.
+      case 'hang':
+        if (this.allow(s, 1)) this.hangings.onHang(s, msg);
+        break;
+      case 'frame':
+        if (this.allow(s, 1)) this.hangings.onFrame(s, msg);
         break;
     }
   }
@@ -741,6 +753,7 @@ export class GameServer {
     this.rules.onBlockChanged(x, y, z, id);
     this.monsters.onBlockChanged(x, y, z, old, id);
     this.golems.onBlockChanged(x, y, z, id); // Fase 6 (gólems/domesticar)
+    this.hangings?.onBlockChanged(x, y, z); // Fase 6.5 (decoración)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -835,6 +848,7 @@ export class GameServer {
     this.signs.flush(this.store);
     this.monsters.flush(this.store);
     this.raids.flush(this.store); // Fase 6 (asaltos)
+    this.hangings.flush(this.store); // Fase 6.5 (decoración)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

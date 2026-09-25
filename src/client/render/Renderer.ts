@@ -31,6 +31,9 @@ import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
 import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY } from '../../shared/mobs';
+// Fase 6.5 (decoración): cuadros y marcos.
+import { isHangingType } from '../../shared/paintings';
+import { pushHangingDraws } from './hangingDraws';
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { LightningRenderer, type Bolt } from './LightningRenderer';
 import type { FishLine } from '../game/fishingLines';
@@ -862,6 +865,8 @@ export class Renderer {
         mat4.translate(m, m, [rx, ry + 0.49, rz]);
         mat4.scale(m, m, [0.98, 0.98, 0.98]);
         out.push({ model, m, light: lightOf(e.x, e.y + 0.5, e.z) });
+      } else if (isHangingType(e.type)) {
+        pushHangingDraws(out, e, this.items, rx, ry, rz, lightOf); // Fase 6.5 (decoración): cuadros y marcos
       }
     }
     for (const l of s.fishLines ?? []) this.pushFishLine(out, s, l, lightOf);

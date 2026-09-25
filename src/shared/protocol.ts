@@ -3,7 +3,7 @@ import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -160,7 +160,11 @@ export type ClientMsg =
   | { t: 'trade'; e: number; i: number; q: number; pay: ItemStack[] }
   | { t: 'tclose' }
   // Fase 6 (asaltos): el jugador se bebió una botella ominosa (Mal presagio de nivel a).
-  | { t: 'omen'; a: number };
+  | { t: 'omen'; a: number }
+  // Fase 6.5 (decoración): colgar un cuadro o un marco (item) en la cara f (0 N, 1 E, 2 S, 3 O) del bloque
+  // (x, y, z); usar un marco (poner el objeto de la mano o girar el que tiene). Respuesta: 'ires' con q.
+  | { t: 'hang'; x: number; y: number; z: number; f: number; item: number; q: number }
+  | { t: 'frame'; e: number; item: number; q: number };
 
 export type ServerMsg =
   | {

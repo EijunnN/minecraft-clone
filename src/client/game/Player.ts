@@ -3,6 +3,7 @@
 // escalones bajos (losas, escaleras) y trepar por escaleras de mano.
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluidHeight } from '../../shared/blocks';
 import { moveBox, boxBlocked } from '../../shared/collide';
+import { scaffoldClimb, scaffoldFloor } from '../../shared/scaffoldPhysics'; // Fase 6.5 (decoración)
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
 
 export interface BlockSource {
@@ -267,6 +268,13 @@ export class Player {
       }
     }
 
+    // Fase 6.5 (decoración): dentro de un andamio se sube saltando y se baja agachado.
+    const climb = this.flying ? null : scaffoldClimb(world, this.x, this.y, this.z, HW, this.height, c.jump, c.sneak);
+    if (climb !== null) {
+      this.vy = climb;
+      this.fallDistance = 0;
+    }
+
     // Impulso externo (se disipa en ~0.4 s).
     const kd = Math.exp(-dt * (this.onGround ? 7 : 2.5));
     this.kx *= kd;
@@ -307,6 +315,13 @@ export class Player {
     }
     if (r.hitY) this.vy = 0;
     this.onGround = r.onGround;
+    // Fase 6.5 (decoración): de pie encima de un andamio (agachado se baja por dentro).
+    const floor = this.flying || c.sneak || r.dy >= 0 ? null : scaffoldFloor(world, this.x, this.z, HW, oy, this.y);
+    if (floor !== null) {
+      this.y = floor;
+      this.vy = 0;
+      this.onGround = true;
+    }
     this.hitWall = r.hitX || r.hitZ;
     if (this.flying && this.onGround) this.flying = false;
     this.justLanded = this.onGround && !wasGround;

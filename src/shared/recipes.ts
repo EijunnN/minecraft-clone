@@ -19,6 +19,13 @@ import {
 // Fase 6 (fauna).
 import { BEEHIVE, HONEY_BLOCK, HONEYCOMB_BLOCK } from './blocks';
 import { GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, BRUSH, RABBIT_HIDE } from './items';
+// Fase 6.5 (decoración).
+import { FLOWER_POT, LANTERN, IRON_CHAIN, IRON_BARS, SCAFFOLDING, DECORATED_POT, RED_MUSHROOM, BROWN_MUSHROOM } from './blocks';
+import {
+  BOWL, IRON_NUGGET, GOLD_NUGGET, COCOA_BEANS, COOKIE, MUSHROOM_STEW, RABBIT_STEW, BEETROOT_SOUP, SUSPICIOUS_STEW,
+  GOLDEN_CARROT, GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, COOKED_RABBIT, CARROT, BAKED_POTATO, BEETROOT,
+} from './items';
+import { SUSPICIOUS_FLOWERS } from './decorFood';
 
 type Cell = readonly number[] | null;
 
@@ -217,6 +224,37 @@ mix([HONEY_BOTTLE], SUGAR, 3);
 shape(['CC', 'CC'], { C: HONEYCOMB }, HONEYCOMB_BLOCK);
 shape(['F', 'C', 'S'], { F: FEATHER, C: COPPER_INGOT, S: STICK }, BRUSH);
 shape(['HH', 'HH'], { H: RABBIT_HIDE }, LEATHER);
+
+// --- Fase 6.5 (decoración): comida, pepitas, macetas, faroles, cadenas, barrotes, andamios, vasijas,
+// cuadros, marcos, catalejo y reloj (como en Minecraft; el andamio lleva palos porque no hay bambú) ---
+{
+  shape(['P P', ' P '], { P: PLANKS }, BOWL, 4);
+  mix([IRON_INGOT], IRON_NUGGET, 9);
+  shape(['NNN', 'NNN', 'NNN'], { N: IRON_NUGGET }, IRON_INGOT);
+  mix([GOLD_INGOT], GOLD_NUGGET, 9);
+  shape(['NNN', 'NNN', 'NNN'], { N: GOLD_NUGGET }, GOLD_INGOT);
+  shape(['WCW'], { W: WHEAT, C: COCOA_BEANS }, COOKIE, 8);
+  mix([RED_MUSHROOM, BROWN_MUSHROOM, BOWL], MUSHROOM_STEW);
+  mix([COOKED_RABBIT, CARROT, BAKED_POTATO, [RED_MUSHROOM, BROWN_MUSHROOM], BOWL], RABBIT_STEW);
+  mix([BEETROOT, BEETROOT, BEETROOT, BEETROOT, BEETROOT, BEETROOT, BOWL], BEETROOT_SOUP);
+  // Estofado sospechoso: la flor queda anotada en el desgaste de la pila (su efecto, en decorFood.ts).
+  SUSPICIOUS_FLOWERS.forEach(([flower], i) => {
+    shapeless.push({ items: [[RED_MUSHROOM], [BROWN_MUSHROOM], [BOWL], [flower]], out: { id: SUSPICIOUS_STEW, count: 1, dmg: i + 1 } });
+  });
+  shape(['NNN', 'NCN', 'NNN'], { N: GOLD_NUGGET, C: CARROT }, GOLDEN_CARROT);
+  shape(['NNN', 'NMN', 'NNN'], { N: GOLD_NUGGET, M: MELON_SLICE }, GLISTERING_MELON_SLICE);
+  shape(['A', 'C', 'C'], { A: AMETHYST_SHARD, C: COPPER_INGOT }, SPYGLASS);
+  shape([' G ', 'GRG', ' G '], { G: GOLD_INGOT, R: REDSTONE }, CLOCK);
+  const WOOLS = [WHITE_WOOL, BLACK_WOOL, RED_WOOL, ORANGE_WOOL, YELLOW_WOOL, LIME_WOOL, BLUE_WOOL, PURPLE_WOOL];
+  shape(['SSS', 'SWS', 'SSS'], { S: STICK, W: WOOLS }, PAINTING);
+  shape(['SSS', 'SLS', 'SSS'], { S: STICK, L: LEATHER }, ITEM_FRAME);
+  shape(['B B', ' B '], { B: BRICK }, FLOWER_POT);
+  shape(['NNN', 'NTN', 'NNN'], { N: IRON_NUGGET, T: TORCH }, LANTERN);
+  shape(['N', 'I', 'N'], { N: IRON_NUGGET, I: IRON_INGOT }, IRON_CHAIN);
+  shape(['III', 'III'], { I: IRON_INGOT }, IRON_BARS, 16);
+  shape(['SWS', 'S S', 'S S'], { S: STICK, W: STRING }, SCAFFOLDING, 6);
+  shape([' B ', 'B B', ' B '], { B: BRICK }, DECORATED_POT);
+}
 
 export interface RecipeMatch {
   out: ItemStack;

@@ -27,6 +27,7 @@ import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
 import { afterDrinkOminous } from './raidClient'; // Fase 6 (asaltos)
+import { decorUse, decorAfterEat } from './decorInteraction'; // Fase 6.5 (decoración)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -126,6 +127,8 @@ export class Interaction {
     const pressed = input.mousePressed[2];
     if (!pressed && !(input.mouseDown[2] && this.placeCooldown <= 0)) return;
     this.placeCooldown = 0.2;
+    // Fase 6.5 (decoración): marcos, cuadros, macetas, campanas, huevos generadores y catalejo.
+    if (decorUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6 (aldeanos): clic derecho sobre un aldeano abre el comercio.
     if (pressed && target && this.g.trading.canTrade(target)) {
       this.g.trading.open(target);
@@ -471,8 +474,10 @@ export class Interaction {
       if (Math.random() < chance) this.g.statusEffects.add(id, secs, amp, this.g.survival);
     }
     this.g.audio.playBurp();
+    const eatenDmg = this.g.inv.get(u.slot)?.dmg ?? 0; // Fase 6.5 (decoración): flor del estofado sospechoso
     if (!this.g.creative) this.g.inv.consume(u.slot, 1);
     faunaAfterEat(this.g, this, u.item, u.slot); // Fase 6 (fauna): miel
+    decorAfterEat(this.g, this, u.item, u.slot, eatenDmg); // Fase 6.5 (decoración): cuenco y estofado sospechoso
     afterDrinkOminous(this.g, u.item); // Fase 6 (asaltos): Mal presagio
   }
 

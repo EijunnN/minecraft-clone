@@ -5,6 +5,7 @@
 // ni si Web Audio no está disponible (p. ej. navegadores headless de pruebas).
 import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
+import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -388,6 +389,11 @@ export class AudioEngine {
   playRaidSfx(kind: string, pos: Vec3 | null): void {
     const build = (ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number) => buildRaidSfx(ctx, noise, kind, dest, now);
     this.safe(() => (pos ? this.spawnPositional(pos, build, 0.5) : this.spawnLocal(0.4, build)));
+  }
+
+  /** Fase 6.5 (decoración): campana, colgar/descolgar cuadros y marcos, girar el objeto del marco. */
+  playDecorSfx(kind: string, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildDecorSfx(ctx, noise, kind, dest, now), kind === 'bell' ? 0.6 : 0.3));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

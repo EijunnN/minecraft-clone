@@ -122,3 +122,8 @@ export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
 // Troncos tumbados (se registran los últimos: ids guardados).
 export * from './logAxis';
+// Fase 6.5 (decoración): maceta, farol, cadena y barrotes de hierro, campana, andamio, vasija decorada
+// y los modelos de cuadros y marcos (se registran los últimos: ids guardados).
+import { DECOR_INVENTORY } from './decorBlocks';
+export * from './decorBlocks';
+(INVENTORY_ORDER as number[]).push(...DECOR_INVENTORY);

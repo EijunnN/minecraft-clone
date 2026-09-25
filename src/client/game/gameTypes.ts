@@ -17,8 +17,8 @@ export interface Mining {
 }
 
 export interface Use {
-  /** Comer o beber, tensar el arco o cubrirse con el escudo. */
-  kind: 'eat' | 'bow' | 'block';
+  /** Comer o beber, tensar el arco o cubrirse con el escudo (fase 6.5: mirar por el catalejo). */
+  kind: 'eat' | 'bow' | 'block' | 'spyglass';
   t: number;
   slot: number;
   item: number;

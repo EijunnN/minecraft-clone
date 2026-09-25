@@ -10,6 +10,8 @@
 // special: 0 = normal, 1 = agua, 2 = lava, 3 = hielo (translúcido).
 // cutout:  true si la textura usa alpha 0/255 como recorte (hojas, plantas, cristal...).
 
+import { PAINTING_TEXTURES } from './paintings'; // Fase 6.5 (decoración)
+
 export interface TextureDef {
   name: string;
   tint?: 0 | 1 | 2 | 3;
@@ -256,6 +258,10 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
   ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
     'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (decoración): maceta, farol, cadena, barrotes, campana, andamio, vasija, marco y cuadros.
+  ...['flower_pot', 'flower_pot_top', 'flower_pot_soil', 'lantern', 'lantern_top', 'chain', 'chain_h', 'iron_bars',
+    'scaffolding_top', 'scaffolding_side'].map((name): TextureDef => ({ name, cutout: true })),
+  ...['bell', 'decorated_pot_side', 'decorated_pot_top', 'item_frame', ...PAINTING_TEXTURES].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

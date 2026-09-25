@@ -24,6 +24,7 @@ import { AquaticLife } from './aquaticLife';
 import { isWaterAmbient } from '../../aquaticMobs';
 // Fase 6 (gólems/domesticar)
 import { Companions } from './companions';
+import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -357,7 +358,7 @@ export class Entities {
       else if (e.type === ENT_XP) this.xp.orbTick(e, dt, players);
       else if (e.type === ENT_THROWN) this.projectiles.thrownTick(e, dt, players);
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
-      else if (e.type === ENT_DISPLAY) e.flags = 0;
+      else if (e.type === ENT_DISPLAY || isHangingType(e.type)) e.flags = 0; // Fase 6.5: cuadros y marcos
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

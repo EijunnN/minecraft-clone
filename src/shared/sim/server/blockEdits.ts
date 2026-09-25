@@ -20,6 +20,7 @@ import type { ServerContext, Session } from './context';
 // Fase 6 (fauna): cosechar nidos y colmenas.
 import { isBeeHome } from '../../blocks';
 import { harvestBeeHome } from '../entities/bees';
+import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
 
 export class BlockEdits {
   constructor(
@@ -139,6 +140,8 @@ export class BlockEdits {
       if (!ok) ctx.reject(s, x, y, z);
       return;
     }
+    // Fase 6.5 (decoración): macetas, campanas y huevos generadores.
+    if (useDecor(ctx, s, x, y, z, id, item)) return;
     // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
     if (Number.isInteger(item) && item > 0) {
       const done = ctx.asActor(s.id, () => {

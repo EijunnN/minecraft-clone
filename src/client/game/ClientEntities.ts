@@ -3,6 +3,7 @@
 // para suavizar).
 import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../shared/mobs';
 import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd } from '../../shared/protocol';
+import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
 
 interface Snap {
   t: number;
@@ -77,7 +78,7 @@ export class ClientEntities {
       }
       const e: ClientEntity = {
         id, type, snaps: [{ t: now, x, y, z, yaw, body, pitch }], x, y, z, yaw, bodyYaw: body, pitch, flags,
-        item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN || type === ENT_DISPLAY ? e1 ?? 0 : 0,
+        item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN || type === ENT_DISPLAY || isHangingType(type) ? e1 ?? 0 : 0,
         count: type === ENT_ITEM ? e2 ?? 1 : type === ENT_XP ? e1 ?? 1 : 1,
         health: MOBS[type] ? e1 ?? MOBS[type].health : 1,
         variant: MOBS[type] && Number.isInteger(e2) ? Math.max(0, Math.min(255, e2)) : 0, // Fase 6 (monturas)

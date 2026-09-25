@@ -13,6 +13,7 @@ import {
 import { DIR_X, DIR_Z } from './blockModels';
 import { isBeeHome } from './blocks'; // Fase 6 (fauna)
 import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
+import { planDecor, planScaffoldTower } from './decorPlacement'; // Fase 6.5 (decoración)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -84,6 +85,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     const t = stateProps(hit.id)!.type;
     if ((t === 0 && hit.ny === 1) || (t === 1 && hit.ny === -1)) return [[hit.x, hit.y, hit.z, stateOf(base, { type: 2 })]];
   }
+  // Fase 6.5 (decoración): andamio en lo alto de una torre de andamios (clic desde abajo).
+  const tower = planScaffoldTower(get, hit, item);
+  if (tower !== undefined) return tower;
   let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) {
     x = hit.x;
@@ -101,6 +105,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   const upper = face === 'down' || (face === 'side' && hit.py - y > 0.5);
   const facing = facingFromYaw(yaw);
   const one = (id: number): Edit[] => [[x, y, z, id]];
+  // Fase 6.5 (decoración): faroles, campanas, cadenas y andamios.
+  const deco = planDecor(get, hit, base, x, y, z, face, facing);
+  if (deco !== undefined) return deco;
 
   // Semillas, zanahorias y patatas: sólo sobre tierra de cultivo.
   if (isCrop(base)) return isFarmland(get(x, y - 1, z)) ? one(base) : null;
