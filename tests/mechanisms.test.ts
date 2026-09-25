@@ -258,19 +258,25 @@ test('observador: pulso de 2 ticks cuando cambia lo que vigila', () => {
 test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por el comparador', () => {
   const { h, bx, by, bz, set, get } = lab();
   const inv = h.gs.mechanisms.inventories;
+  // Lo que se mete a mano se guarda con done() (como todo lo que cambia un contenedor: despierta a las tolvas).
+  const fill = (a: number, b: number, d: number, slot: number, st: { id: number; count: number }) => {
+    const o = inv.open(a, b, d)!;
+    o.state.slots[slot] = st;
+    o.done();
+  };
   const x = bx - 4, z = bz + 10;
   // Cofre arriba → tolva que apunta al este → cofre.
   set(x, by + 1, z, CHEST);
   set(x, by, z, stateOf(HOPPER, { facing: 2 }));
   set(x + 1, by, z, CHEST);
   h.tick(2);
-  inv.open(x, by + 1, z)!.state.slots[0] = { id: COBBLESTONE, count: 3 };
+  fill(x, by + 1, z, 0, { id: COBBLESTONE, count: 3 });
   h.tick(60);
   const dest = inv.open(x + 1, by, z)!.state.slots;
   assert.equal(dest.reduce((n, s) => n + (s?.count ?? 0), 0), 3, 'los tres pasan al cofre de al lado');
   assert.ok(inv.open(x, by + 1, z)!.state.slots.every((s) => !s), 'el de arriba queda vacío');
   // Ritmo: un objeto cada 8 ticks.
-  inv.open(x, by + 1, z)!.state.slots[0] = { id: DIRT, count: 64 };
+  fill(x, by + 1, z, 0, { id: DIRT, count: 64 });
   h.tick(80);
   const moved = inv.open(x + 1, by, z)!.state.slots.filter((s) => s?.id === DIRT).reduce((n, s) => n + s!.count, 0);
   assert.ok(moved >= 8 && moved <= 11, `unos 10 en 80 ticks (${moved})`);
@@ -280,8 +286,8 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   set(fx, by + 1, z, stateOf(HOPPER, { facing: 0 }));
   set(fx - 1, by, z, stateOf(HOPPER, { facing: 2 }));
   h.tick(2);
-  inv.open(fx, by + 1, z)!.state.slots[0] = { id: IRON_ORE_ITEM, count: 2 };
-  inv.open(fx - 1, by, z)!.state.slots[0] = { id: COAL, count: 1 };
+  fill(fx, by + 1, z, 0, { id: IRON_ORE_ITEM, count: 2 });
+  fill(fx - 1, by, z, 0, { id: COAL, count: 1 });
   h.tick(20);
   const furnace = inv.open(fx, by, z)!.state;
   assert.equal(furnace.slots[0]?.id, IRON_ORE_ITEM, 'el mineral entra por arriba');
@@ -294,7 +300,7 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   set(lx, by, z - 1, REDSTONE_BLOCK);
   h.tick(2);
   assert.ok(hopperLocked(get(lx, by, z)), 'bloqueada');
-  inv.open(lx, by + 1, z)!.state.slots[0] = { id: DIRT, count: 5 };
+  fill(lx, by + 1, z, 0, { id: DIRT, count: 5 });
   h.tick(40);
   assert.equal(inv.open(lx, by + 1, z)!.state.slots[0]?.count, 5, 'no se mueve nada');
   set(lx, by, z - 1, AIR);
@@ -306,11 +312,59 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   set(x + 1, by, cz, stateOf(COMPARATOR, { facing: 1 }));
   set(x + 2, by, cz, wireState(0, false));
   h.tick(2);
-  const o = inv.open(x, by, cz)!;
-  o.state.slots[0] = { id: DIRT, count: 64 };
-  o.done();
+  fill(x, by, cz, 0, { id: DIRT, count: 64 });
   h.tick(4);
   assert.equal(wirePower(get(x + 2, by, cz)), 3);
+});
+
+test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las que no tienen nada que hacer duermen', () => {
+  const { h, bx, by, bz, set } = lab();
+  const inv = h.gs.mechanisms.inventories;
+  const hoppers = h.gs.mechanisms.hoppers;
+  const count = (a: number, b: number, d: number) => inv.open(a, b, d)!.state.slots.reduce((n, st) => n + (st?.count ?? 0), 0);
+  const fill = (a: number, b: number, d: number, n: number) => {
+    const o = inv.open(a, b, d)!;
+    o.state.slots[0] = { id: DIRT, count: n };
+    o.done();
+  };
+  // Tolva A → tolva B → cofre, hacia el este.
+  const x = bx - 12, z = bz - 14;
+  set(x, by, z, stateOf(HOPPER, { facing: 2 }));
+  set(x + 1, by, z, stateOf(HOPPER, { facing: 2 }));
+  set(x + 2, by, z, CHEST);
+  h.tick(4);
+  assert.equal(hoppers.awakeCount, 0, 'sin nada que hacer, duermen');
+  fill(x, by, z, 2);
+  h.tick(1);
+  assert.deepEqual([count(x, by, z), count(x + 1, by, z)], [1, 1], 'A pasa uno en el acto');
+  h.tick(6);
+  assert.equal(count(x + 2, by, z), 0, 'B, vacía, lo recibió y espera 7 ticks');
+  h.tick(1);
+  assert.deepEqual([count(x + 1, by, z), count(x + 2, by, z)], [0, 1], 'a los 7 lo pasa');
+  assert.equal(count(x, by, z), 1, 'A aún espera (8)');
+  h.tick(1);
+  assert.deepEqual([count(x, by, z), count(x + 1, by, z)], [0, 1], 'a los 8, A pasa el segundo');
+  h.tick(7);
+  assert.equal(count(x + 2, by, z), 2);
+  h.tick(10);
+  assert.equal(hoppers.awakeCount, 0, 'y vuelven a dormir');
+  // Cada una a su ritmo: una fila de 4 tolvas desde un cofre lleno, 2,5 objetos por segundo.
+  const z2 = z + 3;
+  set(x, by + 1, z2, CHEST);
+  for (let i = 0; i < 4; i++) set(x + i, by, z2, stateOf(HOPPER, { facing: 2 }));
+  set(x + 4, by, z2, CHEST);
+  h.tick(2);
+  fill(x, by + 1, z2, 64);
+  h.tick(200);
+  const through = count(x + 4, by, z2);
+  assert.ok(through >= 22 && through <= 25, `unos 25 − 3 en 200 ticks (${through})`);
+  // Un objeto tirado encima de una tolva dormida la despierta.
+  const z3 = z + 6;
+  set(x, by, z3, stateOf(HOPPER, { facing: 0 }));
+  h.tick(4);
+  h.gs.entities.spawnItem({ id: DIAMOND, count: 1 }, x + 0.5, by + 1.2, z3 + 0.5);
+  h.tick(20);
+  assert.equal(inv.open(x, by, z3)!.state.slots[0]?.id, DIAMOND, 'lo coge');
 });
 
 test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar', () => {
