@@ -11,6 +11,9 @@ import { applyPreset, saveSettings, type Settings } from '../game/settings';
 import type { PresetName } from '../render/Renderer';
 import type { HudIcons } from './hudIcons';
 import { stackIconUrl } from './bannerIcons'; // Fase 6.5 (libros y estandartes)
+// Fase 7 (encantamientos): brillo de lo encantado y libros encantados en el creativo.
+import { paintGlint, glintAttrs } from './glint';
+import { ENCHANTS, ENCHANT_IDS, enchantName, enchantedBook } from '../../shared/enchantments';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -49,7 +52,8 @@ export class UI {
   /** Nombres de los jugadores conectados (para autocompletar en el chat). */
   playerNames: () => string[] = () => [];
   onChatClosed: (() => void) | null = null;
-  onInventoryPick: ((id: number, slot: number | null) => void) | null = null;
+  /** Fase 7 (encantamientos): `stack`, la pila con sus datos (libros encantados del creativo). */
+  onInventoryPick: ((id: number, slot: number | null, stack?: ItemStack) => void) | null = null;
   onInventorySelectSlot: ((slot: number) => void) | null = null;
   onSettingsChanged: ((s: Settings) => void) | null = null;
   onFullscreen: (() => void) | null = null;
@@ -65,6 +69,8 @@ export class UI {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private invCategory: InvCategory = 'todo';
   private hoveredItem: number | null = null;
+  /** Fase 7 (encantamientos): la pila señalada si lleva datos (un libro encantado). */
+  private hoveredStack: ItemStack | undefined;
   private tooltip: HTMLDivElement;
   private settingsReturn: 'menu' | 'pause' = 'menu';
   hotbar: (ItemStack | null)[] = [];
@@ -176,7 +182,7 @@ export class UI {
       if (!this.isInventoryOpen() || !this.hoveredItem) return;
       const n = Number(e.key);
       if (n >= 1 && n <= 9) {
-        this.onInventoryPick?.(this.hoveredItem, n - 1);
+        this.onInventoryPick?.(this.hoveredItem, n - 1, this.hoveredStack);
         this.renderInvHotbar();
       }
     });
@@ -586,21 +592,32 @@ export class UI {
       }
     }
     if (this.invCategory === 'todo' || this.invCategory === 'objetos') ids.push(...CREATIVE_ITEMS);
-    for (const id of ids) {
-      const name = itemName(id);
+    const entries: ItemStack[] = ids.map((id) => ({ id, count: 1 }));
+    // Fase 7 (encantamientos): un libro encantado por cada encantamiento y nivel (como en Minecraft).
+    if (this.invCategory === 'todo' || this.invCategory === 'objetos') {
+      for (const e of ENCHANT_IDS) for (let l = 1; l <= ENCHANTS[e].max; l++) entries.push(enchantedBook([[e, l]]));
+    }
+    for (const st of entries) {
+      const id = st.id;
+      const extra = st.data?.stored ? ' ' + st.data.stored.map(([e, l]) => enchantName(e, l)).join(' ') : '';
+      const name = itemName(id) + extra;
       if (!ITEMS[id]) continue;
       if (q && !name.toLowerCase().includes(q)) continue;
       const item = document.createElement('div');
       item.className = 'invitem';
-      item.innerHTML = `<div class="ico" style="background-image:url(${this.icons.get(id) ?? ''})"></div>`;
+      const url = this.icons.get(id) ?? '';
+      const gl = glintAttrs(st, url);
+      item.innerHTML = `<div class="ico${gl.cls}" style="background-image:url(${url})${gl.style}"></div>`;
+      const stack = st.data ? st : undefined;
       item.addEventListener('click', () => {
         this.onUiSound?.('click');
-        this.onInventoryPick?.(id, null);
+        this.onInventoryPick?.(id, null, stack);
         this.renderInvHotbar();
       });
       item.addEventListener('mouseenter', () => {
         this.hoveredItem = id;
-        this.tooltip.innerHTML = itemTooltipHtml({ id, count: 1 });
+        this.hoveredStack = stack;
+        this.tooltip.innerHTML = itemTooltipHtml(st);
         this.tooltip.classList.remove('hidden');
       });
       item.addEventListener('mousemove', (e) => {
@@ -792,6 +809,7 @@ export function paintSlot(el: HTMLElement, s: ItemStack | null, icons: Map<numbe
   const dur = el.querySelector('.dur') as HTMLElement | null;
   const url = stackIconUrl(s, icons); // Fase 6.5 (libros y estandartes): estandartes con dibujos
   ico.style.backgroundImage = url ? `url(${url})` : '';
+  paintGlint(ico, s, url); // Fase 7 (encantamientos)
   if (cnt) cnt.textContent = s && s.count > 1 ? String(s.count) : '';
   if (dur) {
     const tool = s ? ITEMS[s.id]?.tool : undefined;

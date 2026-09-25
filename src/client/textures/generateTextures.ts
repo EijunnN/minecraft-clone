@@ -48,6 +48,7 @@ import { BOOK_GENERATORS } from './genBooks'; // Fase 6.5 (libros y estandartes)
 import { MATERIAL_GENERATORS } from './genMaterials'; // Fase 6.5 (materiales)
 import { COLLECTION_GENERATORS } from './genCollections'; // Fase 6.5 (colecciones)
 import { EQUIPMENT_GENERATORS } from './genEquipment'; // Fase 6.5 (equipo)
+import { ENCHANT_GENERATORS } from './genEnchant'; // Fase 7 (encantamientos)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -88,6 +89,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...MATERIAL_GENERATORS, // Fase 6.5 (materiales)
   ...COLLECTION_GENERATORS, // Fase 6.5 (colecciones)
   ...EQUIPMENT_GENERATORS, // Fase 6.5 (equipo)
+  ...ENCHANT_GENERATORS, // Fase 7 (encantamientos)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

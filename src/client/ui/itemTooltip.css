@@ -28,3 +28,16 @@
 .tooltip .tt-armor {
   color: #7fb4ff;
 }
+
+/* Fase 7 (encantamientos): objetos encantados (turquesa) y raros (amarillo), como en Minecraft. */
+.tooltip .tt-ench {
+  color: #6ff0ec;
+}
+
+.tooltip .tt-rare {
+  color: #ffe36e;
+}
+
+.tooltip b i {
+  font-style: italic;
+}

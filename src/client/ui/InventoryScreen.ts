@@ -21,6 +21,7 @@ import { itemTooltipHtml } from './itemTooltip';
 import { LoomPanel, LOOM_HTML } from './loomScreen';
 import { bookCopy } from '../../shared/books';
 import { stackIconUrl } from './bannerIcons';
+import { paintGlint } from './glint'; // Fase 7 (encantamientos)
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom';
 
@@ -677,6 +678,7 @@ export class InventoryScreen {
     const dur = el.children[2] as HTMLElement;
     const url = stackIconUrl(s, this.host.icons); // Fase 6.5: estandartes con dibujos
     ico.style.backgroundImage = url ? `url(${url})` : '';
+    paintGlint(ico, s, url); // Fase 7 (encantamientos)
     cnt.textContent = s && s.count > 1 ? String(s.count) : '';
     const max = s ? ITEMS[s.id]?.tool?.durability ?? ITEMS[s.id]?.armor?.durability : undefined;
     if (s && max && s.dmg) {
@@ -705,6 +707,7 @@ export class InventoryScreen {
     el.classList.remove('hidden');
     const url = stackIconUrl(c, this.host.icons);
     (el.firstElementChild as HTMLElement).style.backgroundImage = url ? `url(${url})` : '';
+    paintGlint(el.firstElementChild as HTMLElement, c, url); // Fase 7 (encantamientos)
     (el.children[1] as HTMLElement).textContent = c.count > 1 ? String(c.count) : '';
     el.style.left = `${this.mouse[0]}px`;
     el.style.top = `${this.mouse[1]}px`;

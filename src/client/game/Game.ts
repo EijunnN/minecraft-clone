@@ -451,9 +451,9 @@ export class Game {
       this.input.gameKeys = true;
       this.input.requestLock();
     };
-    ui.onInventoryPick = (id, slot) => {
+    ui.onInventoryPick = (id, slot, stack) => {
       const s = slot ?? this.selected;
-      this.inv.set(s, { id, count: maxStack(id) });
+      this.inv.set(s, stack ? { ...stack, count: 1 } : { id, count: maxStack(id) }); // Fase 7: libros encantados
       this.refreshHotbar(true);
       this.equipT = 1;
     };
