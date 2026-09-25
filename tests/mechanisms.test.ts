@@ -7,7 +7,7 @@ import {
   AIR, STONE, COBBLESTONE, OBSIDIAN, DIRT, SAND, WATER, CHEST, FURNACE, REDSTONE_BLOCK, REDSTONE_LAMP, SLIME_BLOCK, HONEY_BLOCK,
   PISTON, STICKY_PISTON, MOVING_BLOCK, OBSERVER, HOPPER, DISPENSER, DROPPER, TNT, POPPY, COMPARATOR, stateOf, isPiston,
   pistonExtended, isPistonHead, observerPowered, hopperLocked, dispenserTriggered, facingOf, mechanismSlots, wireState, wirePower,
-  railState, RAIL_EW, RAIL_ACTIVATOR,
+  railState, RAIL_EW, RAIL_ACTIVATOR, facingState,
 } from '../src/shared/blocks';
 import { EAST, WEST, UP, NORTH, SOUTH } from '../src/shared/redstone';
 import {
@@ -59,7 +59,7 @@ function lab(seed = 4242): Lab {
 test('pistón: empuja una fila, se recoge y no pasa de 12 bloques', () => {
   const { h, bx, by, bz, set, get } = lab();
   const x = bx - 10, z = bz;
-  set(x, by, z, stateOf(PISTON, { facing: EAST }));
+  set(x, by, z, facingState(PISTON, EAST));
   for (let i = 1; i <= 3; i++) set(x + i, by, z, COBBLESTONE);
   h.tick(2);
   set(x, by, z - 1, REDSTONE_BLOCK);
@@ -76,27 +76,27 @@ test('pistón: empuja una fila, se recoge y no pasa de 12 bloques', () => {
   assert.equal(get(x + 2, by, z), COBBLESTONE, 'el normal no tira');
   // 12 bloques sí; 13, no.
   const z2 = bz + 3;
-  set(x, by, z2, stateOf(PISTON, { facing: EAST }));
+  set(x, by, z2, facingState(PISTON, EAST));
   for (let i = 1; i <= 12; i++) set(x + i, by, z2, DIRT);
   set(x, by, z2 - 1, REDSTONE_BLOCK);
   h.tick(4);
   assert.ok(pistonExtended(get(x, by, z2)), 'con 12 se extiende');
   assert.equal(get(x + 13, by, z2), DIRT);
   const z3 = bz + 6;
-  set(x, by, z3, stateOf(PISTON, { facing: EAST }));
+  set(x, by, z3, facingState(PISTON, EAST));
   for (let i = 1; i <= 13; i++) set(x + i, by, z3, DIRT);
   set(x, by, z3 - 1, REDSTONE_BLOCK);
   h.tick(4);
   assert.ok(!pistonExtended(get(x, by, z3)), 'con 13 no');
   // Obsidiana y lecho de roca no se mueven; lo que se rompe, suelta su objeto.
   const z4 = bz + 9;
-  set(x, by, z4, stateOf(PISTON, { facing: EAST }));
+  set(x, by, z4, facingState(PISTON, EAST));
   set(x + 1, by, z4, OBSIDIAN);
   set(x, by, z4 - 1, REDSTONE_BLOCK);
   h.tick(4);
   assert.ok(!pistonExtended(get(x, by, z4)), 'la obsidiana no se mueve');
   const z5 = bz + 12;
-  set(x, by, z5, stateOf(PISTON, { facing: EAST }));
+  set(x, by, z5, facingState(PISTON, EAST));
   set(x + 1, by, z5, POPPY);
   set(x, by, z5 - 1, REDSTONE_BLOCK);
   h.tick(4);
@@ -108,7 +108,7 @@ test('pistón: empuja una fila, se recoge y no pasa de 12 bloques', () => {
 test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime arrastra', () => {
   const { h, bx, by, bz, set, get } = lab();
   const x = bx - 10, z = bz;
-  set(x, by, z, stateOf(STICKY_PISTON, { facing: EAST }));
+  set(x, by, z, facingState(STICKY_PISTON, EAST));
   set(x + 1, by, z, COBBLESTONE);
   h.tick(2);
   set(x, by, z - 1, REDSTONE_BLOCK);
@@ -129,7 +129,7 @@ test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime
   // Slime (en el aire: si tocara el suelo, tiraría también de él): arrastra a sus vecinos (también los de
   // los lados) y la miel no se pega al slime.
   const z2 = bz + 6, y2 = by + 3;
-  set(x, y2, z2, stateOf(STICKY_PISTON, { facing: EAST }));
+  set(x, y2, z2, facingState(STICKY_PISTON, EAST));
   set(x + 1, y2, z2, SLIME_BLOCK);
   set(x + 1, y2 + 1, z2, STONE); // pegado encima
   set(x + 1, y2, z2 + 1, HONEY_BLOCK); // miel al lado: no se pega al slime
@@ -146,7 +146,7 @@ test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime
   assert.deepEqual([get(x + 1, y2, z2), get(x + 1, y2 + 1, z2), get(x + 1, y2, z2 - 1)], [SLIME_BLOCK, STONE, DIRT], 'y vuelven al tirar');
   // Sobre el suelo, el slime tira del suelo entero: más de 12 bloques y el pistón no se mueve.
   const z3 = bz + 10;
-  set(x, by, z3, stateOf(STICKY_PISTON, { facing: EAST }));
+  set(x, by, z3, facingState(STICKY_PISTON, EAST));
   set(x + 1, by, z3, SLIME_BLOCK);
   set(x - 1, by, z3, REDSTONE_BLOCK);
   h.tick(4);
@@ -154,7 +154,7 @@ test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime
   // Resolución pura: 12 como mucho también contando lo que arrastra el slime.
   const col = new Map<string, number>();
   const g = (a: number, b: number, c: number) => col.get(`${a},${b},${c}`) ?? AIR;
-  col.set('0,0,0', stateOf(PISTON, { facing: EAST }));
+  col.set('0,0,0', facingState(PISTON, EAST));
   col.set('1,0,0', SLIME_BLOCK);
   for (let i = 2; i <= 12; i++) col.set(`${i},0,0`, DIRT);
   assert.equal(resolvePush(g, 0, 0, 0, EAST, true)?.toPush.length, 12, 'el slime y 11 delante');
@@ -165,7 +165,7 @@ test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime
 test('pistón: cuasi-conectividad (el bloque de encima cuenta) y empuja a las criaturas', () => {
   const { h, bx, by, bz, set, get } = lab();
   const x = bx + 4, z = bz - 8;
-  set(x, by, z, stateOf(PISTON, { facing: SOUTH }));
+  set(x, by, z, facingState(PISTON, SOUTH));
   h.tick(2);
   // Un bloque de redstone junto al hueco de encima del pistón: el pistón no se entera (no le llega aviso)…
   set(x - 1, by + 1, z, REDSTONE_BLOCK);
@@ -177,7 +177,7 @@ test('pistón: cuasi-conectividad (el bloque de encima cuenta) y empuja a las cr
   assert.ok(pistonExtended(get(x, by, z)), 'con un aviso se extiende: le da potencia el bloque de encima');
   // Al extenderse aparta a la criatura que tiene delante.
   const z2 = bz + 8;
-  set(x, by, z2, stateOf(PISTON, { facing: SOUTH }));
+  set(x, by, z2, facingState(PISTON, SOUTH));
   h.tick(1);
   const sheep = h.gs.entities.spawnMob(3, x + 0.5, by, z2 + 1.5)!;
   set(x, by, z2 - 1, REDSTONE_BLOCK);
@@ -189,7 +189,7 @@ test('observador: pulso de 2 ticks cuando cambia lo que vigila', () => {
   const { h, bx, by, bz, set, get } = lab();
   const x = bx + 8, z = bz + 4;
   // Mira al oeste (a x − 1); por detrás (x + 1), una lámpara.
-  set(x, by, z, stateOf(OBSERVER, { facing: WEST }));
+  set(x, by, z, facingState(OBSERVER, WEST));
   set(x + 1, by, z, REDSTONE_LAMP);
   h.tick(4);
   assert.ok(!observerPowered(get(x, by, z)));
@@ -276,7 +276,7 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
     h.tick(2);
   };
   // Flecha hacia el este.
-  set(x, by, z, stateOf(DISPENSER, { facing: EAST }));
+  set(x, by, z, facingState(DISPENSER, EAST));
   h.tick(2);
   inv.open(x, by, z)!.state.slots[4] = { id: ARROW, count: 2 };
   set(x, by + 1, z, REDSTONE_BLOCK);
@@ -291,7 +291,7 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
   h.tick(2);
   // Cubo de agua: pone el agua y se queda el cubo; otra vez, la recoge.
   const wz = z + 4;
-  set(x, by, wz, stateOf(DISPENSER, { facing: EAST }));
+  set(x, by, wz, facingState(DISPENSER, EAST));
   h.tick(2);
   inv.open(x, by, wz)!.state.slots[0] = { id: WATER_BUCKET, count: 1 };
   pulse(x, wz);
@@ -302,7 +302,7 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
   assert.equal(inv.open(x, by, wz)!.state.slots[0]?.id, WATER_BUCKET);
   // Dinamita: sale encendida.
   const tz = z + 8;
-  set(x, by, tz, stateOf(DISPENSER, { facing: UP }));
+  set(x, by, tz, facingState(DISPENSER, UP));
   h.tick(2);
   inv.open(x, by, tz)!.state.slots[0] = { id: TNT, count: 1 };
   set(x + 1, by, tz, REDSTONE_BLOCK);
@@ -312,7 +312,7 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
   h.gs.entities.remove(primed[0].id);
   // Soltador: lo suelta como objeto o lo mete en el cofre de delante.
   const dz = z + 12;
-  set(x, by, dz, stateOf(DROPPER, { facing: EAST }));
+  set(x, by, dz, facingState(DROPPER, EAST));
   h.tick(2);
   inv.open(x, by, dz)!.state.slots[0] = { id: DIAMOND, count: 2 };
   pulse(x, dz);
@@ -324,7 +324,7 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
   assert.equal(inv.open(x + 1, by, dz)!.state.slots.find((s) => s)?.id, DIAMOND, 'el otro, al cofre');
   // El mechero enciende lo de delante (aquí, fuego sobre la piedra) y se desgasta.
   const mz = z + 16;
-  set(x, by, mz, stateOf(DISPENSER, { facing: EAST }));
+  set(x, by, mz, facingState(DISPENSER, EAST));
   h.tick(2);
   inv.open(x, by, mz)!.state.slots[0] = { id: FLINT_AND_STEEL, count: 1 };
   pulse(x, mz);

@@ -4,7 +4,7 @@
 // - el observador, al revés: su cara vigila hacia donde mira el jugador y el punto rojo queda de su lado;
 // - la tolva apunta al bloque en el que se hizo clic (hacia abajo si fue en su cara de arriba o de abajo).
 import {
-  PISTON, STICKY_PISTON, OBSERVER, HOPPER, DISPENSER, DROPPER, HOPPER_DOWN, familyBase, stateOf,
+  PISTON, STICKY_PISTON, OBSERVER, HOPPER, DISPENSER, DROPPER, HOPPER_DOWN, familyBase, stateOf, facingState,
 } from './blocks';
 import type { Edit, PlaceHit } from './placement';
 
@@ -25,8 +25,8 @@ export function lookFace(yaw: number, pitch: number): number {
 export function planMechanism(hit: PlaceHit, base: number, x: number, y: number, z: number, yaw: number, pitch: number): Edit[] | undefined {
   const b = familyBase(base);
   const look = lookFace(yaw, pitch);
-  if (b === PISTON || b === STICKY_PISTON || b === DISPENSER || b === DROPPER) return [[x, y, z, stateOf(b, { facing: look ^ 1 })]];
-  if (b === OBSERVER) return [[x, y, z, stateOf(b, { facing: look })]];
+  if (b === PISTON || b === STICKY_PISTON || b === DISPENSER || b === DROPPER) return [[x, y, z, facingState(b, look ^ 1)]];
+  if (b === OBSERVER) return [[x, y, z, facingState(b, look)]];
   if (b === HOPPER) {
     // Apunta dentro del bloque tocado; si se tocó por arriba o por abajo, hacia abajo.
     const facing = hit.ny !== 0 ? HOPPER_DOWN : 1 + (hit.nz > 0 ? 0 : hit.nx < 0 ? 1 : hit.nz < 0 ? 2 : 3);

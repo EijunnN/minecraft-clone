@@ -27,6 +27,7 @@ import { POTION_SPRITES, POTION_VARIANTS } from './potionSprites'; // Fase 7 (po
 import { TRANSPORT_SPRITES } from './transportSprites'; // Fase 7 (transporte)
 import { ENCHANT_SPRITES } from './enchantSprites'; // Fase 7 (encantamientos)
 import { REDSTONE_SPRITES } from './redstoneSprites'; // Fase 7 (redstone)
+import { MECHANISM_SPRITES } from './mechanismSprites'; // Fase 7 (mecanismos)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2287,6 +2288,8 @@ Object.assign(SPRITES, TRANSPORT_SPRITES);
 Object.assign(SPRITES, ENCHANT_SPRITES);
 // Fase 7 (redstone): puerta de hierro y cuarzo del Nether.
 Object.assign(SPRITES, REDSTONE_SPRITES);
+// Fase 7 (mecanismos): tolva y vagonetas con tolva y con dinamita.
+Object.assign(SPRITES, MECHANISM_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

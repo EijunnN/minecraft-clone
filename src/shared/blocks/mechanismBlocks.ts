@@ -7,9 +7,9 @@
 // Aquí también se registra lo que emite el observador (lo usa la forma del polvo en el cliente); lo que
 // hacen todos está en el servidor (sim/server/pistons.ts, hoppers.ts, dispensers.ts, tnt.ts).
 // Se registran los últimos (export * al final de index.ts): no mueven ningún id guardado.
-import { family, familyBase, stateOf, L, R_MODEL, R_NONE, type BlockDef } from './registry';
+import { family, familyBase, L, R_MODEL, R_NONE, type BlockDef, type Opts } from './registry';
 import { mbox, rotateBoxes, autoUV, type ModelBox } from '../blockModels';
-import { registerRedstone, setConductor, FACE_X, FACE_Y, FACE_Z, UP, DOWN, HFACE } from '../redstone/api';
+import { registerRedstone, setConductor, FACE_X, FACE_Y, FACE_Z, UP, DOWN, NORTH, SOUTH, EAST, WEST, HFACE } from '../redstone/api';
 
 // ------------------------------------------------------------------ orientación
 
@@ -46,9 +46,35 @@ export function pointBoxes(boxes: ModelBox[], face: number): ModelBox[] {
   return rotateBoxes(north, HFACE.indexOf(face));
 }
 
-/** Cara hacia la que mira un bloque de 6 orientaciones (su propiedad `facing`). */
+/**
+ * Orden de las caras en la propiedad `facing` de cada familia de 6 orientaciones: la primera es la del
+ * estado base (el del objeto: así el icono y la mano enseñan el pistón hacia arriba y el frente del
+ * observador, el dispensador y el soltador de cara).
+ */
+const FACING_ORDER = new Map<number, readonly number[]>();
+const ORDER_UP: readonly number[] = [UP, DOWN, NORTH, SOUTH, WEST, EAST];
+const ORDER_SOUTH: readonly number[] = [SOUTH, NORTH, EAST, WEST, UP, DOWN];
+
+/** Familia de 6 orientaciones (`facing` y otras propiedades); `make` recibe la cara hacia la que mira. */
+function sixWay(
+  key: string, name: string, order: readonly number[], props: [string, number][], make: (face: number, st: Record<string, number>) => Opts,
+): number {
+  const base = family(key, name, [['facing', 6], ...props], (st) => make(order[st.facing], st));
+  FACING_ORDER.set(base, order);
+  return base;
+}
+
+/** Cara hacia la que mira un bloque de 6 orientaciones. */
 export function facingOf(id: number): number {
-  return (id - familyBase(id)) % 6;
+  const b = familyBase(id);
+  const v = (id - b) % 6;
+  return FACING_ORDER.get(b)?.[v] ?? v;
+}
+
+/** Estado de un bloque de 6 orientaciones mirando a la cara `face` (`extra`: el resto de propiedades, 0 o 1). */
+export function facingState(base: number, face: number, extra = 0): number {
+  const b = familyBase(base);
+  return b + (FACING_ORDER.get(b)?.indexOf(face) ?? face) + 6 * extra;
 }
 
 // ------------------------------------------------------------------ pistones
@@ -93,13 +119,13 @@ function pistonCube(facing: number, sticky: boolean): BlockDef['tex'] {
 }
 
 function piston(key: string, name: string, sticky: boolean): number {
-  return family(key, name, [['facing', 6], ['extended', 2]], (st) => {
-    const tex = pistonCube(st.facing, sticky);
+  return sixWay(key, name, ORDER_UP, [['extended', 2]], (facing, st) => {
+    const tex = pistonCube(facing, sticky);
     const base = { hardness: 1.5, tool: 'pickaxe' as const, sound: 'stone' as const, category: 'redstone' as const };
     if (!st.extended) return { ...base, tex };
     return {
       ...base, tex, render: R_MODEL, opaque: false, lightOpacity: 0,
-      model: pistonTextures(pointBoxes(BASE_UP, st.facing), st.facing, sticky),
+      model: pistonTextures(pointBoxes(BASE_UP, facing), facing, sticky),
       itemModel: undefined,
     };
   });
@@ -109,9 +135,9 @@ export const PISTON = piston('piston', 'Pistón', false);
 export const STICKY_PISTON = piston('sticky_piston', 'Pistón adhesivo', true);
 
 /** Cabeza del pistón (la pone el pistón al extenderse; no se obtiene como objeto). */
-export const PISTON_HEAD = family('piston_head', 'Cabeza de pistón', [['facing', 6], ['sticky', 2]], (st) => ({
+export const PISTON_HEAD = sixWay('piston_head', 'Cabeza de pistón', ORDER_UP, [['sticky', 2]], (facing, st) => ({
   render: R_MODEL, opaque: false, lightOpacity: 0, hardness: 1.5, tool: 'pickaxe', sound: 'stone', noItem: true, category: null,
-  all: 'piston_top', model: pistonTextures(pointBoxes(HEAD_UP, st.facing), st.facing, st.sticky === 1),
+  all: 'piston_top', model: pistonTextures(pointBoxes(HEAD_UP, facing), facing, st.sticky === 1),
 }));
 
 /**
@@ -135,7 +161,7 @@ export function pistonExtended(id: number): boolean {
 }
 /** El mismo pistón (normal o adhesivo) mirando a `facing`, extendido o no. */
 export function pistonState(base: number, facing: number, extended: boolean): number {
-  return familyBase(base) + facing + (extended ? 6 : 0);
+  return facingState(base, facing, extended ? 1 : 0);
 }
 export function isPistonHead(id: number): boolean {
   return id > 0 && familyBase(id) === PISTON_HEAD;
@@ -144,7 +170,7 @@ export function headSticky(id: number): boolean {
   return id - PISTON_HEAD >= 6;
 }
 export function headState(facing: number, sticky: boolean): number {
-  return PISTON_HEAD + facing + (sticky ? 6 : 0);
+  return facingState(PISTON_HEAD, facing, sticky ? 1 : 0);
 }
 export function isMovingBlock(id: number): boolean {
   return id === MOVING_BLOCK;
@@ -156,15 +182,15 @@ for (let i = 0; i < 12; i++) setConductor([PISTON + i, STICKY_PISTON + i], false
 // ------------------------------------------------------------------ observador
 
 /** Observador: la cara (`facing`) mira al bloque que vigila; por detrás da un pulso al cambiar. */
-export const OBSERVER = family('observer', 'Observador', [['facing', 6], ['powered', 2]], (st) => {
+export const OBSERVER = sixWay('observer', 'Observador', ORDER_SOUTH, [['powered', 2]], (facing, st) => {
   const tex = [0, 1, 2, 3, 4, 5].map((f) => {
     // La flecha de dos de los lados apunta hacia la salida; los otros dos, lisos.
-    const vertical = st.facing === UP || st.facing === DOWN;
+    const vertical = facing === UP || facing === DOWN;
     const arrowFace = vertical ? f === 4 || f === 5 : f === UP || f === DOWN;
-    return arrowFace ? turned('observer_top', edgeTurn(f, st.facing ^ 1)) : 'observer_side';
+    return arrowFace ? turned('observer_top', edgeTurn(f, facing ^ 1)) : 'observer_side';
   }) as BlockDef['tex'];
-  tex[st.facing] = 'observer_front';
-  tex[st.facing ^ 1] = st.powered ? 'observer_back_on' : 'observer_back';
+  tex[facing] = 'observer_front';
+  tex[facing ^ 1] = st.powered ? 'observer_back_on' : 'observer_back';
   return { tex, hardness: 3, tool: 'pickaxe', tier: 1, sound: 'stone', category: 'redstone' };
 });
 
@@ -175,7 +201,7 @@ export function observerPowered(id: number): boolean {
   return id - OBSERVER >= 6;
 }
 export function observerWith(id: number, powered: boolean): number {
-  return OBSERVER + facingOf(id) + (powered ? 6 : 0);
+  return facingState(OBSERVER, facingOf(id), powered ? 1 : 0);
 }
 
 registerRedstone(OBSERVER, {
@@ -239,10 +265,10 @@ export function hopperWith(id: number, locked: boolean): number {
 // ------------------------------------------------------------------ dispensador y soltador
 
 function dispenserLike(key: string, name: string, front: string): number {
-  return family(key, name, [['facing', 6], ['triggered', 2]], (st) => {
-    const vertical = st.facing === UP || st.facing === DOWN;
+  return sixWay(key, name, ORDER_SOUTH, [['triggered', 2]], (facing) => {
+    const vertical = facing === UP || facing === DOWN;
     const tex = [0, 1, 2, 3, 4, 5].map((f) => (vertical || f === UP || f === DOWN ? 'furnace_top' : 'furnace_side')) as BlockDef['tex'];
-    tex[st.facing] = vertical ? `${front}_vertical` : front;
+    tex[facing] = vertical ? `${front}_vertical` : front;
     return { tex, hardness: 3.5, tool: 'pickaxe', tier: 1, sound: 'stone', category: 'redstone' };
   });
 }
@@ -265,7 +291,7 @@ export function dispenserTriggered(id: number): boolean {
   return id - familyBase(id) >= 6;
 }
 export function dispenserWith(id: number, triggered: boolean): number {
-  return familyBase(id) + facingOf(id) + (triggered ? 6 : 0);
+  return facingState(id, facingOf(id), triggered ? 1 : 0);
 }
 
 // ------------------------------------------------------------------ dinamita
@@ -289,10 +315,6 @@ export function mechanismTitle(id: number): string {
   return isHopper(id) ? 'Tolva' : isDispenser(id) ? 'Dispensador' : isDropper(id) ? 'Soltador' : '';
 }
 
-/** Estado de un bloque de 6 orientaciones mirando a `facing`. */
-export function facingState(base: number, facing: number): number {
-  return stateOf(base, { facing });
-}
 
 // ------------------------------------------------------------------ inventario creativo
 
