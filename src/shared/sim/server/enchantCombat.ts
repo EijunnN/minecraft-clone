@@ -38,6 +38,7 @@ export function meleeHit(
   } finally {
     ents.looting = 0;
   }
+  ents.mobs.guardians.meleeThorns(e, s.id, s.p[0], s.p[2]); // Fase 7.5 (océano): las púas del guardián pinchan
   const fire = levelIn(en, FIRE_ASPECT);
   if (fire > 0 && !e.dead && e.hurt === 0) e.fire = Math.max(e.fire, fireAspectSeconds(fire));
   // Barrido: sólo espadas, golpe cargado desde el suelo y sin correr (lo comprueba el cliente).

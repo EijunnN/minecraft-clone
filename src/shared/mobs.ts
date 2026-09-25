@@ -16,6 +16,9 @@ export * from './aquaticMobs';
 // Fase 6 (asaltos): saqueadores, vindicadores, evocadores, vex, devastadores y colmillos (ids 60–69).
 import { ILLAGER_MOBS } from './illagers';
 export * from './illagers';
+// Fase 7.5 (océano): guardián y guardián anciano (ids 73–74).
+import { OCEAN_MOBS } from './oceanMobs';
+export * from './oceanMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -103,7 +106,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   // Fase 6 (gólems/domesticar): brazos largos que se balancean y golpean hacia arriba.
   | 'golem'
   | 'flyer' // Fase 6 (fauna): abejas y loros
-  | 'illager' | 'vex' | 'ravager' | 'fangs'; // Fase 6 (asaltos)
+  | 'illager' | 'vex' | 'ravager' | 'fangs' // Fase 6 (asaltos)
+  | 'guardian'; // Fase 7.5 (océano)
 
 export interface MobDef {
   id: number;
@@ -135,6 +139,8 @@ export interface MobDef {
   flying?: boolean;
   /** Fase 6 (asaltos): sin vida ni IA propia (colmillos del evocador): no se le puede golpear ni apuntar. */
   inert?: boolean;
+  /** Fase 7.5 (océano): experiencia al matarla (si no, 5 los monstruos y 1–3 los animales). */
+  xp?: number;
 }
 
 const quadLegs = (h: number, xs: number, zs: [number, number], uv: [number, number], w = 4): ModelPart[] => [
@@ -627,6 +633,7 @@ mob({
 
 // Fase 6 (asaltos): definiciones en illagers.ts.
 for (const d of ILLAGER_MOBS) mob(d);
+for (const d of OCEAN_MOBS) mob(d); // Fase 7.5 (océano)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

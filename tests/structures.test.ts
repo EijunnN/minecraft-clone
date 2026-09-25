@@ -6,11 +6,12 @@ import assert from 'node:assert/strict';
 import {
   AIR, STONE, SANDSTONE, MOSSY_COBBLESTONE, COBBLESTONE, MOB_SPAWNER, COBWEB, OBSIDIAN, SNOW_BLOCK, FENCES, OAK_PLANKS,
   isChest, DARK_OAK_LOG,
+  PRISMARINE_BRICKS, // Fase 7.5 (océano)
 } from '../src/shared/blocks';
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { locateStructure, STRUCTURE_NAMES } from '../src/shared/world/structures';
-import { LOOT_TABLES, rollLoot, scatterLoot } from '../src/shared/loot';
+import { LOOT_TABLES, rollLoot, scatterLoot, lootRollRange } from '../src/shared/loot';
 import { blockDrops } from '../src/shared/sim/drops';
 import { blockIndex, CHUNK_VOLUME } from '../src/shared/constants';
 import { posKey } from '../src/shared/sim/posKey';
@@ -22,7 +23,8 @@ test('botín: tiradas dentro de los márgenes y repartido por el cofre', () => {
   for (const [name, t] of Object.entries(LOOT_TABLES)) {
     for (let i = 0; i < 20; i++) {
       const out = rollLoot(t, rand);
-      assert.ok(out.length >= t.rolls[0] && out.length <= t.rolls[1], `${name}: ${out.length} montones`);
+      const [lo, hi] = lootRollRange(t); // Fase 7.5 (océano): con sus tiradas extra
+      assert.ok(out.length >= lo && out.length <= hi, `${name}: ${out.length} montones`);
       for (const s of out) assert.ok(s.count >= 1, name);
     }
   }
@@ -43,6 +45,10 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     mineshaft: (c) => (c.get(FENCES.oak) ?? 0) + (c.get(OAK_PLANKS) ?? 0) > 3,
     village: (_c, ch) => ch.includes('village'),
     pillager_outpost: (c, ch) => ch.includes('pillager_outpost') || (c.get(DARK_OAK_LOG) ?? 0) > 20,
+    // Fase 7.5 (océano)
+    monument: (c) => (c.get(PRISMARINE_BRICKS) ?? 0) > 200,
+    ocean_ruins: (_c, ch) => ch.some((t) => t.startsWith('underwater_ruin')),
+    buried_treasure: (_c, ch) => ch.includes('buried_treasure'),
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);

@@ -52,6 +52,9 @@ export function deathMessage(cause: DamageCause): string {
     // Fase 6 (asaltos)
     pillager: 'fue abatido por un saqueador', vindicator: 'fue despedazado por un vindicador',
     evoker: 'fue devorado por los colmillos de un evocador', vex: 'fue atravesado por un vex', ravager: 'fue arrollado por un devastador',
+    // Fase 7.5 (océano)
+    guardian: 'fue fulminado por un guardián', elder_guardian: 'fue fulminado por un guardián anciano',
+    guardian_laser: 'fue fulminado por el láser de un guardián', guardian_thorns: 'murió pinchado por un guardián',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';
