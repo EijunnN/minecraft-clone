@@ -60,8 +60,9 @@ export class MapImage {
   passes = 0;
 
   /**
-   * Fase 7.5 (mansión): `explorer`, mapa de explorador: su esquina, su escala (bloques por píxel) y el
-   * estilo de Minecraft para lo que aún no se ha visto (tierra anaranjada y agua a rayas).
+   * Fase 7.5 (mansión): `explorer`, mapa de estructura (del tesoro o de explorador): su esquina, su escala
+   * (bloques por píxel) y el estilo de Minecraft para lo que aún no se ha visto (tierra anaranjada y agua a
+   * rayas).
    */
   readonly scale: number;
   readonly explorer: boolean;
@@ -143,7 +144,7 @@ export class MapImage {
     }
   }
 
-  /** Fase 7.5 (mansión): lo no visitado de un mapa de explorador: tierra anaranjada con relieve y agua a rayas. */
+  /** Fase 7.5 (mansión): lo no visitado de un mapa de estructura: tierra anaranjada con relieve y agua a rayas. */
   private paintExplorer(c: number, i: number, r: number): void {
     const water = BLOCK_FLUID[this.ids[i]] === 1;
     let rgb: [number, number, number];

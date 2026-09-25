@@ -48,15 +48,6 @@
   background: #fff;
 }
 
-/* Fase 7.5 (mansión): destino de un mapa de explorador (mansión, monumento). */
-.map-mark.target {
-  width: 18px;
-  height: 18px;
-  background-size: 100% 100%;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
-}
-
 .map-mark.other {
   width: 8px;
   height: 8px;
@@ -105,4 +96,18 @@
   opacity: 0;
   pointer-events: none;
   z-index: 4;
+}
+
+/* Fase 7.5 (océano): marca del objetivo de los mapas del tesoro y de explorador. */
+.map-mark.target {
+  width: 16px;
+  height: 16px;
+  /* Fase 7.5 (mansión): la marca es una imagen pintada a mano (explorerMarks.ts). */
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+}
+
+.map-mark.target.outside {
+  display: none;
 }

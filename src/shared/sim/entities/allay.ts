@@ -73,7 +73,7 @@ export class AllayLife {
 
   /** Al crearse: el alay no desaparece nunca (ni lejos de todos ni al llenarse el mundo de animales). */
   init(e: Entity): void {
-    if (e.type === MOB_ALLAY) e.persistent = true;
+    if (e.type === MOB_ALLAY) e.persist = true;
   }
 
   // ------------------------------------------------------------------ usar objetos

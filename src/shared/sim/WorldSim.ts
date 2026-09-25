@@ -5,7 +5,7 @@ import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } 
 import { AIR, BLOCK_EMISSION, BLOCK_LIGHT_OPACITY, BLOCK_SOLID, MOB_SPAWNER, isChest } from '../blocks';
 import type { StructureChest } from '../world/structures';
 import type { VillagerSpawn } from '../world/villages'; // Fase 6 (aldeanos)
-import type { StructureMob } from '../world/structures'; // Fase 7.5 (mansión)
+import type { StructureMob } from '../world/structures'; // Fase 7.5 (océano)
 import { decodeChunkEdits, encodeChunkEdits, type ServerStore } from './store';
 
 export interface SimChunk {
@@ -40,7 +40,7 @@ export class WorldSim {
   onLoot: ((chests: StructureChest[]) => void) | null = null;
   /** Fase 6 (aldeanos): aldeanos de una aldea recién generada (una sola vez por chunk). */
   onVillagers: ((villagers: VillagerSpawn[]) => void) | null = null;
-  /** Fase 7.5 (mansión): criaturas de las estructuras de un chunk recién generado (una sola vez por chunk). */
+  /** Fase 7.5 (océano, mansión): criaturas de una estructura recién generada (una sola vez por chunk). */
   onStructureMobs: ((mobs: StructureMob[]) => void) | null = null;
   /** Fase 7 (redstone): un chunk acaba de cargarse (sus componentes se apuntan y reprograman). */
   onChunkLoaded: ((c: SimChunk) => void) | null = null;
@@ -161,7 +161,8 @@ export class WorldSim {
       this.store.setMeta(`villagers:${key}`, '1');
       this.onVillagers(r.villagers);
     }
-    // Fase 7.5 (mansión): illagers de la mansión y alays presos, también una sola vez por chunk.
+    // Fase 7.5 (océano, mansión): guardianes ancianos, ahogados de las ruinas, illagers de la mansión y alays
+    // presos, también una sola vez por chunk.
     if (r.mobs.length > 0 && this.onStructureMobs && !this.store.getMeta(`smobs:${key}`)) {
       this.store.setMeta(`smobs:${key}`, '1');
       this.onStructureMobs(r.mobs);

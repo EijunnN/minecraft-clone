@@ -14,6 +14,7 @@ import type { Entity } from '../entities';
 import type { VillagerSpawn } from '../../world/villages';
 import type { ServerContext, Session } from './context';
 import { ExplorerTrades } from './explorerTrades'; // Fase 7.5 (mansión)
+import { mapKeyAt } from '../../maps';
 
 /** Distancia máxima para comerciar (bloques). */
 const TRADE_RANGE = 6;
@@ -119,7 +120,10 @@ export class Trading {
     // Como en Minecraft, cada trato da algo de experiencia también al jugador.
     ctx.entities.xp.spawn(3 + Math.floor(ctx.rand() * 4), e.x, e.y + 0.5, e.z);
     ctx.fx('villager_yes', e.x, e.y + e.height, e.z, e.type);
-    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1], ...(o.data ? { data: o.data } : {}) }, back }); // Fase 7: libros y equipo encantados
+    // Fase 7.5 (mansión): el mapa de explorador, con su celda como los demás mapas de estructura.
+    const sm = o.data?.smap;
+    const dmg = sm && sm.x !== undefined && sm.z !== undefined ? { dmg: mapKeyAt(sm.x, sm.z) } : {};
+    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1], ...dmg, ...(o.data ? { data: o.data } : {}) }, back }); // Fase 7: libros y equipo encantados
     this.sendOffers(s, e);
   }
 

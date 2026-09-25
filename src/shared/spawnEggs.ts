@@ -73,10 +73,15 @@ export const SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('ravager', 'devastador', [117, 114, 110], [91, 80, 74]),
 ];
 
-/** Fase 7.5 (mansión): huevos que se registran al final de items.ts (no mueven ningún id). */
-export const SPAWN_EGG_DEFS_75_MANSION: readonly SpawnEggDef[] = [
-  egg('allay', 'alay', [0, 218, 255], [0, 173, 255]),
-];
-
 /** Criaturas sin huevo propio: los slimes pequeños salen al dividirse y los colmillos, del evocador. */
 export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime_small', 'evoker_fangs']);
+
+/**
+ * Fase 7.5: huevos de las criaturas nuevas. Van en otra lista porque sus objetos se registran al final de
+ * items.ts (añadirlos a la de arriba movería los ids de todo lo registrado después).
+ */
+export const LATE_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
+  egg('guardian', 'guardián', [90, 130, 114], [241, 125, 48]), // Fase 7.5 (océano)
+  egg('elder_guardian', 'guardián anciano', [206, 205, 186], [116, 118, 147]),
+  egg('allay', 'alay', [0, 218, 255], [0, 173, 255]), // Fase 7.5 (mansión)
+];

@@ -19,6 +19,7 @@ import { gearTexture, GEAR_INFLATE } from '../textures/gearTextures'; // Fase 6.
 import { MOB_DROWNED } from '../../shared/mobs';
 import { EF_INVISIBLE } from '../../shared/potions'; // Fase 7 (remate)
 import { vehicleModel, vehicleSkinVariant, animateVehicle, vehicleRoot } from './vehicleModels'; // Fase 7 (transporte)
+import { animateGuardian, guardianPartScale } from './guardianPose'; // Fase 7.5 (océano)
 import { animateAllay, allayRoot, ALLAY_HOLD } from './allayPose'; // Fase 7.5 (mansión)
 import { MOB_ALLAY } from '../../shared/allay';
 
@@ -164,6 +165,7 @@ export class MobRenderer {
     out[0] = out[1] = out[2] = 0;
     if (animateVehicle(def, e, time, name, out)) return; // Fase 7 (transporte): remos
     if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
+    if (animateGuardian(def, e, time, name, out)) return; // Fase 7.5 (océano)
     if (animateAllay(def, e, time, name, out)) return; // Fase 7.5 (mansión)
     const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
     const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
@@ -272,7 +274,7 @@ export class MobRenderer {
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
-      const faunaScale = faunaPartScale(def, e, part.name); // Fase 6 (fauna): armadillo enroscado
+      const faunaScale = faunaPartScale(def, e, part.name) ?? guardianPartScale(def, e, part.name, time); // Fase 6 (fauna): armadillo enroscado; 7.5: púas
       if (faunaScale) mat4.scale(m, m, faunaScale);
       else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, HIDE);
       else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, HIDE); // Fase 6 (monturas): sin silla

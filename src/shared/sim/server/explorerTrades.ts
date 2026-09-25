@@ -1,14 +1,17 @@
-// Fase 7.5 (mansión): las ofertas de mapas de explorador del cartógrafo. Cada una apunta a la estructura
-// más cercana de su clase desde donde está el aldeano (se busca una vez por aldeano y se recuerda); si
-// no hay ninguna en todo el radio de búsqueda, la oferta no sale (como en Minecraft).
-import { explorerMap, EXPLORER_SEARCH } from '../../explorerMaps';
-import { locateStructure } from '../../world/structures';
+// Fase 7.5 (mansión): las ofertas de mapas de explorador del cartógrafo. Cada una es el mapa de estructura
+// (structureMaps.ts) que apunta a la estructura más cercana de su clase desde donde está el aldeano (se
+// busca una vez por aldeano y se recuerda); si no hay ninguna al alcance, la oferta no sale (como en
+// Minecraft).
+import { EMPTY_MAP } from '../../items';
+import { structureMap } from '../../structureMaps';
+import { isStructureMapKind } from '../../structureMapData';
+import type { ItemData } from '../../itemData';
 import type { Offer } from '../../villagers';
 import type { Entity } from '../entities';
 import type { ServerContext } from './context';
 
 export class ExplorerTrades {
-  private targets = new WeakMap<Entity, Map<string, [number, number] | null>>();
+  private maps = new WeakMap<Entity, Map<string, ItemData | null>>();
 
   constructor(private ctx: ServerContext) {}
 
@@ -21,19 +24,19 @@ export class ExplorerTrades {
         out.push(o);
         continue;
       }
-      const t = this.target(e, o.explorer);
-      if (t) out.push({ ...o, data: explorerMap(o.explorer, t[0], t[1]).data });
+      const data = this.mapData(e, o.explorer);
+      if (data) out.push({ ...o, data });
     }
     return out;
   }
 
-  /** Estructura de esa clase más cercana al aldeano (x, z), o null. */
-  target(e: Entity, kind: string): [number, number] | null {
-    let m = this.targets.get(e);
-    if (!m) this.targets.set(e, (m = new Map()));
+  /** Datos del mapa de esa clase para el aldeano (null si no hay estructura al alcance). */
+  private mapData(e: Entity, kind: string): ItemData | null {
+    let m = this.maps.get(e);
+    if (!m) this.maps.set(e, (m = new Map()));
     if (!m.has(kind)) {
-      const p = locateStructure(this.ctx.world.gen, kind, Math.floor(e.x), Math.floor(e.z), EXPLORER_SEARCH);
-      m.set(kind, p ? [p[0], p[2]] : null);
+      const map = isStructureMapKind(kind) ? structureMap(kind, this.ctx.world.gen, e.x, e.z) : null;
+      m.set(kind, map && map.id !== EMPTY_MAP && map.data ? map.data : null);
     }
     return m.get(kind)!;
   }

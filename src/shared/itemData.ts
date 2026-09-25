@@ -8,8 +8,9 @@ import { BANNER_PATTERNS, MAX_BANNER_LAYERS, isBannerItem, type BannerLayer } fr
 import { ENCHANTED_BOOK } from './items';
 import { sanitizeEnchList, isEnchantable } from './enchantments';
 import { isPotionType } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta
-import { FILLED_MAP } from './items'; // Fase 7.5 (mansión)
-import { sanitizeExplore, EXPLORER_KINDS, type ExplorerTarget } from './explorerMaps';
+// Fase 7.5 (océano): mapas del tesoro y de explorador.
+import { FILLED_MAP } from './items';
+import { sanitizeStructureMap, STRUCTURE_MAPS, type StructureMapData } from './structureMapData';
 
 export interface ItemData {
   /** Libros: el texto de cada página. */
@@ -31,8 +32,8 @@ export interface ItemData {
   rc?: number;
   /** Fase 7 (remate): ballesta cargada con una flecha con efecto: el tipo de poción de la flecha. */
   ap?: number;
-  /** Fase 7.5 (mansión): mapa de explorador: la estructura a la que apunta (ver explorerMaps.ts). */
-  explore?: ExplorerTarget;
+  /** Fase 7.5 (océano): mapa de estructura (tesoro enterrado, explorador): tipo y objetivo. */
+  smap?: StructureMapData;
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -128,9 +129,10 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
     const ap = Number(r.ap);
     return r.ap !== undefined && isPotionType(ap) ? { ap } : undefined;
   }
-  if (id === FILLED_MAP) { // Fase 7.5 (mansión)
-    const explore = sanitizeExplore(r.explore);
-    return explore ? { explore } : undefined;
+  // Fase 7.5 (océano): sólo los mapas resueltos (con objetivo) viajan y se guardan.
+  if (id === FILLED_MAP) {
+    const smap = sanitizeStructureMap(r.smap);
+    return smap && smap.x !== undefined ? { smap } : undefined;
   }
   return undefined;
 }
@@ -149,7 +151,7 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.name !== undefined) c.name = d.name;
   if (d.rc !== undefined) c.rc = d.rc;
   if (d.ap !== undefined) c.ap = d.ap; // Fase 7 (remate)
-  if (d.explore) c.explore = { ...d.explore }; // Fase 7.5 (mansión)
+  if (d.smap) c.smap = { ...d.smap }; // Fase 7.5 (océano)
   return c;
 }
 
@@ -160,7 +162,7 @@ export function cloneItemData(d: ItemData): ItemData {
 export function stackName(s: ItemStack): string {
   if (s.data?.name) return s.data.name;
   if (s.id === WRITTEN_BOOK && s.data?.title) return s.data.title;
-  if (s.data?.explore && EXPLORER_KINDS[s.data.explore.k]) return EXPLORER_KINDS[s.data.explore.k].name; // Fase 7.5 (mansión)
+  if (s.data?.smap) return STRUCTURE_MAPS[s.data.smap.k]?.name ?? itemName(s.id); // Fase 7.5 (océano)
   return itemName(s.id);
 }
 

@@ -45,6 +45,7 @@ import { pushEquipmentDraws } from './equipmentDraws'; // Fase 6.5 (equipo)
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { BannerRenderer, type BannerDraw } from './BannerRenderer'; // Fase 6.5 (libros y estandartes)
 import { LightningRenderer, type Bolt } from './LightningRenderer';
+import { GuardianBeamRenderer, type GuardianBeam } from './GuardianBeamRenderer'; // Fase 7.5 (océano)
 import { EffectView, type SightFog } from './effectView'; // Fase 7 (efectos)
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
@@ -165,6 +166,8 @@ export interface FrameState {
   banners?: BannerDraw[];
   /** Rayos de tormenta en pantalla. */
   bolts?: Bolt[];
+  /** Fase 7.5 (océano): rayos de los guardianes que están cargando. */
+  guardianBeams?: GuardianBeam[];
   /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
   nausea?: number;
   sight?: SightFog | null;
@@ -203,6 +206,7 @@ export class Renderer {
   /** Fase 6.5 (libros y estandartes): tela de los estandartes con dibujos. */
   readonly bannerCloth: BannerRenderer;
   readonly lightning: LightningRenderer;
+  private beams: GuardianBeamRenderer; // Fase 7.5 (océano)
   /** Fase 7 (efectos): náuseas, ceguera, oscuridad y contorno del Brillo. */
   private effectView: EffectView;
   settings: RenderSettings;
@@ -295,6 +299,7 @@ export class Renderer {
     this.signText = new SignTextRenderer(gl);
     this.bannerCloth = new BannerRenderer(gl);
     this.lightning = new LightningRenderer(gl);
+    this.beams = new GuardianBeamRenderer(gl); // Fase 7.5 (océano)
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
     this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
@@ -648,6 +653,7 @@ export class Renderer {
     this.xpOrbs.draw(s.drops, s.camX, s.camY, s.camZ);
     this.atmosphere.drawSky();
     this.lightning.draw(s.bolts ?? [], s.camX, s.camY, s.camZ);
+    this.beams.draw(s.guardianBeams ?? [], s.camX, s.camY, s.camZ); // Fase 7.5 (océano)
 
     // --- 4. Agua ---
     if (this.terrain.visibleTranslucent.length > 0) {

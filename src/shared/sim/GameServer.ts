@@ -70,6 +70,7 @@ import { Mechanisms } from './server/mechanisms'; // Fase 7 (mecanismos)
 import { BellResonance } from './server/bellResonance'; // Fase 7 (efectos)
 import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
+import { OceanMonuments } from './server/monuments'; // Fase 7.5 (océano)
 import { Allays } from './server/allays'; // Fase 7.5 (mansión)
 
 export { TICK_RATE, type Conn };
@@ -194,7 +195,9 @@ export class GameServer {
   readonly mechanisms: Mechanisms;
   /** Fase 7 (efectos): la campana hace brillar a los saqueadores. */
   private bells: BellResonance;
-  /** Fase 7.5 (mansión): alays (bloques musicales, tocadiscos, objetos) y criaturas de las estructuras. */
+  /** Fase 7.5 (océano): criaturas de estructura, guardianes de los monumentos y maldición del anciano. */
+  readonly monuments: OceanMonuments;
+  /** Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y objetos). */
   private allays: Allays;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
@@ -357,9 +360,13 @@ export class GameServer {
     const lightBlock = this.fire.lightBlock.bind(this.fire);
     this.fire.lightBlock = (x, y, z) => mech.light(x, y, z) || lightBlock(x, y, z);
     this.fire.burned = (x, y, z) => mech.light(x, y, z);
-    // Fase 7.5 (mansión): alays y criaturas de las estructuras (illagers de la mansión, alays presos).
+    // Fase 7.5 (océano, mansión): un solo camino para las criaturas de estructura (guardianes, illagers de la
+    // mansión, alays presos): las hace aparecer con persist; lo propio de cada especie (el alay) lo pone
+    // Entities.spawnMob.
+    this.monuments = new OceanMonuments(this.ctx); // Fase 7.5 (océano)
+    this.world.onStructureMobs = (m) => this.monuments.spawnStructureMobs(m);
+    // Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y los objetos que les dan los jugadores).
     this.allays = new Allays(this.ctx, this.collections);
-    this.world.onStructureMobs = (list) => this.allays.spawnStructureMobs(list);
     const interact3 = this.farming.extraInteract;
     this.farming.extraInteract = (s, e, msg) => this.allays.onInteract(s, e, msg) ?? interact3?.(s, e, msg) ?? null;
   }
@@ -1067,6 +1074,7 @@ export class GameServer {
     this.enchantWork.tick(); // Fase 7 (encantamientos)
     this.redstone.tick(); // Fase 7 (redstone)
     this.mechanisms.tick(); // Fase 7 (mecanismos): después de la redstone (los pulsos cortos llegan antes)
+    this.monuments.tick(); // Fase 7.5 (océano)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

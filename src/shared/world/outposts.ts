@@ -12,7 +12,6 @@ import { hash2 } from '../constants';
 import { mulberry32 } from './noise';
 import { isVillageBiome } from './villages';
 import type { VillageCanvas, VillageStart } from './villages';
-import type { StructureMob } from './structures'; // Fase 7.5 (mansión)
 import { MOB_ALLAY } from '../allay'; // Fase 7.5 (mansión)
 
 /** Radio que ocupa el puesto alrededor de la torre (bloques). */
@@ -29,7 +28,7 @@ export function outpostCandidate(biome: number, x: number, z: number, seed: numb
 
 type Canvas = Pick<VillageCanvas, 'x0' | 'z0' | 'get' | 'set' | 'chest' | 'foundation' | 'clearAbove'> & {
   /** Fase 7.5 (mansión): los alays de la jaula. */
-  mob?(m: StructureMob): void;
+  mob?(type: number, x: number, y: number, z: number): void;
 };
 
 export function buildOutpost(c: Canvas, s: VillageStart): void {
@@ -141,7 +140,7 @@ function cage(c: Canvas, x: number, z: number, oy: number, n: number): void {
       c.set(px, g + 4, pz, stateOf(SLABS.dark_oak, { type: 0 }));
     }
   }
-  for (let k = 0; k < n; k++) c.mob?.({ type: MOB_ALLAY, x: x + 0.5 + (k - 1) * 0.6, y: g + 1.5, z: z + 0.5 });
+  for (let k = 0; k < n; k++) c.mob?.(MOB_ALLAY, x + 0.5 + (k - 1) * 0.6, g + 1.5, z + 0.5);
 }
 
 /** Tienda de lana blanca de 3 de fondo con un poste en cada extremo. */

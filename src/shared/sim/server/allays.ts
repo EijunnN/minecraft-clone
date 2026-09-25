@@ -1,12 +1,9 @@
 // Fase 7.5 (mansión): lo que el alay necesita del resto del servidor. Oye los bloques musicales (todo
 // 'note' que suena pasa por aquí), sabe qué tocadiscos están sonando (para bailar) y recibe los objetos
 // que le dan los jugadores (la pila entera, con su desgaste y sus datos, para devolverla igual).
-// También hace aparecer las criaturas de las estructuras (illagers de la mansión, alays presos) cuando se
-// genera su chunk: ésas no desaparecen.
 import { MOB_ALLAY } from '../../allay';
 import { sanitizeStack } from '../../containers';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
-import type { StructureMob } from '../../world/structures';
 import type { Entity, InteractResult } from '../entities';
 import type { Collections } from './collections';
 import type { ServerContext, Session } from './context';
@@ -30,13 +27,5 @@ export class Allays {
     if (item > 0 && (!stack || stack.id !== item)) stack = sanitizeStack({ id: item, count: 1, ...(msg.d ? { dmg: msg.d } : {}) });
     if (item > 0 && !stack) return { ok: false };
     return this.ctx.entities.allays.interact(e, stack, s.mode === 'c', s.name) ?? { ok: false };
-  }
-
-  /** Criaturas de una estructura recién generada (una sola vez por chunk). */
-  spawnStructureMobs(list: StructureMob[]): void {
-    for (const m of list) {
-      const e = this.ctx.entities.spawnMob(m.type, m.x, m.y, m.z);
-      if (e) e.persistent = true;
-    }
   }
 }

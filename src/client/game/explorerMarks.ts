@@ -1,13 +1,13 @@
-// Fase 7.5 (mansión): marcas de destino de los mapas de explorador, pintadas a mano en 16×16 (como
-// las de Minecraft, pero propias): una mansión de roble oscuro con el tejado a dos aguas y ventanas
-// encendidas, y un monumento oceánico escalonado de prismarina.
-import type { ExplorerKind } from '../../shared/explorerMaps';
+// Fase 7.5 (mansión): marcas de destino de los mapas de estructura, pintadas a mano en 16×16 (como las
+// de Minecraft, pero propias): la X roja del tesoro, una mansión de roble oscuro con el tejado a dos
+// aguas y ventanas encendidas, y un monumento oceánico escalonado de prismarina.
+import type { StructureMapMarker } from '../../shared/structureMapData';
 
 const cache = new Map<string, string>();
 
-/** Imagen (data URL) de la marca de un tipo de mapa de explorador. */
-export function explorerMarkIcon(icon: ExplorerKind['icon']): string {
-  let url = cache.get(icon);
+/** Imagen (data URL) de la marca de un mapa de estructura. */
+export function structureMarkIcon(marker: StructureMapMarker): string {
+  let url = cache.get(marker);
   if (url) return url;
   const c = document.createElement('canvas');
   c.width = c.height = 16;
@@ -16,7 +16,17 @@ export function explorerMarkIcon(icon: ExplorerKind['icon']): string {
     g.fillStyle = color;
     g.fillRect(x, y, w, h);
   };
-  if (icon === 'mansion') {
+  if (marker === 'x') {
+    // X roja de dos trazos gruesos, con un borde oscuro.
+    for (let k = 1; k < 15; k++) {
+      px(k - 1, k - 1, 3, 3, '#4a0d0a');
+      px(14 - k, k - 1, 3, 3, '#4a0d0a');
+    }
+    for (let k = 2; k < 14; k++) {
+      px(k, k, 2, 2, '#c8261c');
+      px(14 - k, k, 2, 2, '#c8261c');
+    }
+  } else if (marker === 'mansion') {
     // Silueta negra, tejado oscuro, fachada marrón y ventanas amarillas.
     for (let k = 0; k < 5; k++) px(8 - k, 1 + k, 2 * k + 1, 1, '#1c120b');
     px(1, 5, 14, 1, '#1c120b');
@@ -39,6 +49,6 @@ export function explorerMarkIcon(icon: ExplorerKind['icon']): string {
     px(7, 3, 2, 1, '#9fe3d8');
   }
   url = c.toDataURL();
-  cache.set(icon, url);
+  cache.set(marker, url);
   return url;
 }

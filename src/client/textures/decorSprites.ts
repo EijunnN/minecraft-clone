@@ -1,7 +1,7 @@
 // Fase 6.5 (decoración): sprites de los objetos nuevos (comida, pepitas, cuenco, catalejo, reloj,
 // cuadro, marco y los huevos generadores, que se dibujan con los dos colores de cada criatura).
 // Mismo formato que SPRITES en itemSprites.ts, que los añade a los suyos.
-import { SPAWN_EGG_DEFS, SPAWN_EGG_DEFS_75_MANSION } from '../../shared/spawnEggs';
+import { SPAWN_EGG_DEFS, LATE_SPAWN_EGG_DEFS } from '../../shared/spawnEggs';
 
 type RGB = readonly [number, number, number];
 interface Ink {
@@ -310,4 +310,4 @@ export const DECOR_SPRITES: Record<string, SpriteDef> = {
   },
 };
 
-for (const e of [...SPAWN_EGG_DEFS, ...SPAWN_EGG_DEFS_75_MANSION]) DECOR_SPRITES[`${e.mob}_spawn_egg`] = eggSprite(e.base, e.spots);
+for (const e of [...SPAWN_EGG_DEFS, ...LATE_SPAWN_EGG_DEFS]) DECOR_SPRITES[`${e.mob}_spawn_egg`] = eggSprite(e.base, e.spots); // Fase 7.5: y los nuevos

@@ -59,6 +59,9 @@ export type MobSoundKind =
   | 'illager'
   | 'vex'
   | 'ravager'
+  // Fase 7.5 (océano).
+  | 'guardian'
+  | 'elder_guardian'
   | 'allay'; // Fase 7.5 (mansión)
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos

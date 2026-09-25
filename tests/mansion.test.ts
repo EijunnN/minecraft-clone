@@ -18,7 +18,8 @@ import { locateStructure, structureStartAt, STRUCTURE_NAMES } from '../src/share
 import { mansionLayout, MANSION_LOOT } from '../src/shared/world/mansion';
 import { LOOT_TABLES, rollLoot } from '../src/shared/loot';
 import { offersFor, PROF_CARTOGRAPHER } from '../src/shared/villagers';
-import { explorerInfo, explorerMap, EXPLORER_SPAN } from '../src/shared/explorerMaps';
+import { structureMap, structureMapAt, structureMapOf, STRUCTURE_MAPS } from '../src/shared/structureMaps';
+import { structureMapArea } from '../src/shared/structureMapData';
 import { sanitizeStack } from '../src/shared/containers';
 import { stackName } from '../src/shared/itemData';
 import { makeServer, type Client, type Harness } from './harness';
@@ -91,7 +92,7 @@ test('mansión: se genera con cofres de su botín y cada criatura sale en un sol
 test('mansión: botín como el de Minecraft (tres grupos)', () => {
   const rand = mulberry32(2112);
   const t = LOOT_TABLES[MANSION_LOOT];
-  assert.equal(t.pools?.length, 2);
+  assert.equal(t.extra?.length, 2);
   const seen = new Set<number>();
   for (let i = 0; i < 200; i++) {
     const out = rollLoot(t, rand);
@@ -114,7 +115,7 @@ test('mansión: sus illagers aparecen una vez, no desaparecen, se guardan y se v
   const near = (types: number[]) => [...h.gs.entities.list.values()].filter((e) => types.includes(e.type) && !e.dead && Math.hypot(e.x - p[0], e.z - p[2]) < 40);
   const illagers = near([MOB_VINDICATOR, MOB_EVOKER]);
   assert.ok(illagers.length >= 5, `illagers: ${illagers.length}`);
-  assert.ok(illagers.every((e) => e.persistent), 'no desaparecen');
+  assert.ok(illagers.every((e) => e.persist), 'no desaparecen');
   assert.ok(near([MOB_ALLAY]).length >= 1, 'alays en las celdas');
   // Lejos de todos (a más de 3000 bloques), siguen ahí.
   h.tick(20 * 10);
@@ -127,7 +128,7 @@ test('mansión: sus illagers aparecen una vez, no desaparecen, se guardan y se v
   assert.ok(saved.filter((row) => row[0] === MOB_VINDICATOR).length >= illagers.filter((e) => e.type === MOB_VINDICATOR).length);
   const h2 = makeServer(SEED);
   h2.gs.entities.restorePassive(JSON.stringify(saved));
-  assert.ok([...h2.gs.entities.list.values()].some((e) => e.type === MOB_EVOKER && e.persistent), 'restaurados sin desaparecer');
+  assert.ok([...h2.gs.entities.list.values()].some((e) => e.type === MOB_EVOKER && e.persist), 'restaurados sin desaparecer');
   // En pacífico se van (como en Minecraft).
   c.send({ t: 'chat', m: '/dificultad pacifico' });
   h.tick(5);
@@ -168,7 +169,7 @@ test('alay: id 76, vuela, huevo generador y no desaparece', () => {
   assert.equal(ITEMS[SPAWN_EGGS.allay].name, 'Huevo generador de alay');
   const { h } = arena();
   const a = h.gs.entities.spawnMob(MOB_ALLAY, 0, 200, 0)!;
-  assert.ok(a.persistent, 'no desaparece');
+  assert.ok(a.persist, 'no desaparece');
 });
 
 test('alay: coge el objeto, recoge los iguales y se los lleva al jugador; con la mano vacía lo devuelve', () => {
@@ -300,17 +301,18 @@ test('cartógrafo: mapa del monumento de oficial y de la mansión de maestro, fu
   assert.deepEqual(ex(offersFor(PROF_CARTOGRAPHER, 2, 42)), []);
   assert.deepEqual(ex(o3), [['monument', 13, COMPASS, FILLED_MAP]]);
   assert.deepEqual(ex(o5), [['monument', 13, COMPASS, FILLED_MAP], ['mansion', 14, COMPASS, FILLED_MAP]]);
-  // El mapa: su nombre, su zona (1:4) y sus datos sobreviven a la red y al guardado.
-  const map = explorerMap('mansion', 5000, -3000);
+  // El mapa (el de estructura de structureMaps.ts): su nombre, su zona (1:4) y sus datos sobreviven a la red.
+  const map = structureMapAt('mansion', 5000, -3000);
   const clean = sanitizeStack(JSON.parse(JSON.stringify(map)))!;
   assert.deepEqual(clean, map);
-  assert.equal(stackName(clean), 'Mapa de mansión del bosque');
-  const info = explorerInfo(clean)!;
-  assert.ok(5000 >= info.x0 && 5000 < info.x0 + EXPLORER_SPAN && -3000 >= info.z0 && -3000 < info.z0 + EXPLORER_SPAN);
-  assert.equal(sanitizeStack({ id: FILLED_MAP, count: 1, data: { explore: { k: 'nada', x: 1, z: 2 } } })?.data, undefined);
+  assert.equal(stackName(clean), 'Mapa de explorador de bosques');
+  const a = structureMapArea('mansion', 5000, -3000);
+  assert.equal(a.scale, 4);
+  assert.ok(5000 >= a.x0 && 5000 < a.x0 + a.span && -3000 >= a.z0 && -3000 < a.z0 + a.span);
+  assert.equal(structureMapArea('buried_treasure', 0, 0).scale, 2, 'el del tesoro, a 1:2');
 });
 
-test('cartógrafo: vende el mapa que apunta a la mansión más cercana (sin monumentos, sin esa oferta)', () => {
+test('cartógrafo: vende los mapas del monumento y de la mansión más cercanos', () => {
   const h = makeServer(SEED);
   const c = h.join('Cartografa');
   const [sx, sy, sz] = c.welcome.spawn as [number, number, number];
@@ -326,17 +328,26 @@ test('cartógrafo: vende el mapa que apunta a la mansión más cercana (sin monu
   assert.ok(trades, 'abre el comercio');
   const offers = trades.o as unknown[][];
   const maps = offers.map((o, i) => [o, i] as const).filter(([o]) => o[4] === FILLED_MAP);
-  assert.equal(maps.length, 1, 'sólo el de la mansión (no hay monumentos en esta rama)');
-  const [wire, idx] = maps[0];
-  const target = (wire[8] as { explore: { k: string; x: number; z: number } }).explore;
-  assert.equal(target.k, 'mansion');
-  const want = locateStructure(h.gs.world.gen, 'mansion', Math.floor(e.x), Math.floor(e.z), 100)!;
-  assert.deepEqual([target.x, target.z], [want[0], want[2]]);
-  c.send({ t: 'trade', e: e.id, i: idx, q: 7, pay: [{ id: EMERALD, count: 14 }, { id: COMPASS, count: 1 }] });
-  const res = c.conn.take('tres').find((m) => m.q === 7);
-  assert.ok(res?.ok, 'trato hecho');
+  const kinds = maps.map(([o]) => (o[8] as { smap: { k: string } }).smap.k);
+  assert.deepEqual(kinds, ['monument', 'mansion'], 'los dos mapas de explorador');
+  for (const [wire] of maps) {
+    const t = (wire[8] as { smap: { k: 'monument' | 'mansion'; x: number; z: number } }).smap;
+    const want = structureMapOf(structureMap(t.k, h.gs.world.gen, e.x, e.z))!;
+    assert.deepEqual([t.x, t.z], [want.x, want.z], t.k);
+    assert.equal(STRUCTURE_NAMES[STRUCTURE_MAPS[t.k].structure] !== undefined, true);
+  }
+  const buy = (idx: number, em: number, q: number) => {
+    c.send({ t: 'trade', e: e.id, i: idx, q, pay: [{ id: EMERALD, count: em }, { id: COMPASS, count: 1 }] });
+    return c.conn.take('tres').find((m) => m.q === q);
+  };
+  const mon = buy(maps[0][1], 13, 7);
+  assert.ok(mon?.ok, 'mapa del monumento');
+  assert.equal(structureMapOf(mon.give)?.def.name, 'Mapa de explorador oceánico');
+  const res = buy(maps[1][1], 14, 8);
+  assert.ok(res?.ok, 'mapa de la mansión');
   assert.equal(res.give.id, FILLED_MAP);
-  assert.equal(explorerInfo(res.give)?.kind.name, 'Mapa de mansión del bosque');
+  assert.ok(res.give.dmg > 0, 'con su celda, como los demás mapas');
+  assert.equal(structureMapOf(res.give)?.def.name, 'Mapa de explorador de bosques');
 });
 
 // ------------------------------------------------------------------ cliente

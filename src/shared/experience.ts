@@ -73,6 +73,7 @@ const rnd = (rand: Rand, a: number, b: number) => a + Math.floor(rand() * (b - a
 export function mobXp(type: number, baby: boolean, rand: Rand = Math.random): number {
   const def = MOBS[type];
   if (!def || baby) return 0;
+  if (def.xp !== undefined) return def.xp; // Fase 7.5 (océano)
   return def.hostile ? 5 : rnd(rand, 1, 3);
 }
 

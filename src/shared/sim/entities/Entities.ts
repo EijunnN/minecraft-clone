@@ -36,6 +36,7 @@ import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
+import { DolphinGuide } from './dolphinGuide'; // Fase 7.5 (océano)
 import { AllayLife } from './allay'; // Fase 7.5 (mansión)
 
 export class Entities {
@@ -88,6 +89,8 @@ export class Entities {
   // Fase 7 (mecanismos)
   /** Entidades con comportamiento de otro sistema (la dinamita encendida): tipo → su tick. */
   readonly custom = new Map<number, (e: Entity, dt: number) => void>();
+  /** Fase 7.5 (océano): delfines que llevan a los naufragios y a las ruinas. */
+  readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
   explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
   /** Fase 7.5 (mansión): alays (objetos que recogen, bailes y duplicación). */
@@ -326,6 +329,7 @@ export class Entities {
     // Fase 7.5 (mansión): lo que llevaba el alay (antes que el equipo: su objeto no es una armadura puesta).
     if (drops) this.allays.onKilled(e);
     if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
+    if (drops) this.mobs.guardians.onKilled(e); // Fase 7.5 (océano): botín de los guardianes
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -393,10 +397,9 @@ export class Entities {
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
-      // Fase 7.5 (mansión): los que no desaparecen (illagers de la mansión) sólo se van en pacífico.
-      const stays = e.persistent && this.host.difficulty() > 0;
-      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && !stays && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
-        if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
+      // Fase 7.5 (océano, mansión): las de estructura (persist: illagers de la mansión, guardianes…) sólo se van en pacífico.
+      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
+        if ((!e.persist && (near > 96 || (near > 32 && this.rand() < dt / 40))) || (MOBS[e.type].hostile && this.host.difficulty() === 0)) {
           this.remove(e.id);
           continue;
         }
@@ -457,8 +460,7 @@ export class Entities {
     const out: number[][] = [];
     for (const e of this.list.values()) {
       // Fase 6.5 (remate): los que llevan nombre se guardan siempre (también monstruos y calamares).
-      // Fase 7.5 (mansión): y los que no desaparecen (los illagers de la mansión).
-      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) && !e.customName && !e.persistent)) continue;
+      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) && !e.customName && !e.persist)) continue; // Fase 7.5: persist
       const row = [
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
@@ -477,10 +479,10 @@ export class Entities {
       // Fase 6.5 (equipo): armadura de caballo o de lobo.
       const gear = this.gear.save(e);
       if (gear) (row as unknown[]).push(gear);
-      // Fase 7.5 (mansión): lo que lleva el alay y si no desaparece.
+      // Fase 7.5 (mansión): lo que lleva el alay.
       const allay = this.allays.save(e);
       if (allay) (row as unknown[]).push(allay);
-      if (e.persistent && MOBS[e.type].hostile) (row as unknown[]).push({ persist: 1 });
+      if (e.persist) (row as unknown[]).push({ keep: 1 }); // Fase 7.5 (océano): criatura de estructura
       out.push(row);
     }
     return JSON.stringify(out);
@@ -511,11 +513,8 @@ export class Entities {
           if (Array.isArray(f) && f.length === 3 && f.every(Number.isInteger)) e.leash = [f[0], f[1], f[2]];
         }
         if (Array.isArray(row)) this.gear.restore(e, row as unknown[]); // Fase 6.5 (equipo)
-        // Fase 7.5 (mansión): el alay y los que no desaparecen.
-        if (Array.isArray(row)) {
-          this.allays.restore(e, row as unknown[]);
-          if ((row as unknown[]).some((c) => !!c && typeof c === 'object' && 'persist' in (c as object))) e.persistent = true;
-        }
+        if ((row as unknown[]).some((c) => !!c && typeof c === 'object' && 'keep' in (c as object))) e.persist = true; // Fase 7.5 (océano)
+        if (Array.isArray(row)) this.allays.restore(e, row as unknown[]); // Fase 7.5 (mansión): el alay
       }
     } catch {
       /* ignorar */
@@ -542,7 +541,7 @@ export class Entities {
     const r = this.companions.interact(e, item, creative, who);
     if (r) return r;
     // Fase 6 (acuáticos): cubo de agua sobre un pez, un ajolote o un renacuajo.
-    return this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative);
+    return this.dolphinGuide.feed(e, item) ?? this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative); // Fase 7.5: delfines
   }
 
   spawnPassive(p: PlayerView, force = false): void {

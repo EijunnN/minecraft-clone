@@ -22,7 +22,7 @@ import { MOB_ALLAY } from '../allay';
 import { mulberry32 } from './noise';
 import { BIOME_DARK_FOREST } from './biomeIds';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
-import type { Start, StructureMob } from './structures';
+import type { Start } from './structures';
 
 /** Celdas por lado, bloques por celda (las paredes van en las líneas que las separan) y alto de planta. */
 const G = 7;
@@ -392,7 +392,7 @@ export interface MansionCanvas {
   chest(x: number, y: number, z: number, facing: number, table: string): void;
   foundation(x: number, y: number, z: number, id: number): void;
   clearAbove(x: number, y: number, z: number, h: number): void;
-  mob(m: StructureMob): void;
+  mob(type: number, x: number, y: number, z: number): void;
 }
 
 const cellAt = (L: MansionLayout, fl: number, i: number, j: number): number =>
@@ -670,7 +670,7 @@ function furnish(r: RoomDraw): void {
     const v = flying ? r.D >> 1 : 1;
     const [x, z] = r.at(u, v);
     if (x < r.c.x0 || x > r.c.x0 + 15 || z < r.c.z0 || z > r.c.z0 + 15) return;
-    r.c.mob({ type, x: x + 0.5, y: r.y + (flying ? 2 : 1), z: z + 0.5 });
+    r.c.mob(type, x + 0.5, r.y + (flying ? 2 : 1), z + 0.5);
   });
 }
 
