@@ -19,7 +19,7 @@ export class Effects {
     if (!Array.isArray(p) || !p.every(Number.isFinite)) return;
     void b;
     const mob = a !== undefined ? MOBS[a] : undefined;
-    const mk = mob?.key as MobSoundKind | undefined;
+    const mk = (mob?.sound ?? mob?.key) as MobSoundKind | undefined; // Fase 6 (monstruos): voz prestada (MobDef.sound)
     const fx = this.g.renderer.entities;
     switch (kind) {
       case 'lightning': {
@@ -152,6 +152,26 @@ export class Effects {
       case 'compost_empty':
         this.g.audio.playBreak('grass', p);
         break;
+      // Fase 6 (monstruos).
+      case 'potion_break':
+        // Poción arrojadiza de bruja que se rompe: cristal y una nube.
+        this.g.audio.playBreak('glass', p);
+        fx.spawnSparkles(p[0], p[1], p[2], 18, 1.2);
+        fx.spawnSmoke(p[0], p[1], p[2], 14, 1.4, 0.75, 0.35, 0.6);
+        break;
+      case 'witch_drink':
+        this.g.audio.playEat();
+        fx.spawnSparkles(p[0], p[1], p[2], 8, 0.4);
+        break;
+      case 'mob_convert':
+        // Un zombi ahogado se convierte en ahogado.
+        this.g.audio.playSplash(p, 0.5);
+        fx.spawnSmoke(p[0], p[1], p[2], 16, 0.6, 0.6, 0.4, 0.8);
+        if (mk) this.g.audio.playMob(mk, 'hurt', p);
+        break;
+      case 'slime_jump':
+        if (mk && Math.random() < 0.5) this.g.audio.playMob(mk, 'step', p);
+        break;
     }
   }
 
@@ -178,7 +198,7 @@ export class Effects {
         );
       }
       if (d > 24) continue;
-      const kind = def.key as MobSoundKind;
+      const kind = (def.sound ?? def.key) as MobSoundKind;
       const next = this.idleSounds.get(e.id);
       if (next === undefined) this.idleSounds.set(e.id, now + 2 + Math.random() * 8);
       else if (now >= next) {

@@ -2,7 +2,7 @@
 // invocan de 1 a 4 criaturas alrededor, salvo que ya haya 6 cerca, que esté iluminado por bloques
 // (una antorcha encima lo apaga, como en Minecraft) o que la dificultad sea pacífica.
 import { AIR, COBWEB, MOB_SPAWNER } from '../../blocks';
-import { MOBS, MOB_ZOMBIE, MOB_SKELETON, MOB_SPIDER } from '../../mobs';
+import { MOBS, MOB_ZOMBIE, MOB_SKELETON, MOB_SPIDER, MOB_CAVE_SPIDER } from '../../mobs';
 import { CHUNK_SIZE, hash3, indexY } from '../../constants';
 import { posKey } from '../posKey';
 import { standable } from '../pathfind';
@@ -16,11 +16,11 @@ export class Spawners {
 
   constructor(private ctx: ServerContext) {}
 
-  /** Criatura de un generador: arañas si hay telarañas alrededor; si no, según la posición. */
+  /** Criatura de un generador: arañas de cueva si hay telarañas alrededor (minas); si no, según la posición. */
   mobOf(x: number, y: number, z: number): number {
     const w = this.ctx.world;
     for (let dy = -1; dy <= 1; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-      if (w.getBlock(x + dx, y + dy, z + dz) === COBWEB) return MOB_SPIDER;
+      if (w.getBlock(x + dx, y + dy, z + dz) === COBWEB) return MOB_CAVE_SPIDER; // Fase 6 (monstruos)
     }
     return TYPES[hash3(x, y, z, 0x5be) % TYPES.length];
   }

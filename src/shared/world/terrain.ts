@@ -17,6 +17,7 @@ import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, h
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
 import { DIR_X, DIR_Z } from '../blockModels';
 import { placeStructures, type StructureChest } from './structures';
+import { placeInfested } from './infested'; // Fase 6 (monstruos)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -614,6 +615,7 @@ export class TerrainGenerator {
     vein(TUFF, 3, MIN_Y + 5, 0, 32, DEEPSLATE);
     const cb = infos[8 * 16 + 8].biome;
     if (cb === BIOME_MOUNTAINS || cb === BIOME_SNOWY_PEAKS) vein(EMERALD_ORE, 8, -16, 200, 1, STONE);
+    placeInfested(blocks, cx, cz, seed, cb); // Fase 6 (monstruos): piedra infestada en las montañas
 
     this.decorateCaves(blocks, tops, x0, z0);
     this.placeGeodes(blocks, cx, cz);

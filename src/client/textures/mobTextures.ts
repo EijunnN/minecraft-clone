@@ -16,6 +16,7 @@ import {
   MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
 } from '../../shared/mobs';
+import { MONSTER_PAINTERS } from './monsterTextures'; // Fase 6 (monstruos)
 
 export interface MobTexture {
   width: number;
@@ -1298,7 +1299,11 @@ const PAINTERS: Record<number, Painter> = {
 /** Genera el atlas de una criatura (tamaño MOBS[id].atlas). */
 export function generateMobTexture(mobId: number): MobTexture {
   const mob = MOBS[mobId];
-  const painter = PAINTERS[mobId];
+  const painter = PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId];
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }
+
+// Fase 6 (monstruos): utilidades que usan las texturas de monsterTextures.ts.
+export type { Texel, Paint, Painter, RGB, ZombieStyle };
+export { PX, NX, TOP, BOTTOM, FRONT, BACK, glow, rnd, vnoise, mapAt, zombieLike };

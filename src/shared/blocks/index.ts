@@ -102,3 +102,6 @@ export const INVENTORY_ORDER: readonly number[] = [
 export const DEFAULT_HOTBAR: readonly number[] = [
   GRASS, STONE, OAK_PLANKS, OAK_LOG, GLASS, TORCH, BRICKS, WATER, GLOWSTONE,
 ];
+
+// Fase 6 (monstruos): bloques infestados (se registran los últimos: ids guardados).
+export * from './monsterBlocks';

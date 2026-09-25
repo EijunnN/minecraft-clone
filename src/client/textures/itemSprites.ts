@@ -10,6 +10,7 @@
 // Herramientas en diagonal: mango abajo-izquierda, cabeza arriba-derecha.
 
 import { ITEM_SPRITES } from '../../shared/items';
+import { MONSTER_SPRITES } from './monsterSprites'; // Fase 6 (monstruos)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2203,6 +2204,9 @@ const SPRITES: Record<string, SpriteDef> = {
     holes: true,
   },
 };
+
+// Fase 6 (monstruos): bola de slime, membrana de phantom y pociones arrojadizas.
+Object.assign(SPRITES, MONSTER_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

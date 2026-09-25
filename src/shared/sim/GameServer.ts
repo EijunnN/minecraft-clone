@@ -36,6 +36,7 @@ import { BlockEdits } from './server/blockEdits';
 import { PlayerActions } from './server/playerActions';
 import { Commands } from './server/commands';
 import { EntitySync } from './server/entitySync';
+import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -93,6 +94,8 @@ export class GameServer {
   private actions: PlayerActions;
   private commands: Commands;
   private entitySync: EntitySync;
+  /** Fase 6 (monstruos): insomnio y phantoms, bloques infestados. */
+  private monsters: Monsters;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -146,6 +149,7 @@ export class GameServer {
     this.actions = new PlayerActions(this.ctx);
     this.commands = new Commands(this.ctx);
     this.entitySync = new EntitySync(this.ctx);
+    this.monsters = new Monsters(this.ctx, store);
   }
 
   get seed(): number {
@@ -249,6 +253,13 @@ export class GameServer {
       },
       giveXp: (id, n) => {
         for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
+      },
+      // Fase 6 (monstruos): efectos de estado que causan las criaturas (los aplica el cliente).
+      effectPlayer: (id, effect, seconds, amp) => {
+        for (const s of this.sessions.values()) {
+          if (s.id !== id || !s.joined || s.mode === 'c' || s.s & STATE_DEAD) continue;
+          this.send(s, { t: 'effect', id: effect, s: seconds, a: amp });
+        }
       },
     };
   }
@@ -677,6 +688,7 @@ export class GameServer {
     this.campfires.onBlockChanged(x, y, z, old, id);
     this.signs.onBlockChanged(x, y, z, old, id);
     this.rules.onBlockChanged(x, y, z, id);
+    this.monsters.onBlockChanged(x, y, z, old, id);
   }
 
   // ------------------------------------------------------------------ bucle
@@ -693,6 +705,7 @@ export class GameServer {
     this.composters.tick();
     this.fishing.tick();
     if (this.tickCount % TICK_RATE === 0) this.spawners.tick();
+    if (this.tickCount % TICK_RATE === 0) this.monsters.tick();
     this.storms.tick(DT);
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
@@ -764,6 +777,7 @@ export class GameServer {
     this.containers.flush(this.store);
     this.campfires.flush(this.store);
     this.signs.flush(this.store);
+    this.monsters.flush(this.store);
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {
