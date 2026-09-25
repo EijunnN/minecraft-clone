@@ -97,17 +97,12 @@ function naturalSlowdown(c: CartBody): void {
       f.pz /= d;
       c.vx = c.vx * 0.8 + f.px;
       c.vz = c.vz * 0.8 + f.pz;
-      if (c.inWater) {
-        c.vx *= 0.1;
-        c.vz *= 0.1;
-        c.vy *= 0.1;
-      }
     } else {
       c.vx *= 0.98;
       c.vz *= 0.98;
     }
   }
-  const k = c.occupied ? 0.997 : 0.96;
+  const k = (c.occupied ? 0.997 : 0.96) * (c.inWater ? 0.95 : 1);
   c.vx *= k;
   c.vz *= k;
   c.vy = 0;
