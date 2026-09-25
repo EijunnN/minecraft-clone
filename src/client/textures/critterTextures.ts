@@ -30,7 +30,7 @@ export function critterTexture(mobId: number, variant: number): MobTexture | nul
       return cutout(mobId, paintMob(mobId, (t) => (t.g === 'decor' ? traderDecor(t) : llama(t, coat))), decorHole);
     }
     case MOB_SKELETON_HORSE:
-      return cutout(mobId, paintMob(mobId, skeletonHorse), (part, x, y) => part === 'mane' && (Math.floor(y) % 3 === 2 || x < 0));
+      return cutout(mobId, paintMob(mobId, skeletonHorse), (part, _x, y) => part === 'mane' && Math.floor(y) % 3 === 2);
     case MOB_ZOMBIE_HORSE:
       return paintMob(mobId, zombieHorse);
     default:
