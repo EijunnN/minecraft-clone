@@ -24,6 +24,7 @@ import { OFFHAND, HOTBAR } from './Inventory';
 import type { Game } from './Game';
 // Fase 6 (acuáticos): cubos con criatura.
 import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
+import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -130,9 +131,9 @@ export class Interaction {
     }
     // Fase 6 (monturas): poner la silla o montarse.
     if (pressed && target && this.g.riding.onUse(target, held?.id ?? 0)) return;
-    // Criatura delante: dar de comer, esquilar u ordeñar.
-    if (pressed && target && held && this.canInteract(target, held.id)) {
-      this.interactEntity(target, held.id);
+    // Criatura delante: dar de comer, esquilar u ordeñar (Fase 6: domesticar y sentar, también con la mano vacía).
+    if (pressed && target && this.canInteract(target, held?.id ?? 0)) {
+      this.interactEntity(target, held?.id ?? 0);
       return;
     }
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
@@ -671,6 +672,7 @@ export class Interaction {
     const def = MOBS[e.type];
     if (!def || def.hostile || e.deathT >= 0) return false;
     const baby = (e.flags & EF_BABY) !== 0;
+    if (companionUse(e.type, e.flags, item)) return true; // Fase 6 (gólems/domesticar)
     if (BREED_FOOD[def.key]?.includes(item)) return true;
     if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
     if (item === BUCKET) return e.type === MOB_COW && !baby;

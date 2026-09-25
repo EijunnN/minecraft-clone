@@ -144,6 +144,19 @@ export interface Entity extends Body {
   ai?: AI;
   // Fase 6 (aldeanos): profesión, comercio y hogar (aldeanos y comerciante ambulante).
   villager?: VillagerData;
+  // Fase 6 (gólems/domesticar)
+  /** Dueño de un animal domesticado (nombre del jugador en minúsculas). */
+  tamedBy?: string;
+  /** Domesticado y sentado: no sigue al dueño. */
+  sitting?: boolean;
+  /** Siguiendo al dueño (con histéresis para no dar tirones). */
+  following?: boolean;
+  /** Gólem construido por un jugador (los de las aldeas, no). */
+  playerMade?: boolean;
+  /** Enemigo de un gólem o de un lobo domesticado: id de entidad o id de sesión de un jugador. */
+  foe?: number | string;
+  /** Gólem de nieve: segundos acumulados derritiéndose (1 de daño por segundo). */
+  meltAcc?: number;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

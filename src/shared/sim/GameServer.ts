@@ -40,6 +40,7 @@ import { EntitySync } from './server/entitySync';
 import { Riding } from './server/riding'; // Fase 6 (monturas)
 import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
+import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -103,6 +104,8 @@ export class GameServer {
   private trading: Trading; // Fase 6 (aldeanos)
   /** Fase 6 (monstruos): insomnio y phantoms, bloques infestados. */
   private monsters: Monsters;
+  /** Fase 6 (gólems/domesticar): construir gólems y poblar las aldeas. */
+  readonly golems: Golems;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -162,6 +165,7 @@ export class GameServer {
     this.trading = new Trading(this.ctx);
     this.world.onVillagers = (v) => this.trading.spawnVillagers(v);
     this.monsters = new Monsters(this.ctx, store);
+    this.golems = new Golems(this.ctx, store); // Fase 6 (gólems/domesticar)
   }
 
   get seed(): number {
@@ -724,6 +728,7 @@ export class GameServer {
     this.signs.onBlockChanged(x, y, z, old, id);
     this.rules.onBlockChanged(x, y, z, id);
     this.monsters.onBlockChanged(x, y, z, old, id);
+    this.golems.onBlockChanged(x, y, z, id); // Fase 6 (gólems/domesticar)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -744,6 +749,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.monsters.tick();
     this.storms.tick(DT);
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
+    this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

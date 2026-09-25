@@ -3,8 +3,9 @@
 import {
   RAW_PORKCHOP, RAW_BEEF, LEATHER, RAW_MUTTON, RAW_CHICKEN, FEATHER, ROTTEN_FLESH, BONE, ARROW, GUNPOWDER, STRING,
   ENDER_PEARL, SPIDER_EYE, COD, SALMON,
+  IRON_INGOT, SNOWBALL,
 } from './items';
-import { WHITE_WOOL } from './blocks';
+import { WHITE_WOOL, POPPY } from './blocks';
 // Fase 6 (monstruos): botín de los monstruos nuevos.
 import { STICK, SUGAR, REDSTONE, SLIME_BALL, PHANTOM_MEMBRANE } from './items';
 // Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana, renacuajo y calamar brillante (ids 30–39).
@@ -49,6 +50,10 @@ export const MOB_CAVE_SPIDER = 45;
 export const MOB_ZOMBIE_VILLAGER = 46;
 export const MOB_SLIME_MEDIUM = 47;
 export const MOB_SLIME_SMALL = 48;
+// Fase 6 (gólems/domesticar): gólems y gatos (ids 20–24 reservados; 23 y 24 libres).
+export const MOB_IRON_GOLEM = 20;
+export const MOB_SNOW_GOLEM = 21;
+export const MOB_CAT = 22;
 /** Entidades que no son criaturas. */
 export const ENT_ITEM = 100;
 export const ENT_ARROW = 101;
@@ -84,7 +89,9 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   // Fase 6 (monstruos)
   | 'slime' | 'phantom' | 'silverfish'
   // Fase 6 (acuáticos).
-  | 'fish' | 'puffer' | 'dolphin' | 'turtle' | 'axolotl' | 'frog' | 'tadpole';
+  | 'fish' | 'puffer' | 'dolphin' | 'turtle' | 'axolotl' | 'frog' | 'tadpole'
+  // Fase 6 (gólems/domesticar): brazos largos que se balancean y golpean hacia arriba.
+  | 'golem';
 
 export interface MobDef {
   id: number;
@@ -330,6 +337,51 @@ mob({
     { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-3, 3, -2], size: [2, 2, 1], uv: [36, 0] },
     { name: 'tail', pivot: [0, 13, 7], from: [-1, -1, 0], size: [2, 2, 8], uv: [0, 26], rot: [0.9, 0, 0] },
     ...quadLegs(8, 2, [-5, 5], [24, 26], 2),
+    // Fase 6 (gólems/domesticar): collar rojo alrededor de la melena (sólo se dibuja si está domesticado).
+    { name: 'collar', pivot: [0, 8, -2], from: [-4.5, -1, -5.5], size: [9, 8, 2], uv: [34, 26] },
+  ],
+});
+
+// ---------------------------------------------------------------- Fase 6 (gólems/domesticar)
+mob({
+  id: MOB_IRON_GOLEM, key: 'iron_golem', name: 'Gólem de hierro', hostile: false, health: 100, walk: 0.9, run: 2.2,
+  width: 1.4, height: 2.7, damage: 11, burnsInSun: false, drops: [[IRON_INGOT, 3, 5], [POPPY, 0, 2]], atlas: [128, 64],
+  anim: 'golem', scale: 1,
+  parts: [
+    { name: 'head', pivot: [0, 33, -2], from: [-4, 0, -5.5], size: [8, 10, 8], uv: [0, 0] },
+    { name: 'nose', parent: 'head', pivot: [0, 0, 0], from: [-1, 1, -7.5], size: [2, 4, 2], uv: [32, 0] },
+    { name: 'body', pivot: [0, 21, 0], from: [-9, 0, -5.5], size: [18, 12, 11], uv: [0, 18] },
+    { name: 'waist', pivot: [0, 16, 0], from: [-4.5, 0, -3], size: [9, 5, 6], uv: [60, 18] },
+    { name: 'armR', pivot: [11, 31, 0], from: [-2, -28, -3], size: [4, 30, 6], uv: [90, 0] },
+    { name: 'armL', pivot: [-11, 31, 0], from: [-2, -28, -3], size: [4, 30, 6], uv: [90, 0] },
+    { name: 'legR', pivot: [4, 16, 0], from: [-3, -16, -2.5], size: [6, 16, 5], uv: [0, 41] },
+    { name: 'legL', pivot: [-4, 16, 0], from: [-3, -16, -2.5], size: [6, 16, 5], uv: [0, 41] },
+  ],
+});
+mob({
+  id: MOB_SNOW_GOLEM, key: 'snow_golem', name: 'Gólem de nieve', hostile: false, health: 4, walk: 1.0, run: 1.6,
+  width: 0.7, height: 1.9, damage: 0, burnsInSun: false, drops: [[SNOWBALL, 0, 15]], atlas: [64, 64], anim: 'golem', scale: 1,
+  parts: [
+    { name: 'lower', pivot: [0, 0, 0], from: [-6, 0, -6], size: [12, 12, 12], uv: [0, 36] },
+    { name: 'upper', pivot: [0, 11, 0], from: [-5, 0, -5], size: [10, 10, 10], uv: [0, 16] },
+    { name: 'head', pivot: [0, 21, 0], from: [-4, 0, -4], size: [8, 8, 8], uv: [0, 0] },
+    { name: 'armR', pivot: [4, 18, 0], from: [0, -1, -1], size: [12, 2, 2], uv: [32, 0], rot: [0, 0, -0.5] },
+    { name: 'armL', pivot: [-4, 18, 0], from: [-12, -1, -1], size: [12, 2, 2], uv: [32, 0], rot: [0, 0, 0.5] },
+  ],
+});
+mob({
+  id: MOB_CAT, key: 'cat', name: 'Gato', hostile: false, health: 10, walk: 1.1, run: 3.0, width: 0.6, height: 0.7,
+  damage: 0, burnsInSun: false, drops: [[STRING, 0, 2]], atlas: [64, 32], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 5, 0], from: [-2, 0, -7], size: [4, 5, 14], uv: [0, 13] },
+    { name: 'head', pivot: [0, 9, -7], from: [-2.5, -2, -5], size: [5, 4, 5], uv: [0, 0] },
+    { name: 'snout', parent: 'head', pivot: [0, 0, 0], from: [-1.5, -2, -6], size: [3, 2, 1], uv: [20, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [0.5, 2, -3], size: [1, 1, 2], uv: [28, 0] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-1.5, 2, -3], size: [1, 1, 2], uv: [28, 0] },
+    { name: 'tail', pivot: [0, 9, 7], from: [-0.5, -0.5, 0], size: [1, 1, 8], uv: [36, 13], rot: [0.9, 0, 0] },
+    ...quadLegs(5, 1.1, [-5, 5], [36, 22], 2),
+    // Collar (sólo si está domesticado).
+    { name: 'collar', parent: 'head', pivot: [0, 0, 0], from: [-3, -2.5, -3], size: [6, 1, 4], uv: [44, 22] },
   ],
 });
 

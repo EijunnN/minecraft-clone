@@ -39,6 +39,8 @@ export function deathMessage(cause: DamageCause): string {
     drowned: 'fue arrastrado al fondo por un ahogado', witch: 'fue hechizado por una bruja', slime: 'fue aplastado por un slime',
     phantom: 'fue atacado por un phantom', silverfish: 'fue devorado por lepismas', cave_spider: 'fue mordido por una araña de cueva',
     zombie_villager: 'fue devorado por un aldeano zombi',
+    // Fase 6 (gólems/domesticar)
+    iron_golem: 'salió volando por un gólem de hierro', wolf: 'fue despedazado por un lobo',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

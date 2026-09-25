@@ -22,6 +22,8 @@ import { VillagerLife } from './villagerLife'; // Fase 6 (aldeanos)
 // Fase 6 (acuáticos).
 import { AquaticLife } from './aquaticLife';
 import { isWaterAmbient } from '../../aquaticMobs';
+// Fase 6 (gólems/domesticar)
+import { Companions } from './companions';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -42,6 +44,8 @@ export class Entities {
   readonly villagers = new VillagerLife(this);
   /** Fase 6 (acuáticos): peces, delfines, tortugas, ajolotes, ranas y renacuajos. */
   readonly aquatic = new AquaticLife(this);
+  // Fase 6 (gólems/domesticar): gólems y animales domesticados.
+  readonly companions = new Companions(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -227,6 +231,9 @@ export class Entities {
         ai.panicFrom = [fromX, fromZ];
       }
     } else if (typeof attacker === 'string') ai.target = attacker;
+    // Fase 6 (gólems/domesticar): los lobos ayudan a su dueño; gólems y domesticados se defienden.
+    if (typeof attacker === 'string') this.companions.onPlayerAttack(attacker, e);
+    this.companions.onHurt(e, attacker);
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
     this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
@@ -387,6 +394,9 @@ export class Entities {
       // Fase 6 (aldeanos): profesión, nivel y casa, como un objeto al final de la fila.
       const vil = this.villagers.save(e);
       if (vil) (row as unknown[]).push(vil);
+      // Fase 6 (gólems/domesticar): dueño, sentado, piel y gólem hecho a mano.
+      const extra = this.companions.save(e);
+      if (extra) (row as unknown[]).push(extra);
       out.push(row);
     }
     return JSON.stringify(out);
@@ -401,6 +411,8 @@ export class Entities {
         if (!MOBS[type] || ![x, y, z].every(Number.isFinite)) continue;
         const e = this.spawnMob(type, x, y, z);
         if (!e) continue;
+        // Fase 6: campos extra al final de la fila (monturas: número; gólems/domesticar: lista; aldeanos: {vil}).
+        this.companions.restore(e, (row as unknown[]).slice(7).find((c) => Array.isArray(c)));
         if (Number.isFinite(hp)) e.health = Math.max(1, Math.min(e.maxHealth, hp));
         if (Number.isFinite(grow) && grow > 0) this.animals.setBaby(e, Math.min(GROW_SECONDS, grow));
         if (sheared === 1) e.sheared = true;
@@ -419,7 +431,11 @@ export class Entities {
     return this.items.tryPickup(id, p);
   }
 
-  interact(e: Entity, item: number, creative: boolean): InteractResult {
+  /** `who`: nombre del jugador (para domesticar y reconocer al dueño). */
+  interact(e: Entity, item: number, creative: boolean, who?: string): InteractResult {
+    // Fase 6 (gólems/domesticar): domesticar, sentar, curar gólems.
+    const r = this.companions.interact(e, item, creative, who);
+    if (r) return r;
     // Fase 6 (acuáticos): cubo de agua sobre un pez, un ajolote o un renacuajo.
     return this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative);
   }

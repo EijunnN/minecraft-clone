@@ -1125,6 +1125,9 @@ function wolf(t: Texel): Paint {
       return t.y > 1.2 || t.f === TOP ? grey(0.75) : grey();
     case 'tail':
       return t.z > 6.5 ? grey(0.7) : grey();
+    case 'collar':
+      // Fase 6 (gólems/domesticar): collar rojo con una hebilla.
+      return t.f === FRONT && t.i >= 3 && t.i <= 5 && t.j >= 3 && t.j <= 4 ? [214, 200, 90] : rnd(t, seed + 11) > 0.8 ? [150, 28, 30] : [182, 36, 36];
     case 'leg':
       if (t.f === BOTTOM || t.y < 1) return [96, 90, 86];
       return side(t) && t.i === t.fw - 1 ? grey(0.92) : grey(1.04);
@@ -1510,6 +1513,10 @@ export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   return paintMob(mobId, painter);
 }
 
-// Fase 6: utilidades de pintado para villagerTextures.ts (aldeanos) y monsterTextures.ts (monstruos).
-export { paintMob, mapAt, vnoise, rnd, glow, zombieLike, scale as scaleRGB, PX, NX, TOP, BOTTOM, FRONT, BACK };
+// Fase 6: utilidades de pintado para villagerTextures.ts (aldeanos), monsterTextures.ts (monstruos) y
+// companionTextures.ts (gólems y gatos).
+export {
+  paintMob, mapAt, vnoise, rnd, glow, zombieLike, fur, side, tone, clamp01, scale, scale as scaleRGB,
+  PX, NX, TOP, BOTTOM, FRONT, BACK,
+};
 export type { Texel, Paint, Painter, RGB, RGB as MobRGB, ZombieStyle };

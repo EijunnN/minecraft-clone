@@ -36,13 +36,18 @@ export const EF_BABY = 64;
 export const EF_SHEARED = 128;
 /** Animal en modo amor (corazones). */
 export const EF_LOVE = 256;
-// Fase 6 (monturas): bits altos para no chocar con otros añadidos.
+// Fase 6 (monturas, gólems/domesticar): bits altos para no chocar con otros añadidos.
 /** Montura con silla puesta. */
 export const EF_SADDLE = 1 << 12;
-/** Montura domada. */
+/** Domada o domesticada (monturas; lobos y gatos llevan collar). */
 export const EF_TAMED = 1 << 13;
 /** Montura con jinete. */
 export const EF_RIDDEN = 1 << 14;
+/** Animal domesticado sentado. */
+export const EF_SITTING = 1 << 15;
+/** Piel de la criatura (gatos): 3 bits a partir de este desplazamiento. */
+export const EF_VARIANT_SHIFT = 16;
+export const EF_VARIANT_MASK = 7 << EF_VARIANT_SHIFT;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';

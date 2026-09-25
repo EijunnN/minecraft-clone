@@ -110,6 +110,22 @@ export class Effects {
       case 'shear':
         this.g.audio.playBreak('wool', p);
         break;
+      // Fase 6 (gólems/domesticar)
+      case 'tame':
+        fx.spawnHearts(p[0], p[1], p[2], 7, 0.5);
+        this.g.audio.playPickup();
+        break;
+      case 'tame_fail':
+        fx.spawnSmoke(p[0], p[1], p[2], 7, 0.3, 0.55, 0.3, 0.8);
+        break;
+      case 'golem_build':
+        fx.spawnSmoke(p[0], p[1], p[2], 24, 0.9, 0.85, 0.5, 1.2);
+        this.g.audio.playPlace(a === undefined || MOBS[a]?.key !== 'snow_golem' ? 'metal' : 'snow', p);
+        break;
+      case 'golem_repair':
+        this.g.audio.playPlace('metal', p);
+        fx.spawnSparkles(p[0], p[1], p[2], 8, 0.6);
+        break;
       case 'milk':
         this.g.audio.playSplash(p, 0.25);
         break;

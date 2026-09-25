@@ -29,7 +29,7 @@ export class Farming {
       ctx.send(s, { t: 'ires', q, ok: false });
       return;
     }
-    const r = ctx.entities.interact(e, item, s.mode === 'c');
+    const r = ctx.entities.interact(e, item, s.mode === 'c', s.name); // Fase 6: el nombre, para domesticar
     ctx.send(s, { t: 'ires', q, ...r });
   }
 

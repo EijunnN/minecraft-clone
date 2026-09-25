@@ -9,6 +9,8 @@ import type { ClientEntity } from '../game/ClientEntities';
 import { hiddenMountPart, mountPartAnim, mountRootPose } from './mountPose'; // Fase 6 (monturas)
 import { animateMonster, monsterRoot } from './monsterAnim'; // Fase 6 (monstruos)
 import { animateAquatic, hiddenAquaticPart, aquaticRoot } from './aquaticPose'; // Fase 6 (acuáticos)
+// Fase 6 (gólems/domesticar): pieles, collar, poses de sentado y de los gólems.
+import { mobSkinKey, hiddenPart, sitRoot, companionPart } from './companionPose';
 
 export interface MobTexture {
   width: number;
@@ -217,6 +219,7 @@ export class MobRenderer {
         // Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana y renacuajo.
         animateAquatic(def, e, time, name, out);
     }
+    companionPart(def, e, time, name, out); // Fase 6 (gólems/domesticar)
   }
 
   private pose(def: MobDef, mesh: MobMesh, e: ClientEntity, time: number): void {
@@ -236,7 +239,7 @@ export class MobRenderer {
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
-      if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name)) mat4.scale(m, m, [0, 0, 0]);
+      if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, [0, 0, 0]);
       else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, [0, 0, 0]); // Fase 6 (monturas): sin silla
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
@@ -266,6 +269,7 @@ export class MobRenderer {
     } else s *= aquaticRoot(def, e, m, time); // Fase 6 (acuáticos)
     const k = monsterRoot(def, e, m); // Fase 6 (monstruos): picado del phantom, slime que se estira
     mat4.scale(m, m, [s * k[0], s * k[1], s * k[2]]);
+    sitRoot(def, e.flags, m); // Fase 6 (gólems/domesticar)
     return m;
   }
 
