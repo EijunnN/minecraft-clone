@@ -448,6 +448,53 @@ test('vagonetas con tolva y con dinamita', () => {
   assert.ok(![...h.gs.entities.list.values()].some((e) => e.type === ENT_TNT_MINECART), 'ha explotado');
 });
 
+test('vagoneta con dinamita: rota corriendo se enciende y no se suelta; quieta, sí', () => {
+  const { h, c, bx, by, bz, set } = lab();
+  const x = bx - 20, z = bz - 20;
+  for (let i = 0; i < 40; i++) {
+    set(x + i, by, z, railState(1, RAIL_EW));
+    set(x + i, by, z + 6, railState(1, RAIL_EW));
+  }
+  h.tick(2);
+  const minera = h.join('Minera', 's');
+  minera.send({ t: 'chat', m: '/gamemode supervivencia' });
+  const place = (pz: number, q: number) => {
+    c.pos(x + 2.5, by, pz + 2.5);
+    c.send({ t: 'vplace', item: TNT_MINECART, p: [x + 2.5, by + 0.1, pz + 0.5], b: [x + 2, by, pz], yaw: -Math.PI / 2, q });
+    h.tick(2);
+    const e = [...h.gs.entities.list.values()].find((o) => o.type === ENT_TNT_MINECART && Math.floor(o.z) === pz)!;
+    assert.ok(e, 'puesta');
+    return e;
+  };
+  const cartItems = () => [...h.gs.entities.list.values()].filter((e) => e.type === ENT_ITEM && e.stack?.id === TNT_MINECART).length;
+  const hit = (id: number, speed: number) => {
+    for (let i = 0; i < 6 && h.gs.transport.vehicleOf(id) && num(h.gs.transport.vehicleOf(id)!.extra?.fuse) < 0; i++) {
+      const v = h.gs.transport.vehicleOf(id)!;
+      v.cart!.vx = speed;
+      minera.pos(v.e.x, by, v.e.z + 1.5);
+      minera.send({ t: 'attack', e: id, item: 0 });
+      h.tick(1);
+    }
+  };
+  // Corriendo (8 bloques/s): se enciende con una mecha corta, no suelta nada y explota.
+  const fast = place(z, 3);
+  hit(fast.id, 8);
+  assert.ok(h.gs.transport.vehicleOf(fast.id), 'no se rompe');
+  assert.ok(num(h.gs.transport.vehicleOf(fast.id)!.extra?.fuse) >= 0, 'se enciende');
+  assert.equal(cartItems(), 0, 'no se suelta');
+  h.tick(45);
+  assert.ok(!h.gs.entities.list.has(fast.id), 'explota');
+  assert.equal(cartItems(), 0, 'y no suelta su objeto');
+  // Quieta: se suelta sin explotar.
+  const still = place(z + 6, 4);
+  hit(still.id, 0);
+  assert.ok(!h.gs.transport.vehicleOf(still.id), 'rota');
+  assert.equal(cartItems(), 1, 'suelta la vagoneta con dinamita');
+  assert.equal([...h.gs.entities.list.values()].filter((e) => e.type === ENT_TNT).length, 0);
+});
+
+const num = (v: unknown) => (typeof v === 'number' ? v : -1);
+
 test('registro: recetas, colocación, huecos y texturas', () => {
   const C = COBBLESTONE, R = REDSTONE, P = ITEMS.findIndex((i) => i?.key === 'oak_planks');
   assert.equal(craft([P, P, P, C, IRON_INGOT, C, C, R, C])?.id, PISTON);
