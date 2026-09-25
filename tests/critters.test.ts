@@ -224,8 +224,9 @@ test('ocelote: huye, confía con pescado (1 de cada 3), asusta a los creepers y 
 });
 
 test('ocelote: caza gallinas', () => {
-  const { h, bx, by, bz } = platform();
+  const { h, c, bx, by, bz } = platform();
   const E = h.gs.entities;
+  c.pos(bx + 0.5, by + 40, bz + 0.5); // lejos: que no huya del jugador
   const oc = E.spawnMob(MOB_OCELOT, bx + 0.5, by, bz + 0.5)!;
   const hen = E.spawnMob(MOB_CHICKEN, bx + 4.5, by, bz + 0.5)!;
   let hurt = false;
@@ -233,7 +234,8 @@ test('ocelote: caza gallinas', () => {
     h.tick(5);
     hurt = hen.dead || hen.health < hen.maxHealth;
   }
-  assert.ok(hurt && oc.ai!.attackCd > -1, 'el ocelote muerde a la gallina');
+  assert.ok(hurt, 'el ocelote muerde a la gallina');
+  assert.ok(Math.hypot(oc.x - hen.x, oc.z - hen.z) < 3, 'la persigue');
 });
 
 test('champiñaca: tijeras (vaca y 5 champiñones), cuenco, cubo, flor y estofado sospechoso, rayo', () => {
