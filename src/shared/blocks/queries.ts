@@ -206,5 +206,7 @@ export function singleChestOf(id: number, facing: number): number {
 
 export function isContainer(id: number): boolean {
   // Fase 7 (pociones): también el alambique alquímico (por su clave: se registra después de este módulo).
-  return isFurnace(id) || isChest(id) || defs[familyBase(id)]?.key === 'brewing_stand';
+  // Fase 7 (mecanismos): y la tolva, el dispensador y el soltador.
+  return isFurnace(id) || isChest(id) || CONTAINER_KEYS.has(defs[familyBase(id)]?.key ?? '');
 }
+const CONTAINER_KEYS = new Set(['brewing_stand', 'hopper', 'dispenser', 'dropper']);

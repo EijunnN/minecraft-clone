@@ -89,6 +89,7 @@ const FLAME_RULES: [RegExp, number, number][] = [
   [/^moss_block$|^moss_carpet$/, 5, 100],
   [/^azalea$|^flowering_azalea$|^hanging_roots$/, 30, 60],
   [/^scaffolding$|^bamboo$/, 60, 60],
+  [/^tnt$/, 15, 100], // Fase 7 (mecanismos): la dinamita prende (y se enciende al quemarse)
 ];
 /** Plantas en cruz que arden (hierba, helechos, flores…): no las de cultivo ni los brotes. */
 const PLANT_FLAMES: [number, number] = [60, 100];

@@ -290,7 +290,8 @@ export function containerToWire(c: ContainerState): ContainerWire {
 export function containerFromWire(w: ContainerWire): ContainerState | null {
   if (!w || (w.k !== 'c' && w.k !== 'f' && w.k !== 'b') || !Array.isArray(w.s)) return null;
   const kind = w.k === 'c' ? 'chest' : w.k === 'b' ? 'brewing' : 'furnace'; // Fase 7 (pociones): alambique
-  const c = newContainer(kind, w.k === 'c' && w.s.length === DOUBLE_CHEST_SLOTS ? DOUBLE_CHEST_SLOTS : undefined);
+  // Fase 7 (mecanismos): también los de 5 huecos (tolva) y 9 (dispensador y soltador).
+  const c = newContainer(kind, w.k === 'c' && [5, 9, DOUBLE_CHEST_SLOTS].includes(w.s.length) ? w.s.length : undefined);
   for (let i = 0; i < c.slots.length; i++) {
     const s = w.s[i];
     c.slots[i] = Array.isArray(s) ? sanitizeStack(stackFromWire(s)) : null;

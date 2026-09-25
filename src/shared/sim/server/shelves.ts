@@ -67,6 +67,41 @@ export class Shelves {
     reply(true, 1);
   }
 
+  /** Fase 7 (mecanismos): una tolva mete un libro en el primer hueco libre; true si entró. */
+  insertBook(x: number, y: number, z: number, stack: ItemStack): boolean {
+    const id = this.ctx.world.getBlock(x, y, z);
+    if (!isChiseledShelf(id) || !SHELF_BOOK_KEYS.has(ITEMS[stack.id]?.key ?? '')) return false;
+    const mask = stateProps(id)!.books;
+    for (let i = 0; i < SHELF_SLOTS; i++) {
+      if (mask & (1 << i)) continue;
+      const k = posKey(x, y, z);
+      const slots = this.books.get(k) ?? new Array<ItemStack | null>(SHELF_SLOTS).fill(null);
+      slots[i] = { ...stack, count: 1 };
+      this.store(k, slots);
+      this.ctx.world.setBlock(x, y, z, shelfWithBooks(id, mask | (1 << i)));
+      return true;
+    }
+    return false;
+  }
+
+  /** Fase 7 (mecanismos): una tolva de debajo saca el primer libro; null si no hay. */
+  takeBook(x: number, y: number, z: number): ItemStack | null {
+    const id = this.ctx.world.getBlock(x, y, z);
+    if (!isChiseledShelf(id)) return null;
+    const mask = stateProps(id)!.books;
+    for (let i = 0; i < SHELF_SLOTS; i++) {
+      if (!(mask & (1 << i))) continue;
+      const k = posKey(x, y, z);
+      const slots = this.books.get(k) ?? new Array<ItemStack | null>(SHELF_SLOTS).fill(null);
+      const book = slots[i] ?? { id: BOOK, count: 1 };
+      slots[i] = null;
+      this.store(k, slots);
+      this.ctx.world.setBlock(x, y, z, shelfWithBooks(id, mask & ~(1 << i)));
+      return book;
+    }
+    return null;
+  }
+
   private store(k: number, slots: Slots): void {
     if (slots.some(Boolean)) this.books.set(k, slots);
     else this.books.delete(k);

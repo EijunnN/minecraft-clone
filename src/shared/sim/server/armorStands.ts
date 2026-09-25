@@ -80,6 +80,17 @@ export class ArmorStands {
     return this.byEnt.has(entityId);
   }
 
+  /** Fase 7 (mecanismos): un dispensador le pone una pieza de armadura si ese hueco está libre; true si se la puso. */
+  equip(entityId: number, stack: ItemStack): boolean {
+    const st = this.byEnt.get(entityId);
+    const piece = ITEMS[stack.id]?.armor;
+    if (!st || !piece || st.armor[piece.slot]) return false;
+    st.armor[piece.slot] = { ...stack, count: 1 };
+    this.spawn(st);
+    this.ctx.fx('stand_equip', st.x, st.y + 1, st.z);
+    return true;
+  }
+
   /** Poner un soporte encima del bloque (x, y, z). */
   onPlace(s: Session, msg: Extract<ClientMsg, { t: 'stand' }>): void {
     const ctx = this.ctx;

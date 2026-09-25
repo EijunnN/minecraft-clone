@@ -201,3 +201,8 @@ export * from './enchantBlocks';
 import { REDSTONE_INVENTORY } from './redstoneBlocks';
 export * from './redstoneBlocks';
 (INVENTORY_ORDER as number[]).push(...REDSTONE_INVENTORY);
+// Fase 7 (mecanismos): pistones, observador, tolva, dispensador, soltador y dinamita (registrados los últimos:
+// ids nuevos) y su sitio en el inventario creativo.
+import { MECHANISM_INVENTORY } from './mechanismBlocks';
+export * from './mechanismBlocks';
+(INVENTORY_ORDER as number[]).push(...MECHANISM_INVENTORY);

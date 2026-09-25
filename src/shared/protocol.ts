@@ -138,6 +138,8 @@ export type ClientMsg =
     t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number;
     /** Fase 6.5 (libros y estandartes): capas del estandarte que se coloca. */
     l?: BannerLayer[];
+    /** Fase 7 (mecanismos): inclinación de la mirada (pistones, observadores… hacia arriba o abajo). */
+    pi?: number;
   }
   /** Clic derecho sobre un bloque (abrir puertas, dormir, labrar con la azada, polvo de hueso). */
   | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number; h?: number } // Fase 6.5 (materiales): h, altura del clic
@@ -300,7 +302,9 @@ export type ServerMsg =
   | { t: 'vpass'; e: number; p: (string | number)[] }
   | { t: 'vfix'; e: number; p: [number, number, number]; v: [number, number, number] }
   // Fase 7 (encantamientos): /encantar pone estos encantamientos al objeto de la mano.
-  | { t: 'ench'; e: [number, number][] };
+  | { t: 'ench'; e: [number, number][] }
+  // Fase 7 (mecanismos): un dispensador le pone esta pieza de armadura al jugador (en su hueco, si está libre).
+  | { t: 'equip'; s: ItemStack };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

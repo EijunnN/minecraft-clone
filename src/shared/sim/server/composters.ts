@@ -45,6 +45,29 @@ export class Composters {
     ctx.fx('compost', x + 0.5, y + 0.3 + (level + (up ? 1 : 0)) / 8, z + 0.5, up ? 1 : 0);
   }
 
+  /** Fase 7 (mecanismos): una tolva echa `item` desde arriba; true si lo aceptó (se gasta aunque no suba). */
+  insert(x: number, y: number, z: number, item: number): boolean {
+    const ctx = this.ctx;
+    const level = composterLevel(ctx.world.getBlock(x, y, z));
+    if (level < 0 || level >= COMPOSTER_FULL || !canCompost(level, item)) return false;
+    const up = compostRises(level, item, ctx.rand());
+    if (up) {
+      ctx.world.setBlock(x, y, z, COMPOSTER + level + 1);
+      if (level + 1 === COMPOSTER_FULL) this.pending.set(`${x},${y},${z}`, READY_TICKS);
+    }
+    ctx.fx('compost', x + 0.5, y + 0.3 + (level + (up ? 1 : 0)) / 8, z + 0.5, up ? 1 : 0);
+    return true;
+  }
+
+  /** Fase 7 (mecanismos): una tolva de debajo saca el polvo de hueso de un compostador listo; true si lo había. */
+  takeReady(x: number, y: number, z: number): boolean {
+    const ctx = this.ctx;
+    if (composterLevel(ctx.world.getBlock(x, y, z)) !== COMPOSTER_READY) return false;
+    ctx.world.setBlock(x, y, z, COMPOSTER);
+    ctx.fx('compost_empty', x + 0.5, y + 0.9, z + 0.5);
+    return true;
+  }
+
   tick(): void {
     if (this.pending.size === 0) return;
     const ctx = this.ctx;

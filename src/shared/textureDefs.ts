@@ -424,6 +424,12 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'daylight_detector_side', 'target_side', 'target_top', 'note_block', 'tripwire', 'trapped_chest_front', 'trapped_chest_front_seam_left',
     'trapped_chest_front_seam_right', 'lightning_rod_on', 'iron_door_top', 'iron_door_bottom', 'iron_trapdoor'].map((name): TextureDef => ({ name })),
   ...['', 'exposed_', 'weathered_', 'oxidized_'].flatMap((p) => ['lightning_rod', 'copper_bulb', 'copper_bulb_lit'].map((k): TextureDef => ({ name: p + k }))),
+  // Fase 7 (mecanismos): pistón (el lateral y la flecha del observador, también girados: ver
+  // blocks/mechanismBlocks.ts), observador, tolva, dispensador, soltador y dinamita.
+  ...['piston_top', 'piston_top_sticky', 'piston_bottom', 'piston_inner', 'observer_front', 'observer_side', 'observer_back',
+    'observer_back_on', 'hopper_outside', 'hopper_inside', 'hopper_top', 'dispenser_front', 'dispenser_front_vertical', 'dropper_front',
+    'dropper_front_vertical', 'tnt_side', 'tnt_top', 'tnt_bottom'].map((name): TextureDef => ({ name })),
+  ...['piston_side', 'observer_top'].flatMap((k) => ['', '_r1', '_r2', '_r3'].map((r): TextureDef => ({ name: k + r }))),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

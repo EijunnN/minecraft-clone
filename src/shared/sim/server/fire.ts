@@ -25,6 +25,9 @@ export class Fire {
   /** Fuegos vivos: posición → tick de su próxima revisión. */
   private due = new Map<number, number>();
 
+  /** Fase 7 (mecanismos): el fuego alcanza un bloque inflamable; true si otro sistema se encarga (la dinamita). */
+  burned: ((x: number, y: number, z: number, id: number) => boolean) | null = null;
+
   constructor(private ctx: ServerContext, nature: Nature) {
     nature.addRandomTickHandler((id, x, y, z) => this.randomTick(id, x, y, z));
   }
@@ -202,6 +205,7 @@ export class Fire {
     const id = w.getBlock(x, y, z);
     const burn = flammability(id);
     if (burn <= 0 || Math.floor(ctx.rand() * chance) >= burn) return;
+    if (this.burned?.(x, y, z, id)) return; // Fase 7 (mecanismos): la dinamita se enciende
     if (Math.floor(ctx.rand() * (age + 10)) < 5 && !this.nearRain(x, y, z)) {
       w.setBlock(x, y, z, fireWithAge(Math.min(15, age + Math.floor(Math.floor(ctx.rand() * 5) / 4))));
     } else w.setBlock(x, y, z, AIR);

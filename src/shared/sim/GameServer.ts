@@ -66,6 +66,7 @@ import { Transport } from './server/vehicles'; // Fase 7 (transporte)
 import { EnchantWork } from './server/enchantWork'; // Fase 7 (encantamientos)
 import { thunderAt } from '../weather'; // Fase 7 (encantamientos): Conductividad
 import { Redstone } from './server/redstone'; // Fase 7 (redstone)
+import { Mechanisms } from './server/mechanisms'; // Fase 7 (mecanismos)
 import { discOfItem } from '../collections';
 
 export { TICK_RATE, type Conn };
@@ -175,6 +176,8 @@ export class GameServer {
   private enchantWork: EnchantWork; // Fase 7 (encantamientos)
   /** Fase 7 (redstone): potencia, componentes y ticks programados. */
   readonly redstone: Redstone;
+  /** Fase 7 (mecanismos): pistones, observadores, tolvas, dispensadores, soltadores y dinamita. */
+  readonly mechanisms: Mechanisms;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -325,6 +328,15 @@ export class GameServer {
     // Los raíles propulsores y activadores del transporte miran la potencia de la redstone.
     this.transport.rails.railPowered = (x, y, z) => rs.isPowered(x, y, z);
     for (const c of this.world.loadedChunks()) rs.onChunkLoaded(c);
+    // Fase 7 (mecanismos): lo que usan (contenedores, fuego, transporte…) y los avisos que les llegan.
+    const mech = (this.mechanisms = new Mechanisms({
+      ctx: this.ctx, redstone: rs, rules: this.rules, containers: this.containers, composters: this.composters,
+      collections: this.collections, shelves: this.shelves, transport: this.transport, fire: this.fire, stands: this.stands,
+      fertilize: (x, y, z) => this.farming.fertilize(x, y, z),
+    }));
+    const lightBlock = this.fire.lightBlock.bind(this.fire);
+    this.fire.lightBlock = (x, y, z) => mech.light(x, y, z) || lightBlock(x, y, z);
+    this.fire.burned = (x, y, z) => mech.light(x, y, z);
   }
 
   get seed(): number {
@@ -431,7 +443,10 @@ export class GameServer {
         for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
       },
       // Fase 7 (redstone): proyectiles que se clavan (diana, botones de madera).
-      projectileHit: (kind, bx, by, bz, px, py, pz) => this.redstone?.projectileHit(kind, bx, by, bz, px, py, pz),
+      projectileHit: (kind, bx, by, bz, px, py, pz, fire) => {
+        this.redstone?.projectileHit(kind, bx, by, bz, px, py, pz);
+        this.mechanisms?.projectileHit(kind, bx, by, bz, !!fire); // Fase 7 (mecanismos): flechas en llamas y dinamita
+      },
       // Fase 6 (monstruos): efectos de estado que causan las criaturas (los aplica el cliente).
       // Fase 7 (pociones): las pociones también afectan a los jugadores en creativo (`creativeToo`).
       effectPlayer: (id, effect, seconds, amp, creativeToo) => {
@@ -983,6 +998,7 @@ export class GameServer {
     this.fire?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (equipo)
     this.conduits?.onBlockChanged(x, y, z, old, id);
     this.transport?.rails.onBlockChanged(x, y, z); // Fase 7 (transporte): potencia de los raíles
+    this.mechanisms?.onBlockChanged(x, y, z, old, id); // Fase 7 (mecanismos)
     this.redstone?.onBlockChanged(x, y, z, old, id); // Fase 7 (redstone)
   }
 
@@ -1018,6 +1034,7 @@ export class GameServer {
     this.equipment.tick();
     this.enchantWork.tick(); // Fase 7 (encantamientos)
     this.redstone.tick(); // Fase 7 (redstone)
+    this.mechanisms.tick(); // Fase 7 (mecanismos): después de la redstone (los pulsos cortos llegan antes)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

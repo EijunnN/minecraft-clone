@@ -84,6 +84,11 @@ export class Entities {
   fallingLanded: ((e: Entity) => boolean) | null = null;
   /** Nivel de Saqueo del golpe que se está resolviendo (lo pone quien ataca). */
   looting = 0;
+  // Fase 7 (mecanismos)
+  /** Entidades con comportamiento de otro sistema (la dinamita encendida): tipo → su tick. */
+  readonly custom = new Map<number, (e: Entity, dt: number) => void>();
+  /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
+  explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -320,6 +325,7 @@ export class Entities {
 
   /** `charged`: Fase 6.5 (colecciones), creeper cargado (su víctima suelta la cabeza). */
   explode(x: number, y: number, z: number, power: number, charged = false): void {
+    if (this.explosion) return this.explosion(x, y, z, power, charged); // Fase 7 (mecanismos)
     const r = Math.ceil(power);
     this.host.fx('explode', x, y, z, power);
     for (let dy = -r; dy <= r; dy++) {
@@ -408,6 +414,7 @@ export class Entities {
       else if (e.type === ENT_EFFECT_CLOUD) this.potions.cloudTick(e, dt, players); // Fase 7 (pociones)
       else if (e.effects) this.effects.tickWith(e, dt, () => this.mobs.mobTick(e, dt, players)); // Fase 7 (pociones)
       else if (isVehicleType(e.type)) continue; // Fase 7 (transporte): las mueve su sistema
+      else if (this.custom.has(e.type)) this.custom.get(e.type)!(e, dt); // Fase 7 (mecanismos): dinamita encendida
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

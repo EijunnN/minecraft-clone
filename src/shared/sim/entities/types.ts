@@ -58,7 +58,7 @@ export interface EntityHost {
    * Fase 7 (redstone): un proyectil se clava en el bloque (bx, by, bz) desde el punto libre (px, py, pz)
    * (diana, botones de madera).
    */
-  projectileHit?(kind: 'arrow' | 'trident' | 'thrown', bx: number, by: number, bz: number, px: number, py: number, pz: number): void;
+  projectileHit?(kind: 'arrow' | 'trident' | 'thrown', bx: number, by: number, bz: number, px: number, py: number, pz: number, fire?: boolean): void; // Fase 7 (mecanismos): fire, flecha en llamas
 }
 
 /** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */

@@ -73,6 +73,8 @@ export const VF_PADDLE_R = 1 << 25;
 export const VF_LIT = 1 << 26;
 /** Golpeada hacia el otro lado (la sacudida alterna). */
 export const VF_HURT_FLIP = 1 << 27;
+/** Fase 7 (mecanismos): la vagoneta con dinamita tiene la mecha encendida (parpadea). */
+export const VF_PRIMED = 1 << 28;
 
 /**
  * Posición "de contenedor" de una barca o vagoneta con cofre: la ventana del cofre funciona como la de

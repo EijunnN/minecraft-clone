@@ -35,6 +35,7 @@ import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
 import { DISCS } from './discs'; // Fase 6.5 (colecciones)
 import { BREWING_STAND } from './blocks'; // Fase 7 (pociones)
 import { REDSTONE_WIRE, TRIPWIRE, IRON_DOOR } from './blocks'; // Fase 7 (redstone)
+import { HOPPER } from './blocks'; // Fase 7 (mecanismos)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -551,6 +552,12 @@ ITEMS[REDSTONE].block = REDSTONE_WIRE;
 ITEMS[STRING].block = TRIPWIRE;
 ITEMS[IRON_DOOR].sprite = 'iron_door';
 export const QUARTZ = item('quartz', 'Cuarzo del Nether');
+// ------------------------------------------------------------------ Fase 7 (mecanismos)
+// La tolva se ve plana en el inventario y en la mano (como en Minecraft); las vagonetas con tolva y con
+// dinamita las registra el transporte (vehicleItems.ts).
+ITEMS[HOPPER].sprite = 'hopper';
+export const HOPPER_MINECART = item('hopper_minecart', 'Vagoneta con tolva', { stack: 1 });
+export const TNT_MINECART = item('tnt_minecart', 'Vagoneta con dinamita', { stack: 1 });
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -737,3 +744,4 @@ fuel(COAL_BLOCK, 800);
 
 // ------------------------------------------------------------------ Fase 7 (redstone)
 (CREATIVE_ITEMS as number[]).push(QUARTZ);
+(CREATIVE_ITEMS as number[]).push(HOPPER_MINECART, TNT_MINECART); // Fase 7 (mecanismos)

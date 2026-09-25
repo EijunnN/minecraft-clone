@@ -8,6 +8,7 @@ import { ENT_ARROW } from '../../mobs';
 import { ENT_EFFECT_CLOUD, potionColor } from '../../potions'; // Fase 7 (pociones)
 import { packColor } from '../../effects';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
+import { ENT_TNT } from '../../mechanisms'; // Fase 7 (mecanismos)
 import type { Entity } from '../entities';
 import { r2, type ServerContext } from './context';
 // Fase 7 (encantamientos): el brillo de los objetos encantados va en los bits de estado.
@@ -82,6 +83,7 @@ export class EntitySync {
           else if (e.type === ENT_ARROW) rec.push(e.arrowPotion ?? -1);
           else if (e.type === ENT_EFFECT_CLOUD) rec.push(packColor(potionColor(e.cloudPotion ?? 0)), Math.round((e.cloudRadius ?? 0) * 100));
           else if (e.type === ENT_FALLING) rec.push(e.block ?? 0);
+          else if (e.type === ENT_TNT) rec.push(e.block ?? 0, Math.round(e.fuse ?? 0)); // Fase 7 (mecanismos): bloque y mecha
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (isHangingType(e.type)) rec.push(e.variant ?? 0); // Fase 6.5: variante del cuadro u objeto del marco
           else if (e.type === ENT_ARMOR_STAND) rec.push(...(e.standArmor ?? [0, 0, 0, 0])); // Fase 6.5 (remate): su armadura

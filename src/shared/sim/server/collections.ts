@@ -58,6 +58,20 @@ export class Collections {
     reply(true, 1);
   }
 
+  /** Fase 7 (mecanismos): una tolva mete el disco `item` en el tocadiscos vacío de (x, y, z); true si entró. */
+  insertDisc(x: number, y: number, z: number, item: number): boolean {
+    const ctx = this.ctx;
+    const id = ctx.world.getBlock(x, y, z);
+    if (!isJukebox(id) || jukeboxHasDisc(id) || discOfItem(item) < 0) return false;
+    const k = posKey(x, y, z);
+    this.discs.set(k, item);
+    this.dirty.add(k);
+    this.playing.set(k, ctx.now());
+    ctx.world.setBlock(x, y, z, jukeboxWith(true));
+    this.announce(k, discOfItem(item), 0);
+    return true;
+  }
+
   /** Saca el disco (cae encima del tocadiscos) y lo calla. */
   private eject(k: number, x: number, y: number, z: number): void {
     const disc = this.discs.get(k);

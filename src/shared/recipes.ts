@@ -689,3 +689,20 @@ import { QUARTZ, REDSTONE as RS_DUST, STICK as RS_STICK, IRON_INGOT as RS_IRON, 
   shape(['II', 'II'], { I: RS_IRON }, IRON_TRAPDOOR);
   for (let s = 0; s < RS_STAGES; s++) shape([' C ', 'CBC', ' R '], { C: RS_COPPER.block[0][s], B: BLAZE_ROD, R }, COPPER_BULB[0][s], 4);
 }
+
+// ------------------------------------------------------------------ Fase 7 (mecanismos)
+// Pistones, observador, tolva, dispensador, soltador, dinamita y sus vagonetas, como en Minecraft.
+import { PISTON, STICKY_PISTON, OBSERVER, HOPPER, DISPENSER, DROPPER, TNT } from './blocks';
+import { GUNPOWDER, HOPPER_MINECART, TNT_MINECART } from './items';
+{
+  const C = COBBLESTONE, R = REDSTONE;
+  shape(['TTT', 'CIC', 'CRC'], { T: PLANKS, C, I: IRON_INGOT, R }, PISTON);
+  shape(['S', 'P'], { S: SLIME_BALL, P: PISTON }, STICKY_PISTON);
+  shape(['CCC', 'RRQ', 'CCC'], { C, R, Q: QUARTZ }, OBSERVER);
+  shape(['I I', 'ICI', ' I '], { I: IRON_INGOT, C: CHEST }, HOPPER);
+  shape(['CCC', 'CBC', 'CRC'], { C, B: BOW, R }, DISPENSER);
+  shape(['CCC', 'C C', 'CRC'], { C, R }, DROPPER);
+  shape(['GSG', 'SGS', 'GSG'], { G: GUNPOWDER, S: [SAND, RED_SAND] }, TNT);
+  mix([HOPPER, MINECART], HOPPER_MINECART);
+  mix([TNT, MINECART], TNT_MINECART);
+}

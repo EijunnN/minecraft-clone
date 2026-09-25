@@ -29,6 +29,7 @@ import { BLOCK_COLLIDE } from './blocks';
 import { isAnvil, anvilFacing } from './blocks'; // Fase 7 (encantamientos)
 import { planRedstone } from './redstonePlacement'; // Fase 7 (redstone)
 import { isIronOpenable } from './blocks'; // Fase 7 (redstone)
+import { planMechanism } from './mechanismPlacement'; // Fase 7 (mecanismos)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -77,7 +78,7 @@ function rel(get: GetBlock, x: number, y: number, z: number): NeighborGet {
  * Bloques que coloca el objeto `item` al usarlo sobre `hit` (null si no se puede).
  * No comprueba si hay criaturas o jugadores en medio: eso lo hace quien llama.
  */
-export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: number): Edit[] | null {
+export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: number, pitch = 0): Edit[] | null { // Fase 7 (mecanismos): pitch
   const base = familyBase(item);
   const mat = planMaterial(get, hit, base); // Fase 6.5 (materiales): tartas con vela y huevos de rana
   if (mat !== undefined) return mat;
@@ -137,6 +138,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 7 (redstone): polvo, antorchas, palancas, botones, placas, repetidores, comparadores, ganchos…
   const rs = planRedstone(get, hit, base, x, y, z, face, facing);
   if (rs !== undefined) return rs;
+  // Fase 7 (mecanismos): pistones, observadores, tolvas, dispensadores y soltadores orientados.
+  const mech = planMechanism(hit, base, x, y, z, yaw, pitch);
+  if (mech !== undefined) return mech;
   // Fase 6.5 (colecciones): cabezas en el suelo (16 orientaciones, mirando al jugador) o en la pared.
   const skull = skullPlacement(base, face, hit.nx, hit.nz, yaw);
   if (skull >= 0) return skull && blockSupported(skull, rel(get, x, y, z)) ? one(skull) : null;

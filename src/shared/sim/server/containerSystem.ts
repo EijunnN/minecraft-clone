@@ -22,6 +22,7 @@ import type { ServerContext, Session } from './context';
 // Fase 7 (pociones): el alambique alquímico destila solo y enseña sus frascos.
 import { isBrewingStand, brewingStandMask, brewingStandWith } from '../../blocks';
 import { brewTick, brewBottleMask, BREW_INGREDIENT, BREW_FUEL } from '../../brewing';
+import { mechanismSlots } from '../../blocks'; // Fase 7 (mecanismos)
 
 /** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
 interface View {
@@ -77,9 +78,10 @@ export class ContainerSystem {
     if (!isContainer(id)) return null;
     const k = posKey(x, y, z);
     let c = this.containers.get(k);
-    const kind = isChest(id) ? 'chest' : isBrewingStand(id) ? 'brewing' : 'furnace'; // Fase 7 (pociones)
-    if (!c || c.kind !== kind) {
-      c = newContainer(kind);
+    const size = mechanismSlots(id); // Fase 7 (mecanismos): tolva (5 huecos), dispensador y soltador (9)
+    const kind = size || isChest(id) ? 'chest' : isBrewingStand(id) ? 'brewing' : 'furnace'; // Fase 7 (pociones)
+    if (!c || c.kind !== kind || (size > 0 && c.slots.length !== size)) {
+      c = newContainer(kind, size || undefined);
       this.containers.set(k, c);
     }
     return c;
@@ -299,6 +301,31 @@ export class ContainerSystem {
   /** Casillas que ve un comparador en (x, y, z): las del contenedor o las del cofre doble entero. */
   slotsAt(x: number, y: number, z: number): readonly (ItemStack | null)[] | null {
     return this.viewAt(x, y, z)?.state.slots ?? null;
+  }
+
+  /**
+   * Fase 7 (mecanismos): contenido del contenedor de bloque de (x, y, z) (el cofre doble entero) para las
+   * tolvas, los soltadores y los dispensadores, que lo cambian directamente; `done` guarda el cambio, avisa
+   * a los comparadores y lo enseña a quien lo tenga abierto. null si no hay contenedor.
+   */
+  access(x: number, y: number, z: number): { state: ContainerState; done(): void } | null {
+    const v = this.viewAt(x, y, z);
+    if (!v) return null;
+    const virtual = this.virtual?.container(x, y, z) !== undefined; // barcas y vagonetas con cofre o tolva
+    return {
+      state: v.state,
+      done: () => {
+        if (virtual) this.virtual!.changed(x, y, z);
+        else {
+          this.commit(v);
+          for (const [pk] of v.parts) {
+            this.dirty.add(pk);
+            this.contentsChanged?.(keyX(pk), keyY(pk), keyZ(pk));
+          }
+        }
+        this.sendView(posKey(x, y, z));
+      },
+    };
   }
 
   /** Guarda los contenedores que cambiaron. */

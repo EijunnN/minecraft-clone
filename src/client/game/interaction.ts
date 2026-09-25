@@ -636,7 +636,7 @@ export class Interaction {
   placeBlock(hit: RayHit, base: number, slot = this.g.selected): boolean {
     const world = this.g.world!;
     const get = (x: number, y: number, z: number) => world.getBlock(x, y, z);
-    const edits = planPlacement(get, hit, base, this.g.player.yaw);
+    const edits = planPlacement(get, hit, base, this.g.player.yaw, this.g.player.pitch); // Fase 7 (mecanismos): pitch
     if (!edits) return false;
     for (const [x, y, z, id] of edits) {
       if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return false;
@@ -657,7 +657,7 @@ export class Interaction {
     for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
     this.g.net?.send({
       t: 'place', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], p: [hit.px, hit.py, hit.pz], item: base,
-      yaw: this.g.player.yaw,
+      yaw: this.g.player.yaw, pi: Math.round(this.g.player.pitch * 1000) / 1000, // Fase 7 (mecanismos)
       ...this.g.books.placeExtras(this.g.inv.get(slot), edits), // Fase 6.5 (libros y estandartes): capas del estandarte
     });
     this.g.swing(false);

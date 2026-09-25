@@ -77,6 +77,8 @@ export interface CartBehavior {
   load?(v: Vehicle, data: unknown): void;
   /** Lo que suelta además de su objeto al romperla. */
   drops?(v: Vehicle): ItemStack[];
+  /** Fase 7 (mecanismos): bits de estado propios para los clientes (la mecha de la vagoneta con dinamita). */
+  flags?(v: Vehicle): number;
 }
 
 export const CART_BEHAVIORS: Record<number, CartBehavior> = {};
@@ -520,6 +522,7 @@ export class Transport {
       if (v.paddles & 1) f |= VF_PADDLE_L;
       if (v.paddles & 2) f |= VF_PADDLE_R;
       if (v.cart?.furnace && v.cart.furnace.fuel > 0) f |= VF_LIT;
+      f |= CART_BEHAVIORS[e.type]?.flags?.(v) ?? 0; // Fase 7 (mecanismos)
       e.flags = f;
     }
     this.collide(carts, boats);

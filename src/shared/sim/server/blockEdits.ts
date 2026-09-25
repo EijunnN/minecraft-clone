@@ -137,7 +137,8 @@ export class BlockEdits {
     const hitId = ctx.world.getBlock(x, y, z);
     if (hitId < 0) return;
     const get = (bx: number, by: number, bz: number) => ctx.world.getBlock(bx, by, bz);
-    const edits = planPlacement(get, { x, y, z, nx: n[0], ny: n[1], nz: n[2], px: p[0], py: p[1], pz: p[2], id: hitId }, item, yaw);
+    const pitch = Number.isFinite(Number(msg.pi)) ? Math.max(-Math.PI / 2, Math.min(Math.PI / 2, Number(msg.pi))) : 0; // Fase 7 (mecanismos)
+    const edits = planPlacement(get, { x, y, z, nx: n[0], ny: n[1], nz: n[2], px: p[0], py: p[1], pz: p[2], id: hitId }, item, yaw, pitch);
     if (!edits) {
       undo();
       return;

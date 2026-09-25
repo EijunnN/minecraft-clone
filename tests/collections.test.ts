@@ -209,7 +209,10 @@ test('servidor: un rayo carga al creeper y su explosión suelta una cabeza por v
   assert.ok(!far.charged, 'el lejano no');
   h.tick(2);
   assert.ok(creeper.flags & EF_CHARGED, 'los clientes lo ven cargado');
-  // La explosión de un creeper cargado: el doble de fuerte y una sola cabeza.
+  // La explosión de un creeper cargado: el doble de fuerte y una sola cabeza. Fase 7 (mecanismos): las
+  // explosiones hieren como en Minecraft (el doble que antes) y alcanzarían al creeper cargado, que sería la
+  // primera víctima: se retira antes.
+  E.remove(creeper.id);
   const zombie = E.spawnMob(MOB_ZOMBIE, bx - 3.5, by, bz + 0.5)!;
   const skeleton = E.spawnMob(MOB_SKELETON, bx - 3.5, by, bz + 1.5)!;
   zombie.health = skeleton.health = 1;
