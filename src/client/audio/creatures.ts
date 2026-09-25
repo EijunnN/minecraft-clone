@@ -9,6 +9,7 @@ import { buildBowTwang } from './combat';
 import { randRange, type MobSoundEvent, type MobSoundKind } from './types';
 import { villagerSound } from './villagerVoice'; // Fase 6 (aldeanos)
 import { buildMonsterSound } from './monsterSounds'; // Fase 6 (monstruos)
+import { buildWildlifeSound } from './wildlife'; // Fase 6 (fauna)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
 function playFootstep(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number, weight: number): AudioScheduledSourceNode[] {
@@ -471,7 +472,11 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
     case 'wandering_trader':
       return villagerSound(ctx, noise, event, destination, now);
     default:
-      // Fase 6 (monstruos): bruja, slime, phantom y lepisma.
-      return buildMonsterSound(ctx, noise, kind, event, destination, now);
+      // Fase 6 (monstruos): bruja, slime, phantom y lepisma; (fauna): zorro, cabra, oso polar, conejo, lobo,
+      // abeja, panda, loro y armadillo.
+      {
+        const monster = buildMonsterSound(ctx, noise, kind, event, destination, now);
+        return monster.length ? monster : buildWildlifeSound(ctx, noise, kind, event, destination, now);
+      }
   }
 }

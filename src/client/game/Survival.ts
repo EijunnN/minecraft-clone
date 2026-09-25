@@ -41,6 +41,9 @@ export function deathMessage(cause: DamageCause): string {
     zombie_villager: 'fue devorado por un aldeano zombi',
     // Fase 6 (gólems/domesticar)
     iron_golem: 'salió volando por un gólem de hierro', wolf: 'fue despedazado por un lobo',
+    // Fase 6 (fauna).
+    bee: 'murió picado por una abeja', panda: 'fue aplastado por un panda',
+    polar_bear: 'fue destrozado por un oso polar',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

@@ -11,6 +11,7 @@ import { animateMonster, monsterRoot } from './monsterAnim'; // Fase 6 (monstruo
 import { animateAquatic, hiddenAquaticPart, aquaticRoot } from './aquaticPose'; // Fase 6 (acuáticos)
 // Fase 6 (gólems/domesticar): pieles, collar, poses de sentado y de los gólems.
 import { mobSkinKey, hiddenPart, sitRoot, companionPart } from './companionPose';
+import { mobVariant, faunaAnimate, faunaPartScale, faunaRoot } from './faunaPose'; // Fase 6 (fauna)
 
 export interface MobTexture {
   width: number;
@@ -134,6 +135,7 @@ export class MobRenderer {
   /** Rotaciones de animación por parte: [x, y, z] añadidas a la de reposo. */
   private animate(def: MobDef, e: ClientEntity, time: number, name: string, out: number[]): void {
     out[0] = out[1] = out[2] = 0;
+    if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
     const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
     const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
     const acting = (e.flags & EF_ACTION) !== 0;
@@ -239,7 +241,9 @@ export class MobRenderer {
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
-      if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, [0, 0, 0]);
+      const faunaScale = faunaPartScale(def, e, part.name); // Fase 6 (fauna): armadillo enroscado
+      if (faunaScale) mat4.scale(m, m, faunaScale);
+      else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, [0, 0, 0]);
       else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, [0, 0, 0]); // Fase 6 (monturas): sin silla
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
@@ -254,6 +258,7 @@ export class MobRenderer {
     mat4.rotateY(m, m, e.bodyYaw);
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
     mountRootPose(def, e, m); // Fase 6 (monturas): encabritada
+    faunaRoot(def, e, m); // Fase 6 (fauna)
     let s = def.scale;
     if (e.flags & EF_BABY) s *= 0.5;
     if (def.id === MOB_CREEPER && e.actionT >= 0) {
@@ -293,7 +298,7 @@ export class MobRenderer {
       const light = lightAt(e);
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def, e.variant))
+      p.tex2D('uSkin', this.skin(def, e.variant || mobVariant(e)))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)

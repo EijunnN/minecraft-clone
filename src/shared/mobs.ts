@@ -5,6 +5,7 @@ import {
   ENDER_PEARL, SPIDER_EYE, COD, SALMON,
   IRON_INGOT, SNOWBALL,
 } from './items';
+import { RAW_RABBIT, RABBIT_HIDE } from './items'; // Fase 6 (fauna): botín del conejo
 import { WHITE_WOOL, POPPY } from './blocks';
 // Fase 6 (monstruos): botín de los monstruos nuevos.
 import { STICK, SUGAR, REDSTONE, SLIME_BALL, PHANTOM_MEMBRANE } from './items';
@@ -54,6 +55,11 @@ export const MOB_SLIME_SMALL = 48;
 export const MOB_IRON_GOLEM = 20;
 export const MOB_SNOW_GOLEM = 21;
 export const MOB_CAT = 22;
+// Fase 6 (fauna): abejas, pandas, loros y armadillos (ids 50–59 reservados).
+export const MOB_BEE = 50;
+export const MOB_PANDA = 51;
+export const MOB_PARROT = 52;
+export const MOB_ARMADILLO = 53;
 /** Entidades que no son criaturas. */
 export const ENT_ITEM = 100;
 export const ENT_ARROW = 101;
@@ -91,7 +97,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   // Fase 6 (acuáticos).
   | 'fish' | 'puffer' | 'dolphin' | 'turtle' | 'axolotl' | 'frog' | 'tadpole'
   // Fase 6 (gólems/domesticar): brazos largos que se balancean y golpean hacia arriba.
-  | 'golem';
+  | 'golem'
+  | 'flyer'; // Fase 6 (fauna): abejas y loros
 
 export interface MobDef {
   id: number;
@@ -119,6 +126,8 @@ export interface MobDef {
   aquatic?: boolean;
   /** Fase 6 (monstruos): voz (clave de sonido) si no es la propia clave (el ahogado suena como un zombi). */
   sound?: string;
+  /** Fase 6 (fauna): vuela (abejas y loros; su movimiento va en sim/entities/wildlife.ts). */
+  flying?: boolean;
 }
 
 const quadLegs = (h: number, xs: number, zs: [number, number], uv: [number, number], w = 4): ModelPart[] => [
@@ -315,7 +324,7 @@ mob({
 });
 mob({
   id: MOB_RABBIT, key: 'rabbit', name: 'Conejo', hostile: false, health: 3, walk: 1.6, run: 3.6, width: 0.4, height: 0.5,
-  damage: 0, burnsInSun: false, drops: [], atlas: [32, 32], anim: 'quadruped', scale: 1,
+  damage: 0, burnsInSun: false, drops: [[RAW_RABBIT, 0, 1], [RABBIT_HIDE, 0, 1]], atlas: [32, 32], anim: 'quadruped', scale: 1,
   parts: [
     { name: 'body', pivot: [0, 3, 0], from: [-2, 0, -3], size: [4, 4, 6], uv: [0, 0] },
     { name: 'head', pivot: [0, 6, -3], from: [-2, -1, -4], size: [4, 4, 4], uv: [0, 10] },
@@ -551,6 +560,63 @@ mob({
 });
 // Fase 6 (acuáticos): definiciones en aquaticMobs.ts.
 for (const d of AQUATIC_MOBS) mob(d);
+
+// ---------------------------------------------------------------- fase 6 (fauna): abejas, pandas, loros y armadillos
+mob({
+  id: MOB_BEE, key: 'bee', name: 'Abeja', hostile: false, neutral: true, health: 10, walk: 2.2, run: 4.2, width: 0.7, height: 0.6,
+  damage: 2, burnsInSun: false, drops: [], atlas: [64, 32], anim: 'flyer', scale: 1, flying: true,
+  parts: [
+    { name: 'body', pivot: [0, 3, 0], from: [-3.5, 0, -5], size: [7, 7, 10], uv: [0, 0] },
+    { name: 'stinger', parent: 'body', pivot: [0, 0, 0], from: [-0.5, 2, 5], size: [1, 1, 2], uv: [36, 0] },
+    { name: 'antennaR', parent: 'body', pivot: [0, 0, 0], from: [0.5, 5, -8], size: [1, 2, 3], uv: [44, 0] },
+    { name: 'antennaL', parent: 'body', pivot: [0, 0, 0], from: [-1.5, 5, -8], size: [1, 2, 3], uv: [44, 0] },
+    { name: 'wingR', parent: 'body', pivot: [1, 7, -2], from: [0, 0, 0], size: [9, 0, 6], uv: [0, 18] },
+    { name: 'wingL', parent: 'body', pivot: [-1, 7, -2], from: [-9, 0, 0], size: [9, 0, 6], uv: [0, 18] },
+    { name: 'leg0', parent: 'body', pivot: [0, 0, -2], from: [-2.5, -2, 0], size: [5, 2, 1], uv: [34, 8] },
+    { name: 'leg1', parent: 'body', pivot: [0, 0, 0], from: [-2.5, -2, 0], size: [5, 2, 1], uv: [34, 8] },
+    { name: 'leg2', parent: 'body', pivot: [0, 0, 2], from: [-2.5, -2, 0], size: [5, 2, 1], uv: [34, 8] },
+  ],
+});
+mob({
+  id: MOB_PANDA, key: 'panda', name: 'Panda', hostile: false, neutral: true, health: 20, walk: 0.9, run: 2.2, width: 1.3, height: 1.25,
+  damage: 6, burnsInSun: false, drops: [], atlas: [128, 64], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 8, 0], from: [-7.5, 0, -11], size: [15, 12, 22], uv: [0, 17] },
+    { name: 'head', pivot: [0, 17, -11], from: [-5.5, -4, -8], size: [11, 9, 8], uv: [0, 0] },
+    { name: 'nose', parent: 'head', pivot: [0, 0, 0], from: [-2.5, -4, -10], size: [5, 3, 2], uv: [40, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [3, 4, -3], size: [3, 3, 1], uv: [56, 0] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-6, 4, -3], size: [3, 3, 1], uv: [56, 0] },
+    { name: 'tail', pivot: [0, 17, 11], from: [-1.5, -1.5, 0], size: [3, 3, 2], uv: [66, 0] },
+    ...quadLegs(8, 4.5, [-7, 7], [76, 17], 5),
+  ],
+});
+mob({
+  id: MOB_PARROT, key: 'parrot', name: 'Loro', hostile: false, health: 6, walk: 3, run: 5.5, width: 0.5, height: 0.7,
+  damage: 0, burnsInSun: false, drops: [[FEATHER, 1, 2]], atlas: [32, 32], anim: 'flyer', scale: 1, flying: true,
+  parts: [
+    { name: 'body', pivot: [0, 2, 0], from: [-1.5, 0, -1.5], size: [3, 6, 3], uv: [0, 0], rot: [-0.28, 0, 0] },
+    { name: 'head', parent: 'body', pivot: [0, 6, -0.5], from: [-1, 0, -1], size: [2, 3, 2], uv: [12, 0] },
+    { name: 'beak', parent: 'head', pivot: [0, 0, 0], from: [-0.5, 1, -2], size: [1, 2, 1], uv: [20, 0] },
+    { name: 'crest', parent: 'head', pivot: [0, 3, 0.5], from: [-0.5, -1, 0], size: [1, 3, 2], uv: [20, 4], rot: [-0.6, 0, 0] },
+    { name: 'wingR', parent: 'body', pivot: [1.5, 5.5, 0], from: [0, -5, -1.5], size: [1, 5, 3], uv: [0, 9] },
+    { name: 'wingL', parent: 'body', pivot: [-1.5, 5.5, 0], from: [-1, -5, -1.5], size: [1, 5, 3], uv: [0, 9] },
+    { name: 'tail', parent: 'body', pivot: [0, 0.5, 1.5], from: [-1.5, -3, -0.5], size: [3, 3, 1], uv: [10, 9], rot: [-0.5, 0, 0] },
+    { name: 'legR', pivot: [1, 2, 0], from: [-0.5, -2, -0.5], size: [1, 2, 1], uv: [20, 10] },
+    { name: 'legL', pivot: [-1, 2, 0], from: [-0.5, -2, -0.5], size: [1, 2, 1], uv: [20, 10] },
+  ],
+});
+mob({
+  id: MOB_ARMADILLO, key: 'armadillo', name: 'Armadillo', hostile: false, health: 12, walk: 1.1, run: 2.6, width: 0.7, height: 0.65,
+  damage: 0, burnsInSun: false, drops: [], atlas: [64, 32], anim: 'quadruped', scale: 1,
+  parts: [
+    { name: 'body', pivot: [0, 3, 0], from: [-3.5, 0, -5], size: [7, 6, 10], uv: [0, 0] },
+    { name: 'head', pivot: [0, 6, -5], from: [-1.5, -3.5, -4], size: [3, 4, 4], uv: [36, 0], rot: [-0.3, 0, 0] },
+    { name: 'earR', parent: 'head', pivot: [0, 0, 0], from: [0.5, 0, -1], size: [2, 3, 1], uv: [50, 0], rot: [0, 0, -0.35] },
+    { name: 'earL', parent: 'head', pivot: [0, 0, 0], from: [-2.5, 0, -1], size: [2, 3, 1], uv: [50, 0], rot: [0, 0, 0.35] },
+    { name: 'tail', pivot: [0, 4, 5], from: [-1, -1, 0], size: [2, 2, 5], uv: [36, 8], rot: [0.9, 0, 0] },
+    ...quadLegs(3, 2, [-3, 3], [0, 18], 2),
+  ],
+});
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

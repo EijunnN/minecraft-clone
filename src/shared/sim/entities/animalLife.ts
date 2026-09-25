@@ -8,6 +8,7 @@ import { boxCollides } from '../physics';
 import { LOVE_SECONDS, BREED_COOLDOWN, type PlayerView, type InteractResult, type Entity } from './types';
 import type { Entities } from './Entities';
 import { canMate, offspringType } from '../../mounts'; // Fase 6 (monturas)
+import { faunaInteract } from './wildlife'; // Fase 6 (fauna)
 
 export class AnimalLife {
   constructor(private m: Entities) {}
@@ -133,6 +134,9 @@ export class AnimalLife {
     const mount = this.m.mounts.interact(e, item, creative);
     if (mount) return mount;
     const baby = (e.growAge ?? 0) > 0;
+    // Fase 6 (fauna): cepillar armadillos.
+    const fauna = faunaInteract(this.m, e, item, creative);
+    if (fauna) return fauna;
     const food = BREED_FOOD[def.key];
     if (food && food.includes(item)) {
       if (baby) {

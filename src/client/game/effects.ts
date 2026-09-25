@@ -7,6 +7,7 @@ import { MOBS } from '../../shared/mobs';
 import { EF_LOVE, EF_BABY, EF_FIRE } from '../../shared/protocol';
 import type { Game } from './Game';
 import { aquaticFx } from './aquaticFx'; // Fase 6 (acuáticos)
+import { faunaFx } from './faunaEffects'; // Fase 6 (fauna)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -221,7 +222,8 @@ export class Effects {
         if (mk && Math.random() < 0.5) this.g.audio.playMob(mk, 'step', p);
         break;
       default:
-        aquaticFx(this.g, kind, p); // Fase 6 (acuáticos)
+        // Fase 6 (acuáticos, fauna)
+        if (!aquaticFx(this.g, kind, p)) faunaFx(this.g, kind, p, a);
     }
   }
 

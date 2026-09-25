@@ -2,6 +2,7 @@
 // la tiene) y dormir.
 import { VOID_Y } from '../../shared/constants';
 import { deathMessage } from './Survival';
+import { faunaOnHurt } from './faunaInteraction'; // Fase 6 (fauna)
 import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, stateProps } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
@@ -51,6 +52,7 @@ export class LifeCycle {
     if (cause !== 'kill' && Array.isArray(k) && k.every(Number.isFinite) && this.g.interaction.blockHit(amount, k)) return;
     const dmg = this.g.survival.damage(amount, cause, cause === 'kill');
     if (dmg <= 0) return;
+    faunaOnHurt(this.g, cause); // Fase 6 (fauna): veneno de las abejas
     if (Array.isArray(k) && k.every(Number.isFinite)) {
       this.g.player.impulse(k[0], k[1], k[2]);
       // La cámara se inclina hacia el lado del golpe (el atacante está contra el empuje).

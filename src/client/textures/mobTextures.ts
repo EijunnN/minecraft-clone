@@ -21,6 +21,7 @@ import {
 import { villagerPainter } from './villagerTextures'; // Fase 6 (aldeanos)
 import { MONSTER_PAINTERS } from './monsterTextures'; // Fase 6 (monstruos)
 import { AQUATIC_PAINTERS } from './aquaticMobTextures'; // Fase 6 (acuáticos)
+import { faunaPainter } from './faunaTextures'; // Fase 6 (fauna)
 
 export interface MobTexture {
   width: number;
@@ -1235,8 +1236,9 @@ function polarBear(t: Texel): Paint {
     case 'ear':
       return t.f === FRONT ? [190, 186, 180] : white();
     case 'leg':
-      // Almohadillas negras bajo las patas y garras claras por delante.
-      if (t.f === BOTTOM) return [40, 38, 40];
+      // Fase 6 (fauna): planta de las patas gris clara (antes casi negra: al andar, la zancada la
+      // enseñaba como una mancha negra) y garras claras por delante.
+      if (t.f === BOTTOM) return [168, 164, 156];
       if (t.f === FRONT && t.y < 1 && t.i % 2 === 1) return [120, 116, 110];
       return white();
     default:
@@ -1505,6 +1507,10 @@ const PAINTERS: Record<number, Painter> = {
 
 /** Genera el atlas de una criatura (tamaño MOBS[id].atlas); `variant`: pelaje o profesión. */
 export function generateMobTexture(mobId: number, variant = 0): MobTexture {
+  // Fase 6 (fauna): abejas, pandas, loros y armadillos; la variante es el color del loro o la abeja
+  // enfadada o con néctar.
+  const fauna = faunaPainter(mobId, variant);
+  if (fauna) return paintMob(mobId, fauna);
   const mob = MOBS[mobId];
   // Fase 6 (aldeanos): el aldeano y el comerciante se pintan según su profesión (villagerTextures.ts).
   if (mob && isVillagerType(mobId)) return paintMob(mobId, villagerPainter(mobId, variant));

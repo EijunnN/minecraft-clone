@@ -13,8 +13,10 @@ import {
   PUMPKIN_STEM, MELON_STEM, BEDS, SIGNS, familyBase, CAVE_VINES, COPPER_ORE, DEEPSLATE_ORE, COBBLED_DEEPSLATE, DEEPSLATE,
   HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
+import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
 
-export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod';
+export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
+  | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
 
 export interface ToolInfo {
   kind: ToolType;
@@ -259,6 +261,17 @@ export const TROPICAL_FISH_BUCKET = item('tropical_fish_bucket', 'Cubo con pez t
 export const PUFFERFISH_BUCKET = item('pufferfish_bucket', 'Cubo con pez globo', { stack: 1, block: WATER });
 export const AXOLOTL_BUCKET = item('axolotl_bucket', 'Cubo con ajolote', { stack: 1, block: WATER });
 export const TADPOLE_BUCKET = item('tadpole_bucket', 'Cubo con renacuajo', { stack: 1, block: WATER });
+// ------------------------------------------------------------------ fauna (fase 6)
+export const GLASS_BOTTLE = item('glass_bottle', 'Frasco de cristal', { stack: 16 });
+/** Frasco de miel: se bebe aunque no haya hambre, quita el veneno y devuelve el frasco vacío. */
+export const HONEY_BOTTLE = item('honey_bottle', 'Frasco de miel', { stack: 16, food: { hunger: 6, saturation: 1.2, always: true } });
+export const HONEYCOMB = item('honeycomb', 'Panal');
+export const RAW_RABBIT = item('raw_rabbit', 'Conejo crudo', { food: { hunger: 3, saturation: 1.8 } });
+export const COOKED_RABBIT = item('cooked_rabbit', 'Conejo cocinado', { food: { hunger: 5, saturation: 6 } });
+export const RABBIT_HIDE = item('rabbit_hide', 'Piel de conejo');
+export const ARMADILLO_SCUTE = item('armadillo_scute', 'Escama de armadillo');
+/** Cepillo: saca escamas a los armadillos (16 de desgaste por escama). */
+export const BRUSH = item('brush', 'Cepillo', { stack: 1, tool: { kind: 'brush', tier: 0, speed: 1, durability: 64, damage: 1 } });
 
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
@@ -279,6 +292,9 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   donkey: [GOLDEN_APPLE, WHEAT],
   llama: [HAY_BALE],
   camel: [CACTUS],
+  // Fase 6 (fauna): los pandas comen caña (no hay bambú) y los armadillos, ojos de araña.
+  panda: [SUGAR_CANE],
+  armadillo: [SPIDER_EYE],
 };
 
 export const ITEM_COUNT = nextId;
@@ -323,6 +339,7 @@ smelt(RAW_MUTTON, COOKED_MUTTON);
 smelt(POTATO, BAKED_POTATO);
 smelt(COD, COOKED_COD);
 smelt(SALMON, COOKED_SALMON);
+smelt(RAW_RABBIT, COOKED_RABBIT); // Fase 6 (fauna)
 
 // Los hornos y cofres se apilan hasta 64 como bloque base.
 void FURNACE;
@@ -389,6 +406,8 @@ export const CREATIVE_ITEMS: readonly number[] = [
   SLIME_BALL, PHANTOM_MEMBRANE,
   // Fase 6 (acuáticos).
   COD_BUCKET, SALMON_BUCKET, TROPICAL_FISH_BUCKET, PUFFERFISH_BUCKET, AXOLOTL_BUCKET, TADPOLE_BUCKET,
+  // Fase 6 (fauna).
+  GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, RAW_RABBIT, COOKED_RABBIT, RABBIT_HIDE, ARMADILLO_SCUTE, BRUSH,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

@@ -25,6 +25,7 @@ import type { Game } from './Game';
 // Fase 6 (acuáticos): cubos con criatura.
 import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
+import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -136,6 +137,8 @@ export class Interaction {
       this.interactEntity(target, held?.id ?? 0);
       return;
     }
+    // Fase 6 (fauna): cosechar un nido o colmena llenos con tijeras o un frasco.
+    if (pressed && hit && held && useOnBeeHome(this.g, this, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       if (isUsable(hit.id)) {
@@ -468,6 +471,7 @@ export class Interaction {
     }
     this.g.audio.playBurp();
     if (!this.g.creative) this.g.inv.consume(u.slot, 1);
+    faunaAfterEat(this.g, this, u.item, u.slot); // Fase 6 (fauna): miel
   }
 
   releaseBow(dir: number[]): void {
@@ -673,6 +677,8 @@ export class Interaction {
     if (!def || def.hostile || e.deathT >= 0) return false;
     const baby = (e.flags & EF_BABY) !== 0;
     if (companionUse(e.type, e.flags, item)) return true; // Fase 6 (gólems/domesticar)
+    const fauna = faunaCanInteract(e, item); // Fase 6 (fauna): cepillo
+    if (fauna !== undefined) return fauna;
     if (BREED_FOOD[def.key]?.includes(item)) return true;
     if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
     if (item === BUCKET) return e.type === MOB_COW && !baby;

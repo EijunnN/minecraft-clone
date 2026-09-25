@@ -11,6 +11,7 @@ import {
   blockSupported, orientedFor, type NeighborGet,
 } from './blocks';
 import { DIR_X, DIR_Z } from './blockModels';
+import { isBeeHome } from './blocks'; // Fase 6 (fauna)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -197,6 +198,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
       [hx, y, hz, stateOf(base, { facing, part: 1 })],
     ];
   }
+  // Fase 6 (fauna): nidos y colmenas con la entrada hacia el jugador.
+  if (isBeeHome(base)) return one(stateOf(familyBase(base), { facing: (facing + 2) & 3 }));
   // Bloques con apoyo a medida (amatista, alfombra de musgo, nenúfar…).
   if (BLOCK_NEEDS_SUPPORT[base] && !blockSupported(base, rel(get, x, y, z))) return null;
   return one(orientedFor(base, yaw));

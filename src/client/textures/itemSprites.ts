@@ -12,6 +12,7 @@
 import { ITEM_SPRITES } from '../../shared/items';
 import { MONSTER_SPRITES } from './monsterSprites'; // Fase 6 (monstruos)
 import { AQUATIC_SPRITES } from './aquaticSprites'; // Fase 6 (acuáticos)
+import { FAUNA_SPRITES } from './faunaSprites'; // Fase 6 (fauna)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -409,6 +410,8 @@ function doorInks(light: RGB, base: RGB, dark: RGB, glass: RGB): Inks {
 }
 
 const SPRITES: Record<string, SpriteDef> = {
+  // Fase 6 (fauna): frascos, miel, panal, conejo, escama de armadillo y cepillo.
+  ...FAUNA_SPRITES,
 
   compass: {
     rows: [

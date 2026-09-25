@@ -11,6 +11,7 @@ import type { Entities } from './Entities';
 import { MIN_Y, VOID_Y } from '../../constants';
 // Fase 6 (monstruos): comportamiento de los monstruos nuevos.
 import { MonsterAI, isSpiderLike } from './monsterAi';
+import { faunaMobTick, faunaFlags } from './wildlife'; // Fase 6 (fauna)
 
 export class MobBrain {
   /** Fase 6 (monstruos). */
@@ -91,6 +92,11 @@ export class MobBrain {
     // Fase 6 (aldeanos): oficio, reposición, puertas y huida de los zombis.
     if (isVillagerType(e.type)) this.m.villagers.tick(e, dt);
     if (e.dead || !this.m.list.has(e.id)) return;
+    // Fase 6 (fauna): abejas y loros vuelan; pandas y armadillos tienen estados propios.
+    if (faunaMobTick(this.m, e, dt, players)) {
+      if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
+      return;
+    }
     ai.attackCd -= dt;
     ai.shootCd -= dt;
     ai.repath -= dt;
@@ -384,6 +390,7 @@ export class MobBrain {
     if ((e.love ?? 0) > 0) f |= EF_LOVE;
     f |= this.m.mounts.flags(e); // Fase 6 (monturas): silla, domada, con jinete, encabritada
     f |= this.m.companions.flags(e); // Fase 6 (gólems/domesticar)
+    f |= faunaFlags(e); // Fase 6 (fauna)
     e.flags = f;
   }
 

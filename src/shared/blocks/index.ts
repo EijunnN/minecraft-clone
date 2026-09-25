@@ -115,3 +115,8 @@ import { VILLAGER_BLOCKS } from './villagerBlocks';
 export * from './villagerBlocks';
 // Fase 6 (monstruos): bloques infestados (se registran los últimos: ids guardados).
 export * from './monsterBlocks';
+// Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal (registrados los últimos
+// para no mover ids) y su sitio en el inventario creativo.
+import { BEE_INVENTORY } from './beeBlocks';
+export * from './beeBlocks';
+(INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);

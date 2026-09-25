@@ -17,6 +17,9 @@ import type { Beds } from './beds';
 import type { Composters } from './composters';
 import type { Campfires } from './campfires';
 import type { ServerContext, Session } from './context';
+// Fase 6 (fauna): cosechar nidos y colmenas.
+import { isBeeHome } from '../../blocks';
+import { harvestBeeHome } from '../entities/bees';
 
 export class BlockEdits {
   constructor(
@@ -128,6 +131,12 @@ export class BlockEdits {
     // Comida cruda sobre una fogata: se pone a asar.
     if (familyBase(id) === CAMPFIRE) {
       if (!(Number.isInteger(item) && this.campfires.use(x, y, z, item))) ctx.reject(s, x, y, z);
+      return;
+    }
+    // Fase 6 (fauna): nido o colmena llenos: tijeras (panal) o frasco de cristal (miel).
+    if (isBeeHome(id)) {
+      const ok = Number.isInteger(item) && ctx.asActor(s.id, () => harvestBeeHome(ctx.entities, x, y, z, item, s.id));
+      if (!ok) ctx.reject(s, x, y, z);
       return;
     }
     // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
