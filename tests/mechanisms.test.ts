@@ -162,6 +162,54 @@ test('pistón adhesivo: tira del bloque, lo suelta con un pulso corto y el slime
   assert.equal(resolvePush(g, 0, 0, 0, EAST, true), null, 'con uno más pegado encima, 13: no');
 });
 
+test('pistón: guardar a medio movimiento no pierde nada (y la base que se recoge también se mueve)', () => {
+  const { h, c, bx, by, bz, set, get } = lab();
+  const x = bx - 10, z = bz;
+  // Uno que se extiende empujando una fila y un adhesivo que se recoge tirando de su bloque.
+  set(x, by, z, facingState(PISTON, EAST));
+  set(x + 1, by, z, COBBLESTONE);
+  set(x + 2, by, z, DIRT);
+  const z2 = z + 4;
+  set(x, by, z2, facingState(STICKY_PISTON, EAST));
+  set(x + 1, by, z2, SAND);
+  set(x - 1, by, z2, REDSTONE_BLOCK);
+  h.tick(4);
+  assert.equal(get(x + 2, by, z2), SAND, 'el adhesivo lo ha empujado');
+  set(x - 1, by, z2, AIR);
+  set(x - 1, by, z, REDSTONE_BLOCK);
+  h.tick(1);
+  assert.equal(get(x + 1, by, z), MOVING_BLOCK, 'la cabeza sale');
+  assert.equal(get(x + 3, by, z), MOVING_BLOCK, 'la tierra se mueve');
+  assert.equal(get(x, by, z2), MOVING_BLOCK, 'la base que se recoge es un bloque en movimiento');
+  assert.equal(get(x + 1, by, z2), MOVING_BLOCK, 'la arena vuelve');
+  // Se guarda a medio movimiento (sin tocar el mundo) y se carga en otro servidor.
+  h.gs.flush(true);
+  assert.equal(get(x + 3, by, z), MOVING_BLOCK, 'guardar no cambia el mundo');
+  const h2 = makeServer(4242, h.store);
+  const c2 = h2.join('Ingeniera', 'c');
+  c2.pos(bx + 0.5, by + 30, bz + 0.5);
+  h2.tick(60);
+  const get2 = (a: number, b: number, d: number) => h2.gs.world.getBlock(a, b, d);
+  assert.ok(pistonExtended(get2(x, by, z)), 'extendido');
+  assert.ok(isPistonHead(get2(x + 1, by, z)), 'con su cabeza');
+  assert.deepEqual([get2(x + 2, by, z), get2(x + 3, by, z)], [COBBLESTONE, DIRT], 'la fila, donde iba');
+  assert.ok(isPiston(get2(x, by, z2)) && !pistonExtended(get2(x, by, z2)), 'el adhesivo, recogido');
+  assert.deepEqual([get2(x + 1, by, z2), get2(x + 2, by, z2)], [SAND, AIR], 'con la arena pegada');
+  // Un chunk que se descarga a medio movimiento lo asienta antes (el mundo guarda sus ediciones).
+  h.tick(4);
+  set(x - 1, by, z, AIR);
+  h.tick(1);
+  assert.equal(get(x, by, z), MOVING_BLOCK);
+  c.pos(bx + 5000.5, by + 30, bz + 0.5);
+  h.gs.world.unloadUnused(h.clock.now + 60_000, () => false);
+  assert.equal(h.gs.mechanisms.pistons.pending, 0, 'nada a medias');
+  assert.equal(h.gs.world.getBlock(x, by, z), -1, 'descargado');
+  c.pos(bx + 0.5, by + 30, bz + 0.5);
+  h.tick(40);
+  assert.ok(isPiston(get(x, by, z)) && !pistonExtended(get(x, by, z)), 'recogido al volver');
+  assert.equal(get(x + 1, by, z), AIR, 'sin cabeza');
+});
+
 test('pistón: cuasi-conectividad (el bloque de encima cuenta) y empuja a las criaturas', () => {
   const { h, bx, by, bz, set, get } = lab();
   const x = bx + 4, z = bz - 8;

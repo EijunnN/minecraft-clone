@@ -5,7 +5,10 @@
 //   recogerse, el adhesivo tira del bloque de delante (y de lo que arrastre el slime o la miel).
 // - Lo que se mueve pasa 2 ticks como «bloque en movimiento» (un hueco invisible que no choca) y luego se
 //   asienta; el cliente lo ve deslizarse (efecto 'pmove' por bloque) y las entidades que estorban se
-//   empujan (el slime las lanza).
+//   empujan (el slime las lanza). Al recogerse, también la base es un bloque en movimiento mientras la
+//   cabeza vuelve (el cliente dibuja la base extendida quieta y la cabeza entrando en ella).
+// - Un chunk que se guarda a medio movimiento guarda lo que quedará al asentarse, y uno que se descarga
+//   termina antes sus movimientos: no se pierde nada.
 // - Un pulso corto (se apaga antes de terminar de extenderse) deja lo empujado donde está: el adhesivo
 //   «escupe» su bloque.
 // - Romper la base quita la cabeza; romper la cabeza rompe la base (y suelta el pistón).
@@ -18,6 +21,8 @@ import { resolvePush, isPushable, pushReaction, PUSH_NORMAL, type Cell } from '.
 import { ENT_DISPLAY } from '../../mobs';
 import { isHangingType } from '../../paintings';
 import { isVehicleType } from '../../vehicles';
+import { CHUNK_SIZE } from '../../constants';
+import { PMOVE_STILL } from '../../mechanisms';
 import { posKey } from '../posKey';
 import type { Redstone } from './redstone';
 import type { BlockRules } from './blockRules';
@@ -60,7 +65,7 @@ registerRedstone([PISTON, STICKY_PISTON], {
   neighbor: (api, x, y, z) => SYSTEMS.get(api)?.check(x, y, z),
 });
 registerRedstone(MOVING_BLOCK, {
-  // Al cargar un chunk guardado a medio movimiento, el hueco se vacía (lo que se movía se pierde).
+  // Un hueco de bloque en movimiento sin movimiento (no debería guardarse ninguno): se vacía.
   changed: (api, x, y, z, old) => {
     if (old < 0) api.schedule(x, y, z, MOVE_TICKS + 1);
   },
@@ -154,16 +159,19 @@ export class Pistons {
       }
     }
     const headId = w.getBlock(head.x, head.y, head.z);
+    // Como en Minecraft, la base también es un bloque en movimiento hasta que la cabeza entra.
     const cells = this.move(plan?.toPush ?? [], plan?.toDestroy ?? [], facing ^ 1, () => {
-      w.setBlock(x, y, z, pistonState(id, facing, false));
+      w.setBlock(x, y, z, MOVING_BLOCK);
       if (isPistonHead(headId) && facingOf(headId) === facing && w.getBlock(head.x, head.y, head.z) === headId) {
         w.setBlock(head.x, head.y, head.z, AIR);
       }
     }, null);
+    cells.push({ x, y, z, block: pistonState(id, facing, false) });
     this.start(x, y, z, false, cells);
+    this.anim({ x, y, z }, pistonState(id, facing, true), PMOVE_STILL);
     if (isPistonHead(headId)) this.anim(head, headId, facing ^ 1);
     this.ctx.fx('piston', x + 0.5, y + 0.5, z + 0.5, 0);
-    this.pushEntities(cells, facing ^ 1);
+    this.pushEntities(cells.slice(0, -1), facing ^ 1);
   }
 
   /**
@@ -205,29 +213,56 @@ export class Pistons {
     for (const c of cells) this.cells.add(posKey(c.x, c.y, c.z));
   }
 
+  /** Bloque en el que se asentará la celda `c`: una cabeza cuya base ya no está (se rompió mientras se extendía) no se queda sola. */
+  private settled(c: MovingCell): number {
+    if (!isPistonHead(c.block)) return c.block;
+    const f = facingOf(c.block);
+    const b = this.ctx.world.getBlock(c.x - FACE_X[f], c.y - FACE_Y[f], c.z - FACE_Z[f]);
+    return isPiston(b) && pistonExtended(b) && facingOf(b) === f ? c.block : AIR;
+  }
+
   /** Lo que se estaba moviendo se asienta. */
   private finish(m: Move): void {
     const w = this.ctx.world;
     this.moves.delete(m.key);
     this.busy = true;
+    const placed: MovingCell[] = [];
     try {
       for (const c of m.cells) {
         this.cells.delete(posKey(c.x, c.y, c.z));
         if (w.getBlock(c.x, c.y, c.z) !== MOVING_BLOCK) continue;
-        // Una cabeza cuya base ya no está (se rompió mientras se extendía) no se queda sola.
-        let id = c.block;
-        if (isPistonHead(id)) {
-          const f = facingOf(id);
-          const b = w.getBlock(c.x - FACE_X[f], c.y - FACE_Y[f], c.z - FACE_Z[f]);
-          if (!isPiston(b) || !pistonExtended(b) || facingOf(b) !== f) id = AIR;
-        }
+        const id = this.settled(c);
         w.setBlock(c.x, c.y, c.z, id);
+        if (id > 0) placed.push(c);
       }
     } finally {
       this.busy = false;
     }
-    // Mira otra vez la potencia (pudo cambiar mientras se movía).
+    // Lo que se asienta mira a su alrededor (en Minecraft, neighborChanged sobre sí mismo: un dispensador
+    // empujado a un sitio con potencia dispara) y el pistón mira otra vez la potencia.
+    for (const c of placed) this.rs.updateAt(c.x, c.y, c.z);
     this.rs.updateAt(m.x, m.y, m.z);
+  }
+
+  /**
+   * Lo que quedará en cada celda que se está moviendo, [x, y, z, bloque] (el chunk se guarda así: un
+   * chunk guardado a medio movimiento no pierde nada).
+   */
+  settledCells(): [number, number, number, number][] {
+    const out: [number, number, number, number][] = [];
+    for (const m of this.moves.values()) {
+      for (const c of m.cells) if (this.ctx.world.getBlock(c.x, c.y, c.z) === MOVING_BLOCK) out.push([c.x, c.y, c.z, this.settled(c)]);
+    }
+    return out;
+  }
+
+  /** El chunk (cx, cz) se va a descargar: lo que se mueve en él (o desde él) se asienta ya. */
+  settleChunk(cx: number, cz: number): void {
+    if (this.moves.size === 0) return;
+    const inChunk = (c: Cell) => Math.floor(c.x / CHUNK_SIZE) === cx && Math.floor(c.z / CHUNK_SIZE) === cz;
+    for (const m of [...this.moves.values()]) {
+      if (this.moves.get(m.key) === m && (inChunk(m) || m.cells.some(inChunk))) this.finish(m);
+    }
   }
 
   /** Cada tick: se asienta lo que terminó de moverse. */

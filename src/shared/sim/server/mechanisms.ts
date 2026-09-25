@@ -67,6 +67,9 @@ export class Mechanisms {
     const { ctx, redstone } = d;
     this.inventories = new Inventories(ctx, d.containers, d.composters, d.collections, d.shelves);
     this.pistons = new Pistons(ctx, redstone, d.rules);
+    // Lo que se mueve no se pierde: se guarda ya asentado y, si el chunk se descarga, se asienta antes.
+    ctx.world.savedInstead = () => this.pistons.settledCells();
+    ctx.world.onChunkUnload = (c) => this.pistons.settleChunk(c.cx, c.cz);
     this.hoppers = new Hoppers(ctx, redstone, this.inventories);
     this.explosives = new Explosives(ctx, redstone, d.transport);
     this.dispensers = new Dispensers(ctx, redstone, this.inventories, this.explosives, d.fire, d.transport, d.stands, { fertilize: d.fertilize });
