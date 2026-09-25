@@ -6,6 +6,7 @@
 import { isBundle, fitsInBundle, bundleInsert, bundleTake, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
 import { matchRecipe, CRAFT_REMAINDER } from '../../shared/recipes';
+import { fireworkCraft } from '../../shared/recipes'; // Fase 6.5 (equipo)
 import {
   clickSlot, cloneStack, COOK_TIME, FURNACE_FUEL, FURNACE_IN, FURNACE_OUT, type ContainerState,
 } from '../../shared/containers';
@@ -311,6 +312,9 @@ export class InventoryScreen {
     }
     if (this.kind === 'loom') return this.loom.result(this.grid);
     if (this.kind !== 'player' && this.kind !== 'table') return null;
+    // Fase 6.5 (equipo): los fuegos artificiales miran las pilas (los colores de las estrellas).
+    const fw = fireworkCraft(this.grid);
+    if (fw) return fw;
     const m = matchRecipe(this.grid.map((s) => (s ? s.id : 0)), this.gridSize);
     return m ? m.out : bookCopy(this.grid)?.out ?? null; // Fase 6.5: copias de un libro escrito
   }

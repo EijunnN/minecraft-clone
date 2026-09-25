@@ -11,6 +11,7 @@ import { illagerFx } from './illagerFx'; // Fase 6 (asaltos)
 import { faunaFx } from './faunaEffects'; // Fase 6 (fauna)
 import { copperFx } from './copperInteraction'; // Fase 6.5 (cobre)
 import { collectionFx } from './collectionInteraction'; // Fase 6.5 (colecciones)
+import { equipmentFx } from './equipmentFx'; // Fase 6.5 (equipo)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -244,7 +245,8 @@ export class Effects {
         break;
       default:
         // Fase 6 (acuáticos, fauna)
-        if (!aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones)
+        // Fase 6.5 (equipo): mechero, fuego, ballesta, tridente, cuerno, cohetes, armaduras de animales y conducto.
+        if (!aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b) && !equipmentFx(this.g, kind, p, a, b)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones)
     }
   }
 

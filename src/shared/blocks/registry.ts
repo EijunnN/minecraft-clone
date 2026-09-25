@@ -296,7 +296,8 @@ export function finalizeBlocks(kindOf: ReadonlyMap<number, number>): void {
     BLOCK_MODEL_CUTOUT[b.id] = boxes.some((m) => m.tex.some((l) => l >= 0 && !!TEXTURE_DEFS[l]?.cutout)) ||
       (b.render === R_MODEL && b.tex.some((n) => !!TEXTURE_DEFS[textureLayer(n)]?.cutout)) ? 1 : 0;
     // Fase 6.5 (colores)
-    BLOCK_MODEL_TRANSLUCENT[b.id] = b.render === R_MODEL && b.tex.some((n) => (TEXTURE_DEFS[textureLayer(n)]?.special ?? 0) >= 3) ? 1 : 0;
+    // Fase 6.5 (equipo): el fuego (special 5) no es translúcido, va con los recortes.
+    BLOCK_MODEL_TRANSLUCENT[b.id] = b.render === R_MODEL && b.tex.some((n) => [3, 4].includes(TEXTURE_DEFS[textureLayer(n)]?.special ?? 0)) ? 1 : 0;
     if (b.render === R_MODEL && !b.shape) STATIC_COLLISION[b.id] = typeof b.collision === 'object' ? b.collision : flatBoxes(b.model ?? []);
   }
 }

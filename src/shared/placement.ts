@@ -19,10 +19,11 @@ import { copperPlacement } from './blocks'; // Fase 6.5 (cobre)
 import { planDecor, planScaffoldTower } from './decorPlacement'; // Fase 6.5 (decoración)
 import { HANGING_WALL_OF, CHISELED_BOOKSHELF, isChiseledShelf } from './blocks'; // Fase 6.5 (remate)
 import { isRipeBerryBush } from './blocks'; // Fase 6.5 (océano y plantas)
-import { planPlant65, canFertilize65 } from './plantPlacement'; // Fase 6.5 (océano y plantas)
+import { planPlant65, canFertilize65, isWaterCell } from './plantPlacement'; // Fase 6.5 (océano y plantas)
 import { planMaterial } from './materialPlacement'; // Fase 6.5 (materiales)
 import { isCandleCake } from './blocks'; // Fase 6.5 (materiales)
 import { skullPlacement } from './blocks'; // Fase 6.5 (colecciones)
+import { CONDUIT, conduitFor } from './blocks'; // Fase 6.5 (equipo)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -113,6 +114,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 6.5 (océano y plantas): plantas marinas, corales, pepinos de mar y plantas de dos bloques.
   const plant65 = planPlant65(get, hit, x, y, z, base);
   if (plant65 !== undefined) return plant65;
+  // Fase 6.5 (equipo): el conducto queda anegado si se pone en el agua.
+  if (base === CONDUIT) return replaceable(cur) ? [[x, y, z, conduitFor(isWaterCell(cur))]] : null;
   if (isSlab(base) && familyBase(cur) === base && stateProps(cur)!.type !== 2) return [[x, y, z, stateOf(base, { type: 2 })]];
   if (!replaceable(cur)) return null;
 

@@ -114,8 +114,11 @@ export interface PlayerSave {
 export type EntAdd = number[];
 /** Actualización: [id, x, y, z, yaw, cuerpo, pitch, flags, cantidad?]. */
 export type EntUpd = number[];
-/** Fase 6.5 (remate): [id, nombre ('' sin nombre), atada a: id de jugador, [x, y, z] de una valla o 0]. */
-export type EntExtra = [number, string, string | [number, number, number] | 0];
+/**
+ * Fase 6.5 (remate): [id, nombre ('' sin nombre), atada a: id de jugador, [x, y, z] de una valla o 0].
+ * Fase 6.5 (equipo): cuarto campo opcional, el equipo que lleva (armadura de caballo o lobo, tridente…).
+ */
+export type EntExtra = [number, string, string | [number, number, number] | 0] | [number, string, string | [number, number, number] | 0, number];
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
@@ -145,9 +148,10 @@ export type ClientMsg =
   | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number }
   | { t: 'pickup'; e: number }
   | { t: 'drop'; items: ItemStack[]; p: [number, number, number]; v?: [number, number, number] }
-  | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number }
-  /** Lanzar un objeto (huevo) desde p en la dirección d. */
-  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number }
+  /** c: 1 = virote de ballesta (Fase 6.5, equipo). */
+  | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number; c?: number }
+  /** Lanzar un objeto (huevo) desde p en la dirección d. Fase 6.5 (equipo): tridente o cohete, con w = su desgaste o sus datos. */
+  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number; w?: number }
   /** Caña de pescar: lanzar el flotador o, si ya está fuera, recogerlo. */
   | { t: 'fish'; p: [number, number, number]; d: [number, number, number] }
   /** Escribir el texto de un cartel (cuatro líneas). */
@@ -188,7 +192,12 @@ export type ClientMsg =
   | { t: 'lectern'; x: number; y: number; z: number; a: 'put' | 'take' | 'read'; q: number; book?: ItemStack }
   // Fase 6.5 (colecciones): clic derecho en un tocadiscos con `item` en la mano: meter el disco (take 1)
   // o sacar el que tiene (cae encima). Respuesta: 'ires' con q.
-  | { t: 'jukebox'; x: number; y: number; z: number; item: number; q: number };
+  | { t: 'jukebox'; x: number; y: number; z: number; item: number; q: number }
+  // Fase 6.5 (equipo): mechero en la cara n del bloque (x, y, z) (respuesta: 'ires' con q y el desgaste),
+  // tocar el cuerno de cabra (se oye lejos) y acelerón del cerdo con la caña con zanahoria ('ires' con q).
+  | { t: 'ignite'; x: number; y: number; z: number; n: [number, number, number]; q: number }
+  | { t: 'horn'; v: number }
+  | { t: 'boost'; q: number };
 
 export type ServerMsg =
   | {

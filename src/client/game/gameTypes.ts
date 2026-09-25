@@ -19,7 +19,7 @@ export interface Mining {
 
 export interface Use {
   /** Comer o beber, tensar el arco o cubrirse con el escudo (fase 6.5: mirar por el catalejo). */
-  kind: 'eat' | 'bow' | 'block' | 'spyglass';
+  kind: 'eat' | 'bow' | 'block' | 'spyglass' | 'crossbow' | 'trident'; // Fase 6.5 (equipo): ballesta y tridente
   t: number;
   slot: number;
   item: number;

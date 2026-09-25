@@ -119,6 +119,11 @@ export class MobBrain {
       this.m.aquatic.tick(e, dt, players);
       return;
     }
+    // Fase 6.5 (equipo): el ahogado con tridente lo lanza; la cabra que embiste se mueve sola.
+    if (this.m.gear.tick(e, dt, players)) {
+      if (!e.dead && this.m.list.has(e.id)) this.updateFlags(e, ai);
+      return;
+    }
     // Fase 6 (monstruos): los monstruos nuevos deciden y se mueven solos.
     if (this.monsters.tick(e, dt, players)) return;
     if (this.illagers.tick(e, dt, players)) return; // Fase 6 (asaltos)
@@ -268,7 +273,7 @@ export class MobBrain {
       const d = Math.hypot(dx, dz);
       moveX = dx / d;
       moveZ = dz / d;
-      speed = d > 5 ? def.run : def.walk;
+      speed = e.steerSpeed ?? (d > 5 ? def.run : def.walk); // Fase 6.5 (equipo): el cerdo guiado con la caña
       jump = e.hitWall;
       lookAt = e.leashTo;
     } else if (isVillagerType(e.type) && this.m.villagers.goal(e, players, dt)) {
@@ -410,6 +415,7 @@ export class MobBrain {
     f |= this.m.companions.flags(e); // Fase 6 (gólems/domesticar)
     f |= faunaFlags(e); // Fase 6 (fauna)
     if (e.charged) f |= EF_CHARGED; // Fase 6.5 (colecciones)
+    f |= this.m.gear.flags(e); // Fase 6.5 (equipo): la cabra que embiste
     e.flags = f;
   }
 

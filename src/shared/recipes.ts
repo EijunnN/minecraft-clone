@@ -552,13 +552,62 @@ export const RECIPE_COUNT = shaped.length + shapeless.length;
 // (papel y un objeto). Los objetos que aquí no existen se cambian por otros del tema: cráneo de wither → hueso, manzana de oro encantada → manzana dorada; el globo, que en
 // Minecraft se compra al cartógrafo, sale del mapa vacío. La copia de libros escritos va aparte
 // (books.ts: lleva datos y el original se queda).
-import { WRITABLE_BOOK, BANNER_PATTERN_ITEMS } from './items';
+import { WRITABLE_BOOK, BANNER_PATTERN_ITEMS, ENCHANTED_GOLDEN_APPLE } from './items';
 import { SKULLS } from './blocks';
 mix([BOOK, INK_SAC, FEATHER], WRITABLE_BOOK);
 mix([PAPER, FLOWERS.oxeye_daisy], BANNER_PATTERN_ITEMS.flower);
 mix([PAPER, SKULLS.creeper], BANNER_PATTERN_ITEMS.creeper); // Fase 6.5: ya hay cabeza de creeper
 mix([PAPER, BONE], BANNER_PATTERN_ITEMS.skull);
-mix([PAPER, GOLDEN_APPLE], BANNER_PATTERN_ITEMS.thing);
+mix([PAPER, ENCHANTED_GOLDEN_APPLE], BANNER_PATTERN_ITEMS.thing); // Fase 6.5: ya hay manzana de oro encantada
 mix([PAPER, EMPTY_MAP], BANNER_PATTERN_ITEMS.globe);
 mix([PAPER, VINE], BANNER_PATTERN_ITEMS.curly_border);
 mix([PAPER, BRICKS], BANNER_PATTERN_ITEMS.bricks);
+// ------------------------------------------------------------------ Fase 6.5 (equipo)
+// Mechero, ballesta (sin gancho de cuerda en el juego: lleva un segundo lingote en su lugar), caparazón
+// de tortuga, armadura de cuero para caballo, armadura para lobo, caña con zanahoria y conducto (como
+// en Minecraft). Los fuegos artificiales van aparte (fireworkCraft): sus colores viajan en la pila.
+import {
+  FLINT_AND_STEEL, CROSSBOW, TURTLE_SCUTE, TURTLE_HELMET, HORSE_ARMOR, WOLF_ARMOR, ARMADILLO_SCUTE, CARROT_ON_A_STICK,
+  NAUTILUS_SHELL, HEART_OF_THE_SEA, FIREWORK_ROCKET, FIREWORK_STAR, GUNPOWDER as FW_GUNPOWDER, PAPER as FW_PAPER,
+} from './items';
+import { CONDUIT } from './blocks';
+import { fireworkData, fireworkColors } from './equipment';
+mix([IRON_INGOT, FLINT], FLINT_AND_STEEL);
+shape(['SIS', 'TIT', ' S '], { S: STICK, I: IRON_INGOT, T: STRING }, CROSSBOW);
+shape(['SSS', 'S S'], { S: TURTLE_SCUTE }, TURTLE_HELMET);
+shape(['L L', 'LLL', 'L L'], { L: LEATHER }, HORSE_ARMOR.leather);
+shape(['S  ', 'SSS', 'S S'], { S: ARMADILLO_SCUTE }, WOLF_ARMOR);
+shape(['R ', ' C'], { R: FISHING_ROD, C: CARROT }, CARROT_ON_A_STICK);
+shape(['NNN', 'NHN', 'NNN'], { N: NAUTILUS_SHELL, H: HEART_OF_THE_SEA }, CONDUIT);
+
+/**
+ * Fuegos artificiales (cuadrícula con sus pilas, para ver los colores de las estrellas):
+ * - Estrella: pólvora y de 1 a 8 tintes → estrella de esos colores.
+ * - Cohete: papel, de 1 a 3 pólvoras (la duración del vuelo) y las estrellas que se quiera → 3 cohetes
+ *   que estallan con los colores de todas las estrellas (sin estrellas, sólo suben).
+ * null si la cuadrícula no es una de estas recetas.
+ */
+export function fireworkCraft(grid: readonly (ItemStack | null)[]): ItemStack | null {
+  const items = grid.filter((s): s is ItemStack => !!s && s.count > 0);
+  if (items.length === 0) return null;
+  const count = (id: number) => items.filter((s) => s.id === id).length;
+  const dyeIndex = (id: number) => DYE_COLORS.findIndex((c) => DYES[c] === id);
+  const gunpowder = count(FW_GUNPOWDER), paper = count(FW_PAPER), stars = items.filter((s) => s.id === FIREWORK_STAR);
+  if (paper === 0) {
+    // Estrella: una pólvora y tintes.
+    const dyes = items.filter((s) => dyeIndex(s.id) >= 0);
+    if (gunpowder !== 1 || dyes.length < 1 || dyes.length > 8 || dyes.length + 1 !== items.length) return null;
+    let mask = 0;
+    for (const d of dyes) mask |= 1 << dyeIndex(d.id);
+    return { id: FIREWORK_STAR, count: 1, dmg: mask };
+  }
+  if (paper !== 1 || gunpowder < 1 || gunpowder > 3 || 1 + gunpowder + stars.length !== items.length) return null;
+  let colors = 0;
+  for (const s of stars) colors |= s.dmg ?? 0;
+  return { id: FIREWORK_ROCKET, count: 3, dmg: fireworkData(gunpowder, colors) };
+}
+
+/** Colores (máscara de tintes) de una estrella o de un cohete. */
+export function fireworkMask(s: ItemStack): number {
+  return s.id === FIREWORK_STAR ? (s.dmg ?? 0) & 0xffff : s.id === FIREWORK_ROCKET ? fireworkColors(s.dmg) : 0;
+}

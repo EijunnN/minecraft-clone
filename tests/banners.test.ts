@@ -2,6 +2,7 @@
 // recetas, telar, datos de la pila de ida y vuelta, servidor y persistencia).
 import { test } from 'node:test';
 import { SKULLS } from '../src/shared/blocks';
+import { ENCHANTED_GOLDEN_APPLE } from '../src/shared/items';
 import assert from 'node:assert/strict';
 import { AIR, STONE, BANNERS, WALL_BANNERS, FLOWERS, VINE, BRICKS, DYE_COLORS, stateOf } from '../src/shared/blocks';
 import {
@@ -48,7 +49,7 @@ test('registro: dibujos, diseños de estandarte y sus sprites', () => {
 test('recetas de los diseños de estandarte', () => {
   const P = BANNER_PATTERN_ITEMS;
   const pairs: [number, number][] = [
-    [FLOWERS.oxeye_daisy, P.flower], [SKULLS.creeper, P.creeper], [BONE, P.skull], [GOLDEN_APPLE, P.thing], [EMPTY_MAP, P.globe],
+    [FLOWERS.oxeye_daisy, P.flower], [SKULLS.creeper, P.creeper], [BONE, P.skull], [ENCHANTED_GOLDEN_APPLE, P.thing], [EMPTY_MAP, P.globe],
     [VINE, P.curly_border], [BRICKS, P.bricks],
   ];
   for (const [ing, out] of pairs) assert.equal(matchRecipe([PAPER, ing, 0, 0], 2)?.out.id, out, ITEMS[out].key);

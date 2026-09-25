@@ -120,3 +120,21 @@ import { discIndexOfKey } from './discs';
   LOOT_TABLES.dungeon.entries.push([disc('13'), 8, 1, 1], [disc('cat'), 8, 1, 1], [disc('otherside'), 1, 1, 1]);
   LOOT_TABLES.mineshaft.entries.push([disc('13'), 2, 1, 1], [disc('cat'), 2, 1, 1]);
 }
+// ------------------------------------------------------------------ Fase 6.5 (equipo)
+// Manzana de oro encantada (sólo en estructuras), armaduras para caballo, cota de malla, mechero,
+// corazón del mar (naufragios y portales en ruinas) y ballestas en los puestos de saqueadores.
+import { ENCHANTED_GOLDEN_APPLE, HORSE_ARMOR, HEART_OF_THE_SEA, FLINT_AND_STEEL, CROSSBOW } from './items';
+{
+  const add = (table: string, ...entries: Entry[]) => LOOT_TABLES[table].entries.push(...entries);
+  const chain = ARMOR.chainmail;
+  add('dungeon', [ENCHANTED_GOLDEN_APPLE, 2, 1, 1], [HORSE_ARMOR.iron, 8, 1, 1], [HORSE_ARMOR.golden, 5, 1, 1],
+    [HORSE_ARMOR.diamond, 3, 1, 1], [chain.helmet, 3, 1, 1], [chain.chestplate, 3, 1, 1]);
+  add('mineshaft', [ENCHANTED_GOLDEN_APPLE, 1, 1, 1], [chain.leggings, 2, 1, 1], [chain.boots, 2, 1, 1]);
+  add('desert_pyramid', [ENCHANTED_GOLDEN_APPLE, 2, 1, 1], [HORSE_ARMOR.iron, 15, 1, 1], [HORSE_ARMOR.golden, 10, 1, 1],
+    [HORSE_ARMOR.diamond, 5, 1, 1]);
+  add('jungle_temple', [HORSE_ARMOR.iron, 1, 1, 1], [HORSE_ARMOR.golden, 1, 1, 1], [HORSE_ARMOR.diamond, 1, 1, 1], [chain.helmet, 2, 1, 1]);
+  add('ruined_portal', [ENCHANTED_GOLDEN_APPLE, 1, 1, 1], [FLINT_AND_STEEL, 40, 1, 1], [HEART_OF_THE_SEA, 2, 1, 1]);
+  add('shipwreck_treasure', [HEART_OF_THE_SEA, 20, 1, 1]);
+  add('shipwreck_supply', [chain.boots, 1, 1, 1]);
+  add('pillager_outpost', [CROSSBOW, 4, 1, 1]);
+}

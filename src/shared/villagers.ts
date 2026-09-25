@@ -266,3 +266,15 @@ export function villagerTitle(prof: number, trader: boolean): string {
   if (trader) return 'Comerciante ambulante';
   return PROFESSIONS[prof]?.name ?? 'Aldeano';
 }
+
+// Fase 6.5 (equipo): el armero vende cota de malla (aprendiz: grebas y botas; oficial: casco y peto),
+// el flechero, ballestas, y el peletero, la armadura de cuero para caballo.
+import { CROSSBOW, HORSE_ARMOR } from './items';
+{
+  const prof = (id: number) => PROFESSIONS.find((p) => p.id === id)!;
+  prof(PROF_ARMORER).pool[0].push(sell(ARMOR.chainmail.leggings, 1, 3, 12, 1), sell(ARMOR.chainmail.boots, 1, 1, 12, 1));
+  prof(PROF_ARMORER).pool[1].push(sell(ARMOR.chainmail.helmet, 1, 1, 12, 5), sell(ARMOR.chainmail.chestplate, 1, 4, 12, 5));
+  prof(PROF_FLETCHER).pool[2].push(sell(CROSSBOW, 1, 3, 12, 10));
+  const leather = prof(PROF_LEATHERWORKER).pool;
+  if (leather[2]) leather[2].push(sell(HORSE_ARMOR.leather, 1, 6, 12, 15));
+}

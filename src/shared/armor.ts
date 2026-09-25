@@ -8,9 +8,12 @@ export type ArmorPiece = (typeof ARMOR_PIECES)[number];
 export const ARMOR_MATERIALS = ['leather', 'iron', 'golden', 'diamond'] as const;
 /** Fase 6.5 (cobre): va aparte para que el bucle de items.ts no mueva los ids de los objetos guardados. */
 export const COPPER_ARMOR = 'copper';
-export type ArmorMaterial = (typeof ARMOR_MATERIALS)[number] | typeof COPPER_ARMOR;
-/** Todos los materiales de armadura (los de siempre y el cobre). */
-export const ALL_ARMOR_MATERIALS: readonly ArmorMaterial[] = [...ARMOR_MATERIALS, COPPER_ARMOR];
+/** Fase 6.5 (equipo): cota de malla (no se fabrica) y caparazón de tortuga (sólo el casco). */
+export const CHAINMAIL_ARMOR = 'chainmail';
+export const TURTLE_ARMOR = 'turtle';
+export type ArmorMaterial = (typeof ARMOR_MATERIALS)[number] | typeof COPPER_ARMOR | typeof CHAINMAIL_ARMOR | typeof TURTLE_ARMOR;
+/** Todos los materiales de armadura (los de siempre, el cobre, la cota de malla y la tortuga). */
+export const ALL_ARMOR_MATERIALS: readonly ArmorMaterial[] = [...ARMOR_MATERIALS, COPPER_ARMOR, CHAINMAIL_ARMOR, TURTLE_ARMOR];
 
 export interface ArmorInfo {
   slot: ArmorSlot;
@@ -30,6 +33,8 @@ export const ARMOR_STATS: Readonly<Record<ArmorMaterial, { points: readonly numb
   iron: { points: [2, 6, 5, 2], durability: [165, 240, 225, 195], toughness: 0 },
   diamond: { points: [3, 8, 6, 3], durability: [363, 528, 495, 429], toughness: 2 },
   copper: { points: [2, 4, 3, 1], durability: [121, 176, 165, 143], toughness: 0 }, // Fase 6.5 (cobre)
+  chainmail: { points: [2, 5, 4, 1], durability: [165, 240, 225, 195], toughness: 0 }, // Fase 6.5 (equipo)
+  turtle: { points: [2, 0, 0, 0], durability: [275, 0, 0, 0], toughness: 0 }, // Fase 6.5 (equipo): sólo el casco
 };
 
 /** Causas de daño que la armadura no reduce (como en Minecraft). */

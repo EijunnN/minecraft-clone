@@ -15,6 +15,7 @@ import { BOOK_GENERATIONS } from '../../shared/books';
 import { bannerLayers, layerName, isBannerPatternItem } from '../../shared/bannerPatterns';
 import { discTitle } from '../../shared/collections'; // Fase 6.5 (colecciones)
 import { skullKind } from '../../shared/blocks'; // Fase 6.5 (colecciones)
+import { equipmentTooltip } from './equipmentTooltip'; // Fase 6.5 (equipo)
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -86,6 +87,7 @@ export function itemTooltipHtml(s: ItemStack): string {
   }
   for (const l of bannerLayers(s)) lines.push(`<span class="tt-dim">${esc(layerName(l))}</span>`);
   if (isBannerPatternItem(s.id)) lines.push('<span class="tt-dim">Para el telar (no se gasta)</span>');
+  lines.push(...equipmentTooltip(s)); // Fase 6.5 (equipo)
   const max = tool?.durability ?? armor?.durability;
   if (max) lines.push(`<span class="tt-dim">Durabilidad: ${max - (s.dmg ?? 0)} / ${max}</span>`);
   return lines.join('');

@@ -22,6 +22,7 @@ import { FINISHING_SPRITES } from './finishingSprites'; // Fase 6.5 (remate)
 import { BOOK_SPRITES } from './bookSprites'; // Fase 6.5 (libros y estandartes)
 import { MATERIAL_SPRITES } from './materialSprites'; // Fase 6.5 (materiales)
 import { COLLECTION_SPRITES } from './collectionSprites'; // Fase 6.5 (colecciones)
+import { EQUIPMENT_SPRITES } from './equipmentSprites'; // Fase 6.5 (equipo)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2272,6 +2273,8 @@ Object.assign(SPRITES, MONSTER_SPRITES);
 Object.assign(SPRITES, COLOR_SPRITES);
 // Fase 6.5 (decoración): comida, pepitas, catalejo, reloj, cuadro, marco y huevos generadores.
 Object.assign(SPRITES, DECOR_SPRITES);
+// Fase 6.5 (equipo): mechero, cota de malla, ballesta, tridente, tortuga, armaduras de caballo y lobo…
+Object.assign(SPRITES, EQUIPMENT_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

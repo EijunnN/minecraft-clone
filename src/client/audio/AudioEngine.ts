@@ -8,6 +8,7 @@ import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
+import { buildEquipmentSfx } from './equipmentSounds'; // Fase 6.5 (equipo)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -432,6 +433,25 @@ export class AudioEngine {
   /** Fase 6.5 (colecciones): tocadiscos sonando ahora mismo. */
   get discsPlaying(): number {
     return this.jukeboxes?.count ?? this.pendingDiscs.size;
+  }
+
+  /**
+   * Fase 6.5 (equipo): sonidos del equipo (mechero, fuego, ballesta, tridente, cuerno, cohetes…). El
+   * cuerno y los estallidos se oyen lejos: si están fuera del alcance normal, suenan desde más cerca
+   * en la misma dirección (y más flojos).
+   */
+  playEquipSfx(kind: string, pos: Vec3, a = 0): void {
+    const far = kind === 'goat_horn' ? 26 : kind === 'firework_burst' || kind === 'firework_launch' ? 34 : 0;
+    let p = pos;
+    if (far) {
+      const l = this.listenerPos;
+      const d = Math.hypot(pos[0] - l[0], pos[1] - l[1], pos[2] - l[2]);
+      if (d > far) {
+        const k = far / d;
+        p = [l[0] + (pos[0] - l[0]) * k, l[1] + (pos[1] - l[1]) * k, l[2] + (pos[2] - l[2]) * k];
+      }
+    }
+    this.safe(() => this.spawnPositional(p, (ctx, noise, dest, now) => buildEquipmentSfx(ctx, noise, kind, dest, now, a), far ? 0.6 : 0.3));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

@@ -47,11 +47,12 @@ export class EntitySync {
         if (dx * dx + dz * dz > ENTITY_RANGE * ENTITY_RANGE) continue;
         seen.add(e.id);
         // Fase 6.5 (remate): nombre y correa (se mandan aparte, sólo cuando cambian).
-        const extra = e.customName || e.leash ? `${e.customName ?? ''}|${Array.isArray(e.leash) ? e.leash.join(',') : e.leash ?? ''}` : '';
+        // Fase 6.5 (equipo): y el equipo que lleva (armadura de caballo o de lobo, tridente del ahogado).
+        const extra = e.customName || e.leash || e.gear ? `${e.customName ?? ''}|${Array.isArray(e.leash) ? e.leash.join(',') : e.leash ?? ''}|${e.gear ?? 0}` : '';
         if ((sent.get(e.id) ?? '') !== extra) {
           if (extra) sent.set(e.id, extra);
           else sent.delete(e.id);
-          ex.push([e.id, e.customName ?? '', e.leash ? (Array.isArray(e.leash) ? [...e.leash] as [number, number, number] : e.leash) : 0]);
+          ex.push([e.id, e.customName ?? '', e.leash ? (Array.isArray(e.leash) ? [...e.leash] as [number, number, number] : e.leash) : 0, e.gear ?? 0]);
         }
         const key = this.key(e);
         const prev = s.known.get(e.id);

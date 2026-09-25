@@ -18,6 +18,7 @@ import { FLOWER_POT, pottedPlant } from '../blocks'; // Fase 6.5 (decoración)
 import { isWaterlogged } from '../blocks'; // Fase 6.5 (océano y plantas)
 import { plantDrops65 } from './plantDrops'; // Fase 6.5 (océano y plantas)
 import { materialDrops } from './materialDrops'; // Fase 6.5 (materiales)
+import { POISONOUS_POTATO } from '../items'; // Fase 6.5 (equipo)
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -110,6 +111,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
       case CARROTS:
         return one(CARROT, ripe ? 2 + extra() : 1);
       case POTATOES:
+        // Fase 6.5 (equipo): a veces (2 %) sale además una patata venenosa.
+        if (ripe && rand() < 0.02) return [{ id: POTATO, count: 2 + extra() }, { id: POISONOUS_POTATO, count: 1 }];
         return one(POTATO, ripe ? 2 + extra() : 1);
       case BEETROOTS:
         return ripe ? [{ id: BEETROOT, count: 1 }, { id: BEETROOT_SEEDS, count: 1 + extra() }] : one(BEETROOT_SEEDS);
@@ -155,7 +158,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   // Fase 6.5 (decoración): la maceta suelta también su planta.
   const plant = pottedPlant(block);
   if (plant) return [{ id: FLOWER_POT, count: 1 }, { id: plant, count: 1 }];
-  return one(baseBlock(block));
+  // Fase 6.5 (equipo): lo que no es objeto (el fuego) no suelta nada.
+  return ITEMS[baseBlock(block)] ? one(baseBlock(block)) : [];
 }
 
 /** Botín de las hojas al descomponerse solas (sin herramienta). */

@@ -177,3 +177,7 @@ export * from './materialBlocks';
 import { COLLECTION_INVENTORY } from './collections';
 export * from './collections';
 (INVENTORY_ORDER as number[]).push(...COLLECTION_INVENTORY);
+// Fase 6.5 (equipo): fuego y conducto (registrados los últimos: ids nuevos).
+import { EQUIPMENT_INVENTORY } from './equipmentBlocks';
+export * from './equipmentBlocks';
+(INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);

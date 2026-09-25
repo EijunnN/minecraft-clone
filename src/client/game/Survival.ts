@@ -1,6 +1,7 @@
 // Estado de supervivencia del jugador: vida, hambre, saturación, agotamiento, aire, fuego,
 // invulnerabilidad tras un golpe, armadura, regeneración, inanición y muerte (reglas de Minecraft).
 import { ARMOR_BYPASS, armorReduce, armorWear } from '../../shared/armor';
+import { resistanceFactor } from '../../shared/effects'; // Fase 6.5 (equipo)
 
 export interface SurvivalContext {
   eyeInWater: boolean;
@@ -16,6 +17,8 @@ export interface SurvivalContext {
   waterBreathing?: boolean;
   /** De pie sobre una fogata encendida (quema sin prender fuego). */
   onCampfire?: boolean;
+  /** Fase 6.5 (equipo): dentro de un bloque de fuego (quema y prende). */
+  inFire?: boolean;
 }
 
 /** Armadura puesta (la implementa el inventario). */
@@ -96,6 +99,8 @@ export class Survival {
   absorption = 0;
   /** Armadura que reduce el daño (sin ella, el daño llega entero). */
   armor: ArmorSource | null = null;
+  /** Fase 6.5 (equipo): nivel del efecto Resistencia (−1 sin él); lo pone el juego cada frame. */
+  resistance = -1;
 
   reset(): void {
     this.health = 20;
@@ -136,6 +141,8 @@ export class Survival {
       dmg = armorReduce(raw, this.armor.armorPoints(), this.armor.armorToughness());
       this.armor.wearArmor(armorWear(raw));
     }
+    // Fase 6.5 (equipo): Resistencia (todo menos el vacío y /kill).
+    if (cause !== 'void' && cause !== 'kill') dmg *= resistanceFactor(this.resistance);
     // Los corazones dorados (absorción) se gastan antes que la vida.
     const absorbed = Math.min(this.absorption, dmg);
     this.absorption -= absorbed;
@@ -246,6 +253,11 @@ export class Survival {
     } else this.lavaTimer = 0.5;
     // La fogata quema al pisarla (la invulnerabilidad deja un golpe cada medio segundo).
     if (ctx.onCampfire && !ctx.fireResistant) this.damage(1, 'campfire');
+    // Fase 6.5 (equipo): el fuego prende al que lo toca (8 s) y quema al momento.
+    if (ctx.inFire && !ctx.inWater) {
+      this.fire = Math.max(this.fire, 8);
+      if (!ctx.fireResistant) this.damage(1, 'fire');
+    }
     if (ctx.inWater || ctx.inRain) this.fire = 0;
     if (this.fire > 0) {
       this.fire -= dt;
