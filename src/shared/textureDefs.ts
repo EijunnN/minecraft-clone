@@ -392,6 +392,11 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'fire', special: 5, cutout: true },
   { name: 'conduit_closed' },
   { name: 'conduit_open' },
+  // Fase 7 (pociones): alambique alquímico (pies, vara y frascos).
+  { name: 'brewing_stand_base' },
+  { name: 'brewing_stand_rod' },
+  { name: 'brewing_stand_bottle' },
+  { name: 'brewing_stand_bottle_top' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

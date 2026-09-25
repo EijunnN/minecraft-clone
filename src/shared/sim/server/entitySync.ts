@@ -4,6 +4,9 @@ import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mo
 import type { ServerMsg, EntExtra } from '../../protocol';
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
 import { ENT_ARMOR_STAND } from '../../armorStands'; // Fase 6.5 (remate)
+import { ENT_ARROW } from '../../mobs';
+import { ENT_EFFECT_CLOUD, potionColor } from '../../potions'; // Fase 7 (pociones)
+import { packColor } from '../../effects';
 import type { Entity } from '../entities';
 import { r2, type ServerContext } from './context';
 
@@ -29,7 +32,8 @@ export class EntitySync {
 
   private key(e: Entity): string {
     // Fase 6 (aldeanos): la variante (profesión) también cuenta como cambio.
-    return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${e.flags},${e.stack?.count ?? e.xp ?? 0},${e.variant ?? 0}`;
+    return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${e.flags},${e.stack?.count ?? e.xp ?? 0},${e.variant ?? 0}` +
+      (e.cloudRadius !== undefined ? `,${Math.round(e.cloudRadius * 10)}` : ''); // Fase 7 (pociones): radio de la nube
   }
 
   sync(): void {
@@ -60,7 +64,13 @@ export class EntitySync {
         s.known.set(e.id, key);
         if (prev === undefined) {
           const rec = [e.id, e.type, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), e.flags];
-          if ((e.type === ENT_ITEM || e.type === ENT_THROWN || e.type === ENT_DISPLAY) && e.stack) rec.push(e.stack.id, e.stack.count);
+          if ((e.type === ENT_ITEM || e.type === ENT_THROWN || e.type === ENT_DISPLAY) && e.stack) {
+            rec.push(e.stack.id, e.stack.count);
+            if (e.stack.dmg) rec.push(e.stack.dmg); // Fase 7 (pociones): el tipo (su color)
+          }
+          // Fase 7 (pociones): tipo de la flecha con efecto; color y radio de la nube.
+          else if (e.type === ENT_ARROW) rec.push(e.arrowPotion ?? -1);
+          else if (e.type === ENT_EFFECT_CLOUD) rec.push(packColor(potionColor(e.cloudPotion ?? 0)), Math.round((e.cloudRadius ?? 0) * 100));
           else if (e.type === ENT_FALLING) rec.push(e.block ?? 0);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (isHangingType(e.type)) rec.push(e.variant ?? 0); // Fase 6.5: variante del cuadro u objeto del marco
@@ -72,6 +82,7 @@ export class EntitySync {
           if (e.type === ENT_ITEM && e.stack) rec.push(e.stack.count);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (e.villager) rec.push(e.variant ?? 0); // Fase 6 (aldeanos): profesión del aldeano
+          else if (e.type === ENT_EFFECT_CLOUD) rec.push(Math.round((e.cloudRadius ?? 0) * 100)); // Fase 7 (pociones)
           upd.push(rec);
         }
       }

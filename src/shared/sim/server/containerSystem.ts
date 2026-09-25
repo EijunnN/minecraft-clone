@@ -18,6 +18,9 @@ import { LOOT_TABLES, rollLoot, scatterLoot } from '../../loot';
 import type { StructureChest } from '../../world/structures';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { ServerContext, Session } from './context';
+// Fase 7 (pociones): el alambique alquímico destila solo y enseña sus frascos.
+import { isBrewingStand, brewingStandMask, brewingStandWith } from '../../blocks';
+import { brewTick, brewBottleMask, BREW_INGREDIENT, BREW_FUEL } from '../../brewing';
 
 /** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
 interface View {
@@ -63,7 +66,7 @@ export class ContainerSystem {
     if (!isContainer(id)) return null;
     const k = posKey(x, y, z);
     let c = this.containers.get(k);
-    const kind = isChest(id) ? 'chest' : 'furnace';
+    const kind = isChest(id) ? 'chest' : isBrewingStand(id) ? 'brewing' : 'furnace'; // Fase 7 (pociones)
     if (!c || c.kind !== kind) {
       c = newContainer(kind);
       this.containers.set(k, c);
@@ -205,6 +208,7 @@ export class ContainerSystem {
   tickFurnaces(dt: number): void {
     const w = this.ctx.world;
     for (const [k, c] of this.containers) {
+      if (c.kind === 'brewing') this.tickBrewing(k, c, dt); // Fase 7 (pociones)
       if (c.kind !== 'furnace') continue;
       const x = keyX(k), y = keyY(k), z = keyZ(k);
       const id = w.getBlock(x, y, z);
@@ -216,6 +220,25 @@ export class ContainerSystem {
       if (res.lit !== isLitFurnace(id)) w.setBlock(x, y, z, furnaceWithLit(id, res.lit));
       if (res.changed || c.burn > 0) this.sendView(k);
     }
+  }
+
+  /**
+   * Fase 7 (pociones): el alambique destila (con combustible e ingrediente), avisa al acabar y el bloque
+   * enseña los frascos que tiene dentro.
+   */
+  private tickBrewing(k: number, c: ContainerState, dt: number): void {
+    const w = this.ctx.world;
+    const x = keyX(k), y = keyY(k), z = keyZ(k);
+    const id = w.getBlock(x, y, z);
+    if (id < 0 || !isBrewingStand(id)) return;
+    if (c.cook > 0 || c.slots[BREW_INGREDIENT] || (c.burn <= 0 && c.slots[BREW_FUEL])) {
+      const res = brewTick(c, dt);
+      if (res.changed) this.dirty.add(k);
+      if (res.done) this.ctx.fx('brew_done', x + 0.5, y + 0.6, z + 0.5);
+      if (res.changed || c.cook > 0) this.sendView(k);
+    }
+    const mask = brewBottleMask(c);
+    if (brewingStandMask(id) !== mask) w.setBlock(x, y, z, brewingStandWith(mask));
   }
 
   /** Guarda los contenedores que cambiaron. */

@@ -8,6 +8,7 @@ import { IRON_ORE, GOLD_ORE } from './blocks';
 import { sanitizeItemData, cloneItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { COPPER_ORE, DEEPSLATE_ORE } from './blocks'; // Fase 6.5 (materiales)
 import { RAW_IRON, RAW_GOLD, RAW_COPPER } from './items'; // Fase 6.5 (materiales)
+import { BREW_SLOTS, BREW_TIME, brewCanPlace, brewClick, brewInsert } from './brewing'; // Fase 7 (pociones)
 
 export const CHEST_SLOTS = 27;
 export const FURNACE_IN = 0;
@@ -16,22 +17,25 @@ export const FURNACE_OUT = 2;
 /** Segundos por objeto fundido. */
 export const COOK_TIME = 10;
 
-export type ContainerKind = 'chest' | 'furnace';
+/** Fase 7 (pociones): 'brewing', el alambique alquímico (ver brewing.ts). */
+export type ContainerKind = 'chest' | 'furnace' | 'brewing';
 
 export interface ContainerState {
   kind: ContainerKind;
   slots: (ItemStack | null)[];
-  /** Horno: segundos de combustible restantes y duración del combustible actual. */
+  /** Horno: segundos de combustible restantes y duración del combustible actual (alambique: destilaciones). */
   burn: number;
   burnMax: number;
-  /** Horno: progreso de fundición (0..COOK_TIME). */
+  /** Horno: progreso de fundición (0..COOK_TIME). Alambique: segundos destilando (0..BREW_TIME). */
   cook: number;
+  /** Fase 7 (pociones): alambique, ingrediente con el que empezó la destilación en curso. */
+  brewing?: number;
 }
 
 /** Cofre grande (dos mitades de cofre doble). */
 export const DOUBLE_CHEST_SLOTS = CHEST_SLOTS * 2;
 
-export function newContainer(kind: ContainerKind, size = kind === 'chest' ? CHEST_SLOTS : 3): ContainerState {
+export function newContainer(kind: ContainerKind, size = kind === 'chest' ? CHEST_SLOTS : kind === 'brewing' ? BREW_SLOTS : 3): ContainerState {
   return { kind, slots: new Array(size).fill(null), burn: 0, burnMax: 0, cook: 0 };
 }
 
@@ -98,6 +102,7 @@ export function smeltResult(id: number): number | undefined {
 export function canPlace(kind: ContainerKind, slot: number, s: ItemStack | null): boolean {
   if (!s) return true;
   if (kind === 'chest') return true;
+  if (kind === 'brewing') return brewCanPlace(slot, s); // Fase 7 (pociones)
   if (slot === FURNACE_OUT) return false;
   if (slot === FURNACE_FUEL) return isFuel(s.id);
   return true;
@@ -109,6 +114,7 @@ export function canPlace(kind: ContainerKind, slot: number, s: ItemStack | null)
  */
 export function clickSlot(c: ContainerState, slot: number, btn: number, cursorIn: ItemStack | null): ItemStack | null {
   if (slot < 0 || slot >= c.slots.length) return cloneStack(cursorIn);
+  if (c.kind === 'brewing') return brewClick(c, slot, btn, cursorIn); // Fase 7 (pociones): frascos de uno en uno
   let cursor = cloneStack(cursorIn);
   let cur = cloneStack(c.slots[slot]);
   const accept = canPlace(c.kind, slot, cursor);
@@ -175,6 +181,7 @@ export function clickSlot(c: ContainerState, slot: number, btn: number, cursorIn
 
 /** Mete una pila en el contenedor (mayúsculas + clic desde el inventario). Devuelve lo que sobra. */
 export function insertStack(c: ContainerState, s: ItemStack | null): ItemStack | null {
+  if (c.kind === 'brewing') return brewInsert(c, s); // Fase 7 (pociones)
   const rest = cloneStack(s);
   if (!rest) return null;
   const targets: number[] = [];
@@ -259,7 +266,8 @@ export function furnaceTick(c: ContainerState, dt: number, variant: FurnaceVaria
 
 /** Serialización compacta para guardar y enviar. */
 export interface ContainerWire {
-  k: 'c' | 'f';
+  /** Fase 7 (pociones): 'b', alambique. */
+  k: 'c' | 'f' | 'b';
   s: (WireStack | null)[];
   b?: number;
   bm?: number;
@@ -268,10 +276,10 @@ export interface ContainerWire {
 
 export function containerToWire(c: ContainerState): ContainerWire {
   const w: ContainerWire = {
-    k: c.kind === 'chest' ? 'c' : 'f',
+    k: c.kind === 'chest' ? 'c' : c.kind === 'brewing' ? 'b' : 'f', // Fase 7 (pociones): alambique
     s: c.slots.map((s) => stackToWire(s)), // Fase 6.5: con el contenido de los sacos
   };
-  if (c.kind === 'furnace') {
+  if (c.kind !== 'chest') {
     w.b = Math.round(c.burn * 100) / 100;
     w.bm = c.burnMax;
     w.ck = Math.round(c.cook * 100) / 100;
@@ -280,16 +288,17 @@ export function containerToWire(c: ContainerState): ContainerWire {
 }
 
 export function containerFromWire(w: ContainerWire): ContainerState | null {
-  if (!w || (w.k !== 'c' && w.k !== 'f') || !Array.isArray(w.s)) return null;
-  const c = newContainer(w.k === 'c' ? 'chest' : 'furnace', w.k === 'c' && w.s.length === DOUBLE_CHEST_SLOTS ? DOUBLE_CHEST_SLOTS : undefined);
+  if (!w || (w.k !== 'c' && w.k !== 'f' && w.k !== 'b') || !Array.isArray(w.s)) return null;
+  const kind = w.k === 'c' ? 'chest' : w.k === 'b' ? 'brewing' : 'furnace'; // Fase 7 (pociones): alambique
+  const c = newContainer(kind, w.k === 'c' && w.s.length === DOUBLE_CHEST_SLOTS ? DOUBLE_CHEST_SLOTS : undefined);
   for (let i = 0; i < c.slots.length; i++) {
     const s = w.s[i];
     c.slots[i] = Array.isArray(s) ? sanitizeStack(stackFromWire(s)) : null;
   }
-  if (c.kind === 'furnace') {
+  if (c.kind !== 'chest') {
     c.burn = Number.isFinite(w.b) ? Math.max(0, w.b!) : 0;
     c.burnMax = Number.isFinite(w.bm) ? Math.max(0, w.bm!) : 0;
-    c.cook = Number.isFinite(w.ck) ? Math.max(0, Math.min(COOK_TIME, w.ck!)) : 0;
+    c.cook = Number.isFinite(w.ck) ? Math.max(0, Math.min(c.kind === 'brewing' ? BREW_TIME : COOK_TIME, w.ck!)) : 0;
   }
   return c;
 }

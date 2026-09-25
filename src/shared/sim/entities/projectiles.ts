@@ -6,7 +6,7 @@ import { BLOCK_SOLID, BLOCK_FLUID, fluidHeight } from '../../blocks';
 import { EF_ACTION } from '../../protocol';
 import { FISH_WAIT, FISH_BITE } from '../../fishing';
 import { moveBody } from '../physics';
-import { isSplashPotion, splashPotion } from './potions'; // Fase 6 (monstruos)
+import { isSplashPotion } from './potions'; // Fase 6 (monstruos)
 import type { PlayerView, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -66,8 +66,9 @@ export class Projectiles {
   private shatter(e: Entity, mob: Entity | null): void {
     const m = this.m;
     // Fase 6 (monstruos): las pociones arrojadizas de las brujas salpican su efecto.
+    // Fase 7 (pociones): todas las arrojadizas y persistentes (la criatura alcanzada, de lleno).
     if (isSplashPotion(e.stack?.id)) {
-      splashPotion(m, e);
+      m.potions.shatter(e, mob);
       m.remove(e.id);
       return;
     }

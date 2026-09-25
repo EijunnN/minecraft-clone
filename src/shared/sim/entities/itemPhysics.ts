@@ -7,6 +7,7 @@ import { EF_PICKABLE } from '../../protocol';
 import { moveBody, boxCollides } from '../physics';
 import { GRAVITY, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
+import { potionStack } from '../../potions'; // Fase 7 (pociones): flechas con efecto
 
 export class ItemPhysics {
   private itemGrid = new Map<string, Entity[]>();
@@ -96,7 +97,7 @@ export class ItemPhysics {
       if (!e.stuck || typeof e.shooter !== 'string') return null;
       if (Math.hypot(e.x - p.x, e.y - (p.y + 0.9), e.z - p.z) > 3.5) return null;
       this.m.remove(e.id, p.id);
-      return { id: ARROW, count: 1 };
+      return e.arrowPotion !== undefined ? potionStack('arrow', e.arrowPotion) : { id: ARROW, count: 1 }; // Fase 7 (pociones)
     }
     if (e.type !== ENT_ITEM || !e.stack) return null;
     if (e.pickupDelay! > 0 && e.owner === p.id) return null;
@@ -150,6 +151,7 @@ export class ItemPhysics {
         const hw = m.width / 2 + 0.1;
         if (Math.abs(m.x - e.x) < hw && Math.abs(m.z - e.z) < hw && e.y > m.y - 0.1 && e.y < m.y + m.height + 0.1) {
           this.m.damage(m, dmg, e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6);
+          if (e.arrowPotion !== undefined && !m.dead) this.m.potions.tippedHit(e, m, null); // Fase 7 (pociones)
           this.m.host.fx('arrow_hit', e.x, e.y, e.z);
           this.m.remove(e.id);
           return;
@@ -161,6 +163,7 @@ export class ItemPhysics {
         if (Math.abs(p.x - e.x) < 0.4 && Math.abs(p.z - e.z) < 0.4 && e.y > p.y - 0.1 && e.y < p.y + 1.9) {
           const d = Math.hypot(e.vx, e.vz) || 1;
           this.m.host.hurtPlayer(p.id, dmg * this.m.difficultyScale(), (e.vx / d) * 3, 3, (e.vz / d) * 3, 'arrow');
+          if (e.arrowPotion !== undefined) this.m.potions.tippedHit(e, null, p); // Fase 7 (pociones)
           this.m.host.fx('arrow_hit', e.x, e.y, e.z);
           this.m.remove(e.id);
           return;

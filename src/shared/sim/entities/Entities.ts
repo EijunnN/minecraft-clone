@@ -31,6 +31,10 @@ import { collectionDrops } from './collectionDrops'; // Fase 6.5 (colecciones)
 import { MobGear } from './mobGear';
 import { GearShots } from './gearShots';
 import { ENT_TRIDENT, ENT_FIREWORK } from '../../equipment';
+// Fase 7 (pociones): efectos de las criaturas, pociones que se rompen, nubes y flechas con efecto.
+import { MobEffects } from './mobEffects';
+import { PotionLife } from './potions';
+import { ENT_EFFECT_CLOUD } from '../../potions';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -65,6 +69,10 @@ export class Entities {
   readonly gear = new MobGear(this);
   /** Fase 6.5 (equipo): tridentes lanzados y cohetes. */
   readonly gearShots = new GearShots(this);
+  /** Fase 7 (pociones): efectos de estado de las criaturas. */
+  readonly effects = new MobEffects(this);
+  /** Fase 7 (pociones): arrojadizas, persistentes (nubes) y flechas con efecto. */
+  readonly potions = new PotionLife(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -161,14 +169,14 @@ export class Entities {
     return e;
   }
 
-  /** Objeto lanzado por un jugador (huevo). */
-  spawnThrown(item: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, thrower: string): Entity {
+  /** Objeto lanzado por un jugador (huevo). Fase 7 (pociones): `dmg`, el tipo de la poción lanzada. */
+  spawnThrown(item: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, thrower: string, dmg = 0): Entity {
     this.makeRoom(ENT_THROWN, MAX_ARROWS);
     const e = this.base(ENT_THROWN, x, y, z, 0.25, 0.25, 1);
     e.vx = vx;
     e.vy = vy;
     e.vz = vz;
-    e.stack = { id: item, count: 1 };
+    e.stack = dmg > 0 ? { id: item, count: 1, dmg } : { id: item, count: 1 };
     e.shooter = thrower;
     this.list.set(e.id, e);
     return e;
@@ -229,6 +237,7 @@ export class Entities {
     if (e.dead || !e.ai || MOBS[e.type].inert) return false;
     if (e.invuln > 0) return false;
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
+    amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
     e.health -= amount;
     e.invuln = 0.5;
     e.hurt = 0;
@@ -383,6 +392,8 @@ export class Entities {
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
       else if (e.type === ENT_DISPLAY || isHangingType(e.type) || e.type === ENT_ARMOR_STAND) e.flags = 0; // Fase 6.5: cuadros, marcos y soportes
       else if (e.type === ENT_TRIDENT || e.type === ENT_FIREWORK) this.gearShots.tick(e, dt, players); // Fase 6.5 (equipo)
+      else if (e.type === ENT_EFFECT_CLOUD) this.potions.cloudTick(e, dt, players); // Fase 7 (pociones)
+      else if (e.effects) this.effects.tickWith(e, dt, () => this.mobs.mobTick(e, dt, players)); // Fase 7 (pociones)
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));

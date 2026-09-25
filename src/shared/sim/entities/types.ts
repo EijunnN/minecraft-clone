@@ -4,6 +4,7 @@ import type { Body } from '../physics';
 import type { PathNode } from '../pathfind';
 import type { WorldSim } from '../WorldSim';
 import type { VillagerData } from './villagerLife'; // Fase 6 (aldeanos)
+import type { MobEffect } from './mobEffects'; // Fase 7 (pociones)
 
 export interface PlayerView {
   id: string;
@@ -19,6 +20,12 @@ export interface PlayerView {
   held?: number;
   /** Fase 6.5 (colecciones): lo que lleva en el hueco del casco (las cabezas disimulan). */
   head?: number;
+  /** Fase 7 (pociones): invisible (las criaturas lo ven de mucho más cerca) y piezas de armadura puestas. */
+  invisible?: boolean;
+  armorPieces?: number;
+  /** Fase 7 (pociones): efectos que tiene y vida (lo que sabe el servidor; las brujas eligen poción según eso). */
+  fx?: ReadonlySet<number>;
+  hp?: number;
 }
 
 export interface EntityHost {
@@ -40,8 +47,12 @@ export interface EntityHost {
   trample(x: number, y: number, z: number): void;
   /** Un jugador recoge orbes de experiencia por valor de `n`. */
   giveXp(playerId: string, n: number): void;
-  /** Fase 6 (monstruos): efecto de estado a un jugador (veneno de la araña de cueva, pociones de bruja). */
-  effectPlayer?(id: string, effect: number, seconds: number, amp: number): void;
+  /**
+   * Fase 6 (monstruos): efecto de estado a un jugador (veneno de la araña de cueva, pociones de bruja).
+   * Fase 7 (pociones): en los instantáneos, `seconds` es la fuerza (0..1); `creativeToo`, también a los
+   * jugadores en creativo (las pociones les afectan, aunque el daño no).
+   */
+  effectPlayer?(id: string, effect: number, seconds: number, amp: number, creativeToo?: boolean): void;
 }
 
 /** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */
@@ -193,6 +204,17 @@ export interface Entity extends Body {
   throwCd?: number;
   /** Cohete: segundos de vuelo que le quedan. */
   fuse?: number;
+  // Fase 7 (pociones)
+  /** Efectos de estado de la criatura (ver mobEffects.ts) y espera hasta sus próximos remolinos. */
+  effects?: Map<number, MobEffect>;
+  swirl?: number;
+  /** Flecha con efecto: tipo de poción. */
+  arrowPotion?: number;
+  /** Nube de efecto: tipo de poción, radio, espera antes de empezar y a quién afectó (id → edad). */
+  cloudPotion?: number;
+  cloudRadius?: number;
+  cloudWait?: number;
+  cloudVictims?: Map<string | number, number>;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

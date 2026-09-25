@@ -33,6 +33,7 @@ import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
 import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
 import { DISCS } from './discs'; // Fase 6.5 (colecciones)
+import { BREWING_STAND } from './blocks'; // Fase 7 (pociones)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -499,6 +500,27 @@ export const NAUTILUS_SHELL = item('nautilus_shell', 'Concha de nautilo');
 export const FIREWORK_ROCKET = item('firework_rocket', 'Cohete de fuegos artificiales');
 export const FIREWORK_STAR = item('firework_star', 'Estrella de fuegos artificiales');
 
+// ------------------------------------------------------------------ Fase 7 (pociones)
+/**
+ * Pociones: el tipo va en `dmg` (0 = agua; ver potions.ts). El frasco se bebe; las arrojadizas y las
+ * persistentes se lanzan; las flechas con efecto se disparan con el arco y la ballesta.
+ */
+export const POTION = item('potion', 'Poción', { stack: 1, drink: true });
+export const SPLASH_POTION = item('splash_potion', 'Poción arrojadiza', { stack: 1 });
+export const LINGERING_POTION = item('lingering_potion', 'Poción persistente', { stack: 1 });
+export const TIPPED_ARROW = item('tipped_arrow', 'Flecha con efecto');
+/** Ingredientes de destilación que faltaban. Los del Nether y el End, de momento sólo en creativo y en el botín. */
+export const FERMENTED_SPIDER_EYE = item('fermented_spider_eye', 'Ojo de araña fermentado');
+export const GLOWSTONE_DUST = item('glowstone_dust', 'Polvo de piedra luminosa');
+export const NETHER_WART = item('nether_wart', 'Verruga del Nether');
+export const BLAZE_ROD = item('blaze_rod', 'Vara de blaze', { fuel: 120 });
+export const BLAZE_POWDER = item('blaze_powder', 'Polvo de blaze');
+export const MAGMA_CREAM = item('magma_cream', 'Crema de magma');
+export const GHAST_TEAR = item('ghast_tear', 'Lágrima de ghast');
+export const DRAGON_BREATH = item('dragon_breath', 'Aliento de dragón');
+// El alambique se ve plano en el inventario y en la mano (como en Minecraft).
+ITEMS[BREWING_STAND].sprite = 'brewing_stand';
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -672,3 +694,7 @@ smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
+// Fase 7 (pociones): los ingredientes (las pociones, con cada tipo, las añade el inventario creativo).
+(CREATIVE_ITEMS as number[]).push(
+  FERMENTED_SPIDER_EYE, GLOWSTONE_DUST, NETHER_WART, BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, GHAST_TEAR, DRAGON_BREATH,
+);
