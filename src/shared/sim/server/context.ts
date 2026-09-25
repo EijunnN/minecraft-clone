@@ -43,6 +43,8 @@ export interface Session {
   sleepTicks: number;
   /** Cama donde reaparece (pies de la cama). */
   bed: [number, number, number] | null;
+  /** Fase 7 (pociones): color de los remolinos de sus efectos (0 sin efectos). */
+  ec?: number;
 }
 
 /** Lo que se guarda de cada jugador. */

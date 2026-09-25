@@ -5,6 +5,8 @@ import {
 } from './blocks';
 import { BUCKET, WATER_BUCKET, LAVA_BUCKET, POWDER_SNOW_BUCKET, type ItemStack } from './items';
 import { bannerLayers } from './bannerPatterns';
+import { GLASS_BOTTLE, POTION } from './items'; // Fase 7 (pociones)
+import { potionStack, potionType, PT_WATER } from './potions';
 
 const BANNER_ITEMS = new Set<number>(Object.values(BANNERS));
 
@@ -13,8 +15,11 @@ export interface CauldronResult {
   block: number;
   /** Lo que queda en la mano (null: nada; undefined: no cambia). */
   held?: ItemStack | null;
-  /** Sonido: llenar, vaciar o lavar. */
-  sound: 'fill' | 'empty' | 'wash';
+  /** Fase 7 (pociones): se gastan `take` de la mano y se recibe `give` (frascos, que se apilan). */
+  take?: number;
+  give?: ItemStack;
+  /** Sonido: llenar, vaciar o lavar (Fase 7: llenar o vaciar un frasco). */
+  sound: 'fill' | 'empty' | 'wash' | 'bottle_fill' | 'bottle_empty';
 }
 
 /** Resultado de usar `held` sobre el caldero `id`, o null si no hace nada. */
@@ -35,6 +40,14 @@ export function cauldronUse(id: number, held: ItemStack | null): CauldronResult 
   if (item === BUCKET && held.count === 1 && full) {
     const give = f.kind === CAULDRON_WATER ? WATER_BUCKET : f.kind === CAULDRON_LAVA ? LAVA_BUCKET : f.kind === CAULDRON_SNOW ? POWDER_SNOW_BUCKET : 0;
     if (give) return { block: cauldronOf(CAULDRON_EMPTY, 0), held: { id: give, count: 1 }, sound: 'fill' };
+  }
+  // Fase 7 (pociones): el frasco de cristal se llena en el caldero con agua (baja un nivel) y el frasco de
+  // agua lo vuelve a subir (queda el frasco vacío).
+  if (item === GLASS_BOTTLE && f.kind === CAULDRON_WATER && f.level > 0) {
+    return { block: cauldronOf(CAULDRON_WATER, f.level - 1), take: 1, give: potionStack('drink', PT_WATER), sound: 'bottle_fill' };
+  }
+  if (item === POTION && potionType(held) === PT_WATER && (f.kind === CAULDRON_EMPTY || f.kind === CAULDRON_WATER) && !full) {
+    return { block: cauldronOf(CAULDRON_WATER, f.level + 1), held: { id: GLASS_BOTTLE, count: 1 }, sound: 'bottle_empty' };
   }
   // Estandarte con dibujos en el agua: se lava la última capa (y baja un nivel).
   if (BANNER_ITEMS.has(item) && f.kind === CAULDRON_WATER && f.level > 0) {

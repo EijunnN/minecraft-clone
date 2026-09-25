@@ -9,7 +9,7 @@ import { MOB_ZOMBIE } from '../src/shared/mobs';
 import { matchRecipe } from '../src/shared/recipes';
 import {
   EFFECT_SPEED, EFFECT_SLOWNESS, EFFECT_STRENGTH, EFFECT_WEAKNESS, EFFECT_REGENERATION, EFFECT_POISON, EFFECT_HUNGER,
-  EFFECT_ABSORPTION, EFFECT_NIGHT_VISION, MAX_EFFECT_SECONDS, effectByName, speedMultiplier, meleeBonus,
+  EFFECT_ABSORPTION, EFFECT_NIGHT_VISION, MAX_EFFECT_SECONDS, MAX_EFFECT_AMP, effectByName, speedMultiplier, meleeBonus,
 } from '../src/shared/effects';
 import { StatusEffects } from '../src/client/game/statusEffects';
 import { Survival } from '../src/client/game/Survival';
@@ -52,11 +52,11 @@ test('efectos: añadir, sustituir y quitar', () => {
   assert.equal(fx.list.get(EFFECT_SPEED)!.time, 20, '… y no se acorta');
   fx.add(EFFECT_SLOWNESS, 99999, 99);
   assert.equal(fx.list.get(EFFECT_SLOWNESS)!.time, MAX_EFFECT_SECONDS, 'duración acotada');
-  assert.equal(fx.amp(EFFECT_SLOWNESS), 4, 'nivel acotado');
+  assert.equal(fx.amp(EFFECT_SLOWNESS), MAX_EFFECT_AMP, 'nivel acotado');
   fx.add(999, 10, 0);
   fx.add(EFFECT_STRENGTH, 0, 0);
   assert.equal(fx.list.size, 2, 'efectos desconocidos o sin duración: nada');
-  near(fx.speed, speedMultiplier(1, 4));
+  near(fx.speed, speedMultiplier(1, MAX_EFFECT_AMP));
   fx.add(EFFECT_STRENGTH, 10, 0);
   fx.add(EFFECT_WEAKNESS, 10, 0);
   assert.equal(fx.melee, -1);
@@ -151,7 +151,7 @@ test('efectos: /efecto, guardado y Fuerza en el servidor', () => {
   t.ok(m && m.id === EFFECT_SPEED && m.s === 30 && m.a === 0, 'valores por defecto: 30 s, nivel I');
   c.send({ t: 'chat', m: '/efecto velocidad 999999 99' });
   m = c.conn.take('effect')[0];
-  t.ok(m && m.s === MAX_EFFECT_SECONDS && m.a === 4, 'duración y nivel acotados');
+  t.ok(m && m.s === MAX_EFFECT_SECONDS && m.a === MAX_EFFECT_AMP, 'duración y nivel acotados');
   c.send({ t: 'chat', m: '/efecto quitar' });
   m = c.conn.take('effect')[0];
   t.ok(m && m.id === 0, '/efecto quitar');
@@ -163,7 +163,7 @@ test('efectos: /efecto, guardado y Fuerza en el servidor', () => {
   c.send({ t: 'state', d: { inv: [], hp: 20, food: 20, sat: 5, pos: [sx, sy, sz], fx, abs: 99 } });
   h.gs.disconnect(c.conn);
   const save = JSON.parse(h.store.players.get('alquimista')!).save;
-  t.ok(JSON.stringify(save.fx) === JSON.stringify([[EFFECT_SPEED, 1, 30], [EFFECT_ABSORPTION, 0, 100], [EFFECT_POISON, 4, MAX_EFFECT_SECONDS]]),
+  t.ok(JSON.stringify(save.fx) === JSON.stringify([[EFFECT_SPEED, 1, 30], [EFFECT_ABSORPTION, 0, 100], [EFFECT_POISON, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS]]),
     `efectos saneados al guardar (${JSON.stringify(save.fx)})`);
   t.ok(save.abs === 20, `absorción acotada (${save.abs})`);
   const back = h.join('Alquimista');

@@ -8,6 +8,7 @@ import {
   fireWithAge, flammability, flameEncouragement, stateOf, stateProps, isWaterlogged, isCandle, isLitCandle, candleState, POTATOES,
   WOOL, ALL_PLANKS, OAK_LOG, OAK_LEAVES, WHITE_WOOL, ALL_LOGS,
 } from '../src/shared/blocks';
+import { TRIPWIRE_HOOK } from '../src/shared/blocks'; // Fase 7 (redstone): la ballesta lleva gancho
 import {
   ITEMS, CREATIVE_ITEMS, itemSpriteIndex, ARMOR, FLINT_AND_STEEL, CROSSBOW, CROSSBOW_CHARGED, TRIDENT, TURTLE_SCUTE, TURTLE_HELMET,
   HORSE_ARMOR, WOLF_ARMOR, CARROT_ON_A_STICK, GOAT_HORN, RABBIT_FOOT, POISONOUS_POTATO, ENCHANTED_GOLDEN_APPLE, HEART_OF_THE_SEA,
@@ -98,7 +99,7 @@ test('registro: objetos, bloques, sprites, texturas, efectos y armaduras', () =>
 
 test('recetas: mechero, ballesta, tortuga, armaduras, caña, conducto y fuegos artificiales', () => {
   assert.equal(matchRecipe([IRON_INGOT, FLINT, 0, 0], 2)?.out.id, FLINT_AND_STEEL);
-  assert.deepEqual(craft([STICK, IRON_INGOT, STICK, STRING, IRON_INGOT, STRING, 0, STICK, 0]), { id: CROSSBOW, count: 1 });
+  assert.deepEqual(craft([STICK, IRON_INGOT, STICK, STRING, TRIPWIRE_HOOK, STRING, 0, STICK, 0]), { id: CROSSBOW, count: 1 });
   assert.deepEqual(craft([TURTLE_SCUTE, TURTLE_SCUTE, TURTLE_SCUTE, TURTLE_SCUTE, 0, TURTLE_SCUTE, 0, 0, 0]), { id: TURTLE_HELMET, count: 1 });
   assert.deepEqual(craft([LEATHER, 0, LEATHER, LEATHER, LEATHER, LEATHER, LEATHER, 0, LEATHER]), { id: HORSE_ARMOR.leather, count: 1 });
   const S = ARMADILLO_SCUTE;

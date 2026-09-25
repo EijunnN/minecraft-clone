@@ -392,6 +392,14 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'fire', special: 5, cutout: true },
   { name: 'conduit_closed' },
   { name: 'conduit_open' },
+  // Fase 7 (pociones): alambique alquímico (pies, vara y frascos).
+  { name: 'brewing_stand_base' },
+  { name: 'brewing_stand_rod' },
+  { name: 'brewing_stand_bottle' },
+  { name: 'brewing_stand_bottle_top' },
+  // Fase 7 (transporte): raíles (recortes).
+  ...['rail', 'rail_corner', 'powered_rail', 'powered_rail_on', 'detector_rail', 'detector_rail_on', 'activator_rail',
+    'activator_rail_on'].map((name): TextureDef => ({ name, cutout: true })),
   // Fase 7 (redstone): polvo (un color por potencia), antorchas, repetidor y comparador (la textura de
   // arriba va girada con cada orientación), palanca, lámpara, sensor, diana, bloque musical, cuerda,
   // cofre trampa, pararrayos y bombilla de cobre (por fase) y la puerta y la trampilla de hierro.

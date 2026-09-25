@@ -6,7 +6,7 @@ import { BLOCK_SOLID, BLOCK_FLUID, fluidHeight } from '../../blocks';
 import { EF_ACTION } from '../../protocol';
 import { FISH_WAIT, FISH_BITE } from '../../fishing';
 import { moveBody } from '../physics';
-import { isSplashPotion, splashPotion } from './potions'; // Fase 6 (monstruos)
+import { isSplashPotion } from './potions'; // Fase 6 (monstruos)
 import type { PlayerView, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -54,7 +54,7 @@ export class Projectiles {
       for (const p of players) {
         if (!p.alive || p.id === e.shooter) continue;
         if (Math.abs(p.x - e.x) < 0.4 && Math.abs(p.z - e.z) < 0.4 && e.y > p.y - 0.1 && e.y < p.y + 1.9) {
-          this.shatter(e, null);
+          this.shatter(e, null, p);
           return;
         }
       }
@@ -64,11 +64,12 @@ export class Projectiles {
   }
 
   /** El huevo se rompe: empuja a la criatura (sin daño) y, con 1/8, nace un pollito (1/32 de ésos, cuatro). */
-  private shatter(e: Entity, mob: Entity | null): void {
+  private shatter(e: Entity, mob: Entity | null, player: PlayerView | null = null): void {
     const m = this.m;
     // Fase 6 (monstruos): las pociones arrojadizas de las brujas salpican su efecto.
+    // Fase 7 (pociones): todas las arrojadizas y persistentes (a quien alcanza, de lleno).
     if (isSplashPotion(e.stack?.id)) {
-      splashPotion(m, e);
+      m.potions.shatter(e, mob, player);
       m.remove(e.id);
       return;
     }

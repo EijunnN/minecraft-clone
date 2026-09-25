@@ -11,7 +11,9 @@ import { illagerFx } from './illagerFx'; // Fase 6 (asaltos)
 import { faunaFx } from './faunaEffects'; // Fase 6 (fauna)
 import { copperFx } from './copperInteraction'; // Fase 6.5 (cobre)
 import { collectionFx } from './collectionInteraction'; // Fase 6.5 (colecciones)
+import { transportFx } from './vehicleFx'; // Fase 7 (transporte)
 import { equipmentFx } from './equipmentFx'; // Fase 6.5 (equipo)
+import { potionFx } from './potionClient'; // Fase 7 (pociones)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -226,17 +228,7 @@ export class Effects {
         this.g.audio.playSplash(p, 0.15);
         break;
       }
-      // Fase 6 (monstruos).
-      case 'potion_break':
-        // Poción arrojadiza de bruja que se rompe: cristal y una nube.
-        this.g.audio.playBreak('glass', p);
-        fx.spawnSparkles(p[0], p[1], p[2], 18, 1.2);
-        fx.spawnSmoke(p[0], p[1], p[2], 14, 1.4, 0.75, 0.35, 0.6);
-        break;
-      case 'witch_drink':
-        this.g.audio.playEat();
-        fx.spawnSparkles(p[0], p[1], p[2], 8, 0.4);
-        break;
+      // Fase 6 (monstruos). Fase 7 (pociones): la poción que se rompe y la bruja que bebe, en potionFx.
       case 'mob_convert':
         // Un zombi ahogado se convierte en ahogado.
         this.g.audio.playSplash(p, 0.5);
@@ -249,7 +241,7 @@ export class Effects {
       default:
         // Fase 6 (acuáticos, fauna)
         // Fase 6.5 (equipo): mechero, fuego, ballesta, tridente, cuerno, cohetes, armaduras de animales y conducto.
-        if (!aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b) && !equipmentFx(this.g, kind, p, a, b)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones)
+        if (!potionFx(this.g, kind, p, a, b) && !transportFx(this.g, kind, p, a) && !aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b) && !equipmentFx(this.g, kind, p, a, b)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones)
     }
   }
 

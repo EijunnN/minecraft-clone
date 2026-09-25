@@ -17,6 +17,8 @@ export const R_CACTUS = 7; // cactus (caras laterales hundidas 1/16)
 export const R_LAVA = 8; // lava (opaca, emisiva, superficie rebajada)
 export const R_MODEL = 9; // forma hecha de cajas (losas, escaleras, vallas, puertas…)
 export const R_CROP = 10; // cultivo: cuatro planos en forma de # (trigo, zanahorias…)
+/** Fase 7 (transporte): raíl (un plano pegado al suelo o en cuesta). Valor alto: no choca con otros tipos nuevos. */
+export const R_RAIL = 21;
 
 /** Vecino relativo (dx, dy, dz) → id del bloque (-1 si no se sabe). */
 export type NeighborGet = (dx: number, dy: number, dz: number) => number;

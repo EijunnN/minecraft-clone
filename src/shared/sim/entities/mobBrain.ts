@@ -14,6 +14,8 @@ import { MonsterAI, isSpiderLike } from './monsterAi';
 import { faunaMobTick, faunaFlags } from './wildlife'; // Fase 6 (fauna)
 import { IllagerAI } from './illagers'; // Fase 6 (asaltos)
 import { CHARGED_POWER, EF_CHARGED, skullDisguises } from '../../collections'; // Fase 6.5 (colecciones)
+import { PT_LONG_SLOWNESS } from '../../potions'; // Fase 7 (pociones)
+import { invisibleRange } from '../../effects';
 
 export class MobBrain {
   /** Fase 6 (monstruos). */
@@ -36,6 +38,8 @@ export class MobBrain {
       if (d2 >= bd) continue;
       // Fase 6.5 (colecciones): con la cabeza de su especie puesta, lo ven a la mitad de distancia.
       if (p.head && skullDisguises(p.head, e.type) && d2 * 4 >= max * max) continue;
+      // Fase 7 (pociones): a alguien invisible lo ven de mucho más cerca (menos cuanta más armadura lleve).
+      if (p.invisible && d2 >= (max * invisibleRange(p.armorPieces ?? 0)) ** 2) continue;
       if (needLos && d2 > 36 && !lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, p.x, p.y + 1.5, p.z)) continue;
       bd = d2;
       best = p;
@@ -55,6 +59,7 @@ export class MobBrain {
     const w = this.m.w;
     // Fase 6 (monturas): la montura que guía su jinete ni piensa ni se mueve sola.
     if (this.m.mounts.riddenTick(e, dt)) return;
+    if (e.vehicle !== undefined && this.m.seated?.(e)) return; // Fase 7 (transporte): sentada en una barca o vagoneta
     // Ambiente: sol, lava, fuego, caída, vacío.
     if (def.burnsInSun && this.isSunlit(e)) e.fire = Math.max(e.fire, 2);
     if (e.inLava) {
@@ -149,6 +154,8 @@ export class MobBrain {
     if (hostileNow) {
       if (ai.target) target = players.find((p) => p.id === ai.target && p.alive && !p.creative) ?? null;
       if (target && Math.hypot(target.x - e.x, target.z - e.z) > 40) target = null;
+      // Fase 7 (pociones): si se vuelve invisible, lo pierde de vista en cuanto se aleja un poco.
+      if (target?.invisible && Math.hypot(target.x - e.x, target.z - e.z) > 24 * invisibleRange(target.armorPieces ?? 0)) target = null;
       // (Fase 6: las arañas, neutrales de día, a oscuras buscan presa sin que las provoquen.)
       if (!target && (def.neutral ? ai.angry > 0 || spiderLike : true)) target = this.nearestPlayer(e, players, spiderLike ? 16 : 24, true);
       ai.target = target ? target.id : null;
@@ -466,7 +473,9 @@ export class MobBrain {
     const vy = (ty - sy) / t + 0.5 * 20 * t;
     const vx = dx / t + (this.m.rand() - 0.5) * spread * speed;
     const vz = dz / t + (this.m.rand() - 0.5) * spread * speed;
-    this.m.spawnArrow(sx + (dx / horiz) * 0.6, sy, sz + (dz / horiz) * 0.6, vx, vy + (this.m.rand() - 0.5) * spread * speed, vz, e.id, 2);
+    const arrow = this.m.spawnArrow(sx + (dx / horiz) * 0.6, sy, sz + (dz / horiz) * 0.6, vx, vy + (this.m.rand() - 0.5) * spread * speed, vz, e.id, 2);
+    // Fase 7 (pociones): las flechas de los esqueletos glaciales dan 30 s de Lentitud (como en Minecraft).
+    if (e.type === MOB_STRAY) arrow.arrowPotion = PT_LONG_SLOWNESS;
     this.m.host.fx('mob_shoot', sx, sy, sz, e.type);
   }
 

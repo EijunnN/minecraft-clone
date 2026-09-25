@@ -19,6 +19,9 @@ import { LOOT_TABLES, rollLoot, scatterLoot } from '../../loot';
 import type { StructureChest } from '../../world/structures';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { ServerContext, Session } from './context';
+// Fase 7 (pociones): el alambique alquímico destila solo y enseña sus frascos.
+import { isBrewingStand, brewingStandMask, brewingStandWith } from '../../blocks';
+import { brewTick, brewBottleMask, BREW_INGREDIENT, BREW_FUEL } from '../../brewing';
 
 /** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
 interface View {
@@ -29,6 +32,12 @@ interface View {
 export class ContainerSystem {
   private containers = new Map<number, ContainerState>();
   private dirty = new Set<number>();
+  /**
+   * Fase 7 (transporte): contenedores que no son bloques (barcas y vagonetas con cofre) en posiciones que
+   * no existen en el mundo. container: su contenido (undefined si la posición no es de éstas; null si ya no
+   * está o, con `s`, si está lejos del jugador); changed: se tocó.
+   */
+  virtual: { container(x: number, y: number, z: number, s?: Session): ContainerState | null | undefined; changed(x: number, y: number, z: number): void } | null = null;
   /** Fase 7 (redstone): cambió quién tiene abierto el contenedor de (x, y, z) (cofres trampa). */
   viewersChanged: ((x: number, y: number, z: number) => void) | null = null;
   /** Fase 7 (redstone): cambió el contenido del contenedor de (x, y, z) (comparadores). */
@@ -68,7 +77,7 @@ export class ContainerSystem {
     if (!isContainer(id)) return null;
     const k = posKey(x, y, z);
     let c = this.containers.get(k);
-    const kind = isChest(id) ? 'chest' : 'furnace';
+    const kind = isChest(id) ? 'chest' : isBrewingStand(id) ? 'brewing' : 'furnace'; // Fase 7 (pociones)
     if (!c || c.kind !== kind) {
       c = newContainer(kind);
       this.containers.set(k, c);
@@ -88,6 +97,8 @@ export class ContainerSystem {
 
   /** Lo que se ve al abrir (x, y, z): el contenedor o el cofre grande. */
   private viewAt(x: number, y: number, z: number): View | null {
+    const vc = this.virtual?.container(x, y, z); // Fase 7 (transporte)
+    if (vc !== undefined) return vc ? { parts: [[posKey(x, y, z), vc]], state: vc } : null;
     const c = this.containerAt(x, y, z);
     if (!c) return null;
     const k = posKey(x, y, z);
@@ -153,7 +164,13 @@ export class ContainerSystem {
 
   onOpen(s: Session, msg: Extract<ClientMsg, { t: 'open' }>): void {
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z);
-    if (![x, y, z].every(Number.isInteger) || !this.ctx.reachOk(s, x, y, z, 8)) return;
+    if (![x, y, z].every(Number.isInteger)) return;
+    // Fase 7 (transporte): el cofre de una barca o vagoneta mira la distancia a la entidad.
+    const vc = this.virtual?.container(x, y, z, s);
+    if (vc === undefined ? !this.ctx.reachOk(s, x, y, z, 8) : !vc) {
+      if (vc === null) this.ctx.send(s, { t: 'cclose' });
+      return;
+    }
     if (!this.viewAt(x, y, z)) {
       this.ctx.send(s, { t: 'cclose' });
       return;
@@ -197,9 +214,12 @@ export class ContainerSystem {
     }
     this.commit(v);
     if (before) this.smeltReward(s, before.id, before.count - (c.slots[FURNACE_OUT]?.count ?? 0));
-    for (const [pk] of v.parts) {
-      this.dirty.add(pk);
-      this.contentsChanged?.(keyX(pk), keyY(pk), keyZ(pk)); // Fase 7 (redstone)
+    if (this.virtual?.container(x, y, z) !== undefined) this.virtual.changed(x, y, z); // Fase 7 (transporte)
+    else {
+      for (const [pk] of v.parts) {
+        this.dirty.add(pk);
+        this.contentsChanged?.(keyX(pk), keyY(pk), keyZ(pk)); // Fase 7 (redstone)
+      }
     }
     this.sendView(k);
   }
@@ -215,6 +235,7 @@ export class ContainerSystem {
   tickFurnaces(dt: number): void {
     const w = this.ctx.world;
     for (const [k, c] of this.containers) {
+      if (c.kind === 'brewing') this.tickBrewing(k, c, dt); // Fase 7 (pociones)
       if (c.kind !== 'furnace') continue;
       const x = keyX(k), y = keyY(k), z = keyZ(k);
       const id = w.getBlock(x, y, z);
@@ -229,6 +250,25 @@ export class ContainerSystem {
       if (res.lit !== isLitFurnace(id)) w.setBlock(x, y, z, furnaceWithLit(id, res.lit));
       if (res.changed || c.burn > 0) this.sendView(k);
     }
+  }
+
+  /**
+   * Fase 7 (pociones): el alambique destila (con combustible e ingrediente), avisa al acabar y el bloque
+   * enseña los frascos que tiene dentro.
+   */
+  private tickBrewing(k: number, c: ContainerState, dt: number): void {
+    const w = this.ctx.world;
+    const x = keyX(k), y = keyY(k), z = keyZ(k);
+    const id = w.getBlock(x, y, z);
+    if (id < 0 || !isBrewingStand(id)) return;
+    if (c.cook > 0 || c.slots[BREW_INGREDIENT] || (c.burn <= 0 && c.slots[BREW_FUEL])) {
+      const res = brewTick(c, dt);
+      if (res.changed) this.dirty.add(k);
+      if (res.done) this.ctx.fx('brew_done', x + 0.5, y + 0.6, z + 0.5);
+      if (res.changed || c.cook > 0) this.sendView(k);
+    }
+    const mask = brewBottleMask(c);
+    if (brewingStandMask(id) !== mask) w.setBlock(x, y, z, brewingStandWith(mask));
   }
 
   // ------------------------------------------------------------------ Fase 7 (redstone)

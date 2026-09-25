@@ -48,6 +48,8 @@ import { BOOK_GENERATORS } from './genBooks'; // Fase 6.5 (libros y estandartes)
 import { MATERIAL_GENERATORS } from './genMaterials'; // Fase 6.5 (materiales)
 import { COLLECTION_GENERATORS } from './genCollections'; // Fase 6.5 (colecciones)
 import { EQUIPMENT_GENERATORS } from './genEquipment'; // Fase 6.5 (equipo)
+import { BREWING_GENERATORS } from './genBrewing'; // Fase 7 (pociones)
+import { TRANSPORT_GENERATORS } from './genTransport'; // Fase 7 (transporte)
 import { REDSTONE_GENERATORS } from './genRedstone'; // Fase 7 (redstone)
 
 export interface GeneratedTextures {
@@ -89,6 +91,8 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...MATERIAL_GENERATORS, // Fase 6.5 (materiales)
   ...COLLECTION_GENERATORS, // Fase 6.5 (colecciones)
   ...EQUIPMENT_GENERATORS, // Fase 6.5 (equipo)
+  ...BREWING_GENERATORS, // Fase 7 (pociones)
+  ...TRANSPORT_GENERATORS, // Fase 7 (transporte)
   ...REDSTONE_GENERATORS, // Fase 7 (redstone)
 };
 

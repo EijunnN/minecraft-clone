@@ -154,11 +154,13 @@ export class LifeCycle {
     const surv = g.survival;
     const cold = surv.dead ? 0 : this.freezing.update(g, dt); // Fase 6.5 (materiales)
     if (!g.creative && !surv.dead) {
-      if (p.landedFall > 3 && !p.inWater) {
+      // Fase 7 (pociones): con Supersalto se aguanta un bloque más de caída por nivel.
+      const safe = 3 + Math.max(0, g.statusEffects.jumpAmp + 1);
+      if (p.landedFall > safe && !p.inWater) {
         // Caer sobre un fardo de heno quita el 80 % del daño y sobre una cama, la mitad.
         const under = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y - 0.05), Math.floor(p.z));
         const k = under === HAY_BALE ? 0.2 : isBed(under) ? 0.5 : 1;
-        const dmg = Math.ceil((p.landedFall - 3) * k);
+        const dmg = Math.ceil((p.landedFall - safe) * k);
         if (dmg > 0 && surv.damage(dmg, 'fall') > 0) this.hurtFeedback(dmg);
       }
       if (p.sprinting) surv.addExhaustion(moved * 0.1);

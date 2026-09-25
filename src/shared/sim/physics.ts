@@ -2,6 +2,7 @@
 import { BLOCK_SOLID, BLOCK_FLUID, COBWEB } from '../blocks';
 import { moveBox, boxBlocked } from '../collide';
 import { blockUnder, groundSpeed, slimeBounce, inPowderSnow, POWDER_SINK_SPEED, POWDER_WALK_FACTOR } from '../materialPhysics'; // Fase 6.5 (materiales)
+import { SLOW_FALL_SPEED } from '../effects'; // Fase 7 (pociones)
 
 export interface BlockGetter {
   /** Id del bloque o -1 si no está cargado (se trata como sólido). */
@@ -22,6 +23,9 @@ export interface Body {
   inLava: boolean;
   /** Choque horizontal en el último movimiento. */
   hitWall: boolean;
+  /** Fase 7 (pociones): multiplicador del paso horizontal (Velocidad y Lentitud) y caída lenta. */
+  speedMul?: number;
+  slowFall?: boolean;
 }
 
 const EPS = 1e-4;
@@ -54,6 +58,9 @@ export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
     kh *= POWDER_WALK_FACTOR;
     if (b.vy < -POWDER_SINK_SPEED) b.vy = -POWDER_SINK_SPEED;
   }
+  // Fase 7 (pociones): Velocidad y Lentitud; con Caída lenta se baja despacio.
+  if (b.speedMul !== undefined) kh *= b.speedMul;
+  if (b.slowFall && b.vy < -SLOW_FALL_SPEED) b.vy = -SLOW_FALL_SPEED;
   const vy0 = b.vy;
   const r = moveBox(w, b.x, b.y, b.z, b.width, b.height, b.vx * dt * kh, b.vy * dt * kv, b.vz * dt * kh, step, b.onGround);
   b.x += r.dx;

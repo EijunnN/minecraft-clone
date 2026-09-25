@@ -40,6 +40,9 @@ import { TRIDENT } from '../../shared/items';
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { materialsUse } from './materialsInteraction'; // Fase 6.5 (materiales)
 import { collectionUse } from './collectionInteraction'; // Fase 6.5 (colecciones)
+import { potionUse, drinkPotion, hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
+import { TIPPED_ARROW } from '../../shared/items';
+import { isVehicleType } from '../../shared/vehicles'; // Fase 7 (transporte)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
@@ -134,7 +137,9 @@ export class Interaction {
           u.soundT -= dt;
           if (u.soundT <= 0) {
             u.soundT = 0.22;
-            this.g.audio.playEat();
+            // Fase 7 (pociones): las pociones y la leche se beben a tragos.
+            if (ITEMS[u.item]?.drink) this.g.audio.playPotionSfx('drink', null);
+            else this.g.audio.playEat();
           }
           if (u.t >= 1.6) this.finishEating();
         }
@@ -161,6 +166,9 @@ export class Interaction {
     }
     // Fase 6 (monturas): poner la silla o montarse.
     if (pressed && target && this.g.riding.onUse(target, held?.id ?? 0)) return;
+    // Fase 7 (transporte): subirse, abrir el cofre o echar carbón; poner barcas y vagonetas.
+    if (pressed && target && this.g.vehicles.onUse(target, held)) return;
+    if (this.g.vehicles.place(this, pressed, target ? null : hit, held, dir)) return;
     // Criatura delante: dar de comer, esquilar u ordeñar (Fase 6: domesticar y sentar, también con la mano vacía).
     if (pressed && target && this.canInteract(target, held?.id ?? 0)) {
       this.interactEntity(target, held?.id ?? 0);
@@ -197,6 +205,8 @@ export class Interaction {
     }
     // Fase 6.5 (colecciones): tocadiscos, cabezas (colocar o ponérsela) y marco brillante.
     if (collectionUse(this.g, this, pressed, hit, held)) return;
+    // Fase 7 (pociones): lanzar arrojadizas y persistentes y llenar frascos en el agua.
+    if (potionUse(this.g, this, pressed, held, dir)) return;
     // Si la mano principal no hace nada con el clic derecho, lo usa la secundaria.
     if (!this.mainHandUses(held, hit)) {
       this.useOffhand(pressed, hit);
@@ -256,7 +266,7 @@ export class Interaction {
       return;
     }
     if (def.tool?.kind === 'bow') {
-      if (pressed && (this.g.creative || this.g.inv.count(ARROW) > 0)) this.use = { kind: 'bow', t: 0, slot: this.g.selected, item: held.id, soundT: 0 };
+      if (pressed && (this.g.creative || hasArrows(this.g))) this.use = { kind: 'bow', t: 0, slot: this.g.selected, item: held.id, soundT: 0 };
       return;
     }
     if (held.id === BUCKET) {
@@ -498,7 +508,7 @@ export class Interaction {
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.1);
       const tool = ITEMS[this.g.heldId]?.tool;
-      if (tool && !WEARLESS.has(tool.kind)) this.wearHeld(tool.kind === 'sword' ? 1 : 2);
+      if (tool && !WEARLESS.has(tool.kind) && !isVehicleType(e.type)) this.wearHeld(tool.kind === 'sword' ? 1 : 2); // Fase 7: las barcas no gastan
     }
   }
 
@@ -507,6 +517,7 @@ export class Interaction {
     const def = ITEMS[u.item];
     const food = def?.food;
     this.use = null;
+    if (drinkPotion(this.g, this, u.slot, u.item)) return; // Fase 7 (pociones)
     if (def?.drink) {
       // Cubo de leche: quita todos los efectos y queda el cubo vacío.
       this.g.statusEffects.clear(this.g.survival);
@@ -536,12 +547,12 @@ export class Interaction {
     const t = Math.min(1, u.t);
     const f = Math.min(1, (t * t + 2 * t) / 3);
     if (f < 0.1) return;
-    if (!this.g.creative) {
-      if (this.g.inv.remove(ARROW, 1) < 1) return;
-      this.wearHeld(1);
-    }
+    // Fase 7 (pociones): la primera flecha que haya (normal o con efecto).
+    const ap = takeArrow(this.g);
+    if (ap === null) return;
+    this.wearHeld(1);
     const p = this.g.player;
-    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f });
+    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f, ...(ap >= 0 ? { ap } : {}) });
     this.g.swing(false);
   }
 
@@ -790,7 +801,7 @@ export class Interaction {
       // Fase 6.5 (equipo): también los tridentes clavados.
       if ((e.type !== ENT_ITEM && e.type !== ENT_ARROW && e.type !== ENT_TRIDENT) || !(e.flags & EF_PICKABLE) || e.gone) continue;
       if (Math.abs(e.x - p.x) > 1.3 || Math.abs(e.z - p.z) > 1.3 || e.y < p.y - 0.8 || e.y > p.y + 2.3) continue;
-      const id = e.type === ENT_ARROW ? ARROW : e.type === ENT_TRIDENT ? TRIDENT : e.item;
+      const id = e.type === ENT_ARROW ? ((e.potion ?? -1) >= 0 ? TIPPED_ARROW : ARROW) : e.type === ENT_TRIDENT ? TRIDENT : e.item; // Fase 7: flechas con efecto
       if (this.g.inv.room({ id, count: 1 }) <= 0) continue;
       const last = this.pickupAsk.get(e.id) ?? 0;
       if (now - last < 0.5) continue;

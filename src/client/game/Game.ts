@@ -35,6 +35,9 @@ import { StatusEffects } from './statusEffects';
 import { fishingLines } from './fishingLines';
 import { useLook } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { equipmentFrame } from './equipmentLife';
+// Fase 7 (pociones): física de los efectos, remolinos, nubes, invisibles y nombres de las pociones.
+import { potionPhysics, potionPosState, potionFrame } from './potionClient';
+import { stackName, EF_INVISIBLE, STATE_INVISIBLE } from '../../shared/potions';
 import type { Use } from './gameTypes';
 import { leashLines } from './leashLines'; // Fase 6.5 (remate)
 import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
@@ -52,6 +55,9 @@ import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
 import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
+import { VehicleClient } from './vehicleClient'; // Fase 7 (transporte)
+import { vehicleFrame } from './vehicleFx';
+import { isVehicleType } from '../../shared/vehicles';
 import { Trading } from './trading'; // Fase 6 (aldeanos)
 import { renderRaidBar, type RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
 // Fase 6.5 (decoración): catalejo, reloj y rayo contra cuadros y marcos.
@@ -100,6 +106,7 @@ export class Game {
   /** Intensidad de la lluvia ahora mismo (0..1), para las salpicaduras. */
   rainNow = 0;
   readonly riding = new Riding(this); // Fase 6 (monturas)
+  readonly vehicles = new VehicleClient(this); // Fase 7 (transporte): barcas y vagonetas
   /** Fase 6 (aldeanos): comercio con los aldeanos. */
   readonly trading = new Trading(this);
   readonly xp = new Experience();
@@ -451,9 +458,9 @@ export class Game {
       this.input.gameKeys = true;
       this.input.requestLock();
     };
-    ui.onInventoryPick = (id, slot) => {
+    ui.onInventoryPick = (id, slot, dmg) => {
       const s = slot ?? this.selected;
-      this.inv.set(s, { id, count: maxStack(id) });
+      this.inv.set(s, { id, count: maxStack(id), ...(dmg ? { dmg } : {}) }); // Fase 7 (pociones): con su tipo
       this.refreshHotbar(true);
       this.equipT = 1;
     };
@@ -601,13 +608,14 @@ export class Game {
     const p = this.player;
     const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
       (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0) | (p.pose !== 'stand' ? STATE_PRONE : 0) |
-      useState(this.interaction.use);
+      useState(this.interaction.use) | potionPosState(this).s; // Fase 7 (pociones): invisible
+    const ec = potionPosState(this).ec;
     const q = (v: number, step: number) => Math.round(v / step);
     const armor = this.inv.armorIds();
     const off = this.inv.offhand?.id ?? 0;
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor}`;
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${ec}`;
     if (!force && key === this.lastSentKey) return;
-    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor });
+    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor, ...(ec ? { ec } : {}) });
     this.lastSentKey = key;
   }
 
@@ -725,6 +733,7 @@ export class Game {
     // Usar un objeto frena mucho; los efectos Velocidad y Lentitud multiplican.
     p.usingItem = !!this.interaction.use;
     p.slow = (this.interaction.use ? 0.25 : 1) * this.statusEffects.speed;
+    potionPhysics(this); // Fase 7 (pociones): Supersalto y Caída lenta
     p.leatherBoots = ITEMS[this.inv.armor[3]?.id ?? 0]?.armor?.material === 'leather'; // Fase 6.5 (materiales): nieve polvo
     world.renderDistance = settings.render.renderDistance;
     const wasInWater = p.inWater;
@@ -740,8 +749,9 @@ export class Game {
       sprint: active && (settings.toggleSprint ? this.sprintOn : input.isDown(k.sprint)) && (this.creative || surv.canSprint()),
     };
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
-    if (!this.riding.update(dt, controls, active)) p.update(dt, controls, world);
-    const moved = this.riding.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
+    // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
+    if (!this.riding.update(dt, controls, active) && !this.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
+    const moved = this.riding.active || this.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
     // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
     if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
       const bx = Math.floor(p.x), by = Math.floor(p.y - 0.05), bz = Math.floor(p.z);
@@ -782,7 +792,7 @@ export class Game {
     const dir = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
     const reach = this.creative ? REACH_CREATIVE : REACH_SURVIVAL;
     this.hit = surv.dead ? null : raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], reach, (x, y, z) => world.getBlock(x, y, z));
-    const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH, this.riding.entityId);
+    const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH, this.riding.active ? this.riding.entityId : this.vehicles.skipId); // Fase 7: la barca propia no tapa
     // Las plantas sin colisión (hierba, flores, cultivos) no tapan a las criaturas.
     const hitBlocks = this.hit && BLOCK_RENDER[this.hit.id] !== R_CROSS && BLOCK_RENDER[this.hit.id] !== R_CROP;
     // Fase 6.5 (decoración): los cuadros y marcos también se pueden golpear y usar.
@@ -802,6 +812,8 @@ export class Game {
     world.update(p.x, p.z, p.yaw, dt);
     this.ents.update(dt, nowS);
     this.riding.afterEntities(dt); // Fase 6 (monturas)
+    this.vehicles.afterEntities(dt); // Fase 7 (transporte)
+    vehicleFrame(this, dt);
     this.interaction.autoPickup(nowS);
     this.lookTimer -= dt;
     if (this.lookTimer <= 0 && !surv.dead) {
@@ -814,7 +826,8 @@ export class Game {
     for (const rp of this.remote.values()) {
       rp.update(dt);
       this.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
-      if (rp.state & STATE_DEAD) continue;
+      this.vehicles.placeRemote(rp.id, rp.view); // Fase 7 (transporte): en su barca o vagoneta
+      if (rp.state & (STATE_DEAD | STATE_INVISIBLE)) continue; // Fase 7 (pociones): los invisibles no se dibujan
       const v = rp.view;
       const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
       v.light = [(l >> 4) / 15, (l & 15) / 15];
@@ -836,6 +849,7 @@ export class Game {
     ps.update(dt);
     this.ambient.update(dt);
     equipmentFrame(this, dt); // Fase 6.5 (equipo): estela de los cohetes
+    potionFrame(this, dt); // Fase 7 (pociones): remolinos, nubes y flechas con efecto
 
     // --- Red: posición a ~8 Hz y sólo si cambia (ahorra peticiones) ---
     this.lastSent += dt;
@@ -932,13 +946,13 @@ export class Game {
         yaw += Math.PI;
         pitch = -pitch;
       }
-      views.push({
+      if (!this.statusEffects.invisible) views.push({ // Fase 7 (pociones): invisible, tampoco en tercera persona
         id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
         bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
         swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
         use: ((k) => (k === 'none' ? null : k))(useLook(this.interaction.use).kind), light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
-        riding: this.riding.active, // Fase 6 (monturas): sentado
+        riding: this.riding.active || this.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
       });
     }
 
@@ -979,8 +993,10 @@ export class Game {
     const mobs: ClientEntity[] = [];
     const drops: ClientEntity[] = [];
     for (const e of this.ents.list.values()) {
-      if (MOBS[e.type]) mobs.push(e);
-      else drops.push(e);
+      // Fase 7: barcas y vagonetas van con los modelos de cajas; las criaturas invisibles no se dibujan.
+      if (MOBS[e.type] || isVehicleType(e.type)) {
+        if (!(e.flags & EF_INVISIBLE)) mobs.push(e);
+      } else drops.push(e);
     }
     const m = this.interaction.mining;
     let crack: FrameState['crack'] = null;
@@ -1014,6 +1030,8 @@ export class Game {
       mist,
       selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
       heldItem: surv.dead ? 0 : this.heldId,
+      heldDmg: this.heldStack?.dmg ?? 0, // Fase 7 (pociones): color de la poción
+      offhandDmg: this.inv.offhand?.dmg ?? 0,
       handUse: useLook(mainUse).amount, // Fase 6.5 (equipo): con la ballesta y el tridente
       handUseKind: useLook(mainUse).kind,
       offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
@@ -1060,7 +1078,7 @@ export class Game {
     for (const rp of this.remote.values()) {
       const v = rp.view;
       const d = Math.hypot(v.x - camX, v.y - camY, v.z - camZ);
-      const visible = d < 72 && !this.hudHidden && !(rp.state & STATE_DEAD);
+      const visible = d < 72 && !this.hudHidden && !(rp.state & (STATE_DEAD | STATE_INVISIBLE)); // Fase 7: sin nombre si es invisible
       tags.push({ id: rp.id, name: rp.name, pos: visible ? this.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null });
     }
     // Fase 6.5 (remate): criaturas con nombre (etiqueta), hasta 16 bloques.
@@ -1113,7 +1131,7 @@ export class Game {
         `Entidades: ${mobs.length} criaturas · ${drops.length} objetos\n` +
         `Modo: ${this.creative ? 'creativo' : 'supervivencia'} · ${this.offline ? 'sin conexión' : `ping ${Math.round(this.net?.latency ?? 0)} ms · ${this.remote.size + 1} jugadores`}\n` +
         (this.hit ? `Mirando: ${BLOCKS[this.hit.id].name} (${this.hit.x}, ${this.hit.y}, ${this.hit.z})\n` : '') +
-        (target ? `Criatura: ${MOBS[target.type].name}\n` : '') +
+        (target ? `Criatura: ${MOBS[target.type]?.name ?? 'transporte'}\n` : '') + // Fase 7: también barcas y vagonetas
         `GPU: ${r.caps.renderer}`,
       );
     } else ui.setDebug(null);
@@ -1140,7 +1158,7 @@ export class Game {
     this.interaction.mining = null;
     this.refreshHotbar(true);
     const s = this.heldStack;
-    if (s) this.ui.showBlockName(ITEMS[s.id]?.name ?? '');
+    if (s) this.ui.showBlockName(stackName(s)); // Fase 7 (pociones): con el nombre de su tipo
   }
 
   /** Animación del brazo (y aviso por red si no hubo edición, que ya la anima). */

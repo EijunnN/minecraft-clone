@@ -183,6 +183,14 @@ export * from './equipmentBlocks';
 (INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);
 // Fase 6.5 (calderos): caldero con agua, con lava y con nieve polvo (registrados los últimos: ids nuevos).
 export * from './cauldrons';
+// Fase 7 (pociones): alambique alquímico (registrado el último: ids nuevos) y su sitio en el creativo.
+import { BREWING_STAND } from './brewingBlocks';
+export * from './brewingBlocks';
+(INVENTORY_ORDER as number[]).push(BREWING_STAND);
+// Fase 7 (transporte): raíles normal, propulsor, detector y activador (registrados los últimos: ids nuevos).
+import { RAIL_INVENTORY } from './rails';
+export * from './rails';
+(INVENTORY_ORDER as number[]).push(...RAIL_INVENTORY);
 // Fase 7 (redstone): polvo, antorchas, palanca, botones, placas, repetidor, comparador, lámpara, sensores,
 // cofre trampa, bombilla y pararrayos de cobre, puerta y trampilla de hierro (registrados los últimos: ids nuevos).
 import { REDSTONE_INVENTORY } from './redstoneBlocks';

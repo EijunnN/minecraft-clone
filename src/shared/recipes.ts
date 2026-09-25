@@ -613,17 +613,50 @@ export function fireworkMask(s: ItemStack): number {
   return s.id === FIREWORK_STAR ? (s.dmg ?? 0) & 0xffff : s.id === FIREWORK_ROCKET ? fireworkColors(s.dmg) : 0;
 }
 
+// ------------------------------------------------------------------ Fase 7 (pociones)
+// Alambique (vara de blaze sobre tres piedras: guijarro o pizarra profunda rocosa), polvo de blaze, crema
+// de magma, ojo de araña fermentado y piedra luminosa con su polvo (como en Minecraft). Las flechas con
+// efecto van aparte (tippedArrowCraft en potions.ts: el tipo de la poción viaja en la pila).
+import { BREWING_STAND, GLOWSTONE } from './blocks';
+import { BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, FERMENTED_SPIDER_EYE, GLOWSTONE_DUST, SPIDER_EYE } from './items';
+shape([' B ', 'SSS'], { B: BLAZE_ROD, S: [COBBLESTONE, COBBLED_DEEPSLATE] }, BREWING_STAND);
+mix([BLAZE_ROD], BLAZE_POWDER, 2);
+mix([BLAZE_POWDER, SLIME_BALL], MAGMA_CREAM);
+mix([SPIDER_EYE, BROWN_MUSHROOM, SUGAR], FERMENTED_SPIDER_EYE);
+shape(['GG', 'GG'], { G: GLOWSTONE_DUST }, GLOWSTONE);
+// ------------------------------------------------------------------ Fase 7 (transporte)
+// Barcas (con los tablones de su madera; la balsa, con los de bambú), barcas con cofre, vagonetas y raíles
+// (como en Minecraft). El raíl detector y el activador necesitan la placa de presión de piedra y la antorcha
+// de redstone: sus recetas se registran si esos bloques existen (los trae la redstone).
+import { BOAT_ITEMS, CHEST_BOAT_ITEMS, MINECART, CHEST_MINECART, FURNACE_MINECART, GOLD_INGOT as RAIL_GOLD } from './items';
+import { RAIL, POWERED_RAIL, DETECTOR_RAIL, ACTIVATOR_RAIL } from './blocks';
+for (const [wood, boat] of Object.entries(BOAT_ITEMS)) {
+  const planks = wood === 'bamboo' ? BAMBOO_PLANKS : WOOD_TYPES.find((w) => w.key === wood)?.planks;
+  if (planks === undefined) continue;
+  shape(['P P', 'PPP'], { P: planks }, boat);
+  mix([boat, CHEST], CHEST_BOAT_ITEMS[wood]);
+}
+shape(['I I', 'III'], { I: IRON_INGOT }, MINECART);
+mix([MINECART, CHEST], CHEST_MINECART);
+mix([MINECART, FURNACE], FURNACE_MINECART);
+shape(['I I', 'ISI', 'I I'], { I: IRON_INGOT, S: STICK }, RAIL, 16);
+shape(['G G', 'GSG', 'GRG'], { G: RAIL_GOLD, S: STICK, R: REDSTONE }, POWERED_RAIL, 6);
+{
+  const byKey = (key: string) => ITEMS.findIndex((it) => it?.key === key);
+  const plate = byKey('stone_pressure_plate'), torch = byKey('redstone_torch');
+  if (plate > 0) shape(['I I', 'IPI', 'IRI'], { I: IRON_INGOT, P: plate, R: REDSTONE }, DETECTOR_RAIL, 6);
+  if (torch > 0) shape(['ISI', 'ITI', 'ISI'], { I: IRON_INGOT, S: STICK, T: torch }, ACTIVATOR_RAIL, 6);
+}
 // ------------------------------------------------------------------ Fase 7 (redstone)
-// Componentes de redstone como en Minecraft. La bombilla de cobre lleva vara de blaze: sólo se añade si
-// ese objeto existe (llega con el Nether); el cuarzo del Nether, de momento, sólo sale en creativo.
+// Componentes de redstone como en Minecraft (la bombilla de cobre, con la vara de blaze de las pociones);
+// el cuarzo del Nether, de momento, sólo sale en creativo.
 import {
   REDSTONE_TORCH, LEVER, BUTTONS, PRESSURE_PLATES, LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE, REPEATER, COMPARATOR,
   REDSTONE_BLOCK, REDSTONE_LAMP, DAYLIGHT_DETECTOR, TARGET, NOTE_BLOCK, TRAPPED_CHEST, LIGHTNING_ROD, COPPER_BULB, IRON_DOOR,
-  IRON_TRAPDOOR, GLOWSTONE, COBBLESTONE as RS_COBBLESTONE, STONE as RS_STONE, GLASS as RS_GLASS, HAY_BALE as RS_HAY,
+  IRON_TRAPDOOR, COBBLESTONE as RS_COBBLESTONE, STONE as RS_STONE, GLASS as RS_GLASS, HAY_BALE as RS_HAY,
   CHEST as RS_CHEST, COPPER as RS_COPPER, WOODS as RS_WOODS, SLABS as RS_SLABS, OXIDATION_STAGES as RS_STAGES,
 } from './blocks';
 import { QUARTZ, REDSTONE as RS_DUST, STICK as RS_STICK, IRON_INGOT as RS_IRON, GOLD_INGOT as RS_GOLD, COPPER_INGOT as RS_COPPER_INGOT } from './items';
-import { ITEMS as RS_ITEMS } from './items';
 {
   const R = RS_DUST;
   shape(['R', 'S'], { R, S: RS_STICK }, REDSTONE_TORCH);
@@ -649,10 +682,5 @@ import { ITEMS as RS_ITEMS } from './items';
   shape(['C', 'C', 'C'], { C: RS_COPPER_INGOT }, LIGHTNING_ROD[0][0]);
   shape(['II', 'II', 'II'], { I: RS_IRON }, IRON_DOOR, 3);
   shape(['II', 'II'], { I: RS_IRON }, IRON_TRAPDOOR);
-  const blazeRod = RS_ITEMS.findIndex((i) => i?.key === 'blaze_rod');
-  if (blazeRod > 0) {
-    for (let s = 0; s < RS_STAGES; s++) {
-      shape([' C ', 'CBC', ' R '], { C: RS_COPPER.block[0][s], B: blazeRod, R }, COPPER_BULB[0][s], 4);
-    }
-  }
+  for (let s = 0; s < RS_STAGES; s++) shape([' C ', 'CBC', ' R '], { C: RS_COPPER.block[0][s], B: BLAZE_ROD, R }, COPPER_BULB[0][s], 4);
 }

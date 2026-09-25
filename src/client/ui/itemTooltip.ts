@@ -16,6 +16,9 @@ import { bannerLayers, layerName, isBannerPatternItem } from '../../shared/banne
 import { discTitle } from '../../shared/collections'; // Fase 6.5 (colecciones)
 import { skullKind } from '../../shared/blocks'; // Fase 6.5 (colecciones)
 import { equipmentTooltip } from './equipmentTooltip'; // Fase 6.5 (equipo)
+import { potionTooltip } from './potionTooltip'; // Fase 7 (pociones)
+import { POTION } from '../../shared/items';
+import { stackName } from '../../shared/potions';
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -26,7 +29,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60))
 /** HTML de la descripción de una pila (para un elemento con la clase `tooltip`). */
 export function itemTooltipHtml(s: ItemStack): string {
   const def = ITEMS[s.id];
-  const lines: string[] = [`<b>${esc(itemName(s.id))}</b>`];
+  const lines: string[] = [`<b>${esc(stackName(s))}</b>`]; // Fase 7 (pociones): con el nombre de su tipo
   const tool = def?.tool;
   if (tool && WEAPONS.has(tool.kind)) {
     lines.push('<span class="tt-gap"></span>', '<span class="tt-dim">En la mano principal:</span>',
@@ -53,7 +56,8 @@ export function itemTooltipHtml(s: ItemStack): string {
       lines.push(`<span class="${e.good ? 'tt-good' : 'tt-bad'}">${e.name}${lvl} (${clock(secs)})${p}</span>`);
     }
   }
-  if (def?.drink) lines.push('<span class="tt-dim">Quita todos los efectos</span>');
+  if (def?.drink && s.id !== POTION) lines.push('<span class="tt-dim">Quita todos los efectos</span>');
+  lines.push(...potionTooltip(s)); // Fase 7 (pociones)
   // Fase 6.5 (decoración): efecto del estofado sospechoso y uso del catalejo y del reloj.
   if (s.id === SUSPICIOUS_STEW && s.dmg) lines.push(`<span class="tt-good">${esc(stewEffectText(s.dmg))}</span>`);
   if (s.id === SPYGLASS) lines.push('<span class="tt-dim">Mantén el clic derecho para mirar de lejos</span>');

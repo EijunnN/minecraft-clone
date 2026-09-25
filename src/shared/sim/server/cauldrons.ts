@@ -5,6 +5,7 @@ import { cauldronFill, cauldronOf, CAULDRON_EMPTY, CAULDRON_WATER, CAULDRON_LAVA
 import { cauldronUseServer } from '../../cauldronUse';
 import { rainAt } from '../../weather';
 import { BUCKET } from '../../items';
+import { GLASS_BOTTLE, POTION } from '../../items'; // Fase 7 (pociones)
 import type { Nature } from './nature';
 import type { ServerContext, Session } from './context';
 
@@ -23,6 +24,11 @@ export class Cauldrons {
     this.ctx.world.setBlock(x, y, z, next);
     const before = cauldronFill(id)!, after = cauldronFill(next)!;
     // Sonido: el cubo se llena, se vacía en el caldero o se lava un estandarte (a = 1 si es lava).
+    // Fase 7 (pociones): frascos que se llenan o se vacían.
+    if (item === GLASS_BOTTLE || item === POTION) {
+      this.ctx.fx(item === GLASS_BOTTLE ? 'bottle_fill' : 'bottle_empty', x + 0.5, y + 0.8, z + 0.5);
+      return true;
+    }
     const kind = item === BUCKET ? 'fill' : after.kind === CAULDRON_WATER && after.level < before.level ? 'wash' : 'empty';
     this.ctx.fx(`cauldron_${kind}`, x + 0.5, y + 0.8, z + 0.5, after.kind === CAULDRON_LAVA || before.kind === CAULDRON_LAVA ? 1 : 0);
     void s;

@@ -33,6 +33,7 @@ import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
 import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
 import { DISCS } from './discs'; // Fase 6.5 (colecciones)
+import { BREWING_STAND } from './blocks'; // Fase 7 (pociones)
 import { REDSTONE_WIRE, TRIPWIRE, IRON_DOOR } from './blocks'; // Fase 7 (redstone)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
@@ -500,6 +501,43 @@ export const NAUTILUS_SHELL = item('nautilus_shell', 'Concha de nautilo');
 export const FIREWORK_ROCKET = item('firework_rocket', 'Cohete de fuegos artificiales');
 export const FIREWORK_STAR = item('firework_star', 'Estrella de fuegos artificiales');
 
+// ------------------------------------------------------------------ Fase 7 (pociones)
+/**
+ * Pociones: el tipo va en `dmg` (0 = agua; ver potions.ts). El frasco se bebe; las arrojadizas y las
+ * persistentes se lanzan; las flechas con efecto se disparan con el arco y la ballesta.
+ */
+export const POTION = item('potion', 'Poción', { stack: 1, drink: true });
+export const SPLASH_POTION = item('splash_potion', 'Poción arrojadiza', { stack: 1 });
+export const LINGERING_POTION = item('lingering_potion', 'Poción persistente', { stack: 1 });
+export const TIPPED_ARROW = item('tipped_arrow', 'Flecha con efecto');
+/** Ingredientes de destilación que faltaban. Los del Nether y el End, de momento sólo en creativo y en el botín. */
+export const FERMENTED_SPIDER_EYE = item('fermented_spider_eye', 'Ojo de araña fermentado');
+export const GLOWSTONE_DUST = item('glowstone_dust', 'Polvo de piedra luminosa');
+export const NETHER_WART = item('nether_wart', 'Verruga del Nether');
+export const BLAZE_ROD = item('blaze_rod', 'Vara de blaze', { fuel: 120 });
+export const BLAZE_POWDER = item('blaze_powder', 'Polvo de blaze');
+export const MAGMA_CREAM = item('magma_cream', 'Crema de magma');
+export const GHAST_TEAR = item('ghast_tear', 'Lágrima de ghast');
+export const DRAGON_BREATH = item('dragon_breath', 'Aliento de dragón');
+// El alambique se ve plano en el inventario y en la mano (como en Minecraft).
+ITEMS[BREWING_STAND].sprite = 'brewing_stand';
+// ------------------------------------------------------------------ Fase 7 (transporte)
+/** Barcas y barcas con cofre por madera (la de bambú es una balsa), en el orden de BOAT_WOODS. */
+const BOAT_NAMES: [string, string][] = [
+  ['oak', 'de roble'], ['spruce', 'de abeto'], ['birch', 'de abedul'], ['jungle', 'de jungla'], ['acacia', 'de acacia'],
+  ['dark_oak', 'de roble oscuro'], ['mangrove', 'de mangle'], ['cherry', 'de cerezo'], ['pale_oak', 'de roble pálido'],
+  ['bamboo', 'de bambú'],
+];
+export const BOAT_ITEMS: Record<string, number> = {};
+export const CHEST_BOAT_ITEMS: Record<string, number> = {};
+for (const [wood, name] of BOAT_NAMES) {
+  const raft = wood === 'bamboo';
+  BOAT_ITEMS[wood] = item(raft ? 'bamboo_raft' : `${wood}_boat`, raft ? 'Balsa de bambú' : `Barca ${name}`, { stack: 1, fuel: 60 });
+  CHEST_BOAT_ITEMS[wood] = item(raft ? 'bamboo_chest_raft' : `${wood}_chest_boat`, raft ? 'Balsa de bambú con cofre' : `Barca ${name} con cofre`, { stack: 1 });
+}
+export const MINECART = item('minecart', 'Vagoneta', { stack: 1 });
+export const CHEST_MINECART = item('chest_minecart', 'Vagoneta con cofre', { stack: 1 });
+export const FURNACE_MINECART = item('furnace_minecart', 'Vagoneta con horno', { stack: 1 });
 // ------------------------------------------------------------------ Fase 7 (redstone)
 // El polvo de redstone pone el polvo en el suelo y la cuerda, la cuerda tendida (como las semillas
 // plantan su cultivo); la puerta de hierro se ve plana en la mano, como las de madera. El cuarzo del
@@ -682,6 +720,14 @@ smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
+// Fase 7 (pociones): los ingredientes (las pociones, con cada tipo, las añade el inventario creativo).
+(CREATIVE_ITEMS as number[]).push(
+  FERMENTED_SPIDER_EYE, GLOWSTONE_DUST, NETHER_WART, BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, GHAST_TEAR, DRAGON_BREATH,
+);
+// Fase 7 (transporte): barcas, balsas y vagonetas en el creativo.
+(CREATIVE_ITEMS as number[]).push(
+  ...Object.values(BOAT_ITEMS).flatMap((b, i) => [b, Object.values(CHEST_BOAT_ITEMS)[i]]), MINECART, CHEST_MINECART, FURNACE_MINECART,
+);
 
 // ------------------------------------------------------------------ Fase 7 (redstone)
 (CREATIVE_ITEMS as number[]).push(QUARTZ);

@@ -15,6 +15,16 @@ export function cauldronClick(g: Game, pressed: boolean, hit: RayHit | null, hel
     g.inv.set(g.selected, r.held);
     g.inv.changed();
   }
+  // Fase 7 (pociones): el frasco lleno sale aparte (los frascos vacíos se apilan); en creativo no se gasta.
+  if (r.give) {
+    if (!g.creative && r.take) g.inv.consume(g.selected, r.take);
+    if (!g.inv.get(g.selected)) g.inv.set(g.selected, r.give);
+    else {
+      const rest = g.inv.add(r.give);
+      if (rest) g.interaction.throwStack(rest, false);
+    }
+    g.inv.changed();
+  }
   g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: g.player.yaw, item: held.id });
   g.swing(true);
   return true;

@@ -10,6 +10,7 @@ import { // Fase 6.5 (materiales): hielo, slime y nieve polvo
   POWDER_CLIMB_SPEED,
 } from '../../shared/materialPhysics';
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
+import { SLOW_FALL_GRAVITY, SLOW_FALL_SPEED } from '../../shared/effects'; // Fase 7 (pociones)
 
 export interface BlockSource {
   /** Id del bloque o -1 si la columna no está cargada. */
@@ -90,6 +91,9 @@ export class Player {
   hitWall = false;
   /** Postura: de pie, buceando (corriendo bajo el agua) o gateando (sin sitio para ponerse de pie). */
   pose: Pose = 'stand';
+  /** Fase 7 (pociones): velocidad extra del salto (Supersalto) y Caída lenta; los pone el juego cada frame. */
+  jumpBoost = 0;
+  slowFall = false;
 
   /** Altura del cuerpo según la postura. */
   get height(): number {
@@ -265,8 +269,10 @@ export class Player {
       const k = 1 - Math.exp(-dt * (this.onGround ? 16 * groundGrip(under) : 3.2));
       this.vx += (wx * speed - this.vx) * k;
       this.vz += (wz * speed - this.vz) * k;
-      this.vy -= GRAVITY * dt;
+      // Fase 7 (pociones): con Caída lenta se cae con poca gravedad y muy despacio.
+      this.vy -= (this.slowFall && this.vy <= 0 ? SLOW_FALL_GRAVITY : GRAVITY) * dt;
       if (this.vy < -78) this.vy = -78;
+      if (this.slowFall && this.vy < -SLOW_FALL_SPEED) this.vy = -SLOW_FALL_SPEED;
       if (this.onLadder) {
         // Escalera de mano: se baja despacio, se sube saltando o empujando contra ella y
         // agachado se queda quieto.
@@ -275,7 +281,7 @@ export class Player {
         if (c.jump || (this.hitWall && (c.forward || c.back || c.left || c.right))) this.vy = 2.4;
         else if (c.sneak && this.vy < 0) this.vy = 0;
       } else if (c.jump && this.onGround) {
-        this.vy = JUMP_VELOCITY;
+        this.vy = JUMP_VELOCITY + this.jumpBoost; // Fase 7 (pociones): Supersalto
         this.onGround = false;
         if (this.sprinting) {
           this.vx += -sy * 1.2;
@@ -380,7 +386,7 @@ export class Player {
     this.landedSpeed = this.justLanded ? prevVy : 0;
     // Distancia de caída: se acumula al bajar y se consume al aterrizar (el agua la anula).
     this.landedFall = 0;
-    if (this.flying || this.inWater) this.fallDistance = 0;
+    if (this.flying || this.inWater || this.slowFall) this.fallDistance = 0; // Fase 7: la caída lenta no hace daño
     else if (this.y < oy) this.fallDistance += oy - this.y;
     if (this.onGround) {
       if (this.justLanded) this.landedFall = this.fallDistance;

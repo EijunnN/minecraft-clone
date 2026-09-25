@@ -5,7 +5,9 @@
 //   convierten en ahogados (y los zombis momificados, en zombis).
 // - Ahogado: nada en tres dimensiones hacia su presa; fuera del agua, es un zombi más.
 // - Bruja: guarda las distancias, lanza pociones arrojadizas y bebe curación (o resistencia al
-//   fuego) cuando lo necesita.
+//   fuego) cuando lo necesita. Fase 7 (pociones): como en Minecraft, bebe respiración acuática bajo
+//   el agua, resistencia al fuego si arde, curación si está herida y velocidad si su presa está lejos;
+//   lanza lentitud (de lejos), veneno, debilidad (de cerca) o daño según lo que ya tenga su presa.
 // - Slime: avanza a saltos y hace daño al tocar (los pequeños no); al morir se divide.
 // - Phantom: vuela en círculos sobre su presa y se lanza en picado de vez en cuando.
 // - Lepisma: si un jugador la hiere, al poco despierta a las de los bloques infestados cercanos.
@@ -16,7 +18,15 @@ import {
 } from '../../mobs';
 import { BLOCK_FLUID, BLOCK_SOLID, isInfested } from '../../blocks';
 import { EFFECT_POISON } from '../../effects';
-import { SPLASH_HARMING, SPLASH_POISON, SPLASH_SLOWNESS } from '../../items';
+// Fase 7 (pociones): las brujas beben y lanzan pociones de verdad; a los invisibles los pierden de vista.
+import {
+  EFFECT_WATER_BREATHING, EFFECT_FIRE_RESISTANCE, EFFECT_SPEED, EFFECT_SLOWNESS, EFFECT_WEAKNESS, packColor, invisibleRange,
+} from '../../effects';
+import { SPLASH_POTION } from '../../items';
+import {
+  PT_HARMING, PT_POISON, PT_SLOWNESS, PT_WEAKNESS, PT_HEALING, PT_FIRE_RESISTANCE, PT_WATER_BREATHING, PT_SWIFTNESS,
+  potionEffects, potionColor,
+} from '../../potions';
 import { EF_ACTION } from '../../protocol';
 import { moveBody, lineOfSight } from '../physics';
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type Entity } from './types';
@@ -54,9 +64,9 @@ interface MonsterState {
   underwater: number;
   /** Bruja: segundos que le quedan bebiendo, qué bebe y cuándo podrá volver a beber. */
   drink: number;
-  drinking: 'heal' | 'fire' | null;
+  /** Fase 7 (pociones): tipo de la poción que bebe (-1 ninguna). */
+  drinking: number;
   drinkCd: number;
-  fireRes: number;
   /** Slime: espera hasta el próximo salto. */
   jumpIn: number;
   /** Phantom: centro y ángulo del círculo, picado en curso y espera hasta el siguiente. */
@@ -81,7 +91,7 @@ export class MonsterAI {
     if (!s) {
       const r = this.m.rand;
       s = {
-        underwater: 0, drink: 0, drinking: null, drinkCd: 2, fireRes: 0, jumpIn: r(), cx: e.x, cy: e.y, cz: e.z,
+        underwater: 0, drink: 0, drinking: -1, drinkCd: 0, jumpIn: r(), cx: e.x, cy: e.y, cz: e.z,
         angle: r() * TAU, radius: 6 + r() * 8, swoop: 0, swoopCd: 3 + r() * 5, call: 0,
       };
       this.states.set(e, s);
@@ -161,6 +171,8 @@ export class MonsterAI {
     let t: PlayerView | null = null;
     if (ai.target) t = players.find((p) => p.id === ai.target && p.alive && !p.creative) ?? null;
     if (t && Math.hypot(t.x - e.x, t.z - e.z) > Math.max(40, range)) t = null;
+    // Fase 7 (pociones): a alguien invisible lo pierde de vista en cuanto se aleja un poco.
+    if (t?.invisible && Math.hypot(t.x - e.x, t.z - e.z) > range * invisibleRange(t.armorPieces ?? 0)) t = null;
     if (!t) t = this.brain.nearestPlayer(e, players, range, needLos);
     ai.target = t ? t.id : null;
     return t;
@@ -353,30 +365,30 @@ export class MonsterAI {
     const def = MOBS[e.type];
     const ai = e.ai!;
     const s = this.state(e);
-    s.drinkCd -= dt;
-    if (s.fireRes > 0) {
-      s.fireRes -= dt;
-      e.fire = 0;
-      e.burnAcc = 0;
-    }
-    // Beber: resistencia al fuego si arde; curación si está herida.
+    const target = this.target(e, players, 16);
+    // Fase 7 (pociones): beber (como en Minecraft, con probabilidades por tick: 15 % las de agua y fuego,
+    // 5 % la curación y 50 % la velocidad) y, al acabar, notar sus efectos.
     if (s.drink > 0) {
       s.drink -= dt;
       if (s.drink <= 0) {
-        if (s.drinking === 'heal') e.health = Math.min(e.maxHealth, e.health + 8);
-        else if (s.drinking === 'fire') s.fireRes = 30;
-        s.drinking = null;
-        s.drinkCd = 3 + this.m.rand() * 3;
-        this.m.host.fx('witch_drink', e.x, e.y + 1.6, e.z);
+        for (const [id, secs, amp] of potionEffects(s.drinking)) this.m.effects.add(e, id, secs, amp);
+        this.m.host.fx('witch_drink', e.x, e.y + 1.6, e.z, packColor(potionColor(s.drinking)));
+        s.drinking = -1;
       }
-    } else if (s.drinkCd <= 0 && (e.fire > 0 || e.inLava) && s.fireRes <= 0) {
-      s.drink = 1.6;
-      s.drinking = 'fire';
-    } else if (s.drinkCd <= 0 && e.health < e.maxHealth - 6) {
-      s.drink = 1.6;
-      s.drinking = 'heal';
+    } else {
+      const chance = (perTick: number) => this.m.rand() < 1 - Math.pow(1 - perTick, dt * 20);
+      const fx = this.m.effects;
+      const eyes = this.m.w.getBlock(Math.floor(e.x), Math.floor(e.y + e.height * 0.85), Math.floor(e.z));
+      let p = -1;
+      if (eyes > 0 && BLOCK_FLUID[eyes] === 1 && !fx.has(e, EFFECT_WATER_BREATHING) && chance(0.15)) p = PT_WATER_BREATHING;
+      else if ((e.fire > 0 || e.inLava) && !fx.has(e, EFFECT_FIRE_RESISTANCE) && chance(0.15)) p = PT_FIRE_RESISTANCE;
+      else if (e.health < e.maxHealth && chance(0.05)) p = PT_HEALING;
+      else if (target && !fx.has(e, EFFECT_SPEED) && Math.hypot(target.x - e.x, target.z - e.z) > 11 && chance(0.5)) p = PT_SWIFTNESS;
+      if (p >= 0) {
+        s.drink = 1.6;
+        s.drinking = p;
+      }
     }
-    const target = this.target(e, players, 16);
     let mx = 0, mz = 0, speed = 0;
     let lookAt: [number, number, number] | null = null;
     if (target) {
@@ -411,16 +423,21 @@ export class MonsterAI {
     if (s.drink > 0) e.flags |= EF_ACTION;
   }
 
-  /** Poción arrojadiza hacia la presa: lentitud de lejos, veneno o daño de cerca. */
+  /**
+   * Poción arrojadiza hacia la presa (Fase 7, como en Minecraft): lentitud si está lejos y no la tiene;
+   * si no, veneno si le queda vida y no lo tiene; debilidad a veces si está muy cerca; si no, daño.
+   */
   throwPotion(e: Entity, target: PlayerView, dist: number): Entity {
-    const r = this.m.rand();
-    const item = dist >= 8 && r < 0.4 ? SPLASH_SLOWNESS : r < 0.7 ? SPLASH_POISON : SPLASH_HARMING;
+    const has = (id: number) => !!target.fx?.has(id);
+    const type = dist >= 8 && !has(EFFECT_SLOWNESS) ? PT_SLOWNESS
+      : (target.hp ?? 20) >= 8 && !has(EFFECT_POISON) ? PT_POISON
+        : dist <= 3 && !has(EFFECT_WEAKNESS) && this.m.rand() < 0.25 ? PT_WEAKNESS : PT_HARMING;
     const sx = e.x, sy = e.y + e.height * 0.8, sz = e.z;
     const dx = target.x - sx, dz = target.z - sz;
     const horiz = Math.max(1e-3, Math.hypot(dx, dz));
     const t = Math.max(0.15, horiz / 12);
     const vy = (target.y + 1 - sy) / t + 0.5 * THROWN_GRAVITY * t;
-    const p = this.m.spawnThrown(item, sx + (dx / horiz) * 0.5, sy, sz + (dz / horiz) * 0.5, dx / t, vy, dz / t, '');
+    const p = this.m.spawnThrown(SPLASH_POTION, sx + (dx / horiz) * 0.5, sy, sz + (dz / horiz) * 0.5, dx / t, vy, dz / t, '', type);
     p.shooter = e.id;
     this.m.host.fx('throw', sx, sy, sz);
     return p;

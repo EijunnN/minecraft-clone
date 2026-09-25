@@ -5,6 +5,8 @@ import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY
 import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd, type EntExtra } from '../../shared/protocol';
 import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
 import { ENT_ARMOR_STAND } from '../../shared/armorStands'; // Fase 6.5 (remate)
+import { ENT_EFFECT_CLOUD } from '../../shared/potions'; // Fase 7 (pociones)
+import { isVehicleType, vehicleSize } from '../../shared/vehicles'; // Fase 7 (transporte)
 
 interface Snap {
   t: number;
@@ -58,6 +60,11 @@ export interface ClientEntity {
   armor?: number[];
   /** Fase 6.5 (equipo): armadura puesta (caballo, lobo) u objeto en la mano (tridente del ahogado). */
   gear?: number;
+  /** Fase 7 (pociones): desgaste o tipo de la pila (objetos y pociones lanzadas), tipo de la flecha con efecto (−1 normal) y nube de efecto (color 0xRRGGBB y radio). */
+  dmg?: number;
+  potion?: number;
+  cloudColor?: number;
+  cloudRadius?: number;
 }
 
 const DELAY = 0.11;
@@ -78,7 +85,7 @@ export class ClientEntities {
 
   apply(msg: { a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[]; ex?: EntExtra[] }, now: number): void {
     for (const a of msg.a ?? []) {
-      const [id, type, x, y, z, yaw, body, pitch, flags, e1, e2] = a;
+      const [id, type, x, y, z, yaw, body, pitch, flags, e1, e2, e3] = a;
       const prev = this.list.get(id);
       if (prev && !prev.gone) {
         this.push(prev, now, x, y, z, yaw, body, pitch, flags);
@@ -95,6 +102,14 @@ export class ClientEntities {
         collector: null, collectT: 0, gone: false, seed: (id * 2654435761) % 1000 / 1000, lastX: x, lastZ: z,
       };
       if (type === ENT_ARMOR_STAND) e.armor = [0, 1, 2, 3].map((k) => Number(a[9 + k]) || 0); // Fase 6.5 (remate)
+      // Fase 7 (pociones): tipo de la poción lanzada, de la flecha con efecto y color y radio de la nube.
+      if ((type === ENT_ITEM || type === ENT_THROWN || type === ENT_DISPLAY) && Number.isInteger(e3) && e3 > 0) e.dmg = e3;
+      else if (type === ENT_ARROW && Number.isInteger(e1)) e.potion = e1;
+      else if (type === ENT_EFFECT_CLOUD) {
+        e.cloudColor = Number.isInteger(e1) ? e1 : 0;
+        e.cloudRadius = Number.isFinite(e2) ? Math.max(0, Math.min(8, e2 / 100)) : 0;
+      }
+      if (isVehicleType(type)) e.variant = Number.isInteger(e1) ? Math.max(0, Math.min(255, e1)) : 0; // Fase 7 (transporte): madera
       this.list.set(id, e);
     }
     for (const u of msg.u ?? []) {
@@ -103,6 +118,7 @@ export class ClientEntities {
       this.push(e, now, u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
       if ((e.type === ENT_ITEM || e.type === ENT_XP) && u.length > 8) e.count = u[8];
       else if (MOBS[e.type] && u.length > 8) e.variant = u[8]; // Fase 6 (aldeanos)
+      else if (e.type === ENT_EFFECT_CLOUD && u.length > 8) e.cloudRadius = Math.max(0, Math.min(8, u[8] / 100)); // Fase 7 (pociones)
     }
     // Fase 6.5 (remate): nombre y correa.
     for (const [id, name, leash, gear] of msg.ex ?? []) {
@@ -202,10 +218,12 @@ export class ClientEntities {
     let best: { e: ClientEntity; dist: number } | null = null;
     for (const e of this.list.values()) {
       const def = MOBS[e.type];
-      if (!def || def.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
-      const k = e.flags & EF_BABY ? 0.5 : 1;
-      const hw = (def.width * k) / 2 + 0.05;
-      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + def.height * k, e.z + hw];
+      // Fase 7 (transporte): las barcas y vagonetas también se apuntan (para subirse y golpearlas).
+      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : null;
+      if ((!def && !vs) || def?.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
+      const k = e.flags & EF_BABY && def ? 0.5 : 1;
+      const hw = ((vs ? vs[0] : def!.width) * k) / 2 + 0.05;
+      const mn = [e.x - hw, e.y, e.z - hw], mx = [e.x + hw, e.y + (vs ? vs[1] : def!.height) * k, e.z + hw];
       let tmin = 0, tmax = maxDist;
       const o = [ox, oy, oz], d = [dx, dy, dz];
       let hit = true;
