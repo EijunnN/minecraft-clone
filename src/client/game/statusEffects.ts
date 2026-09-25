@@ -13,6 +13,13 @@ import {
   EFFECT_INSTANT_HEALTH, EFFECT_INSTANT_DAMAGE, EFFECT_JUMP_BOOST, EFFECT_SLOW_FALLING, EFFECT_INVISIBILITY, instantHeal,
   instantHarm, mixEffectColor,
 } from '../../shared/effects';
+// Fase 7 (efectos): Prisa, Fatiga minera, Náuseas, Ceguera, Saturación, Brillo, Gracia del delfín, Salud
+// mejorada, Oscuridad, Marchitamiento y Levitación.
+import {
+  EFFECT_HASTE, EFFECT_MINING_FATIGUE, EFFECT_NAUSEA, EFFECT_BLINDNESS, EFFECT_SATURATION, EFFECT_GLOWING, EFFECT_DOLPHINS_GRACE,
+  EFFECT_HEALTH_BOOST, EFFECT_DARKNESS, EFFECT_WITHER, EFFECT_LEVITATION, SATURATION_TICK, miningSpeedFactor, attackSpeedFactor,
+  witherInterval, maxHealthWith,
+} from '../../shared/effects';
 
 export interface ActiveEffect {
   /** Nivel (0 = I). */
@@ -33,6 +40,9 @@ export interface EffectTarget {
   addExhaustion(n: number): void;
   /** Corazones dorados (absorción). */
   absorption: number;
+  /** Fase 7 (efectos): comer sin comida (Saturación) y la vida máxima (Salud mejorada). */
+  eat?(hunger: number, saturation: number): void;
+  maxHealth?: number;
 }
 
 export class StatusEffects {
@@ -127,6 +137,61 @@ export class StatusEffects {
     return this.has(EFFECT_INVISIBILITY);
   }
 
+  // ---------------------------------------------------------------- Fase 7 (efectos)
+
+  /** Multiplicador de la velocidad de minado (Prisa o el Poder del conducto, y Fatiga minera). */
+  get miningSpeed(): number {
+    return miningSpeedFactor(Math.max(this.amp(EFFECT_HASTE), this.amp(EFFECT_CONDUIT_POWER)), this.amp(EFFECT_MINING_FATIGUE));
+  }
+
+  /** Multiplicador de la velocidad de ataque (Prisa y Fatiga minera). */
+  get attackSpeed(): number {
+    return attackSpeedFactor(this.amp(EFFECT_HASTE), this.amp(EFFECT_MINING_FATIGUE));
+  }
+
+  /** Vida máxima (Salud mejorada). */
+  get maxHealth(): number {
+    return maxHealthWith(this.amp(EFFECT_HEALTH_BOOST));
+  }
+
+  /** Ciego: niebla negra cerca, sin correr ni críticos. */
+  get blind(): boolean {
+    return this.has(EFFECT_BLINDNESS);
+  }
+
+  /**
+   * Cuánto se cierra la vista (0..1) con la Ceguera: se abre en el último segundo y, al empezar, se
+   * cierra en uno (como en Minecraft).
+   */
+  get blindness(): number {
+    const e = this.list.get(EFFECT_BLINDNESS);
+    return e ? Math.max(0, Math.min(1, e.time, e.total - e.time)) : 0;
+  }
+
+  /** Oscuridad (0..1; entra y sale en un segundo). */
+  get darkness(): number {
+    const e = this.list.get(EFFECT_DARKNESS);
+    return e ? Math.max(0, Math.min(1, e.time, e.total - e.time)) : 0;
+  }
+
+  /** Náuseas: sólo retuercen la vista mientras les quedan más de 3 s (como en Minecraft). */
+  get nauseous(): boolean {
+    return (this.list.get(EFFECT_NAUSEA)?.time ?? 0) > 3;
+  }
+
+  get glowing(): boolean {
+    return this.has(EFFECT_GLOWING);
+  }
+
+  get dolphinsGrace(): boolean {
+    return this.has(EFFECT_DOLPHINS_GRACE);
+  }
+
+  /** Nivel de Levitación (−1 sin ella). */
+  get levitation(): number {
+    return this.amp(EFFECT_LEVITATION);
+  }
+
   /** Fase 7 (pociones): color de los remolinos (mezcla de los efectos; null sin efectos). */
   get swirlColor(): [number, number, number] | null {
     return mixEffectColor([...this.list].map(([id, e]) => [id, e.amp] as const));
@@ -150,7 +215,7 @@ export class StatusEffects {
         const iv = regenInterval(e.amp);
         while (e.acc >= iv) {
           e.acc -= iv;
-          if (target.health < 20) target.heal(1);
+          if (target.health < (target.maxHealth ?? 20)) target.heal(1);
         }
       } else if (id === EFFECT_POISON) {
         e.acc += dt;
@@ -162,6 +227,21 @@ export class StatusEffects {
         }
       } else if (id === EFFECT_HUNGER) {
         target.addExhaustion(hungerExhaustion(e.amp) * dt);
+      } else if (id === EFFECT_SATURATION) {
+        // Fase 7 (efectos): cada tick, 1 de comida y 2 de saturación por nivel (el último tick también).
+        e.acc += Math.min(dt, e.time + dt);
+        while (e.acc >= SATURATION_TICK - 1e-9) {
+          e.acc -= SATURATION_TICK;
+          target.eat?.(e.amp + 1, 2 * (e.amp + 1));
+        }
+      } else if (id === EFFECT_WITHER) {
+        // Fase 7 (efectos): el marchitamiento, a diferencia del veneno, sí mata.
+        e.acc += dt;
+        const iv = witherInterval(e.amp);
+        while (e.acc >= iv) {
+          e.acc -= iv;
+          target.damage(1, 'wither', true);
+        }
       }
       if (e.time <= 0) {
         this.list.delete(id);

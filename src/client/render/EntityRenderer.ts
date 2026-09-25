@@ -52,6 +52,8 @@ export interface RemotePlayerView {
   glint?: number;
   /** Fase 7 (remate): invisible (poción): no se dibuja el cuerpo, pero sí la armadura y lo que lleva en las manos. */
   invisible?: boolean;
+  /** Fase 7 (efectos): con el efecto Brillo (se le ve el contorno a través de las paredes). */
+  glowing?: boolean;
 }
 
 interface PartMesh {
@@ -351,6 +353,15 @@ export class EntityRenderer {
       });
     }
     gl.bindVertexArray(null);
+  }
+
+  /** Fase 7 (efectos): siluetas de los jugadores que brillan con el programa `prog` (contorno del Brillo). */
+  drawSilhouettes(players: RemotePlayerView[], camX: number, camY: number, camZ: number, prog: Program): void {
+    for (const p of players) {
+      prog.tex2D('uSkin', this.skinFor(p));
+      this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
+    }
+    this.gl.bindVertexArray(null);
   }
 
   drawPlayersShadow(players: RemotePlayerView[], camX: number, camY: number, camZ: number): void {

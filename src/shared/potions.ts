@@ -19,8 +19,8 @@ import { ARMOR_BYPASS } from './armor';
 
 /** Entidad de la nube de efecto que deja una poción persistente al romperse. */
 export const ENT_EFFECT_CLOUD = 150;
-/** Bit de estado de las criaturas invisibles (no se dibujan). */
-export const EF_INVISIBLE = 1 << 22;
+/** Bit de estado de las criaturas invisibles (no se dibuja su cuerpo). Los bits 22..25 son del brillo. */
+export const EF_INVISIBLE = 1 << 26;
 /** Bit de estado de los jugadores invisibles (lo pone el servidor al reenviar su posición). */
 export const STATE_INVISIBLE = 1 << 14;
 

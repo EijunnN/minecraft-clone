@@ -29,6 +29,22 @@ export const EFFECT_LUCK = 19;
 export const EFFECT_UNLUCK = 20;
 export const EFFECT_INSTANT_HEALTH = 21;
 export const EFFECT_INSTANT_DAMAGE = 22;
+// Fase 7 (efectos): los que faltaban de Minecraft Java. Prisa y Fatiga minera (minar y golpear más
+// deprisa o más despacio), Náuseas (la pantalla se retuerce), Ceguera (niebla negra a 5 bloques, sin
+// correr ni críticos), Saturación (comida al instante), Brillo (contorno visible a través de las
+// paredes), Gracia del delfín (nadar más rápido), Salud mejorada (+2 corazones por nivel), Oscuridad
+// (la vista se apaga a pulsos), Marchitamiento (daño que sí mata) y Levitación (flotar hacia arriba).
+export const EFFECT_HASTE = 23;
+export const EFFECT_MINING_FATIGUE = 24;
+export const EFFECT_NAUSEA = 25;
+export const EFFECT_BLINDNESS = 26;
+export const EFFECT_SATURATION = 27;
+export const EFFECT_GLOWING = 28;
+export const EFFECT_DOLPHINS_GRACE = 29;
+export const EFFECT_HEALTH_BOOST = 30;
+export const EFFECT_DARKNESS = 31;
+export const EFFECT_WITHER = 32;
+export const EFFECT_LEVITATION = 33;
 
 export interface EffectDef {
   id: number;
@@ -69,6 +85,18 @@ export const EFFECTS: Readonly<Record<number, EffectDef>> = {
   [EFFECT_UNLUCK]: { id: EFFECT_UNLUCK, key: 'unluck', name: 'Mala suerte', color: [192, 164, 77], good: false },
   [EFFECT_INSTANT_HEALTH]: { id: EFFECT_INSTANT_HEALTH, key: 'instant_health', name: 'Curación instantánea', color: [248, 36, 35], good: true, instant: true },
   [EFFECT_INSTANT_DAMAGE]: { id: EFFECT_INSTANT_DAMAGE, key: 'instant_damage', name: 'Daño instantáneo', color: [169, 101, 106], good: false, instant: true },
+  // Fase 7 (efectos). El Brillo es neutral en Minecraft (marco azul, como los beneficiosos).
+  [EFFECT_HASTE]: { id: EFFECT_HASTE, key: 'haste', name: 'Prisa', color: [217, 192, 67], good: true },
+  [EFFECT_MINING_FATIGUE]: { id: EFFECT_MINING_FATIGUE, key: 'mining_fatigue', name: 'Fatiga minera', color: [74, 66, 23], good: false },
+  [EFFECT_NAUSEA]: { id: EFFECT_NAUSEA, key: 'nausea', name: 'Náuseas', color: [85, 29, 74], good: false },
+  [EFFECT_BLINDNESS]: { id: EFFECT_BLINDNESS, key: 'blindness', name: 'Ceguera', color: [31, 31, 35], good: false },
+  [EFFECT_SATURATION]: { id: EFFECT_SATURATION, key: 'saturation', name: 'Saturación', color: [248, 36, 35], good: true },
+  [EFFECT_GLOWING]: { id: EFFECT_GLOWING, key: 'glowing', name: 'Brillo', color: [148, 160, 97], good: true },
+  [EFFECT_DOLPHINS_GRACE]: { id: EFFECT_DOLPHINS_GRACE, key: 'dolphins_grace', name: 'Gracia del delfín', color: [136, 163, 190], good: true },
+  [EFFECT_HEALTH_BOOST]: { id: EFFECT_HEALTH_BOOST, key: 'health_boost', name: 'Salud mejorada', color: [248, 125, 35], good: true },
+  [EFFECT_DARKNESS]: { id: EFFECT_DARKNESS, key: 'darkness', name: 'Oscuridad', color: [41, 39, 33], good: false },
+  [EFFECT_WITHER]: { id: EFFECT_WITHER, key: 'wither', name: 'Marchitamiento', color: [115, 97, 86], good: false },
+  [EFFECT_LEVITATION]: { id: EFFECT_LEVITATION, key: 'levitation', name: 'Levitación', color: [206, 255, 255], good: false },
 };
 
 /** Fase 6.5 (equipo): multiplicador del daño con Resistencia (−20 % por nivel; −1 = sin el efecto). */
@@ -177,3 +205,86 @@ export function packColor(c: readonly [number, number, number]): number {
 export function unpackColor(v: number): [number, number, number] {
   return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 }
+
+// ------------------------------------------------------------------ Fase 7 (efectos)
+
+/**
+ * Multiplicador de la velocidad de minado: Prisa ×(1 + 0,2 por nivel; el Poder del conducto cuenta como
+ * Prisa I) y Fatiga minera ×0,3 elevado al nivel (a partir del IV, ×0,3⁴), como en Minecraft.
+ */
+export function miningSpeedFactor(hasteAmp: number, fatigueAmp: number): number {
+  const up = hasteAmp >= 0 ? 1 + 0.2 * (hasteAmp + 1) : 1;
+  const down = fatigueAmp >= 0 ? Math.pow(0.3, Math.min(4, fatigueAmp + 1)) : 1;
+  return up * down;
+}
+
+/** Multiplicador de la velocidad de ataque: +10 % por nivel de Prisa, −10 % por nivel de Fatiga minera. */
+export function attackSpeedFactor(hasteAmp: number, fatigueAmp: number): number {
+  const up = hasteAmp >= 0 ? 1 + 0.1 * (hasteAmp + 1) : 1;
+  const down = fatigueAmp >= 0 ? Math.max(0, 1 - 0.1 * (fatigueAmp + 1)) : 1;
+  return up * down;
+}
+
+/** Segundos entre daños de Marchitamiento (40 ticks, la mitad por nivel; como mucho uno por tick). */
+export function witherInterval(amp: number): number {
+  return Math.max(1, 40 >> Math.min(5, amp)) / 20;
+}
+
+/**
+ * Saturación: cada tick da 1 de comida y 2 de saturación por nivel (así el estofado de diente de león,
+ * con 7 ticks, llena 7 de comida y 14 de saturación). Segundos por tick:
+ */
+export const SATURATION_TICK = 0.05;
+
+/** Vida máxima con Salud mejorada (+4 por nivel). */
+export function maxHealthWith(boostAmp: number): number {
+  return 20 + (boostAmp >= 0 ? 4 * (boostAmp + 1) : 0);
+}
+
+/** La vida más alta que se puede tener (Salud mejorada del nivel máximo; para el guardado). */
+export const MAX_HEALTH_CAP = maxHealthWith(MAX_EFFECT_AMP);
+
+/**
+ * Levitación: la velocidad vertical tiende a 1 bloque/s por nivel (0,05 por tick) con un 20 % por tick,
+ * sin gravedad. Devuelve la nueva velocidad vertical tras `dt` segundos.
+ */
+export function levitate(vy: number, amp: number, dt: number): number {
+  const target = amp + 1;
+  return target + (vy - target) * Math.pow(0.8, dt * 20);
+}
+
+/** Gracia del delfín: multiplicador de la velocidad nadando (en Minecraft el agua frena mucho menos). */
+export const DOLPHINS_GRACE_SWIM = 1.9;
+
+/** Ceguera: la niebla se cierra a 5 bloques (empieza a un cuarto); la Oscuridad, a 15 bloques. */
+export const BLIND_FOG_END = 5;
+export const DARKNESS_FOG_END = 15;
+
+/**
+ * Pulso de la Oscuridad (0..1): cada 4 s la vista se apaga y vuelve, como en Minecraft
+ * (max(0, cos(t·π·0,025)) con t en ticks).
+ */
+export function darknessPulse(seconds: number): number {
+  return Math.max(0, Math.cos(seconds * 20 * Math.PI * 0.025));
+}
+
+/** Náuseas: la intensidad sube en 7,5 s mientras dure (salvo los 3 últimos segundos) y baja en 1 s. */
+export function nauseaStep(cur: number, active: boolean, dt: number): number {
+  return active ? Math.min(1, cur + dt / 7.5) : Math.max(0, cur - dt);
+}
+
+/**
+ * Brillo: bit de estado de las criaturas que brillan (se les ve el contorno a través de las paredes) y de
+ * los jugadores (lo manda su cliente con la posición).
+ */
+export const EF_GLOWING = 1 << 11;
+export const STATE_GLOWING = 1 << 15;
+
+/** Campana: los saqueadores a menos de 48 bloques brillan 3 s (resuena a los 45 ticks del toque, como en Minecraft). */
+export const BELL_GLOW_RANGE = 48;
+export const BELL_GLOW_SECONDS = 3;
+export const BELL_GLOW_DELAY = 2.25;
+
+/** Delfín: da Gracia del delfín 5 s a quien nada (buceando) a menos de 10 bloques y no le ha pegado. */
+export const DOLPHIN_GRACE_RANGE = 10;
+export const DOLPHIN_GRACE_SECONDS = 5;

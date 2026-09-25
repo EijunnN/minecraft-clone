@@ -11,6 +11,7 @@ import { // Fase 6.5 (materiales): hielo, slime y nieve polvo
 } from '../../shared/materialPhysics';
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
 import { SLOW_FALL_GRAVITY, SLOW_FALL_SPEED } from '../../shared/effects'; // Fase 7 (pociones)
+import { DOLPHINS_GRACE_SWIM, levitate } from '../../shared/effects'; // Fase 7 (efectos)
 
 export interface BlockSource {
   /** Id del bloque o -1 si la columna no está cargada. */
@@ -98,6 +99,9 @@ export class Player {
   slowFall = false;
   /** Fase 7 (remate): cajas de las barcas cercanas (6 números por caja): sólidas, se puede estar encima. */
   entityBoxes: number[] = [];
+  /** Fase 7 (efectos): nivel de Levitación (−1 sin ella) y Gracia del delfín; los pone el juego cada frame. */
+  levitation = -1;
+  dolphinsGrace = false;
 
   /** Altura del cuerpo según la postura. */
   get height(): number {
@@ -249,14 +253,15 @@ export class Player {
       // Buceando: se avanza hacia donde se mira, también hacia arriba o abajo.
       const cp = Math.cos(this.pitch);
       const k = 1 - Math.exp(-dt * 5);
-      const s = SWIM_SPEED * this.slow * Math.max(0, fwd);
+      const s = SWIM_SPEED * this.slow * Math.max(0, fwd) * (this.dolphinsGrace ? DOLPHINS_GRACE_SWIM : 1); // Fase 7: delfín
       this.vx += ((-sy * cp) * s + cy * str * 2 - this.vx) * k;
       this.vz += ((-cy * cp) * s - sy * str * 2 - this.vz) * k;
       this.vy += (Math.sin(this.pitch) * s + (c.jump ? 2.5 : 0) - (c.sneak ? 2.5 : 0) - this.vy) * k;
     } else if (this.inWater || this.inLava) {
       // Fase 7 (encantamientos): con Agilidad acuática se anda casi como en tierra (la mitad si no se toca el fondo).
       const ds = this.inLava ? 0 : this.depthStrider * (this.onGround ? 1 : 0.5);
-      const speed = (this.inLava ? 1.2 : (this.sprinting ? 3.6 : 2.4) * (1 - ds) + (this.sprinting ? 5.61 : 4.32) * ds) * this.slow;
+      const speed = (this.inLava ? 1.2 : (this.sprinting ? 3.6 : 2.4) * (1 - ds) + (this.sprinting ? 5.61 : 4.32) * ds) * this.slow *
+        (this.dolphinsGrace && this.inWater ? DOLPHINS_GRACE_SWIM : 1); // Fase 7 (efectos): Gracia del delfín
       const k = 1 - Math.exp(-dt * 6);
       // La corriente arrastra (velocidad objetivo desplazada en su dirección).
       this.vx += (wx * speed + this.flowX * 2.2 - this.vx) * k;
@@ -276,10 +281,13 @@ export class Player {
       this.vx += (wx * speed - this.vx) * k;
       this.vz += (wz * speed - this.vz) * k;
       // Fase 7 (pociones): con Caída lenta se cae con poca gravedad y muy despacio.
-      this.vy -= (this.slowFall && this.vy <= 0 ? SLOW_FALL_GRAVITY : GRAVITY) * dt;
+      // Fase 7 (efectos): con Levitación no hay gravedad y se sube despacio (ni saltar ni escaleras).
+      if (this.levitation >= 0) this.vy = levitate(this.vy, this.levitation, dt);
+      else this.vy -= (this.slowFall && this.vy <= 0 ? SLOW_FALL_GRAVITY : GRAVITY) * dt;
       if (this.vy < -78) this.vy = -78;
       if (this.slowFall && this.vy < -SLOW_FALL_SPEED) this.vy = -SLOW_FALL_SPEED;
-      if (this.onLadder) {
+      if (this.levitation >= 0) this.fallDistance = 0;
+      else if (this.onLadder) {
         // Escalera de mano: se baja despacio, se sube saltando o empujando contra ella y
         // agachado se queda quieto.
         this.fallDistance = 0;

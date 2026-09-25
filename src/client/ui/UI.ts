@@ -335,18 +335,19 @@ export class UI {
   /** Corazones, hambre y aire (sólo en supervivencia). */
   setSurvival(
     show: boolean, health: number, food: number, air: number, flash: boolean, absorption = 0, poisoned = false, hungry = false,
+    maxHealth = 20, withered = false, // Fase 7 (efectos): Salud mejorada y Marchitamiento
   ): void {
     const el = $('survival-hud');
     el.classList.toggle('hidden', !show);
     const icons = this.hudIcons;
     if (!show || !icons) return;
     const bubbles = air >= 14.9 ? 10 : Math.ceil((air / 15) * 10);
-    const key = `${health}|${food}|${air >= 14.9 ? 'full' : bubbles}|${flash}|${absorption}|${poisoned}|${hungry}`;
+    const key = `${health}|${food}|${air >= 14.9 ? 'full' : bubbles}|${flash}|${absorption}|${poisoned}|${hungry}|${maxHealth}|${withered}`;
     if (key === this.hudKey) return;
     this.hudKey = key;
-    const row = (n: number, full: string, half: string, empty: string) => {
+    const row = (n: number, full: string, half: string, empty: string, from = 0, count = 10) => {
       let h = '';
-      for (let i = 0; i < 10; i++) {
+      for (let i = from; i < from + count; i++) {
         const v = n - i * 2;
         h += `<i style="background-image:url(${v >= 2 ? full : v === 1 ? half : empty})"></i>`;
       }
@@ -354,9 +355,20 @@ export class UI {
     };
     const hp = Math.ceil(health);
     const hearts = $('hearts');
-    hearts.innerHTML = poisoned
-      ? row(hp, icons.heartPoison, icons.heartPoisonHalf, flash ? icons.heartFlash : icons.heartEmpty)
-      : row(hp, icons.heart, icons.heartHalf, flash ? icons.heartFlash : icons.heartEmpty);
+    // Fase 7 (efectos): con Marchitamiento, negros; con Salud mejorada, más corazones en filas de 10 hacia arriba.
+    const [hFull, hHalf] = withered ? [icons.heartWither, icons.heartWitherHalf]
+      : poisoned ? [icons.heartPoison, icons.heartPoisonHalf] : [icons.heart, icons.heartHalf];
+    const hEmpty = flash ? icons.heartFlash : icons.heartEmpty;
+    const slots = Math.max(10, Math.ceil(maxHealth / 2));
+    const rows = Math.ceil(slots / 10);
+    if (rows === 1) hearts.innerHTML = row(hp, hFull, hHalf, hEmpty);
+    else {
+      let h = '';
+      for (let r = 0; r < rows; r++) h += `<span class="hrow">${row(hp, hFull, hHalf, hEmpty, r * 10, Math.min(10, slots - r * 10))}</span>`;
+      hearts.innerHTML = h;
+    }
+    el.classList.toggle('hp-rows-2', rows === 2);
+    el.classList.toggle('hp-rows-3', rows >= 3);
     hearts.classList.toggle('low', hp <= 4);
     $('hunger').innerHTML = hungry
       ? row(Math.ceil(food), icons.foodHunger, icons.foodHungerHalf, icons.foodEmpty)

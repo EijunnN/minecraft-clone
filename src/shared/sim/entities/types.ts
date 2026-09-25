@@ -26,6 +26,8 @@ export interface PlayerView {
   /** Fase 7 (pociones): efectos que tiene y vida (lo que sabe el servidor; las brujas eligen poción según eso). */
   fx?: ReadonlySet<number>;
   hp?: number;
+  /** Fase 7 (efectos): buceando (los delfines que no están enfadados le dan Gracia del delfín). */
+  swimming?: boolean;
 }
 
 export interface EntityHost {

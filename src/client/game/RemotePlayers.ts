@@ -1,6 +1,7 @@
 // Jugadores remotos: interpolación de instantáneas y estado de animación.
 import type { PlayerInfo } from '../../shared/protocol';
 import { STATE_SNEAK, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK } from '../../shared/protocol';
+import { STATE_GLOWING } from '../../shared/effects'; // Fase 7 (efectos)
 import type { RemotePlayerView } from '../render/EntityRenderer';
 
 interface Snapshot {
@@ -128,6 +129,7 @@ export class RemotePlayer {
     v.sneaking = (b.s & STATE_SNEAK) !== 0;
     v.sleeping = (b.s & STATE_SLEEP) !== 0;
     v.prone = (b.s & STATE_PRONE) !== 0;
+    v.glowing = (b.s & STATE_GLOWING) !== 0; // Fase 7 (efectos)
     v.use = b.s & STATE_EAT ? 'eat' : b.s & STATE_BOW ? 'bow' : b.s & STATE_BLOCK ? 'block' : null;
     // Animación de caminar según la velocidad horizontal.
     const mv = Math.hypot(v.x - this.lastX, v.z - this.lastZ);

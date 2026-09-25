@@ -209,3 +209,33 @@ test('los ids de criatura guardados no cambian', () => {
   assert.deepEqual([MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO], [50, 51, 52, 53]);
   assert.deepEqual([MOB_PILLAGER, MOB_EVOKER_FANGS], [60, 65]);
 });
+
+// Fase 7 (efectos): los efectos que faltaban (se guardan con el jugador) y el orden de las flores del
+// estofado sospechoso (la flor va en el `dmg` de la pila).
+import { EFFECTS, EFFECT_HASTE, EFFECT_LEVITATION } from '../src/shared/effects';
+import { SUSPICIOUS_FLOWERS } from '../src/shared/decorFood';
+test('los efectos de estado y las flores del estofado no cambian', () => {
+  assert.deepEqual([EFFECT_HASTE, EFFECT_LEVITATION], [23, 33]);
+  assert.deepEqual(Object.values(EFFECTS).map((e) => `${e.id}:${e.key}`), [
+    '1:speed', '2:slowness', '3:strength', '4:weakness', '5:regeneration', '6:poison', '7:hunger', '8:fire_resistance',
+    '9:night_vision', '10:water_breathing', '11:absorption', '12:bad_omen', '13:hero_of_the_village', '14:resistance',
+    '15:conduit_power', '16:jump_boost', '17:invisibility', '18:slow_falling', '19:luck', '20:unluck', '21:instant_health',
+    '22:instant_damage', '23:haste', '24:mining_fatigue', '25:nausea', '26:blindness', '27:saturation', '28:glowing',
+    '29:dolphins_grace', '30:health_boost', '31:darkness', '32:wither', '33:levitation',
+  ]);
+  assert.deepEqual(SUSPICIOUS_FLOWERS.map(([f]) => BLOCKS[f]?.key), [
+    'poppy', 'dandelion', 'cornflower', 'blue_orchid', 'allium', 'azure_bluet', 'red_tulip', 'orange_tulip', 'white_tulip',
+    'pink_tulip', 'oxeye_daisy', 'lily_of_the_valley', 'torchflower',
+  ]);
+});
+
+// Los bits de las entidades que se añadieron en la fase 7 no pisan a los anteriores ni entre sí.
+import { EF_CAPTAIN, EF_GLINT_ARMOR_SHIFT, EF_VARIANT_MASK } from '../src/shared/protocol';
+import { EF_INVISIBLE, STATE_INVISIBLE } from '../src/shared/potions';
+import { EF_GLOWING, STATE_GLOWING } from '../src/shared/effects';
+test('los bits de estado de la fase 7 no se pisan', () => {
+  const glint = 15 << EF_GLINT_ARMOR_SHIFT;
+  const bits = [EF_VARIANT_MASK, EF_CAPTAIN, glint, EF_INVISIBLE, EF_GLOWING];
+  for (let i = 0; i < bits.length; i++) for (let k = i + 1; k < bits.length; k++) assert.equal(bits[i] & bits[k], 0, `${i} y ${k}`);
+  assert.equal(STATE_INVISIBLE & STATE_GLOWING, 0);
+});

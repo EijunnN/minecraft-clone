@@ -75,6 +75,9 @@ export interface HudIcons {
   /** Con veneno los corazones se vuelven verdes. */
   heartPoison: string;
   heartPoisonHalf: string;
+  /** Fase 7 (efectos): con Marchitamiento los corazones se vuelven negros. */
+  heartWither: string;
+  heartWitherHalf: string;
   /** Con el efecto Hambre la comida se vuelve verdosa. */
   foodHunger: string;
   foodHungerHalf: string;
@@ -89,6 +92,7 @@ export function buildHudIcons(): HudIcons {
   const bubPal: Pal = { K: '#0b2342', b: '#5fb4f0', W: '#e9f6ff' };
   const goldPal: Pal = { K: '#2a1c02', r: '#f2c21b', W: '#fff4b0', d: '#c08a0c' };
   const poisonPal: Pal = { K: '#0c1a05', r: '#8f9e2a', W: '#e2eca0', d: '#5d6b12' };
+  const witherPal: Pal = { K: '#000000', r: '#2b2b2b', W: '#8a8a8a', d: '#141414' };
   const hungerPal: Pal = { K: '#141d06', b: '#7a8a2b', W: '#c2d27a', w: '#c9d6a8' };
   return {
     heart: draw(HEART, heartPal, 'full', heartEmpty),
@@ -103,6 +107,8 @@ export function buildHudIcons(): HudIcons {
     heartGoldHalf: draw(HEART, goldPal, 'left', heartEmpty),
     heartPoison: draw(HEART, poisonPal, 'full', heartEmpty),
     heartPoisonHalf: draw(HEART, poisonPal, 'left', heartEmpty),
+    heartWither: draw(HEART, witherPal, 'full', heartEmpty),
+    heartWitherHalf: draw(HEART, witherPal, 'left', heartEmpty),
     foodHunger: draw(FOOD, hungerPal, 'full', foodEmpty),
     foodHungerHalf: draw(FOOD, hungerPal, 'left', foodEmpty),
   };

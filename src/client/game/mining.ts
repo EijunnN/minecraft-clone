@@ -33,15 +33,17 @@ export function toolSpeed(block: number, toolId: number): number {
 
 /**
  * Segundos para romper el bloque (0 = instantáneo, Infinity = irrompible).
- * Bajo el agua y en el aire se mina cinco veces más despacio.
+ * Bajo el agua y en el aire se mina cinco veces más despacio. `effects`: multiplicador de los efectos
+ * (Fase 7: Prisa y Fatiga minera).
  */
-export function breakTime(block: number, toolId: number, underwater: boolean, onGround: boolean, efficiency = 0): number {
+export function breakTime(block: number, toolId: number, underwater: boolean, onGround: boolean, efficiency = 0, effects = 1): number {
   const b = BLOCKS[block];
   if (!b || !b.breakable || b.hardness < 0) return Infinity;
   if (b.hardness === 0) return 0;
   let speed = toolSpeed(block, toolId);
   // Fase 7 (encantamientos): Eficiencia suma nivel² + 1, sólo con la herramienta adecuada.
   if (speed > 1) speed += efficiencyBonus(efficiency);
+  speed *= effects;
   if (underwater) speed /= 5;
   if (!onGround) speed /= 5;
   const perTick = speed / b.hardness / (canHarvest(block, toolId) ? 30 : 100);

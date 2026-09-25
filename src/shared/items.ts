@@ -26,6 +26,7 @@ import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 // Fase 6.5 (equipo)
 import { CHAINMAIL_ARMOR, TURTLE_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
+import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
 import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
@@ -249,9 +250,9 @@ export const COOKED_COD = item('cooked_cod', 'Bacalao cocinado', { food: { hunge
 export const SALMON = item('salmon', 'Salmón crudo', { food: { hunger: 2, saturation: 0.4 } });
 export const COOKED_SALMON = item('cooked_salmon', 'Salmón cocinado', { food: { hunger: 6, saturation: 9.6 } });
 export const TROPICAL_FISH = item('tropical_fish', 'Pez tropical', { food: { hunger: 1, saturation: 0.2 } });
-/** Pez globo: Hambre III y Veneno II (como en Minecraft, sin la náusea). */
+/** Pez globo: Hambre III, Veneno II y (Fase 7: efectos) Náuseas I, como en Minecraft Java. */
 export const PUFFERFISH = item('pufferfish', 'Pez globo', {
-  food: { hunger: 1, saturation: 0.2, effects: [[EFFECT_HUNGER, 15, 2, 1], [EFFECT_POISON, 60, 1, 1]] },
+  food: { hunger: 1, saturation: 0.2, effects: [[EFFECT_HUNGER, 15, 2, 1], [EFFECT_POISON, 60, 1, 1], [EFFECT_NAUSEA, 15, 0, 1]] },
 });
 
 // ------------------------------------------------------------------ subsuelo (fase 5)

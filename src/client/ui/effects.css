@@ -64,3 +64,27 @@
 #survival-hud.absorbing #armor-bar {
   bottom: 44px;
 }
+
+/* Fase 7 (efectos): Salud mejorada. Los corazones de más van en filas encima (algo solapadas, como en
+   Minecraft) y la absorción y la armadura suben con ellas. */
+#hearts .hrow {
+  display: flex;
+}
+
+#hearts:has(.hrow) {
+  flex-direction: column-reverse;
+}
+
+#hearts .hrow + .hrow {
+  margin-bottom: -8px;
+}
+
+#survival-hud.hp-rows-2 #absorb,
+#survival-hud.hp-rows-2 #armor-bar {
+  translate: 0 -10px;
+}
+
+#survival-hud.hp-rows-3 #absorb,
+#survival-hud.hp-rows-3 #armor-bar {
+  translate: 0 -20px;
+}

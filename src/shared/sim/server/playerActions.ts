@@ -34,7 +34,10 @@ export class PlayerActions {
     const item = Number(msg.item);
     const valid = Number.isInteger(item) && item > 0;
     const tool = valid ? ITEMS[item]?.tool : undefined;
-    const charge = Math.min(1, (now - s.lastAttack) / (attackCooldown(valid ? item : 0) * 1000));
+    // Fase 7 (efectos): Prisa y Fatiga minera (el cliente manda el multiplicador; aquí se acota).
+    const k = Number(msg.k);
+    const speedK = Number.isFinite(k) ? Math.max(0.3, Math.min(1.7, k)) : 1;
+    const charge = Math.min(1, (now - s.lastAttack) / (attackCooldown(valid ? item : 0) / speedK * 1000));
     s.lastAttack = now;
     let dmg = valid ? attackDamage(item) : 1;
     // Efectos del jugador (Fuerza, Debilidad): el cliente los manda y aquí se acotan.

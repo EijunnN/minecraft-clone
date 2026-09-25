@@ -44,6 +44,7 @@ import { pushEquipmentDraws } from './equipmentDraws'; // Fase 6.5 (equipo)
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { BannerRenderer, type BannerDraw } from './BannerRenderer'; // Fase 6.5 (libros y estandartes)
 import { LightningRenderer, type Bolt } from './LightningRenderer';
+import { EffectView, type SightFog } from './effectView'; // Fase 7 (efectos)
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
 import { WHITE_WOOL, RED_WOOL, BLACK_WOOL, WOOL } from '../../shared/blocks';
@@ -163,6 +164,9 @@ export interface FrameState {
   banners?: BannerDraw[];
   /** Rayos de tormenta en pantalla. */
   bolts?: Bolt[];
+  /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
+  nausea?: number;
+  sight?: SightFog | null;
 }
 
 const NEAR = 0.05;
@@ -198,6 +202,8 @@ export class Renderer {
   /** Fase 6.5 (libros y estandartes): tela de los estandartes con dibujos. */
   readonly bannerCloth: BannerRenderer;
   readonly lightning: LightningRenderer;
+  /** Fase 7 (efectos): náuseas, ceguera, oscuridad y contorno del Brillo. */
+  private effectView: EffectView;
   settings: RenderSettings;
 
   private tri: FullscreenTriangle;
@@ -283,6 +289,7 @@ export class Renderer {
     this.weather = new Weather(gl);
     this.items = new ItemRenderer(gl, caps, this.textures, sprites);
     this.mobs = new MobRenderer(gl, mobTextures);
+    this.effectView = new EffectView(gl, this.tri); // Fase 7 (efectos)
     this.xpOrbs = new XpOrbRenderer(gl);
     this.signText = new SignTextRenderer(gl);
     this.bannerCloth = new BannerRenderer(gl);
@@ -507,6 +514,7 @@ export class Renderer {
     // Cámara (relativa: la vista sólo rota).
     const fovY = (set.fov * Math.PI) / 180;
     mat4.perspective(this.projUnjit, fovY, W / H, NEAR, FAR);
+    EffectView.warp(this.projUnjit, s.nausea ?? 0, s.time); // Fase 7 (efectos): náuseas
     mat4.copy(this.proj, this.projUnjit);
     if (set.taa) {
       const j = HALTON[this.frame % 8];
@@ -744,6 +752,13 @@ export class Renderer {
     this.tri.draw();
     gl.bindTexture(gl.TEXTURE_2D, this.lumTex);
     gl.generateMipmap(gl.TEXTURE_2D);
+    // Fase 7 (efectos): Ceguera y Oscuridad (después de medir la exposición y antes de la mano).
+    // (Sobre el color del buffer de post sin su profundidad, que se lee aparte, como las partículas.)
+    if (s.sight) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleFbo);
+      gl.viewport(0, 0, W, H);
+      this.effectView.sight(s.sight, this.main.depth);
+    }
 
     // Objeto en la mano (con su propio buffer de profundidad).
     if (s.showHand && (s.heldItem > 0 || (s.offhandItem ?? 0) > 0)) {
@@ -817,6 +832,9 @@ export class Renderer {
       this.pFxaa.use().tex2D('uColor', this.ldr.color).f2('uTexel', 1 / cw, 1 / ch);
       this.tri.draw();
     }
+
+    // Fase 7 (efectos): contorno de lo que brilla, encima de todo.
+    this.effectView.glow(s.mobs, s.players, this.mobs, this.entities, s.camX, s.camY, s.camZ, s.time, W, H, cw, ch);
 
     // Estado para el frame siguiente.
     mat4.copy(this.prevViewProj, this.viewProjUnjit);

@@ -8,6 +8,9 @@ import {
   EFFECT_BAD_OMEN, EFFECT_HERO,
   EFFECT_RESISTANCE, EFFECT_CONDUIT_POWER, // Fase 6.5 (equipo)
   EFFECT_JUMP_BOOST, EFFECT_INVISIBILITY, EFFECT_SLOW_FALLING, EFFECT_LUCK, EFFECT_UNLUCK, // Fase 7 (pociones)
+  // Fase 7 (efectos)
+  EFFECT_HASTE, EFFECT_MINING_FATIGUE, EFFECT_NAUSEA, EFFECT_BLINDNESS, EFFECT_SATURATION, EFFECT_GLOWING, EFFECT_DOLPHINS_GRACE,
+  EFFECT_HEALTH_BOOST, EFFECT_DARKNESS, EFFECT_WITHER, EFFECT_LEVITATION,
 } from '../../shared/effects';
 import type { StatusEffects } from '../game/statusEffects';
 
@@ -77,6 +80,50 @@ const GLYPHS: Record<number, string[]> = {
   [EFFECT_UNLUCK]: [
     '.KKK.KKK.', 'KccaKbcaK', 'KcaaKcacK', '.KKaKcKK.', 'KbcaKccaK', 'KcacKaccK', '.KKKKKKK.', '...KcK...', '...KK....',
   ],
+  // Fase 7 (efectos): el pico de la prisa (roto en la fatiga), la espiral de las náuseas, el ojo cerrado
+  // de la ceguera, el muslo de la saturación, la silueta que brilla, el delfín, el corazón con más, el ojo
+  // de la oscuridad, la calavera del marchitamiento y las burbujas que suben de la levitación.
+  [EFFECT_HASTE]: [
+    '...KKKK..', '..KbbbaK.', '...KKKcaK', '....KcKaK', '...KcK.KK', '..KcK....', '.KcK.....', 'KcK......', 'KK.......',
+  ],
+  [EFFECT_MINING_FATIGUE]: [
+    '...KKKK..', '..KbbbaK.', '...KKKcaK', '....KcKaK', '.....K.KK', '..K......', '.KcK.....', 'KcK......', 'KK.......',
+  ],
+  [EFFECT_NAUSEA]: [
+    'KKKKKKKKK', 'KaaaaaaaK', 'KaKKKKKaK', 'KaKbbbKaK', 'KaKbKbKaK', 'KaKbKKKaK', 'KaKbbbbaK', 'KaKKKKKKK', 'KaaaaaaaK',
+  ],
+  [EFFECT_BLINDNESS]: [
+    '.........', '.........', 'KK.....KK', '.KKKKKKK.', '.KbbbbbK.', '..KKKKK..', '.K.K.K.K.', '.........', '.........',
+  ],
+  [EFFECT_SATURATION]: [
+    '....KKKK.', '...KaaaaK', '..KabaaaK', '..KaaaaaK', '.KaaaacK.', 'KwKaacK..', 'KwwKKK...', '.KwK.....', '..K......',
+  ],
+  [EFFECT_GLOWING]: [
+    '...aaa...', '..aKKKa..', '..aKKKa..', '...aKa...', '.aaKKKaa.', 'a.aKKKa.a', '..aKaKa..', '..aKaKa..', '..aa.aa..',
+  ],
+  [EFFECT_DOLPHINS_GRACE]: [
+    '.........', '....KK...', '...KbK...', '.KKbbaKK.', 'KbbwbaaaK', '.KaaaaacK', '..KKKccK.', '.....KKcK', '......KK.',
+  ],
+  [EFFECT_HEALTH_BOOST]: [
+    '.KK...KK.', 'KaaK.KaaK', 'KaaawaaaK', 'KaaawaaaK', 'KawwwwwcK', '.KaawacK.', '..KawcK..', '...KcK...', '....K....',
+  ],
+  [EFFECT_DARKNESS]: [
+    '..KKKKK..', '.KcccccK.', 'KccKKKccK', 'KcKbbbKcK', 'KcKbwbKcK', 'KcKbbbKcK', 'KccKKKccK', '.KcccccK.', '..KKKKK..',
+  ],
+  [EFFECT_WITHER]: [
+    '.KKKKKKK.', 'KaaaaaaaK', 'KaKKaKKaK', 'KaKKaKKaK', 'KaaaKaaaK', '.KaaaaaK.', '.KaKaKaK.', '..KKKKK..', '.........',
+  ],
+  [EFFECT_LEVITATION]: [
+    '...KKK...', '..KbbbK..', '.KbwbbaK.', '.KbbbaaK.', '..KaacK..', '...KKK...', '.K.....K.', 'KaK...KaK', '.K.....K.',
+  ],
+};
+
+/**
+ * Color base del icono cuando el del efecto es demasiado oscuro para el fondo del HUD (Fase 7: ceguera,
+ * oscuridad y fatiga minera).
+ */
+const ICON_BASE: Record<number, [number, number, number]> = {
+  [EFFECT_BLINDNESS]: [150, 150, 160], [EFFECT_DARKNESS]: [118, 110, 96], [EFFECT_MINING_FATIGUE]: [150, 134, 60],
 };
 
 const iconCache = new Map<number, string>();
@@ -92,7 +139,7 @@ function icon(id: number): string {
   const rows = GLYPHS[id];
   const col = EFFECTS[id].color;
   // La absorción usa el dorado de sus corazones.
-  const base: [number, number, number] = id === EFFECT_ABSORPTION ? [242, 194, 27] : col;
+  const base: [number, number, number] = id === EFFECT_ABSORPTION ? [242, 194, 27] : ICON_BASE[id] ?? col;
   const pal: Record<string, string> = { K: '#101010', a: shade(base, 1), b: shade(base, 1.45), c: shade(base, 0.6), w: '#ffffff' };
   const cv = document.createElement('canvas');
   cv.width = 9;

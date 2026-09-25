@@ -3,13 +3,16 @@
 // cuanta más armadura lleve), el color de sus remolinos (se reenvía a los demás) y, del último estado
 // guardado, sus efectos y su vida (las brujas eligen qué poción lanzar según eso).
 import { STATE_INVISIBLE } from '../../potions';
+import { STATE_SWIM, STATE_PRONE } from '../../protocol'; // Fase 7 (efectos)
 import { EFFECT_LUCK, EFFECT_UNLUCK } from '../../effects';
 import type { PlayerView } from '../entities';
 import type { Session } from './context';
 
 /** Campos de la vista del jugador que dependen de sus efectos. */
-export function potionView(s: Session): Pick<PlayerView, 'invisible' | 'armorPieces' | 'fx' | 'hp'> {
+export function potionView(s: Session): Pick<PlayerView, 'invisible' | 'armorPieces' | 'fx' | 'hp' | 'swimming'> {
   return {
+    // Fase 7 (efectos): buceando (en el agua y tumbado): los delfines le dan su gracia.
+    swimming: (s.s & STATE_SWIM) !== 0 && (s.s & STATE_PRONE) !== 0,
     invisible: (s.s & STATE_INVISIBLE) !== 0,
     armorPieces: s.a.filter((id) => id > 0).length,
     fx: new Set((s.save?.fx ?? []).map(([id]) => id)),

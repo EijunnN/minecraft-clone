@@ -81,7 +81,7 @@ esquilar, ordeñar, huevos y generadores de monstruos.
 | Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
 | Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento por arma; falta el barrido) |
 | Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha y arco) |
-| Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (11 efectos: velocidad, lentitud, fuerza, debilidad, regeneración, veneno, hambre, resistencia al fuego, visión nocturna, respiración acuática y absorción; faltan las pociones) |
+| Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (33 efectos con sus mecánicas, iconos y `/efecto`; faltan los de las cámaras de desafío y los presagios de 1.21, fase 9) |
 | Modos: supervivencia, creativo, aventura, espectador, extremo (hardcore) | 🟡 (supervivencia y creativo) |
 | Dificultad pacífica, fácil, normal y difícil | ✅ |
 
@@ -462,8 +462,9 @@ Fuera de la fase 7 (anotado para que no se pierda):
   ingredientes sólo se obtienen allí); el faro (necesita la estrella del Nether); la ancla de
   reaparición; la piedra imán; el encantamiento de velocidad de alma; los botones y placas de piedra
   negra pulida; la carga de fuego (polvo de blaze) y la flecha espectral (polvo de piedra luminosa),
-  también como munición del dispensador; los efectos que sólo dan criaturas o bloques de allí
-  (marchitamiento, levitación, brillo, prisa y fatiga minera del faro).
+  también como munición del dispensador; las fuentes de los efectos que sólo dan criaturas o bloques
+  de allí (marchitamiento, levitación, brillo de la flecha espectral, prisa y fatiga minera del faro;
+  los efectos ya funcionan y se pueden poner con `/efecto`).
 - **Fase 7.5 (estructuras del mundo normal):** el sculk (sensores, catalizador, chillador) y el
   encantamiento de sigilo rápido, que salen del Deep Dark.
 - **Fase 9 (novedades de 2025–2026):** el crafteador, la maza y sus encantamientos (brecha, densidad,
