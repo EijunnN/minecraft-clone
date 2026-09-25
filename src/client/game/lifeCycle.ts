@@ -60,7 +60,8 @@ export class LifeCycle {
     if (dmg <= 0) return;
     faunaOnHurt(this.g, cause); // Fase 6 (fauna): veneno de las abejas
     if (Array.isArray(k) && k.every(Number.isFinite)) {
-      this.g.player.impulse(k[0], k[1], k[2]);
+      const kb = this.g.enchant.knockbackFactor(cause); // Fase 7 (encantamientos): Protección contra explosiones
+      this.g.player.impulse(k[0] * kb, k[1] * kb, k[2] * kb);
       // La cámara se inclina hacia el lado del golpe (el atacante está contra el empuje).
       const kl = Math.hypot(k[0], k[2]);
       if (kl > 0.01) {
@@ -93,7 +94,7 @@ export class LifeCycle {
     if (this.g.ui.isInventoryOpen()) this.g.toggleInventory();
     let xp = 0;
     if (!this.g.creative) {
-      const items = this.g.inv.takeAll();
+      const items = this.g.inv.takeAll().filter((s) => this.g.enchant.keepsOnDeath(s)); // Fase 7: Maldición de desaparición
       const p = this.g.player;
       for (let i = 0; i < items.length; i += 16) {
         this.g.net?.send({ t: 'drop', items: items.slice(i, i + 16), p: [p.x, p.y + 0.5, p.z] });

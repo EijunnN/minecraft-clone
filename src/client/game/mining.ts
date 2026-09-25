@@ -2,6 +2,7 @@
 import { BLOCKS, ALL_LEAVES, isVine, COBWEB } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
 import { isBamboo } from '../../shared/blocks'; // Fase 6.5 (maderas)
+import { efficiencyBonus } from '../../shared/enchantEffects'; // Fase 7 (encantamientos)
 
 const LEAVES = new Set(ALL_LEAVES);
 
@@ -34,11 +35,13 @@ export function toolSpeed(block: number, toolId: number): number {
  * Segundos para romper el bloque (0 = instantáneo, Infinity = irrompible).
  * Bajo el agua y en el aire se mina cinco veces más despacio.
  */
-export function breakTime(block: number, toolId: number, underwater: boolean, onGround: boolean): number {
+export function breakTime(block: number, toolId: number, underwater: boolean, onGround: boolean, efficiency = 0): number {
   const b = BLOCKS[block];
   if (!b || !b.breakable || b.hardness < 0) return Infinity;
   if (b.hardness === 0) return 0;
   let speed = toolSpeed(block, toolId);
+  // Fase 7 (encantamientos): Eficiencia suma nivel² + 1, sólo con la herramienta adecuada.
+  if (speed > 1) speed += efficiencyBonus(efficiency);
   if (underwater) speed /= 5;
   if (!onGround) speed /= 5;
   const perTick = speed / b.hardness / (canHarvest(block, toolId) ? 30 : 100);

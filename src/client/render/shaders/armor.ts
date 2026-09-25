@@ -4,6 +4,7 @@
 import { COMMON } from './common';
 import { ATMOSPHERE } from './atmosphere';
 import { LIGHTING } from './terrain';
+import { GLINT } from './items'; // Fase 7 (encantamientos)
 
 export const ARMOR_FS = /* glsl */ `
 ${COMMON}
@@ -14,6 +15,10 @@ uniform sampler2D uSkyView;
 uniform vec2 uLightLevel;
 /** x = rugosidad pulida, y = cuánto es metal, z = luz ambiente extra (oro y diamante). */
 uniform vec3 uMat;
+// Fase 7 (encantamientos): brillo de la pieza encantada.
+uniform float uGlint;
+uniform float uTime;
+${GLINT}
 in vec3 vRel;
 in vec3 vNormal;
 in vec2 vUV;
@@ -49,6 +54,7 @@ void main() {
   vec3 Fa = f0 + (max(vec3(1.0 - rough), f0) - f0) * pow(1.0 - NdotV, 5.0);
   vec3 sky = texture(uSkyView, skyViewUV(normalize(vec3(R.x, max(R.y, 0.02), R.z)))).rgb;
   col += Fa * sky * skyF * sq(1.0 - rough) * gloss;
+  if (uGlint > 0.0) col += glint(vUV * vec2(6.0, 3.0), uTime) * uGlint; // Fase 7 (encantamientos)
   outColor = vec4(col, 1.0);
 }
 `;

@@ -36,7 +36,8 @@ export interface EntityHost {
   raining(): number;
   /** 0 pacífico, 1 fácil, 2 normal, 3 difícil. */
   difficulty(): number;
-  hurtPlayer(id: string, amount: number, kx: number, ky: number, kz: number, cause: string): void;
+  /** Fase 7 (encantamientos): `src`, la criatura que golpea cuerpo a cuerpo (Espinas). */
+  hurtPlayer(id: string, amount: number, kx: number, ky: number, kz: number, cause: string, src?: Entity): void;
   /** Efecto puntual para los clientes (sonidos, partículas). */
   fx(kind: string, x: number, y: number, z: number, a?: number, b?: number): void;
   /** Cambia un bloque desde la simulación (explosiones, etc.). */
@@ -189,6 +190,8 @@ export interface Entity extends Body {
   leash?: string | [number, number, number];
   /** Soporte para armadura: la armadura puesta [cabeza, pecho, piernas, pies] (ids, 0 = nada). */
   standArmor?: number[];
+  /** Fase 7 (encantamientos): piezas del soporte que brillan (bit 0 cabeza … 3 pies). */
+  standGlint?: number;
   /** Punto del que tira su correa ahora mismo (lo pone el sistema de correas cada tick). */
   leashTo?: [number, number, number];
   /** Fase 6.5 (colecciones): creeper cargado por un rayo. */
@@ -222,6 +225,21 @@ export interface Entity extends Body {
   cloudVictims?: Map<string | number, number>;
   /** Fase 7 (transporte): barca o vagoneta en la que va sentada la criatura (id de la entidad). */
   vehicle?: number;
+  // Fase 7 (encantamientos)
+  /** Flecha: empuje (Retroceso), prende lo que toca (Fuego), no se recoge (Infinidad, virotes laterales). */
+  arrowKnock?: number;
+  arrowFire?: boolean;
+  noPickup?: boolean;
+  /** Flecha con Perforación: criaturas que aún puede atravesar y las que ya atravesó. */
+  pierce?: number;
+  pierced?: number[];
+  /** Tridente con Lealtad volviendo a su dueño. */
+  returning?: boolean;
+  /** Flotador: Suerte marina y Atracción de la caña. */
+  luck?: number;
+  lure?: number;
+  /** Bloque que cae: altura desde la que empezó a caer (el yunque hiere según la caída). */
+  fallFrom?: number;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

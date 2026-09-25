@@ -114,7 +114,7 @@ export class Trading {
     // Como en Minecraft, cada trato da algo de experiencia también al jugador.
     ctx.entities.xp.spawn(3 + Math.floor(ctx.rand() * 4), e.x, e.y + 0.5, e.z);
     ctx.fx('villager_yes', e.x, e.y + e.height, e.z, e.type);
-    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1] }, back });
+    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1], ...(o.data ? { data: o.data } : {}) }, back }); // Fase 7: libros y equipo encantados
     this.sendOffers(s, e);
   }
 

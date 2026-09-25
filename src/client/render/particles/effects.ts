@@ -230,6 +230,31 @@ export class ParticleFx {
     }
   }
 
+  /**
+   * Fase 7 (encantamientos): una runa que sale de la librería (x, y, z) y vuela, subiendo en arco, hasta
+   * el libro de la mesa (tx, ty, tz), donde se apaga.
+   */
+  glyph(x: number, y: number, z: number, tx: number, ty: number, tz: number): void {
+    const life = rnd(1.1, 1.6);
+    const dx = tx - x, dy = ty - y, dz = tz - z;
+    this.ps.spawn({
+      x, y, z, vx: dx / life, vy: dy / life + 1.1, vz: dz / life, life, size: rnd(0.09, 0.13), size1: 0.05,
+      sprite: SPRITE.glyph + Math.floor(Math.random() * 8), r: 1.4, g: 1.25, b: 1.9, r1: 0.8, g1: 0.55, b1: 1.6, a: 1,
+      grav: 2.2, flags: PF.EMISSIVE | PF.FADE_IN,
+    });
+  }
+
+  /** Fase 7 (encantamientos): chispas mágicas (golpe con un arma encantada, encantar algo). */
+  magic(x: number, y: number, z: number, n: number, spread = 0.4): void {
+    for (let i = 0; i < n; i++) {
+      this.ps.spawn({
+        x: x + rnd(-1, 1) * spread, y: y + rnd(-0.5, 0.5) * spread, z: z + rnd(-1, 1) * spread,
+        vx: rnd(-3, 3), vy: rnd(0.5, 3.5), vz: rnd(-3, 3), life: rnd(0.4, 0.8), size: rnd(0.06, 0.1),
+        sprite: SPRITE.spark, r: 0.9, g: 2.2, b: 2.6, grav: 8, drag: 2.5, flags: PF.EMISSIVE | PF.STRETCH,
+      });
+    }
+  }
+
   /** Anillo que se expande (onda, aterrizaje fuerte). */
   ring(x: number, y: number, z: number, size: number, r = 1, g = 1, b = 1): void {
     this.ps.spawn({ x, y, z, life: 0.45, size: size * 0.3, size1: size, sprite: SPRITE.ring, r, g, b, a: 0.7 });

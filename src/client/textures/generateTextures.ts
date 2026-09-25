@@ -50,6 +50,7 @@ import { COLLECTION_GENERATORS } from './genCollections'; // Fase 6.5 (coleccion
 import { EQUIPMENT_GENERATORS } from './genEquipment'; // Fase 6.5 (equipo)
 import { BREWING_GENERATORS } from './genBrewing'; // Fase 7 (pociones)
 import { TRANSPORT_GENERATORS } from './genTransport'; // Fase 7 (transporte)
+import { ENCHANT_GENERATORS } from './genEnchant'; // Fase 7 (encantamientos)
 import { REDSTONE_GENERATORS } from './genRedstone'; // Fase 7 (redstone)
 
 export interface GeneratedTextures {
@@ -93,6 +94,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...EQUIPMENT_GENERATORS, // Fase 6.5 (equipo)
   ...BREWING_GENERATORS, // Fase 7 (pociones)
   ...TRANSPORT_GENERATORS, // Fase 7 (transporte)
+  ...ENCHANT_GENERATORS, // Fase 7 (encantamientos)
   ...REDSTONE_GENERATORS, // Fase 7 (redstone)
 };
 

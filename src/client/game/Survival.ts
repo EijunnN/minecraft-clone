@@ -27,6 +27,8 @@ export interface ArmorSource {
   armorToughness(): number;
   /** Desgasta cada pieza puesta; devuelve cuántas se rompieron. */
   wearArmor(amount: number): number;
+  /** Fase 7 (encantamientos): daño tras las protecciones encantadas (Protección, Caída de pluma…). */
+  protect?(damage: number, cause: DamageCause): number;
 }
 
 export type DamageCause =
@@ -102,6 +104,12 @@ export class Survival {
   armor: ArmorSource | null = null;
   /** Fase 6.5 (equipo): nivel del efecto Resistencia (−1 sin él); lo pone el juego cada frame. */
   resistance = -1;
+  /**
+   * Fase 7 (encantamientos), los pone el juego cada frame: parte del aire que se gasta bajo el agua
+   * (Respiración) y de lo que dura el fuego (Protección contra el fuego).
+   */
+  respiration = 1;
+  burnFactor = 1;
 
   reset(): void {
     this.health = 20;
@@ -144,6 +152,8 @@ export class Survival {
     }
     // Fase 6.5 (equipo): Resistencia (todo menos el vacío y /kill).
     if (cause !== 'void' && cause !== 'kill') dmg *= resistanceFactor(this.resistance);
+    // Fase 7 (encantamientos): protecciones de la armadura encantada (también en las caídas).
+    if (this.armor?.protect) dmg = this.armor.protect(dmg, cause);
     // Los corazones dorados (absorción) se gastan antes que la vida.
     const absorbed = Math.min(this.absorption, dmg);
     this.absorption -= absorbed;
@@ -231,7 +241,7 @@ export class Survival {
     } else this.starveTimer = 0;
     // Aire bajo el agua.
     if (ctx.eyeInWater && !ctx.waterBreathing) {
-      this.air = Math.max(0, this.air - dt);
+      this.air = Math.max(0, this.air - dt * this.respiration); // Fase 7: Respiración
       if (this.air <= 0) {
         this.drownTimer += dt;
         if (this.drownTimer >= 1) {
@@ -245,7 +255,7 @@ export class Survival {
     }
     // Lava y fuego.
     if (ctx.inLava) {
-      this.fire = 15;
+      this.fire = 15 * this.burnFactor; // Fase 7: Protección contra el fuego
       this.lavaTimer += dt;
       if (this.lavaTimer >= 0.5) {
         this.lavaTimer = 0;
@@ -256,7 +266,7 @@ export class Survival {
     if (ctx.onCampfire && !ctx.fireResistant) this.damage(1, 'campfire');
     // Fase 6.5 (equipo): el fuego prende al que lo toca (8 s) y quema al momento.
     if (ctx.inFire && !ctx.inWater) {
-      this.fire = Math.max(this.fire, 8);
+      this.fire = Math.max(this.fire, 8 * this.burnFactor); // Fase 7: Protección contra el fuego
       if (!ctx.fireResistant) this.damage(1, 'fire');
     }
     if (ctx.inWater || ctx.inRain) this.fire = 0;

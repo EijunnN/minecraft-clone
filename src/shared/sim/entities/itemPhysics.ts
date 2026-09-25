@@ -3,7 +3,8 @@
 import { MOBS, ENT_ITEM, ENT_ARROW, isRaider } from '../../mobs';
 import { ITEMS, ARROW, maxStack, sameKind, type ItemStack } from '../../items';
 import { AIR, BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
-import { EF_PICKABLE } from '../../protocol';
+import { EF_PICKABLE, EF_FIRE } from '../../protocol';
+import { FLAME_SECONDS } from '../../enchantEffects'; // Fase 7 (encantamientos)
 import { moveBody, boxCollides } from '../physics';
 import { GRAVITY, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
@@ -19,6 +20,7 @@ export class ItemPhysics {
     moveBody(e, this.m.w, dt);
     if (e.onGround || e.age > 30) {
       this.m.remove(e.id);
+      if (this.m.fallingLanded?.(e) === false) return; // Fase 7 (encantamientos): el yunque aplasta y se deteriora
       this.m.host.landBlock(Math.floor(e.x), Math.floor(e.y + 0.1), Math.floor(e.z), e.block ?? AIR);
     }
     e.flags = 0;
@@ -94,7 +96,7 @@ export class ItemPhysics {
     const e = this.m.list.get(id);
     if (!e || e.dead) return null;
     if (e.type === ENT_ARROW) {
-      if (!e.stuck || typeof e.shooter !== 'string') return null;
+      if (!e.stuck || typeof e.shooter !== 'string' || e.noPickup) return null; // Fase 7: Infinidad
       if (Math.hypot(e.x - p.x, e.y - (p.y + 0.9), e.z - p.z) > 3.5) return null;
       this.m.remove(e.id, p.id);
       return e.arrowPotion !== undefined ? potionStack('arrow', e.arrowPotion) : { id: ARROW, count: 1 }; // Fase 7 (pociones)
@@ -134,7 +136,7 @@ export class ItemPhysics {
         e.stuck = true;
         e.age = 0;
         e.vx = e.vy = e.vz = 0;
-        e.flags = typeof e.shooter === 'string' ? EF_PICKABLE : 0;
+        e.flags = typeof e.shooter === 'string' && !e.noPickup ? EF_PICKABLE : 0;
         this.m.host.fx('arrow_hit', nx, ny, nz);
         this.m.host.projectileHit?.('arrow', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z); // Fase 7 (redstone)
         return;
@@ -151,9 +153,17 @@ export class ItemPhysics {
         if (!m.ai || m.dead || m.id === e.shooter || MOBS[m.type].inert || (raiderShot && isRaider(m.type))) continue;
         const hw = m.width / 2 + 0.1;
         if (Math.abs(m.x - e.x) < hw && Math.abs(m.z - e.z) < hw && e.y > m.y - 0.1 && e.y < m.y + m.height + 0.1) {
-          this.m.damage(m, dmg, e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6);
+          // Fase 7 (encantamientos): Retroceso empuja más, Fuego prende y Perforación sigue de largo.
+          if (e.pierced?.includes(m.id)) continue;
+          this.m.damage(m, dmg, e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6 * (e.arrowKnock ?? 1));
+          if (e.arrowFire && !m.dead) m.fire = Math.max(m.fire, FLAME_SECONDS);
           if (e.arrowPotion !== undefined && !m.dead) this.m.potions.tippedHit(e, m, null); // Fase 7 (pociones)
           this.m.host.fx('arrow_hit', e.x, e.y, e.z);
+          if ((e.pierce ?? 0) > 1) {
+            e.pierce!--;
+            (e.pierced ??= []).push(m.id);
+            continue;
+          }
           this.m.remove(e.id);
           return;
         }
@@ -175,5 +185,7 @@ export class ItemPhysics {
     e.pitch = Math.atan2(e.vy, Math.hypot(e.vx, e.vz));
     const b = this.m.w.getBlock(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z));
     e.inWater = b > 0 && BLOCK_FLUID[b] === 1;
+    if (e.inWater) e.arrowFire = false; // Fase 7: el agua apaga la flecha con Fuego
+    e.flags = e.arrowFire ? EF_FIRE : 0;
   }
 }

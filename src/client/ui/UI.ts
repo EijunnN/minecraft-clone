@@ -13,6 +13,9 @@ import type { PresetName } from '../render/Renderer';
 import type { HudIcons } from './hudIcons';
 import { stackIconUrl } from './bannerIcons'; // Fase 6.5 (libros y estandartes)
 import { CREATIVE_POTIONS, CREATIVE_BREWING, stackName } from '../../shared/potions'; // Fase 7 (pociones)
+// Fase 7 (encantamientos): brillo de lo encantado y libros encantados en el creativo.
+import { paintGlint, glintAttrs } from './glint';
+import { ENCHANTS, ENCHANT_IDS, enchantName, enchantedBook } from '../../shared/enchantments';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -53,8 +56,8 @@ export class UI {
   /** Nombres de los jugadores conectados (para autocompletar en el chat). */
   playerNames: () => string[] = () => [];
   onChatClosed: (() => void) | null = null;
-  /** Fase 7 (pociones): `dmg`, el tipo de las pociones. */
-  onInventoryPick: ((id: number, slot: number | null, dmg?: number) => void) | null = null;
+  /** Fase 7: `stack`, la pila con su tipo o sus datos (pociones, flechas con efecto, libros encantados). */
+  onInventoryPick: ((id: number, slot: number | null, stack?: ItemStack) => void) | null = null;
   onInventorySelectSlot: ((slot: number) => void) | null = null;
   onSettingsChanged: ((s: Settings) => void) | null = null;
   onFullscreen: (() => void) | null = null;
@@ -70,8 +73,8 @@ export class UI {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private invCategory: InvCategory = 'todo';
   private hoveredItem: number | null = null;
-  /** Fase 7 (pociones): tipo de la poción bajo el ratón. */
-  private hoveredDmg = 0;
+  /** Fase 7: la pila señalada si lleva tipo o datos (una poción, un libro encantado). */
+  private hoveredStack: ItemStack | undefined;
   private tooltip: HTMLDivElement;
   private settingsReturn: 'menu' | 'pause' = 'menu';
   hotbar: (ItemStack | null)[] = [];
@@ -183,7 +186,7 @@ export class UI {
       if (!this.isInventoryOpen() || !this.hoveredItem) return;
       const n = Number(e.key);
       if (n >= 1 && n <= 9) {
-        this.onInventoryPick?.(this.hoveredItem, n - 1, this.hoveredDmg);
+        this.onInventoryPick?.(this.hoveredItem, n - 1, this.hoveredStack);
         this.renderInvHotbar();
       }
     });
@@ -598,22 +601,30 @@ export class UI {
     if (this.invCategory === 'pociones') ids.push(...CREATIVE_BREWING);
     const stacks: ItemStack[] = ids.map((id) => ({ id, count: 1 }));
     if (this.invCategory === 'todo' || this.invCategory === 'pociones') stacks.push(...CREATIVE_POTIONS);
+    // Fase 7 (encantamientos): un libro encantado por cada encantamiento y nivel (como en Minecraft).
+    if (this.invCategory === 'todo' || this.invCategory === 'objetos') {
+      for (const e of ENCHANT_IDS) for (let l = 1; l <= ENCHANTS[e].max; l++) stacks.push(enchantedBook([[e, l]]));
+    }
     for (const st of stacks) {
       const id = st.id;
+      const extra = st.data?.stored ? ' ' + st.data.stored.map(([e, l]) => enchantName(e, l)).join(' ') : '';
       if (!ITEMS[id]) continue;
-      const name = stackName(st);
+      const name = stackName(st) + extra;
       if (q && !name.toLowerCase().includes(q)) continue;
       const item = document.createElement('div');
       item.className = 'invitem';
-      item.innerHTML = `<div class="ico" style="background-image:url(${stackIconUrl(st, this.icons) ?? ''})"></div>`;
+      const url = stackIconUrl(st, this.icons) ?? '';
+      const gl = glintAttrs(st, url);
+      item.innerHTML = `<div class="ico${gl.cls}" style="background-image:url(${url})${gl.style}"></div>`;
+      const stack = st.data || st.dmg ? st : undefined;
       item.addEventListener('click', () => {
         this.onUiSound?.('click');
-        this.onInventoryPick?.(id, null, st.dmg);
+        this.onInventoryPick?.(id, null, stack);
         this.renderInvHotbar();
       });
       item.addEventListener('mouseenter', () => {
         this.hoveredItem = id;
-        this.hoveredDmg = st.dmg ?? 0;
+        this.hoveredStack = stack;
         this.tooltip.innerHTML = itemTooltipHtml(st);
         this.tooltip.classList.remove('hidden');
       });
@@ -806,6 +817,7 @@ export function paintSlot(el: HTMLElement, s: ItemStack | null, icons: Map<numbe
   const dur = el.querySelector('.dur') as HTMLElement | null;
   const url = stackIconUrl(s, icons); // Fase 6.5 (libros y estandartes): estandartes con dibujos
   ico.style.backgroundImage = url ? `url(${url})` : '';
+  paintGlint(ico, s, url); // Fase 7 (encantamientos)
   if (cnt) cnt.textContent = s && s.count > 1 ? String(s.count) : '';
   if (dur) {
     const tool = s ? ITEMS[s.id]?.tool : undefined;

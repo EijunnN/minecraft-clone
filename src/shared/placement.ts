@@ -26,6 +26,7 @@ import { skullPlacement } from './blocks'; // Fase 6.5 (colecciones)
 import { CONDUIT, conduitFor } from './blocks'; // Fase 6.5 (equipo)
 import { isRailItem, planRail } from './rails'; // Fase 7 (transporte)
 import { BLOCK_COLLIDE } from './blocks';
+import { isAnvil, anvilFacing } from './blocks'; // Fase 7 (encantamientos)
 import { planRedstone } from './redstonePlacement'; // Fase 7 (redstone)
 import { isIronOpenable } from './blocks'; // Fase 7 (redstone)
 
@@ -259,6 +260,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   if (copper >= 0) return copper ? one(copper) : null;
   // Bloques con apoyo a medida (amatista, alfombra de musgo, nenúfar…).
   if (BLOCK_NEEDS_SUPPORT[base] && !blockSupported(base, rel(get, x, y, z))) return null;
+  // Fase 7 (encantamientos): el yunque, con la tabla atravesada respecto a donde mira el jugador.
+  if (isAnvil(base)) return one(anvilFacing(base, (facing + 1) & 3));
   return one(orientedFor(base, yaw));
 }
 

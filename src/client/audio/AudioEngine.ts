@@ -12,6 +12,7 @@ import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
 import { buildEquipmentSfx } from './equipmentSounds'; // Fase 6.5 (equipo)
 import { buildPotionSfx } from './potionSounds'; // Fase 7 (pociones)
 import { buildTransportSfx } from './transportSounds'; // Fase 7 (transporte)
+import { buildEnchantSfx } from './enchantSounds'; // Fase 7 (encantamientos)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -474,6 +475,11 @@ export class AudioEngine {
   /** Fase 7 (transporte): remos, barcas y vagonetas (`a`: 1 metal, 0 madera; en el traqueteo, la velocidad). */
   playTransportSfx(kind: string, pos: Vec3, a = 0): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildTransportSfx(ctx, noise, kind, dest, now, a), 0.3));
+  }
+
+  /** Fase 7 (encantamientos): mesa de encantamientos, yunque, afiladora, botella con experiencia y espinas. */
+  playEnchantSfx(kind: string, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildEnchantSfx(ctx, noise, kind, dest, now), 0.3));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

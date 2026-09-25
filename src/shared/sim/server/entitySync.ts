@@ -10,6 +10,15 @@ import { packColor } from '../../effects';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
 import type { Entity } from '../entities';
 import { r2, type ServerContext } from './context';
+// Fase 7 (encantamientos): el brillo de los objetos encantados va en los bits de estado.
+import { EF_GLINT, EF_GLINT_ARMOR_SHIFT } from '../../protocol';
+import { hasGlint } from '../../enchantments';
+
+/** Bits de estado que se envían: los de la entidad más el brillo de lo que lleva o muestra. */
+function flagsOf(e: Entity): number {
+  if (e.type === ENT_ARMOR_STAND) return e.flags | ((e.standGlint ?? 0) << EF_GLINT_ARMOR_SHIFT);
+  return e.stack && hasGlint(e.stack) ? e.flags | EF_GLINT : e.flags;
+}
 
 /** Distancia a la que se envían entidades a un jugador. */
 const ENTITY_RANGE = 80;
@@ -33,7 +42,7 @@ export class EntitySync {
 
   private key(e: Entity): string {
     // Fase 6 (aldeanos): la variante (profesión) también cuenta como cambio.
-    return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${e.flags},${e.stack?.count ?? e.xp ?? 0},${e.variant ?? 0}` +
+    return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${flagsOf(e)},${e.stack?.count ?? e.xp ?? 0},${e.variant ?? 0}` +
       (e.cloudRadius !== undefined ? `,${Math.round(e.cloudRadius * 10)}` : ''); // Fase 7 (pociones): radio de la nube
   }
 
@@ -64,7 +73,7 @@ export class EntitySync {
         if (prev === key) continue;
         s.known.set(e.id, key);
         if (prev === undefined) {
-          const rec = [e.id, e.type, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), e.flags];
+          const rec = [e.id, e.type, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), flagsOf(e)];
           if ((e.type === ENT_ITEM || e.type === ENT_THROWN || e.type === ENT_DISPLAY) && e.stack) {
             rec.push(e.stack.id, e.stack.count);
             if (e.stack.dmg) rec.push(e.stack.dmg); // Fase 7 (pociones): el tipo (su color)
@@ -80,7 +89,7 @@ export class EntitySync {
           else if (e.ai) rec.push(Math.round(e.health), e.variant ?? 0); // Fase 6: variante (pelaje o profesión)
           add.push(rec);
         } else {
-          const rec = [e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), e.flags];
+          const rec = [e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), flagsOf(e)];
           if (e.type === ENT_ITEM && e.stack) rec.push(e.stack.count);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (e.villager) rec.push(e.variant ?? 0); // Fase 6 (aldeanos): profesión del aldeano

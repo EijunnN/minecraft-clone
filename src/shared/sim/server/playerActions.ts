@@ -12,6 +12,9 @@ import { isPotionType } from '../../potions';
 /** Fase 7 (pociones): velocidad (bloques/s) y ángulo hacia arriba con que salen las pociones lanzadas. */
 const POTION_THROW_SPEED = 10;
 const POTION_THROW_UP = (20 * Math.PI) / 180;
+// Fase 7 (encantamientos): encantamientos del arma, del arco y de la ballesta.
+import { meleeHit, shootArrows } from './enchantCombat';
+import { EXPERIENCE_BOTTLE } from '../../items';
 import type { ServerContext, Session } from './context';
 
 export class PlayerActions {
@@ -39,7 +42,8 @@ export class PlayerActions {
     if (Number.isFinite(bonus)) dmg = Math.max(0, dmg + Math.max(-20, Math.min(15, bonus)));
     dmg *= chargeFactor(charge);
     if (msg.crit && charge > 0.9) dmg *= 1.5;
-    ctx.entities.damage(e, Math.max(0.5, dmg), s.p[0], s.p[2], s.id, tool?.kind === 'sword' ? 1.2 : 1);
+    // Fase 7 (encantamientos): Filo, Castigo, Perdición, Empalamiento, Empuje, Aspecto de fuego, Saqueo y barrido.
+    meleeHit(ctx, s, e, valid ? item : 0, msg, dmg, charge, tool?.kind === 'sword' ? 1.2 : 1);
   }
 
   onPickup(s: Session, id: number): void {
@@ -86,10 +90,14 @@ export class PlayerActions {
     // Fase 6.5 (equipo): el virote de la ballesta sale siempre a tope y pega más fuerte.
     const crossbow = msg.c === 1;
     const speed = crossbow ? CROSSBOW_SPEED : 55 * f;
-    const arrow = ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, crossbow ? CROSSBOW_ARROW_DAMAGE : 2);
-    // Fase 7 (pociones): flecha con efecto (el tipo de poción que lleva).
+    // Fase 7 (encantamientos): Poder, Retroceso, Fuego e Infinidad; Multidisparo y Perforación.
+    const arrows = shootArrows(ctx, s, p, [d[0] / len, d[1] / len, d[2] / len], speed, crossbow ? CROSSBOW_ARROW_DAMAGE : 2, crossbow, msg.en);
+    // Fase 7 (pociones): flecha con efecto (el tipo de poción que lleva); Infinidad no vale con ellas.
     const ap = Number(msg.ap);
-    if (msg.ap !== undefined && isPotionType(ap)) arrow.arrowPotion = ap;
+    if (msg.ap !== undefined && isPotionType(ap)) {
+      for (const a of arrows) a.arrowPotion = ap;
+      if (arrows[0]) arrows[0].noPickup = false;
+    }
     if (crossbow) ctx.fx('crossbow_shoot', p[0], p[1], p[2]);
     else ctx.fx('bow', p[0], p[1], p[2], f);
   }
@@ -102,13 +110,16 @@ export class PlayerActions {
       this.throwPotion(s, msg, item);
       return;
     }
-    if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
+    if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL && item !== EXPERIENCE_BOTTLE) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
     const p = msg.p.map(Number), d = msg.d.map(Number);
     if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite)) return;
     if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
+    // Fase 7 (encantamientos): la botella con experiencia sale más despacio (0,7 bloques por tick) y 20° más alta.
+    const bottle = item === EXPERIENCE_BOTTLE;
+    if (bottle) d[1] += 0.36 * Math.hypot(d[0], d[1], d[2]);
     const len = Math.hypot(d[0], d[1], d[2]) || 1;
     // 1,5 bloques por tick, como en Minecraft.
-    const speed = 30;
+    const speed = bottle ? 14 : 30;
     ctx.entities.spawnThrown(item, p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id);
     ctx.fx('throw', p[0], p[1], p[2]);
   }

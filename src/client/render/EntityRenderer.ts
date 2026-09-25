@@ -15,6 +15,7 @@ import { ITEMS } from '../../shared/items';
 import { ALL_ARMOR_MATERIALS, type ArmorMaterial } from '../../shared/armor'; // Fase 6.5 (cobre): con el cobre
 import { ARMOR_BOXES, ARMOR_SHINE, generateArmorTexture, type BodyPart } from '../textures/armorTextures';
 import { isSkull } from '../../shared/blocks'; // Fase 6.5 (colecciones)
+import { glintTime } from './ItemRenderer'; // Fase 7 (encantamientos)
 
 export interface RemotePlayerView {
   id: string;
@@ -44,6 +45,8 @@ export interface RemotePlayerView {
   armor?: number[];
   /** Fase 6 (monturas): sentado en una montura (piernas hacia delante). */
   riding?: boolean;
+  /** Fase 7 (encantamientos): qué brilla (bit 0 mano, 1 mano secundaria, 2..5 armadura de la cabeza a los pies). */
+  glint?: number;
 }
 
 interface PartMesh {
@@ -296,14 +299,14 @@ export class EntityRenderer {
 
   /** Cajas de armadura de un jugador con la matriz de su parte del cuerpo (misma animación que la piel). */
   private forEachArmor(
-    p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (mesh: PartMesh, mat: ArmorMaterial, m: mat4) => void,
+    p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (mesh: PartMesh, mat: ArmorMaterial, m: mat4, slot: number) => void,
   ): void {
     const mats = this.armorOf(p);
     if (!mats) return;
     this.forEachPart(p, camX, camY, camZ, (part, m) => {
       for (const box of this.armorParts.get(part) ?? []) {
         const mat = mats[box.slot];
-        if (mat) fn(box.mesh, mat, m);
+        if (mat) fn(box.mesh, mat, m, box.slot);
       }
     });
   }
@@ -329,14 +332,15 @@ export class EntityRenderer {
     let armor: Program | null = null;
     for (const p of players) {
       let bound: ArmorMaterial | null = null;
-      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
-        if (!armor) armor = bindLighting(this.pArmor.use());
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m, slot) => {
+        if (!armor) armor = bindLighting(this.pArmor.use()).f1('uTime', glintTime());
         if (!bound) armor.f2('uLightLevel', p.light[0], p.light[1]);
         if (mat !== bound) {
           const sh = ARMOR_SHINE[mat];
           armor.tex2D('uSkin', this.armorTex.get(mat)!).f3('uMat', sh.rough, sh.metal, sh.sheen);
           bound = mat;
         }
+        armor.f1('uGlint', (p.glint ?? 0) & (4 << slot) ? 1 : 0); // Fase 7 (encantamientos)
         this.drawMesh(armor, mesh, m);
       });
     }
@@ -366,14 +370,15 @@ export class EntityRenderer {
     let armor: Program | null = null;
     for (const p of views) {
       let bound: ArmorMaterial | null = null;
-      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
-        if (!armor) armor = bindLighting(this.pArmor.use());
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m, slot) => {
+        if (!armor) armor = bindLighting(this.pArmor.use()).f1('uTime', glintTime());
         if (!bound) armor.f2('uLightLevel', p.light[0], p.light[1]);
         if (mat !== bound) {
           const sh = ARMOR_SHINE[mat];
           armor.tex2D('uSkin', this.armorTex.get(mat)!).f3('uMat', sh.rough, sh.metal, sh.sheen);
           bound = mat;
         }
+        armor.f1('uGlint', (p.glint ?? 0) & (4 << slot) ? 1 : 0); // Fase 7 (encantamientos)
         this.drawMesh(armor, mesh, m);
       });
     }

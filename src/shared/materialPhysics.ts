@@ -4,6 +4,7 @@
 // y la nieve polvo no sostiene: quien entra se hunde despacio y casi no avanza; con botas de cuero se
 // camina por encima y dentro se sube saltando (como por una escalera de mano).
 import { ICE, PACKED_ICE, BLUE_ICE, SLIME_BLOCK, POWDER_SNOW } from './blocks';
+import { isFrostedIce } from './blocks'; // Fase 7 (encantamientos)
 
 export interface BlockReader {
   getBlock(x: number, y: number, z: number): number;
@@ -19,7 +20,7 @@ export function blockUnder(w: BlockReader, x: number, y: number, z: number): num
  * Cuanto menor, más se desliza (en Minecraft: hielo 0,98 de deslizamiento, hielo azul 0,989, slime 0,8).
  */
 export function groundGrip(id: number): number {
-  if (id === ICE || id === PACKED_ICE) return 0.15;
+  if (id === ICE || id === PACKED_ICE || isFrostedIce(id)) return 0.15; // Fase 7: el hielo escarchado también resbala
   if (id === BLUE_ICE) return 0.06;
   if (id === SLIME_BLOCK) return 0.5;
   return 1;

@@ -28,6 +28,8 @@ export interface ItemDraw {
   m: mat4;
   light: [number, number];
   tint?: [number, number, number];
+  /** Fase 7 (encantamientos): con el brillo de los encantamientos. */
+  glint?: boolean;
 }
 
 const CORNERS: number[][][] = [
@@ -42,6 +44,11 @@ const NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0,
 const CU = [0, 1, 1, 0];
 const CV = [1, 1, 0, 0];
 const MAX_QUADS = 4096;
+
+/** Fase 7 (encantamientos): reloj del brillo (segundos, acotado para no perder precisión). */
+export function glintTime(): number {
+  return (performance.now() / 1000) % 3600;
+}
 
 export class ItemRenderer {
   private gl: GL;
@@ -208,6 +215,18 @@ export class ItemRenderer {
     return m;
   }
 
+  /** Fase 7 (encantamientos): cubo con la textura `name` en las seis caras (el libro de la mesa). */
+  textureCube(name: string): ItemModel {
+    const key = 't' + name;
+    let m = this.cache.get(key);
+    if (!m) {
+      const l = textureLayer(name);
+      m = this.upload(this.cubeData([l, l, l, l, l, l]), true, false, false);
+      this.cache.set(key, m);
+    }
+    return m;
+  }
+
   private crackModel(stage: number): ItemModel {
     const key = 'c' + stage;
     let m = this.cache.get(key);
@@ -238,11 +257,13 @@ export class ItemRenderer {
       .m4('uProjM', viewProj as Float32Array)
       .i1('uHand', 0)
       .i1('uCrack', 0)
-      .f3('uGrassTint', grassTint[0], grassTint[1], grassTint[2]);
+      .f3('uGrassTint', grassTint[0], grassTint[1], grassTint[2])
+      .f1('uTime', glintTime());
     for (const d of list) {
       this.bindCommon(p, d.model);
       const t = d.tint ?? [1, 1, 1];
-      p.m4('uModel', d.m as Float32Array).f2('uLightLevel', d.light[0], d.light[1]).f3('uTint', t[0], t[1], t[2]);
+      p.m4('uModel', d.m as Float32Array).f2('uLightLevel', d.light[0], d.light[1]).f3('uTint', t[0], t[1], t[2])
+        .f1('uGlint', d.glint ? 1 : 0); // Fase 7 (encantamientos)
       gl.bindVertexArray(d.model.vao);
       gl.drawElements(gl.TRIANGLES, d.model.indexCount, gl.UNSIGNED_SHORT, 0);
     }
@@ -285,7 +306,7 @@ export class ItemRenderer {
     this.bindCommon(p, m);
     p.tex('uSpecular', gl.TEXTURE_2D_ARRAY, this.blocks.specular)
       .tex2D('uLayerProps', this.blocks.layerProps)
-      .m4('uModel', mm as Float32Array).m4('uProjM', viewProj as Float32Array).i1('uCrack', 1).i1('uHand', 0);
+      .m4('uModel', mm as Float32Array).m4('uProjM', viewProj as Float32Array).i1('uCrack', 1).i1('uHand', 0).f1('uGlint', 0);
     gl.bindVertexArray(m.vao);
     gl.drawElements(gl.TRIANGLES, m.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(null);
@@ -299,7 +320,7 @@ export class ItemRenderer {
   /** Objeto en la mano (espacio de vista, con su propia proyección). */
   drawHand(
     model: ItemModel, mv: mat4, proj: mat4, lightDirView: number[], light: [number, number], grassTint: [number, number, number],
-    bindLighting: (p: Program) => Program,
+    bindLighting: (p: Program) => Program, glint = false,
   ): void {
     const gl = this.gl;
     const p = bindLighting(this.prog.use());
@@ -313,7 +334,9 @@ export class ItemRenderer {
       .f3('uLightDirView', lightDirView[0], lightDirView[1], lightDirView[2])
       .f2('uLightLevel', light[0], light[1])
       .f3('uGrassTint', grassTint[0], grassTint[1], grassTint[2])
-      .f3('uTint', 1, 1, 1);
+      .f3('uTint', 1, 1, 1)
+      .f1('uGlint', glint ? 1 : 0) // Fase 7 (encantamientos)
+      .f1('uTime', glintTime());
     gl.bindVertexArray(model.vao);
     gl.drawElements(gl.TRIANGLES, model.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(null);

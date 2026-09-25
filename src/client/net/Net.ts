@@ -234,8 +234,9 @@ export class Net {
     if (this.welcomed) this.sendRaw(msg);
   }
 
-  sendSet(x: number, y: number, z: number, b: number, tool = 0): void {
-    if (this.connected) this.sendRaw({ t: 'set', x, y, z, b, tool });
+  /** Fase 7 (encantamientos): `en`, los encantamientos de la herramienta (Toque de seda, Fortuna). */
+  sendSet(x: number, y: number, z: number, b: number, tool = 0, en?: [number, number][]): void {
+    if (this.connected) this.sendRaw({ t: 'set', x, y, z, b, tool, ...(en?.length ? { en } : {}) });
     else if (this.pendingSets.length < 20000) this.pendingSets.push([x, y, z, b]);
   }
 

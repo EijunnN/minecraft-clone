@@ -5,6 +5,19 @@ import { COMMON } from './common';
 import { ATMOSPHERE } from './atmosphere';
 import { LIGHTING } from './terrain';
 
+/**
+ * Fase 7 (encantamientos): brillo de los objetos encantados. Dos franjas violetas que cruzan el objeto en
+ * diagonal a distinto ritmo, más un velo tenue; se suma a la luz (se ve también a oscuras).
+ */
+export const GLINT = /* glsl */ `
+vec3 glint(vec2 p, float t) {
+  float a = sin((p.x * 1.1 + p.y * 0.45) * 5.2 - t * 2.3);
+  float b = sin((p.x * -0.35 + p.y * 1.0) * 6.8 - t * 1.55 + 1.7);
+  float g = pow(max(a, 0.0), 7.0) * 0.9 + pow(max(b, 0.0), 9.0) * 0.6;
+  return vec3(0.52, 0.24, 1.0) * (0.09 + g * 0.55);
+}
+`;
+
 export const ITEM3D_VS = /* glsl */ `
 ${COMMON}
 layout(location = 0) in vec3 aPos;
@@ -16,8 +29,10 @@ out vec3 vRel;
 out vec3 vN;
 out vec2 vUV;
 flat out float vLayer;
+out vec3 vObj; // Fase 7 (encantamientos): posición en el objeto (para el brillo)
 void main() {
   vec4 p = uModel * vec4(aPos, 1.0);
+  vObj = aPos;
   vRel = p.xyz;
   vN = normalize(mat3(uModel) * aNormal);
   vUV = aUVL.xy;
@@ -41,11 +56,16 @@ uniform vec3 uLightDirView;
 uniform vec2 uLightLevel;
 uniform vec3 uGrassTint;
 uniform vec3 uTint;
+// Fase 7 (encantamientos): brillo de lo encantado (0 = nada) y el reloj que lo hace correr.
+uniform float uGlint;
+uniform float uTime;
 in vec3 vRel;
 in vec3 vN;
 in vec2 vUV;
 flat in float vLayer;
+in vec3 vObj;
 layout(location = 0) out vec4 outColor;
+${GLINT}
 void main() {
   vec2 gdx = dFdx(vUV), gdy = dFdy(vUV);
   vec3 tuv = vec3(pixelArtUV(vUV, 16.0), vLayer);
@@ -90,6 +110,7 @@ void main() {
     col = albedo / PI * (NdotL * lightCol + amb);
   }
   col = col * uTint + albedo * emissive;
+  if (uGlint > 0.0) col += glint(vObj.xy + vObj.zz * 0.6, uTime) * uGlint; // Fase 7 (encantamientos)
   outColor = vec4(col, 1.0);
 }
 `;

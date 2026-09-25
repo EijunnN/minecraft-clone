@@ -707,7 +707,9 @@ export const LIT_DEEPSLATE_REDSTONE_ORE = family('lit_deepslate_redstone_ore', '
   tex: defs[DEEP_REDSTONE].tex, hardness: defs[DEEP_REDSTONE].hardness, tool: 'pickaxe', tier: defs[DEEP_REDSTONE].tier, sound: 'stone',
   emission: 9, category: null, base: DEEP_REDSTONE,
 }));
+// Las dos encendidas cuentan como la mena de redstone (su botín, Fortuna y la experiencia).
 SURFACE_ORE[LIT_DEEPSLATE_REDSTONE_ORE] = REDSTONE_ORE;
+SURFACE_ORE[LIT_REDSTONE_ORE] = REDSTONE_ORE;
 
 /** La mena de redstone (normal o de pizarra) encendida o apagada; 0 si no es una mena de redstone. */
 export function redstoneOreLit(id: number, lit: boolean): number {

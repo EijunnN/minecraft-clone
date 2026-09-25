@@ -5,6 +5,17 @@
 import './tradeScreen.css';
 import { itemName, EMERALD } from '../../shared/items';
 import { LEVEL_NAMES, LEVEL_XP, MAX_LEVEL, villagerTitle, type TradeWire } from '../../shared/villagers';
+// Fase 7 (encantamientos): libros y equipo encantados en las ofertas.
+import type { ItemData } from '../../shared/itemData';
+import type { ItemStack } from '../../shared/items';
+import { glintAttrs } from './glint';
+import { enchantName, enchantsOf, storedOf } from '../../shared/enchantments';
+
+/** Nombre de lo que se recibe con sus encantamientos («Libro encantado (Reparación)»). */
+function stackLabel(s: ItemStack): string {
+  const list = [...enchantsOf(s), ...storedOf(s)];
+  return list.length ? `${itemName(s.id)} (${list.map(([e, l]) => enchantName(e, l)).join(', ')})` : itemName(s.id);
+}
 
 export interface TradeScreenHost {
   icons(): Map<number, string>;
@@ -110,20 +121,26 @@ export class TradeScreen {
       this.barFill.style.width = `${Math.round(f * 100)}%`;
     }
     const icons = this.host.icons();
-    const slot = (id: number, n: number) => id
-      ? `<span class="tslot" title="${esc(itemName(id))}"><i style="background-image:url(${icons.get(id) ?? ''})"></i>${n > 1 ? `<b>${n}</b>` : ''}</span>`
-      : '<span class="tslot empty"></span>';
+    // Fase 7 (encantamientos): lo que se recibe puede llevar datos (libro o equipo encantado): brillo y nombre.
+    const slot = (id: number, n: number, data?: ItemData) => {
+      if (!id) return '<span class="tslot empty"></span>';
+      const st: ItemStack = { id, count: n, ...(data ? { data } : {}) };
+      const url = icons.get(id) ?? '';
+      const gl = glintAttrs(st, url);
+      return `<span class="tslot" title="${esc(stackLabel(st))}"><i class="${gl.cls.trim()}" style="background-image:url(${url})${gl.style}"></i>${n > 1 ? `<b>${n}</b>` : ''}</span>`;
+    };
     const html = v.offers.map((o, i) => {
       const [c1, n1, c2, n2, r, rn, uses, max] = o;
+      const rd = o[8];
       const out = uses >= max;
       const need = new Map<number, number>([[c1, n1]]);
       if (c2) need.set(c2, (need.get(c2) ?? 0) + n2);
       const poor = [...need].some(([id, n]) => this.host.have(id) < n);
-      const tip = `${n1} × ${itemName(c1)}${c2 ? ` + ${n2} × ${itemName(c2)}` : ''} → ${rn} × ${itemName(r)}` +
+      const tip = `${n1} × ${itemName(c1)}${c2 ? ` + ${n2} × ${itemName(c2)}` : ''} → ${rn} × ${stackLabel({ id: r, count: rn, ...(rd ? { data: rd } : {}) })}` +
         (out ? ' (agotada)' : ` · quedan ${max - uses}`);
       return `<div class="trade-row${out ? ' out' : ''}${poor ? ' poor' : ''}" data-i="${i}" title="${esc(tip)}">` +
-        `${slot(c1, n1)}${slot(c2, n2)}<span class="tarrow"></span>${slot(r, rn)}` +
-        `<span class="tname">${esc(itemName(r))}</span>` +
+        `${slot(c1, n1)}${slot(c2, n2)}<span class="tarrow"></span>${slot(r, rn, rd)}` +
+        `<span class="tname">${esc(stackLabel({ id: r, count: rn, ...(rd ? { data: rd } : {}) }))}</span>` +
         `<span class="tstock">${out ? 'Agotada' : `${max - uses}/${max}`}</span></div>`;
     }).join('');
     const key = html;

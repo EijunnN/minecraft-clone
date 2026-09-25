@@ -7,6 +7,7 @@ import type { ServerMsg } from '../../shared/protocol';
 import type { TradeWire } from '../../shared/villagers';
 import { TradeScreen, type TradeView } from '../ui/TradeScreen';
 import { EF_BABY } from '../../shared/protocol';
+import { sanitizeStack } from '../../shared/containers'; // Fase 7 (encantamientos)
 import type { ClientEntity } from './ClientEntities';
 import type { Game } from './Game';
 
@@ -71,7 +72,9 @@ export class Trading {
       const inv = this.g.inv;
       const give = (s: ItemStack | null | undefined) => {
         if (!s || !isValidItem(s.id) || !(s.count > 0)) return;
-        const rest = inv.add({ id: s.id, count: Math.min(maxStack(s.id), s.count | 0) });
+        // Fase 7 (encantamientos): con sus datos (libros y equipo encantados).
+        const data = sanitizeStack({ ...s, count: 1 })?.data;
+        const rest = inv.add({ id: s.id, count: Math.min(maxStack(s.id), s.count | 0), ...(data ? { data } : {}) });
         if (rest) this.g.interaction.throwStack(rest, false);
       };
       if (msg.ok) give(msg.give);
@@ -129,5 +132,11 @@ export class Trading {
 
 function sanitize(raw: unknown): TradeWire[] {
   if (!Array.isArray(raw)) return [];
-  return raw.slice(0, 12).filter((o): o is TradeWire => Array.isArray(o) && o.length === 8 && o.every(Number.isInteger)).map((o) => [...o] as TradeWire);
+  // Fase 7 (encantamientos): el noveno campo son los datos de lo que se recibe (se validan con la pila).
+  return raw.slice(0, 12).filter((o): o is TradeWire => Array.isArray(o) && (o.length === 8 || o.length === 9) && o.slice(0, 8).every(Number.isInteger))
+    .map((o) => {
+      const w = o.slice(0, 8) as [number, number, number, number, number, number, number, number];
+      const data = o.length === 9 ? sanitizeStack({ id: w[4], count: 1, data: o[8] })?.data : undefined;
+      return data ? [...w, data] : w;
+    });
 }

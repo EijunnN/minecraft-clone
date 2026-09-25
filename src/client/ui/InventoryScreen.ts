@@ -24,8 +24,12 @@ import { stackIconUrl } from './bannerIcons';
 // Fase 7 (pociones): alambique y flechas con efecto.
 import { BREWING_HTML, renderBrewing } from './brewingScreen';
 import { tippedArrowCraft } from '../../shared/potions';
+import { paintGlint } from './glint'; // Fase 7 (encantamientos)
+import { EnchantPanel, AnvilPanel, GrindstonePanel, type WorkHost, type WorkPanel } from './enchantScreens';
 
-export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom' | 'brewing'; // Fase 7 (pociones): alambique
+export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom'
+  | 'brewing' // Fase 7 (pociones): alambique
+  | 'enchant' | 'anvil' | 'grindstone'; // Fase 7 (encantamientos)
 
 export interface ScreenHost {
   icons: Map<number, string>;
@@ -35,6 +39,8 @@ export interface ScreenHost {
   sound(kind: 'click' | 'craft'): void;
   /** Teclas configuradas (tirar, cambiar de mano). */
   keys(): Keybinds;
+  /** Fase 7 (encantamientos): experiencia, semilla y avisos de la mesa, el yunque y la afiladora. */
+  work?: WorkHost;
 }
 
 type SlotRef =
@@ -61,6 +67,8 @@ export class InventoryScreen {
   private cutInput = 0;
   /** Fase 6.5 (libros y estandartes): telar (dibujo elegido). */
   private loom = new LoomPanel();
+  /** Fase 7 (encantamientos): mesa de encantamientos, yunque o afiladora abiertos. */
+  private work: WorkPanel | null = null;
   private root: HTMLElement;
   private panel: HTMLElement;
   private cursorEl: HTMLElement;
@@ -81,6 +89,8 @@ export class InventoryScreen {
   private drag: { btn: number; keys: string[] } | null = null;
   /** Último clic (para el doble clic). */
   private lastClick = { key: '', at: 0 };
+  /** Fase 7 (encantamientos): la descripción flotante muestra la pista de una oferta de la mesa. */
+  private workTip = false;
 
   constructor(host: ScreenHost, inv: Inventory) {
     this.host = host;
@@ -115,6 +125,36 @@ export class InventoryScreen {
       this.host.sound('click');
       this.render();
     });
+    // Fase 7 (encantamientos): ofertas de la mesa de encantamientos.
+    this.panel.addEventListener('mousedown', (e) => {
+      const t = e.target as HTMLElement;
+      if (!this.work || !t.closest('[data-work]') || this.isBusy()) return;
+      e.preventDefault();
+      if (this.work.click(t, this.grid)) {
+        this.inv.changed();
+        this.render();
+      }
+    });
+    // Fase 7 (encantamientos): la pista de las ofertas de la mesa, en la misma descripción flotante que los
+    // objetos (dentro del panel no valdría `position: fixed`: el desenfoque del fondo lo recoloca).
+    this.panel.addEventListener('mousemove', (e) => {
+      const b = (e.target as HTMLElement).closest('[data-tip]') as HTMLElement | null;
+      const html = this.work && !this.inv.cursor ? b?.dataset.tip : undefined;
+      if (!html) {
+        if (this.workTip) this.tooltip.classList.add('hidden');
+        this.workTip = false;
+        return;
+      }
+      this.workTip = true;
+      if (this.tooltip.innerHTML !== html) this.tooltip.innerHTML = html;
+      this.tooltip.classList.remove('hidden');
+      this.tooltip.style.left = `${e.clientX + 14}px`;
+      this.tooltip.style.top = `${e.clientY + 14}px`;
+    });
+    this.panel.addEventListener('mouseleave', () => {
+      if (this.workTip) this.tooltip.classList.add('hidden');
+      this.workTip = false;
+    });
     // Fase 6.5 (libros y estandartes): telar, elegir el dibujo.
     this.panel.addEventListener('mousedown', (e) => {
       const b = (e.target as HTMLElement).closest('[data-loom]') as HTMLElement | null;
@@ -144,12 +184,23 @@ export class InventoryScreen {
     this.chestSlots = 27;
     this.cut = -1;
     this.loom.reset();
+    this.work = this.makeWork(kind, pos); // Fase 7 (encantamientos)
     this.gridSize = kind === 'table' ? 3 : kind === 'stonecutter' ? 1 : 2;
     this.grid = new Array(this.gridSize * this.gridSize).fill(null);
     this.busy = 0;
     this.build();
     this.root.classList.remove('hidden');
     this.render();
+  }
+
+  /** Fase 7 (encantamientos): panel de la mesa, el yunque o la afiladora (null en las demás pantallas). */
+  private makeWork(kind: ScreenKind, pos: [number, number, number] | null): WorkPanel | null {
+    const host = this.host.work;
+    if (!host || !pos) return null;
+    if (kind === 'enchant') return new EnchantPanel(host, pos);
+    if (kind === 'anvil') return new AnvilPanel(host, pos, () => this.render());
+    if (kind === 'grindstone') return new GrindstonePanel(host, pos);
+    return null;
   }
 
   /** Cierra y devuelve al inventario lo que quedó en la cuadrícula y el cursor. */
@@ -237,6 +288,8 @@ export class InventoryScreen {
       top = LOOM_HTML;
     } else if (kind === 'brewing') {
       top = BREWING_HTML; // Fase 7 (pociones)
+    } else if (this.work) {
+      top = this.work.html(); // Fase 7 (encantamientos)
     } else if (kind === 'stonecutter') {
       top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
         `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
@@ -265,7 +318,7 @@ export class InventoryScreen {
         const btn = e.button === 2 ? 1 : 0;
         if (btn === 0 && !e.shiftKey && this.collect(key)) return;
         // Con algo en el cursor sobre el inventario o la fabricación: puede ser un arrastre.
-        if (this.inv.cursor && !e.shiftKey && (ref.kind === 'inv' || ref.kind === 'grid') && !this.isBusy()) {
+        if (this.inv.cursor && !e.shiftKey && (ref.kind === 'inv' || (ref.kind === 'grid' && !this.work)) && !this.isBusy()) {
           this.drag = { btn, keys: [key] };
           el.classList.add('drag');
           return;
@@ -316,6 +369,7 @@ export class InventoryScreen {
       return opt ? { ...opt } : null;
     }
     if (this.kind === 'loom') return this.loom.result(this.grid);
+    if (this.work) return this.work.result(this.grid); // Fase 7 (encantamientos)
     if (this.kind !== 'player' && this.kind !== 'table') return null;
     // Fase 6.5 (equipo): los fuegos artificiales miran las pilas (los colores de las estrellas).
     const fw = fireworkCraft(this.grid);
@@ -372,10 +426,13 @@ export class InventoryScreen {
         this.inv.offhand = fake.slots[0];
       }
     } else if (r.kind === 'armor') {
+      // Fase 7 (encantamientos): la Maldición de ligamiento no deja quitarse la pieza (salvo en creativo).
+      if (this.inv.armorBound(r.i) && !this.host.work?.creative()) return;
       // Mayúsculas: devolver la pieza al inventario; si no, coger, dejar o intercambiar.
       if (shift) this.inv.unequip(r.i);
       else this.inv.clickArmor(r.i);
     } else if (shift) this.quickMove(r);
+    else if (r.kind === 'grid' && this.work) this.clickWorkSlot(r.i, btn); // Fase 7 (encantamientos)
     else {
       const arr = r.kind === 'inv' ? this.inv.slots : this.grid;
       // Fase 6.5 (remate): clic derecho con sacos (meter o sacar).
@@ -430,7 +487,52 @@ export class InventoryScreen {
     return false;
   }
 
+  /**
+   * Fase 7 (encantamientos): clic en un hueco de la mesa, el yunque o la afiladora: sólo admite lo que
+   * toca y hasta su límite (el objeto de la mesa, de uno en uno; el lapislázuli, en pila).
+   */
+  private clickWorkSlot(i: number, btn: number): void {
+    const cur = this.inv.cursor, slot = this.grid[i];
+    if (!cur) {
+      if (!slot) return;
+      const n = btn === 1 ? Math.ceil(slot.count / 2) : slot.count;
+      this.inv.cursor = { ...slot, count: n };
+      this.grid[i] = slot.count > n ? { ...slot, count: slot.count - n } : null;
+      return;
+    }
+    const limit = Math.min(maxStack(cur.id), this.work!.accepts(i, cur));
+    if (limit <= 0) return;
+    if (!slot) {
+      const n = Math.min(limit, btn === 1 ? 1 : cur.count);
+      this.grid[i] = { ...cur, count: n };
+      this.inv.cursor = cur.count > n ? { ...cur, count: cur.count - n } : null;
+    } else if (sameKind(slot, cur)) {
+      const n = Math.min(limit - slot.count, btn === 1 ? 1 : cur.count);
+      if (n <= 0) return;
+      this.grid[i] = { ...slot, count: slot.count + n };
+      this.inv.cursor = cur.count > n ? { ...cur, count: cur.count - n } : null;
+    } else if (cur.count <= limit) {
+      this.grid[i] = cur;
+      this.inv.cursor = slot;
+    }
+  }
+
+  /** Fase 7 (encantamientos): coger la salida del yunque o de la afiladora (con mayúsculas, al inventario). */
+  private takeWork(shift: boolean): void {
+    const res = this.result();
+    if (!res || !this.work) return;
+    const cur = this.inv.cursor;
+    if (shift ? this.inv.room(res) < res.count : !!cur) return;
+    if (!this.work.take(this.grid)) return;
+    if (shift) this.inv.add(res);
+    else this.inv.cursor = { ...res };
+  }
+
   private clickOutput(shift: boolean): void {
+    if (this.work) {
+      this.takeWork(shift); // Fase 7 (encantamientos)
+      return;
+    }
     const res = this.result();
     if (!res) return;
     if (shift) {
@@ -495,6 +597,18 @@ export class InventoryScreen {
     if (r.kind !== 'inv') return;
     // En el inventario del jugador, una pieza de armadura va a su ranura si está libre.
     if (this.kind === 'player' && this.inv.equipFromSlot(r.i, false)) return;
+    // Fase 7 (encantamientos): a la mesa, el yunque o la afiladora, al primer hueco que lo admita.
+    if (this.work) {
+      for (let i = 0; i < 2; i++) {
+        const limit = Math.min(maxStack(s.id), this.work.accepts(i, s));
+        const g = this.grid[i];
+        if (limit <= 0 || (g && (!sameKind(g, s) || g.count >= limit))) continue;
+        const n = Math.min(limit - (g?.count ?? 0), s.count);
+        this.grid[i] = { ...s, count: (g?.count ?? 0) + n };
+        this.inv.slots[r.i] = s.count > n ? { ...s, count: s.count - n } : null;
+        return;
+      }
+    }
     if (this.container && this.containerPos) {
       // Del inventario al contenedor (lo confirma el servidor).
       const q = this.seq++;
@@ -540,7 +654,7 @@ export class InventoryScreen {
     if (!d || !cur || d.keys.includes(key)) return;
     const r = this.parseRef(key);
     const arr = this.localArray(r);
-    if (!arr || r.kind === 'out') return;
+    if (!arr || r.kind === 'out' || (r.kind === 'grid' && this.work)) return; // Fase 7: los huecos de trabajo, no
     const s = arr[r.i];
     if (s && !(sameKind(s, cur) && s.count < maxStack(s.id))) return;
     if (d.keys.length >= cur.count && d.btn === 0) return;
@@ -602,8 +716,11 @@ export class InventoryScreen {
 
   private onKey(e: KeyboardEvent): void {
     if (!this.kind || !this.hovered || this.isBusy()) return;
+    // Fase 7 (encantamientos): escribiendo el nombre en el yunque, las teclas son del campo.
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     const r = this.hovered;
-    if (r.kind !== 'inv' && r.kind !== 'grid') return;
+    if (r.kind !== 'inv' && (r.kind !== 'grid' || this.work)) return;
     const arr = r.kind === 'inv' ? this.inv.slots : this.grid;
     const n = Number(e.key);
     const keys = this.host.keys();
@@ -648,6 +765,7 @@ export class InventoryScreen {
     if (this.kind === 'stonecutter') this.renderCuts();
     if (this.kind === 'loom') this.loom.render(this.panel, this.grid);
     if (this.kind === 'brewing') renderBrewing(this.panel, this.container); // Fase 7 (pociones)
+    this.work?.render(this.panel, this.grid, this.host.icons); // Fase 7 (encantamientos)
     const out = this.slotEls.get('out');
     if (out) out.classList.toggle('ready', !!this.result());
     this.placeCursor();
@@ -685,6 +803,7 @@ export class InventoryScreen {
     const dur = el.children[2] as HTMLElement;
     const url = stackIconUrl(s, this.host.icons); // Fase 6.5: estandartes con dibujos
     ico.style.backgroundImage = url ? `url(${url})` : '';
+    paintGlint(ico, s, url); // Fase 7 (encantamientos)
     cnt.textContent = s && s.count > 1 ? String(s.count) : '';
     const max = s ? ITEMS[s.id]?.tool?.durability ?? ITEMS[s.id]?.armor?.durability : undefined;
     if (s && max && s.dmg) {
@@ -713,6 +832,7 @@ export class InventoryScreen {
     el.classList.remove('hidden');
     const url = stackIconUrl(c, this.host.icons);
     (el.firstElementChild as HTMLElement).style.backgroundImage = url ? `url(${url})` : '';
+    paintGlint(el.firstElementChild as HTMLElement, c, url); // Fase 7 (encantamientos)
     (el.children[1] as HTMLElement).textContent = c.count > 1 ? String(c.count) : '';
     el.style.left = `${this.mouse[0]}px`;
     el.style.top = `${this.mouse[1]}px`;

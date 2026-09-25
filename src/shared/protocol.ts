@@ -52,6 +52,10 @@ export const EF_VARIANT_SHIFT = 16;
 export const EF_VARIANT_MASK = 7 << EF_VARIANT_SHIFT;
 /** Fase 6 (asaltos): capitán de una patrulla o de un asalto (lleva el estandarte ominoso). */
 export const EF_CAPTAIN = 1 << 21;
+/** Fase 7 (encantamientos): objeto (tirado, lanzado, expuesto o tridente) con el brillo de los encantamientos. */
+export const EF_GLINT = 1 << 22;
+/** Fase 7 (encantamientos): soporte para armadura: brillo de cada pieza (bits 22..25, de la cabeza a los pies). */
+export const EF_GLINT_ARMOR_SHIFT = 22;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';
@@ -78,6 +82,8 @@ export interface PlayerInfo {
   o?: number;
   /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
   a?: number[];
+  /** Fase 7 (encantamientos): brillo (bit 0 mano, 1 mano secundaria, 2..5 armadura de la cabeza a los pies). */
+  g?: number;
 }
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
@@ -108,6 +114,8 @@ export interface PlayerSave {
   abs?: number;
   /** Experiencia total acumulada. */
   xp?: number;
+  /** Fase 7 (encantamientos): semilla de encantamiento (las ofertas de la mesa; cambia al encantar). */
+  es?: number;
 }
 
 /** Entidad nueva: [id, tipo, x, y, z, yaw, cuerpo, pitch, flags, extra...]. */
@@ -122,8 +130,9 @@ export type EntExtra = [number, string, string | [number, number, number] | 0] |
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
-  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number } // Fase 7 (pociones): ec, color de sus remolinos
-  | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
+  | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number } // Fase 7: ec (pociones), g (brillo)
+  /** Fase 7 (encantamientos): en, encantamientos de la herramienta (Toque de seda, Fortuna). */
+  | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number; en?: [number, number][] }
   /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
   | {
     t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number;
@@ -135,7 +144,7 @@ export type ClientMsg =
   /** Al morir: soltar orbes con esta experiencia en la posición p. */
   | { t: 'dropxp'; n: number; p: [number, number, number] }
   /** Usar el objeto de la mano sobre una criatura (dar de comer, esquilar, ordeñar). */
-  | { t: 'interact'; e: number; item: number; q: number; n?: string; d?: number }
+  | { t: 'interact'; e: number; item: number; q: number; n?: string; d?: number; st?: ItemStack } // Fase 7: st, la pila entera
   /** Fase 6.5 (remate): atar a la valla (x, y, z) las criaturas que lleva el jugador con correa. */
   | { t: 'leash'; x: number; y: number; z: number }
   /** El jugador cayó sobre tierra de cultivo y la pisoteó. */
@@ -145,15 +154,16 @@ export type ClientMsg =
   | { t: 'swing' }
   | { t: 'ping'; c: number }
   /** b: daño extra por efectos (Fuerza +3 por nivel, Debilidad −4). */
-  | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number }
+  /** Fase 7 (encantamientos): en, encantamientos del arma; sw, golpe que barre (espada, cargado, en el suelo). */
+  | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number; en?: [number, number][]; sw?: number }
   | { t: 'pickup'; e: number }
   | { t: 'drop'; items: ItemStack[]; p: [number, number, number]; v?: [number, number, number] }
-  /** c: 1 = virote de ballesta (Fase 6.5, equipo). Fase 7 (pociones): ap, tipo de la flecha con efecto. */
-  | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number; c?: number; ap?: number }
+  /** c: 1 = virote de ballesta (Fase 6.5, equipo). Fase 7: ap, tipo de la flecha con efecto (pociones); en, encantamientos. */
+  | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number; c?: number; ap?: number; en?: [number, number][] }
   /** Lanzar un objeto (huevo) desde p en la dirección d. Fase 6.5 (equipo): tridente o cohete, con w = su desgaste o sus datos. */
-  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number; w?: number }
+  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number; w?: number; st?: ItemStack } // Fase 7: st, el tridente entero
   /** Caña de pescar: lanzar el flotador o, si ya está fuera, recogerlo. */
-  | { t: 'fish'; p: [number, number, number]; d: [number, number, number] }
+  | { t: 'fish'; p: [number, number, number]; d: [number, number, number]; en?: [number, number][] } // Fase 7: en, Suerte marina y Atracción
   /** Escribir el texto de un cartel (cuatro líneas). */
   | { t: 'sign'; x: number; y: number; z: number; l: string[] }
   | { t: 'open'; x: number; y: number; z: number }
@@ -204,7 +214,12 @@ export type ClientMsg =
   | { t: 'vplace'; item: number; p: [number, number, number]; b?: [number, number, number]; yaw: number; q: number }
   | { t: 'vride'; e: number }
   | { t: 'vleave' }
-  | { t: 'vpos'; e: number; p: [number, number, number]; r: number; pi?: number; v: [number, number, number]; k?: number };
+  | { t: 'vpos'; e: number; p: [number, number, number]; r: number; pi?: number; v: [number, number, number]; k?: number }
+  // Fase 7 (encantamientos): se usó la mesa de encantamientos, el yunque (el servidor decide si se
+  // deteriora) o la afiladora (n: experiencia que suelta en orbes) en (x, y, z); Paso helado de nivel l
+  // bajo los pies del jugador.
+  | { t: 'work'; k: 'enchant' | 'anvil' | 'grind'; x: number; y: number; z: number; n?: number }
+  | { t: 'frost'; l: number };
 
 export type ServerMsg =
   | {
@@ -221,7 +236,7 @@ export type ServerMsg =
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
-  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number } // Fase 7 (pociones)
+  | { t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number } // Fase 7
   | { t: 'set'; id: string; x: number; y: number; z: number; b: number }
   | { t: 'sets'; l: number[] }
   | { t: 'chat'; id: string | null; name: string; m: string }
@@ -234,7 +249,8 @@ export type ServerMsg =
       /** Fase 6.5 (remate): nombre y correa de las criaturas que cambiaron: [id, nombre, atada a (jugador, valla o 0)]. */
       ex?: EntExtra[];
     }
-  | { t: 'hurt'; a: number; k: [number, number, number]; c: string }
+  /** Fase 7 (encantamientos): th, piezas de armadura (bit 0 cabeza … 3 pies) cuyas Espinas saltaron (se desgastan). */
+  | { t: 'hurt'; a: number; k: [number, number, number]; c: string; th?: number }
   | { t: 'picked'; e: number; s: ItemStack }
   | { t: 'fx'; k: string; p: [number, number, number]; a?: number; b?: number }
   | { t: 'cont'; x: number; y: number; z: number; c: ContainerWire }
@@ -253,7 +269,7 @@ export type ServerMsg =
    */
   | { t: 'effect'; id: number; s: number; a: number }
   /** El jugador recogió orbes de experiencia por valor de `n`. */
-  | { t: 'xp'; n: number }
+  | { t: 'xp'; n: number; l?: number } // Fase 7 (encantamientos): l, niveles de golpe (/experiencia)
   /** Flotador del jugador p (e = id de la entidad, 0 = recogido); w = desgaste de la caña al recoger. */
   | { t: 'rod'; p: string; e: number; w?: number }
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
@@ -282,7 +298,9 @@ export type ServerMsg =
   // Fase 7 (transporte): quién va en cada plaza de la barca o vagoneta e (id de jugador, id de la criatura o
   // 0 si está libre) y posición rechazada de la que lleva el jugador (vuelve a p con velocidad v).
   | { t: 'vpass'; e: number; p: (string | number)[] }
-  | { t: 'vfix'; e: number; p: [number, number, number]; v: [number, number, number] };
+  | { t: 'vfix'; e: number; p: [number, number, number]; v: [number, number, number] }
+  // Fase 7 (encantamientos): /encantar pone estos encantamientos al objeto de la mano.
+  | { t: 'ench'; e: [number, number][] };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

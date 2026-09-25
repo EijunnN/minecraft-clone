@@ -191,6 +191,11 @@ export * from './brewingBlocks';
 import { RAIL_INVENTORY } from './rails';
 export * from './rails';
 (INVENTORY_ORDER as number[]).push(...RAIL_INVENTORY);
+// Fase 7 (encantamientos): mesa de encantamientos, yunques y hielo escarchado (registrados los últimos: ids
+// nuevos) y su sitio en el inventario creativo.
+import { ENCHANT_INVENTORY } from './enchantBlocks';
+export * from './enchantBlocks';
+(INVENTORY_ORDER as number[]).push(...ENCHANT_INVENTORY);
 // Fase 7 (redstone): polvo, antorchas, palanca, botones, placas, repetidor, comparador, lámpara, sensores,
 // cofre trampa, bombilla y pararrayos de cobre, puerta y trampilla de hierro (registrados los últimos: ids nuevos).
 import { REDSTONE_INVENTORY } from './redstoneBlocks';
