@@ -381,6 +381,9 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
 
 ### Mejoras entre fases
 
+- 🐞 **Fallo conocido (menor): conducto en seco.** Si se pone un conducto fuera del agua y luego se
+  inunda alrededor, su celda se queda seca (una burbuja de aire alrededor del conducto). Pendiente.
+
 - ✅ **Partículas nuevas.** Sistema propio con atlas procedural, física por partícula (viento,
   balanceo, rebote, reposo en el suelo) y fundido suave; emisores del ambiente (pétalos de cerezo,
   hojas, antorchas, hornos, fogatas, goteo, lava, micelio, luciérnagas, lluvia y burbujas).
@@ -444,14 +447,32 @@ Antes de empezar se amplió el motor: hasta 1024 texturas (10 bits en el vértic
   estandarte.
 - Lo que queda del catálogo (ver `docs/cobertura.md`) es de otras fases: redstone, encantamientos,
   pociones, yunque y mesa de encantamientos (fase 7); Nether y End (fase 8); novedades de 2025–2026
-  y arqueología (fase 9). Sin fase todavía: el Deep Dark y la ciudad antigua, los monumentos oceánicos
-  y los guardianes (la prismarina y las esponjas sólo salen en creativo), la mansión del bosque, el
-  tesoro enterrado y los mapas de explorador (ver «Decisiones pendientes»).
+  y arqueología (fase 9). El Deep Dark y la ciudad antigua, los monumentos oceánicos y los guardianes
+  (la prismarina y las esponjas sólo salen en creativo), la mansión del bosque, el tesoro enterrado y
+  los mapas de explorador van en la fase 7.5.
 
-### Fase 7 — Magia y técnica (XL)
+### Fase 7 — Magia y técnica (XL) · 🟡 en curso
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,
 antorchas, repetidores, comparadores, pistones, observadores, tolvas, dispensadores, TNT, lámparas),
 raíles y vagonetas, barcas.
+
+Fuera de la fase 7 (anotado para que no se pierda):
+- **Fase 8 (Nether y End):** conseguir en supervivencia la verruga del Nether, el polvo de blaze, la
+  crema de magma y la lágrima de ghast (la fase 7 hace el sistema de pociones completo, pero esos
+  ingredientes sólo se obtienen allí); el faro (necesita la estrella del Nether); la ancla de
+  reaparición; la piedra imán; el encantamiento de velocidad de alma; los botones y placas de piedra
+  negra pulida.
+- **Fase 7.5 (estructuras del mundo normal):** el sculk (sensores, catalizador, chillador) y el
+  encantamiento de sigilo rápido, que salen del Deep Dark.
+- **Fase 9 (novedades de 2025–2026):** el crafteador, la maza y sus encantamientos (brecha, densidad,
+  estallido de viento), las lanzas y los encantamientos que se añadan con ellas.
+
+### Fase 7.5 — Estructuras y criaturas del mundo normal (L)
+Lo del mundo normal que no tenía fase y que depende de la fase 7 (su botín son libros encantados y el
+sculk da señales de redstone): el Deep Dark con el guardián (*warden*), el sculk y la ciudad antigua
+(eco, brújula de recuperación, sigilo rápido); los monumentos oceánicos con guardianes y el guardián
+anciano (prismarina y esponjas en supervivencia); la mansión del bosque con sus illagers; el tesoro
+enterrado; y los mapas de explorador del cartógrafo que llevan a todo esto.
 
 ### Fase 8 — Nether y End (XL)
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
@@ -465,11 +486,6 @@ permisos y operadores, libro de recetas, subtítulos; contenido de 2025–2026: 
 creaking, cámaras de desafío y breeze, arqueología, cuevas de azufre, bosque moteado y campamentos.
 
 ## 5. Decisiones pendientes
-
-- **Estructuras y criaturas del mundo normal sin fase:** el Deep Dark (sculk, guardián —el *warden*—,
-  ciudad antigua, eco y brújula de recuperación), los monumentos oceánicos con guardianes, la mansión
-  del bosque con sus illagers, el tesoro enterrado y los mapas de explorador del cartógrafo. Hay que
-  decidir en qué fase entran.
 
 - **¿Paridad total o lo esencial?** Recomiendo priorizar lo que más se usa jugando con amigos
   (fases 3 a 6) antes que redstone avanzada, el End o las novedades de los últimos años.
