@@ -43,6 +43,7 @@ import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 import { Raids } from './server/raids'; // Fase 6 (asaltos)
+import { ColorBlocks } from './server/colorBlocks'; // Fase 6.5 (colores)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -112,6 +113,8 @@ export class GameServer {
   readonly golems: Golems;
   /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
   readonly raids: Raids;
+  /** Fase 6.5 (colores): hormigón en polvo que se endurece en el agua. */
+  private colorBlocks: ColorBlocks;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -174,6 +177,7 @@ export class GameServer {
     this.monsters = new Monsters(this.ctx, store);
     this.golems = new Golems(this.ctx, store); // Fase 6 (gólems/domesticar)
     this.raids = new Raids(this.ctx, store); // Fase 6 (asaltos)
+    this.colorBlocks = new ColorBlocks(this.ctx); // Fase 6.5 (colores)
     this.trading.heroOf = (name) => this.raids.isHero(name);
     this.commands.raids = this.raids;
   }
@@ -745,6 +749,7 @@ export class GameServer {
     this.rules.onBlockChanged(x, y, z, id);
     this.monsters.onBlockChanged(x, y, z, old, id);
     this.golems.onBlockChanged(x, y, z, id); // Fase 6 (gólems/domesticar)
+    this.colorBlocks.onBlockChanged(x, y, z, old, id); // Fase 6.5 (colores)
   }
 
   // ------------------------------------------------------------------ bucle

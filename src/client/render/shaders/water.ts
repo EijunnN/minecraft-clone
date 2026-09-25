@@ -215,11 +215,13 @@ void main() {
   } else {
     // Hielo: superficie translúcida con textura.
     vec4 alb = textureGrad(uAlbedo, vec3(pixelArtUV(vUV, 16.0), float(vLayer)), dFdx(vUV), dFdy(vUV));
-    vec3 tint = mix(vec3(1.0), alb.rgb, 0.75);
-    vec3 Tw = exp(-vec3(0.25, 0.12, 0.08) * min(thickness, 6.0));
+    // Fase 6.5 (colores): el cristal de color (special 4) tiñe más y no tiene la absorción azulada del hielo.
+    bool stained = special == 4;
+    vec3 tint = mix(vec3(1.0), alb.rgb, stained ? 0.9 : 0.75);
+    vec3 Tw = stained ? vec3(1.0) : exp(-vec3(0.25, 0.12, 0.08) * min(thickness, 6.0));
     vec3 below = refracted * tint * Tw;
     vec3 diffuseIce = alb.rgb / PI * (ambient + lightCol * max(dot(Nf, uLightDir.xyz), 0.0));
-    below = mix(below, diffuseIce, alb.a * 0.45);
+    below = mix(below, diffuseIce, alb.a * (stained ? 0.6 : 0.45));
     vec3 R = reflect(-V, n);
     float F = F_SchlickScalar(0.03, saturate(dot(n, V)));
     color = mix(below, skyColor(R) * skyF, F) + specularGGX(n, V, uLightDir.xyz, 0.12, vec3(0.03)) * lightCol;

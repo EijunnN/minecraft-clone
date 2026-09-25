@@ -15,6 +15,8 @@ import {
 } from './blocks';
 import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
 import { BAMBOO, BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_MOSAIC } from './blocks'; // Fase 6.5 (maderas)
+// Fase 6.5 (colores)
+import { DYE_COLORS, COLOR_NAMES, COLORED_TERRACOTTA, GLAZED_TERRACOTTA, CARPETS, BANNERS, type DyeColor } from './blocks';
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -278,6 +280,16 @@ export const BRUSH = item('brush', 'Cepillo', { stack: 1, tool: { kind: 'brush',
 export const OMINOUS_BOTTLE = item('ominous_bottle', 'Botella ominosa', { food: { hunger: 0, saturation: 0, always: true } });
 /** Tótem de inmortalidad: en la mano (o la secundaria), salva de una muerte segura. */
 export const TOTEM_OF_UNDYING = item('totem_of_undying', 'Tótem de inmortalidad', { stack: 1 });
+// ------------------------------------------------------------------ Fase 6.5 (colores): tintes
+/** Tinte de cada uno de los 16 colores. */
+export const DYES = {} as Record<DyeColor, number>;
+for (const c of DYE_COLORS) DYES[c] = item(`${c}_dye`, `Tinte ${COLOR_NAMES[c][0]}`);
+// Los estandartes se apilan de 16 en 16 y arden como la madera; las alfombras, un poco.
+for (const c of DYE_COLORS) {
+  ITEMS[BANNERS[c]].stack = 16;
+  ITEMS[BANNERS[c]].fuel = 15;
+  ITEMS[CARPETS[c]].fuel = 3.35;
+}
 
 // Comida con efectos (valores de Minecraft).
 ITEMS[OMINOUS_BOTTLE].food!.effects = [[EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, 0, 1]]; // Fase 6 (asaltos)
@@ -416,6 +428,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   // Fase 6 (fauna).
   GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, RAW_RABBIT, COOKED_RABBIT, RABBIT_HIDE, ARMADILLO_SCUTE, BRUSH,
   OMINOUS_BOTTLE, TOTEM_OF_UNDYING, // Fase 6 (asaltos)
+  ...DYE_COLORS.map((c) => DYES[c]), // Fase 6.5 (colores)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */
@@ -432,3 +445,7 @@ fuel(SLABS.bamboo_mosaic, 7.5);
 for (const id of [FENCES.bamboo, FENCE_GATES.bamboo, STAIRS.bamboo, TRAPDOORS.bamboo]) fuel(id, 15);
 fuel(SLABS.bamboo, 7.5);
 fuel(DOORS.bamboo, 10);
+// Fase 6.5 (colores): el cactus se funde en tinte verde (antes, a falta de tintes, daba lana verde
+// lima) y la terracota de color, en terracota esmaltada.
+smelt(CACTUS, DYES.green);
+for (const c of DYE_COLORS) smelt(COLORED_TERRACOTTA[c], GLAZED_TERRACOTTA[c]);

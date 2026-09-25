@@ -38,6 +38,7 @@ import { AQUATIC_GENERATORS } from './genAquatic'; // Fase 6 (acuáticos)
 // Fase 6 (fauna): nido de abejas, colmena, miel y panal.
 import { BEE_GENERATORS } from './genBees';
 import { WOODS2_GENERATORS } from './genWoods2'; // Fase 6.5 (maderas)
+import { COLOR_GENERATORS } from './genColors'; // Fase 6.5 (colores)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -68,6 +69,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...AQUATIC_GENERATORS, // Fase 6 (acuáticos)
   ...BEE_GENERATORS, // Fase 6 (fauna)
   ...WOODS2_GENERATORS, // Fase 6.5 (maderas)
+  ...COLOR_GENERATORS, // Fase 6.5 (colores)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

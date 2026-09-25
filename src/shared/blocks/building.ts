@@ -148,8 +148,9 @@ export const LADDER = family('ladder', 'Escalera de mano', [['facing', 4]], (st)
   };
 });
 
-const PANE_IDS = new Set<number>();
-function paneConnects(id: number): boolean {
+/** Paneles y cristales a los que se unen los paneles (Fase 6.5 (colores): también los de color). */
+export const PANE_IDS = new Set<number>();
+export function paneConnects(id: number): boolean {
   return id > 0 && (PANE_IDS.has(id) || id === GLASS || BLOCK_OPAQUE[id] === 1);
 }
 export const GLASS_PANE = family('glass_pane', 'Panel de cristal', [], () => {

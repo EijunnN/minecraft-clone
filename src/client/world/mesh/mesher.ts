@@ -12,6 +12,7 @@ import {
   BLOCK_RENDER, BLOCK_OPAQUE, BLOCK_AO, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, BLOCK_TEX, BLOCK_FLUID, BLOCK_SOLID, BLOCK_TEXROT,
   BLOCK_FLUID_LEVEL, R_NONE, R_CUBE, R_CUTOUT, R_CROSS, R_WATER, R_TRANSLUCENT, R_TORCH, R_CACTUS, R_LAVA, R_MODEL,
   BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland, isCrop,
+  BLOCK_MODEL_TRANSLUCENT, // Fase 6.5 (colores)
 } from '../../../shared/blocks';
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2, MIN_Y, WORLD_HEIGHT, CHUNK_VOLUME } from '../../../shared/constants';
@@ -108,6 +109,8 @@ export class Mesher {
   private tAo = new Int32Array(4);
   private tSl = new Int32Array(4);
   private tBl = new Int32Array(4);
+  private tU = new Int32Array(4); // Fase 6.5 (colores)
+  private tV = new Int32Array(4);
 
   setSeed(seed: number): void {
     this.seed = seed | 0;
@@ -371,7 +374,8 @@ export class Mesher {
       case R_WATER:
         return BLOCK_FLUID[nid] !== 1 && nid !== ICE;
       case R_TRANSLUCENT:
-        return nid !== ICE;
+        // Fase 6.5 (colores): entre dos cristales iguales (de color o tintados) no hay cara.
+        return nid !== ICE && nid !== id;
       default:
         return true;
     }
@@ -614,8 +618,10 @@ export class Mesher {
     const vox = this.vox;
     const boxes = blockModel(id, (dx, dy, dz) => vox[i + dx + dz * SZ + dy * SY]);
     if (!boxes || boxes.length === 0) return false;
-    const buf = BLOCK_MODEL_CUTOUT[id] ? this.cutout : this.opaque;
+    // Fase 6.5 (colores): los paneles de cristal de color van en la pasada translúcida.
+    const buf = BLOCK_MODEL_TRANSLUCENT[id] ? this.translucent : BLOCK_MODEL_CUTOUT[id] ? this.cutout : this.opaque;
     const bx = x * 16, by = y * 16, bz = z * 16;
+    const us = this.tU, vs = this.tV;
     let any = false;
     for (const b of boxes) {
       const lo = [b.x0, b.y0, b.z0], hi = [b.x1, b.y1, b.z1];
@@ -645,7 +651,17 @@ export class Mesher {
             case 4: u = px; v = 16 - py; break;
             default: u = 16 - px; v = 16 - py; break;
           }
-          this.pushVertex(buf, bx + px, by + py, bz + pz, u, v, layer, f, 3, sl, bl);
+          us[k] = u;
+          vs[k] = v;
+        }
+        // Fase 6.5 (colores): cajas que salen del bloque (estandartes de dos de alto): la UV se desplaza
+        // un múltiplo de 16 (la textura se repite) para que quepa en los 5 bits del vértice.
+        const su = Math.floor(Math.min(us[0], us[1], us[2], us[3]) / 16) * 16;
+        const sv = Math.floor(Math.min(vs[0], vs[1], vs[2], vs[3]) / 16) * 16;
+        for (let k = 0; k < 4; k++) {
+          const c = corners[k];
+          const px = c[0] ? hi[0] : lo[0], py = c[1] ? hi[1] : lo[1], pz = c[2] ? hi[2] : lo[2];
+          this.pushVertex(buf, bx + px, by + py, bz + pz, us[k] - su, vs[k] - sv, layer, f, 3, sl, bl);
         }
         any = true;
       }
