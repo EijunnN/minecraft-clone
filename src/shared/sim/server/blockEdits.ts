@@ -25,6 +25,7 @@ import { strippedOf } from '../../blocks'; // Fase 6.5 (maderas)
 import { copperInfo } from '../../blocks';
 import { partnerOf } from '../../placement';
 import type { Copper } from './copper';
+import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
 
 export class BlockEdits {
   /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
@@ -160,6 +161,8 @@ export class BlockEdits {
         return;
       }
     }
+    // Fase 6.5 (decoración): macetas, campanas y huevos generadores.
+    if (useDecor(ctx, s, x, y, z, id, item)) return;
     // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
     if (Number.isInteger(item) && item > 0) {
       const done = ctx.asActor(s.id, () => {

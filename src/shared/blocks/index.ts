@@ -143,3 +143,8 @@ export * from './stoneBlocks';
 import { COPPER_INVENTORY } from './copperBlocks';
 export * from './copperBlocks';
 (INVENTORY_ORDER as number[]).push(...COPPER_INVENTORY);
+// Fase 6.5 (decoración): maceta, farol, cadena y barrotes de hierro, campana, andamio, vasija decorada
+// y los modelos de cuadros y marcos (se registran los últimos: ids guardados).
+import { DECOR_INVENTORY } from './decorBlocks';
+export * from './decorBlocks';
+(INVENTORY_ORDER as number[]).push(...DECOR_INVENTORY);

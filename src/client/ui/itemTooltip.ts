@@ -6,6 +6,8 @@ import './itemTooltip.css';
 import { ITEMS, itemName, type ItemStack } from '../../shared/items';
 import { EFFECTS, effectLevel } from '../../shared/effects';
 import { attackDamage, attackSpeed } from '../../shared/combat';
+import { SUSPICIOUS_STEW, SPYGLASS, CLOCK } from '../../shared/items'; // Fase 6.5 (decoración)
+import { stewEffectText } from '../../shared/decorFood'; // Fase 6.5 (decoración)
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -44,6 +46,10 @@ export function itemTooltipHtml(s: ItemStack): string {
     }
   }
   if (def?.drink) lines.push('<span class="tt-dim">Quita todos los efectos</span>');
+  // Fase 6.5 (decoración): efecto del estofado sospechoso y uso del catalejo y del reloj.
+  if (s.id === SUSPICIOUS_STEW && s.dmg) lines.push(`<span class="tt-good">${esc(stewEffectText(s.dmg))}</span>`);
+  if (s.id === SPYGLASS) lines.push('<span class="tt-dim">Mantén el clic derecho para mirar de lejos</span>');
+  if (s.id === CLOCK) lines.push('<span class="tt-dim">En la mano muestra la hora</span>');
   if (s.id === FILLED_MAP && s.dmg) {
     const [x0, z0] = mapOrigin(s.dmg);
     lines.push(`<span class="tt-dim">Zona: x ${x0} a ${x0 + MAP_SIZE - 1}, z ${z0} a ${z0 + MAP_SIZE - 1}</span>`);

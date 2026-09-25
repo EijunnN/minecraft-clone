@@ -11,6 +11,8 @@
 //          4 = cristal de color (translúcido, sin la absorción azulada del hielo; Fase 6.5).
 // cutout:  true si la textura usa alpha 0/255 como recorte (hojas, plantas, cristal...).
 
+import { PAINTING_TEXTURES } from './paintings'; // Fase 6.5 (decoración)
+
 export interface TextureDef {
   name: string;
   tint?: 0 | 1 | 2 | 3;
@@ -322,6 +324,10 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     ...['copper_grate', 'copper_door_top', 'copper_door_bottom', 'copper_trapdoor', 'copper_bars', 'copper_chain', 'copper_lantern']
       .map((n): TextureDef => ({ name: p + n, cutout: true })),
   ]),
+  // Fase 6.5 (decoración): maceta, farol, cadena, barrotes, campana, andamio, vasija, marco y cuadros.
+  ...['flower_pot', 'flower_pot_top', 'flower_pot_soil', 'lantern', 'lantern_top', 'chain', 'chain_h', 'iron_bars',
+    'scaffolding_top', 'scaffolding_side'].map((name): TextureDef => ({ name, cutout: true })),
+  ...['bell', 'decorated_pot_side', 'decorated_pot_top', 'item_frame', ...PAINTING_TEXTURES].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

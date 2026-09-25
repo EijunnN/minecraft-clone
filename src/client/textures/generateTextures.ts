@@ -41,6 +41,7 @@ import { WOODS2_GENERATORS } from './genWoods2'; // Fase 6.5 (maderas)
 import { COLOR_GENERATORS } from './genColors'; // Fase 6.5 (colores)
 import { STONES_GENERATORS } from './genStones'; // Fase 6.5 (piedras)
 import { COPPER_GENERATORS } from './genCopper'; // Fase 6.5 (cobre)
+import { DECOR_GENERATORS } from './genDecor'; // Fase 6.5 (decoración)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -74,6 +75,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...COLOR_GENERATORS, // Fase 6.5 (colores)
   ...STONES_GENERATORS, // Fase 6.5 (piedras)
   ...COPPER_GENERATORS, // Fase 6.5 (cobre)
+  ...DECOR_GENERATORS, // Fase 6.5 (decoración)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

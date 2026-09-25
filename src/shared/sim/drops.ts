@@ -14,6 +14,7 @@ import { colorBlockDrops } from '../blocks'; // Fase 6.5 (colores)
 // Fase 6.5 (cobre): la mena de cobre suelta cobre en bruto.
 import { COPPER_ORE } from '../blocks';
 import { RAW_COPPER } from '../items';
+import { FLOWER_POT, pottedPlant } from '../blocks'; // Fase 6.5 (decoración)
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -143,6 +144,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (familyBase(block) === CAMPFIRE) return one(CHARCOAL, 2);
   // El compostador lleno suelta también su polvo de hueso.
   if (familyBase(block) === COMPOSTER && block - COMPOSTER === 8) return [{ id: COMPOSTER, count: 1 }, { id: BONE_MEAL, count: 1 }];
+  // Fase 6.5 (decoración): la maceta suelta también su planta.
+  const plant = pottedPlant(block);
+  if (plant) return [{ id: FLOWER_POT, count: 1 }, { id: plant, count: 1 }];
   return one(baseBlock(block));
 }
 

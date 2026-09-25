@@ -1,0 +1,147 @@
+// Fase 6.5 (decoración): clic derecho con los objetos y bloques de decoración en el cliente. Colgar
+// cuadros y marcos (y poner o girar el objeto de un marco), plantar en macetas (o sacar la planta),
+// tocar campanas, usar huevos generadores y mirar por el catalejo. También lo que queda al comer un
+// estofado (el cuenco), el efecto del estofado sospechoso y el rayo contra cuadros y marcos.
+import type { RayHit } from './raycast';
+import type { ClientEntity, ClientEntities } from './ClientEntities';
+import type { Interaction } from './interaction';
+import type { Game } from './Game';
+import { FLOWER_POT, familyBase, isBell, pottedPlant, potWith } from '../../shared/blocks';
+import { ITEMS, PAINTING, ITEM_FRAME, SPYGLASS, SUSPICIOUS_STEW, spawnEggMob, type ItemStack } from '../../shared/items';
+import { EATEN_REMAINDER, stewEffect } from '../../shared/decorFood';
+import { ENT_FRAME, hangingBox, isHangingType } from '../../shared/paintings';
+
+/** Dirección horizontal (0 N, 1 E, 2 S, 3 O) de una normal de cara lateral. */
+function dirOfNormal(nx: number, nz: number): number {
+  if (nz < 0) return 0;
+  if (nx > 0) return 1;
+  if (nz > 0) return 2;
+  return 3;
+}
+
+/** Pide algo al servidor que, si sale bien ('ires' con take), gasta el objeto de la mano. */
+function askServer(ia: Interaction, g: Game, item: number, send: (q: number) => void): void {
+  const q = ++ia.interactQ;
+  ia.pendingInteract.set(q, { slot: g.selected, item });
+  if (ia.pendingInteract.size > 32) ia.pendingInteract.delete(ia.pendingInteract.keys().next().value!);
+  send(q);
+}
+
+/**
+ * Clic derecho de decoración. Devuelve true si lo atendió (y el resto de la interacción no sigue).
+ */
+export function decorUse(
+  g: Game, ia: Interaction, pressed: boolean, hit: RayHit | null, target: ClientEntity | null, held: ItemStack | null,
+): boolean {
+  if (!pressed) return false;
+  const heldId = held?.id ?? 0;
+  // Marco o cuadro delante: el marco recibe el objeto (o lo gira); el cuadro no hace nada.
+  if (target && isHangingType(target.type)) {
+    if (target.type === ENT_FRAME) {
+      askServer(ia, g, heldId, (q) => g.net?.send({ t: 'frame', e: target.id, item: heldId, q }));
+      g.swing(true);
+    }
+    return true;
+  }
+  // Catalejo: se mira mientras se mantiene el botón.
+  if (heldId === SPYGLASS) {
+    ia.use = { kind: 'spyglass', t: 0, slot: g.selected, item: heldId, soundT: 0 };
+    g.audio.playUi('open');
+    return true;
+  }
+  if (!hit) return false;
+  const yaw = g.player.yaw;
+  // Colgar un cuadro o un marco en la cara lateral de un bloque.
+  if (heldId === PAINTING || heldId === ITEM_FRAME) {
+    if (hit.ny === 0) {
+      const f = dirOfNormal(hit.nx, hit.nz);
+      askServer(ia, g, heldId, (q) => g.net?.send({ t: 'hang', x: hit.x, y: hit.y, z: hit.z, f, item: heldId, q }));
+      g.swing(true);
+    }
+    return true;
+  }
+  if (!g.player.sneaking) {
+    // Campana: suena (el servidor avisa a todos los que están cerca).
+    if (isBell(hit.id)) {
+      g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw });
+      g.swing(true);
+      return true;
+    }
+    // Maceta: plantar lo que se lleva o, con la mano vacía, sacar la planta.
+    if (familyBase(hit.id) === FLOWER_POT) {
+      const world = g.world!;
+      const plant = pottedPlant(hit.id);
+      const pot = !plant && heldId ? potWith(ITEMS[heldId]?.block ?? 0) : 0;
+      if (pot) {
+        world.setBlock(hit.x, hit.y, hit.z, pot);
+        g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw, item: heldId });
+        if (!g.creative) g.inv.consume(g.selected, 1);
+        g.audio.playPlace('grass', [hit.x + 0.5, hit.y + 0.5, hit.z + 0.5]);
+        g.swing(true);
+        return true;
+      }
+      if (plant && !heldId) {
+        world.setBlock(hit.x, hit.y, hit.z, FLOWER_POT);
+        g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw });
+        g.audio.playBreak('grass', [hit.x + 0.5, hit.y + 0.5, hit.z + 0.5]);
+        g.swing(true);
+        return true;
+      }
+      // Otra planta en una maceta ya ocupada: nada (no se pone encima).
+      if (plant && heldId && potWith(ITEMS[heldId]?.block ?? 0)) return true;
+    }
+  }
+  // Huevo generador sobre un bloque: el servidor crea la criatura.
+  if (heldId && spawnEggMob(heldId)) {
+    g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw, item: heldId });
+    if (!g.creative) g.inv.consume(g.selected, 1);
+    g.swing(true);
+    return true;
+  }
+  return false;
+}
+
+/** Después de comer: los estofados dejan el cuenco y el sospechoso da el efecto de su flor. */
+export function decorAfterEat(g: Game, ia: Interaction, item: number, slot: number, dmg: number): void {
+  const fx = stewEffect(dmg);
+  if (item === SUSPICIOUS_STEW && fx) {
+    if (fx[0] === 0) g.survival.eat(1, 2);
+    else g.statusEffects.add(fx[0], fx[1], 0, g.survival);
+  }
+  const rest = EATEN_REMAINDER[item];
+  if (!rest || g.creative) return;
+  const give = { id: rest, count: 1 };
+  if (!g.inv.get(slot)) g.inv.set(slot, give);
+  else {
+    const left = g.inv.add(give);
+    if (left) ia.throwStack(left, false);
+  }
+}
+
+/** Rayo contra cuadros y marcos (cajas finas pegadas a la pared). */
+export function raycastHangings(
+  ents: ClientEntities, ox: number, oy: number, oz: number, dir: number[], maxDist: number,
+): { e: ClientEntity; dist: number } | null {
+  let best: { e: ClientEntity; dist: number } | null = null;
+  for (const e of ents.list.values()) {
+    if (!isHangingType(e.type) || e.gone) continue;
+    const b = hangingBox(e.type, e.item, e.x, e.y, e.z, e.yaw);
+    let tmin = 0, tmax = maxDist, ok = true;
+    const o = [ox, oy, oz];
+    for (let k = 0; k < 3 && ok; k++) {
+      const pad = 0.02;
+      const mn = b[k] - pad, mx = b[k + 3] + pad;
+      if (Math.abs(dir[k]) < 1e-9) {
+        if (o[k] < mn || o[k] > mx) ok = false;
+        continue;
+      }
+      let t1 = (mn - o[k]) / dir[k], t2 = (mx - o[k]) / dir[k];
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      tmin = Math.max(tmin, t1);
+      tmax = Math.min(tmax, t2);
+      if (tmin > tmax) ok = false;
+    }
+    if (ok && (!best || tmin < best.dist)) best = { e, dist: tmin };
+  }
+  return best;
+}

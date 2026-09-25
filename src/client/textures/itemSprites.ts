@@ -16,6 +16,7 @@ import { FAUNA_SPRITES } from './faunaSprites'; // Fase 6 (fauna)
 import { ILLAGER_SPRITES } from './illagerSprites'; // Fase 6 (asaltos)
 import { COLOR_SPRITES } from './colorSprites'; // Fase 6.5 (colores)
 import { COPPER_SPRITES, COPPER_TOOL_INKS, COPPER_ARMOR_ACCENT } from './copperSprites'; // Fase 6.5 (cobre)
+import { DECOR_SPRITES } from './decorSprites'; // Fase 6.5 (decoración)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2259,6 +2260,8 @@ const SPRITES: Record<string, SpriteDef> = {
 Object.assign(SPRITES, MONSTER_SPRITES);
 // Fase 6.5 (colores): tintes y camas de los colores nuevos.
 Object.assign(SPRITES, COLOR_SPRITES);
+// Fase 6.5 (decoración): comida, pepitas, catalejo, reloj, cuadro, marco y huevos generadores.
+Object.assign(SPRITES, DECOR_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

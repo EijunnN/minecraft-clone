@@ -37,6 +37,15 @@ export class Effects {
         if (d < 24) this.g.shake = Math.max(this.g.shake, 0.5 * (1 - d / 24));
         break;
       }
+      // Fase 6.5 (decoración): campana, cuadros y marcos.
+      case 'bell':
+      case 'hang_place':
+      case 'hang_break':
+      case 'frame_add':
+      case 'frame_remove':
+      case 'frame_rotate':
+        this.g.audio.playDecorSfx(kind, p);
+        break;
       case 'snowball_break':
         fx.pfx.splash(p[0], p[1], p[2], 8);
         fx.spawnSmoke(p[0], p[1], p[2], 4, 0.15, 0.95, 0.2, 0.3);

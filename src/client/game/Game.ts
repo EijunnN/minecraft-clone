@@ -47,6 +47,10 @@ import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
 import { Trading } from './trading'; // Fase 6 (aldeanos)
 import { renderRaidBar, type RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
+// Fase 6.5 (decoración): catalejo, reloj y rayo contra cuadros y marcos.
+import { renderDecorHud } from '../ui/decorHud';
+import { raycastHangings } from './decorInteraction';
+import { CLOCK } from '../../shared/items';
 
 export interface GameConfig {
   room: string;
@@ -662,7 +666,7 @@ export class Game {
 
     // --- Cámara ---
     if (input.locked && !surv.dead) {
-      const sens = 0.0022 * settings.sensitivity;
+      const sens = 0.0022 * settings.sensitivity * (this.interaction.use?.kind === 'spyglass' ? 0.2 : 1); // Fase 6.5: catalejo
       p.yaw -= input.dx * sens;
       p.pitch -= input.dy * sens * (settings.invertY ? -1 : 1);
       p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch));
@@ -752,7 +756,10 @@ export class Game {
     const entHit = surv.dead ? null : this.ents.raycast(eyeX, eyeY, eyeZ, dir[0], dir[1], dir[2], this.creative ? 5 : ATTACK_REACH, this.riding.entityId);
     // Las plantas sin colisión (hierba, flores, cultivos) no tapan a las criaturas.
     const hitBlocks = this.hit && BLOCK_RENDER[this.hit.id] !== R_CROSS && BLOCK_RENDER[this.hit.id] !== R_CROP;
-    const target = entHit && (!hitBlocks || entHit.dist < this.hit!.dist) ? entHit.e : null;
+    // Fase 6.5 (decoración): los cuadros y marcos también se pueden golpear y usar.
+    const hangHit = surv.dead ? null : raycastHangings(this.ents, eyeX, eyeY, eyeZ, dir, this.creative ? 5 : ATTACK_REACH);
+    const anyHit = hangHit && (!entHit || hangHit.dist < entHit.dist) ? hangHit : entHit;
+    const target = anyHit && (!hitBlocks || anyHit.dist < this.hit!.dist) ? anyHit.e : null;
     this.interaction.placeCooldown -= dt;
     this.interaction.breakDelay -= dt;
     if (active) this.interaction.interact(dt, target, dir);
@@ -820,6 +827,8 @@ export class Game {
     );
     renderEffectsHud(fx, !surv.dead && !this.hudHidden);
     renderRaidBar(this.raid, !this.hudHidden); // Fase 6 (asaltos)
+    renderDecorHud(this.interaction.use?.kind === 'spyglass', this.heldId === CLOCK || this.inv.offhand?.id === CLOCK ? worldTime : null,
+      !surv.dead && !this.hudHidden); // Fase 6.5 (decoración)
     renderAttackIndicator(this.interaction.attackCharge(), !surv.dead && !this.hudHidden && !this.anyScreenOpen());
     renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
     renderXpBar(this.xp, !this.creative && !surv.dead);
@@ -893,7 +902,8 @@ export class Game {
     // FOV dinámico al correr/volar y al tensar el arco.
     const baseFov = settings.render.fov;
     const bowZoom = this.interaction.use?.kind === 'bow' ? 1 - Math.min(1, this.interaction.use.t) * 0.15 : 1;
-    const targetFov = baseFov * (p.sprinting ? 1.12 : 1) * (p.flying && p.sprinting ? 1.05 : 1) * bowZoom;
+    const spyZoom = this.interaction.use?.kind === 'spyglass' ? 0.1 : 1; // Fase 6.5 (decoración): catalejo
+    const targetFov = baseFov * (p.sprinting ? 1.12 : 1) * (p.flying && p.sprinting ? 1.05 : 1) * bowZoom * spyZoom;
     this.fovCurrent += (targetFov - this.fovCurrent) * (1 - Math.exp(-dt * 8));
     // Resolución dinámica: si el rendimiento cae de forma sostenida, bajar la escala interna.
     if (settings.render.renderScale !== this.lastUserScale) {
@@ -957,7 +967,7 @@ export class Game {
       selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
       heldItem: surv.dead ? 0 : this.heldId,
       handUse: mainUse ? (mainUse.kind === 'bow' ? Math.min(1, mainUse.t) : mainUse.kind === 'block' ? mainUse.t : mainUse.t / 1.6) : 0,
-      handUseKind: mainUse ? mainUse.kind : 'none',
+      handUseKind: mainUse && mainUse.kind !== 'spyglass' ? mainUse.kind : 'none',
       offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
       offhandUseKind: offUse ? (offUse.kind === 'block' ? 'block' : 'eat') : 'none',
       offhandUse: offUse ? (offUse.kind === 'block' ? offUse.t : offUse.t / 1.6) : 0,
@@ -976,7 +986,7 @@ export class Game {
       fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, {
         cam: [camX, camY, camZ], yaw, pitch, firstPerson: this.thirdPerson === 0, feet: [p.x, p.y, p.z], bodyYaw: p.yaw,
       }, views),
-      showHand: this.thirdPerson === 0 && !this.hudHidden,
+      showHand: this.thirdPerson === 0 && !this.hudHidden && this.interaction.use?.kind !== 'spyglass',
     };
     this.renderer.render(state);
     this.hurtRoll *= Math.exp(-dt * 5);

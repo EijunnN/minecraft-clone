@@ -6,6 +6,7 @@
 import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
+import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -394,6 +395,11 @@ export class AudioEngine {
   /** Fase 6.5 (cobre): encerar o raspar un bloque de cobre en `pos`. */
   playCopperSfx(kind: 'wax' | 'scrape', pos: Vec3): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildCopperSfx(ctx, noise, kind, dest, now)));
+  }
+
+  /** Fase 6.5 (decoración): campana, colgar/descolgar cuadros y marcos, girar el objeto del marco. */
+  playDecorSfx(kind: string, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildDecorSfx(ctx, noise, kind, dest, now), kind === 'bell' ? 0.6 : 0.3));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */
