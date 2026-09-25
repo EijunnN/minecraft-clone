@@ -2,8 +2,11 @@
 // libro escrito, además, título, autor y generación; el estandarte, sus capas de dibujos. Viajan con la
 // pila (5.º campo de WireStack), se guardan con ella (inventario, cofres, objetos en el suelo) y se
 // validan y acotan cada vez que llegan de la red o del almacenamiento.
-import { WRITABLE_BOOK, WRITTEN_BOOK } from './items';
+import { WRITABLE_BOOK, WRITTEN_BOOK, itemName, type ItemStack } from './items';
 import { BANNER_PATTERNS, MAX_BANNER_LAYERS, isBannerItem, type BannerLayer } from './bannerPatterns';
+// Fase 7 (encantamientos): encantamientos, libros encantados, nombres del yunque y coste de trabajo previo.
+import { ENCHANTED_BOOK } from './items';
+import { sanitizeEnchList, isEnchantable } from './enchantments';
 
 export interface ItemData {
   /** Libros: el texto de cada página. */
@@ -14,6 +17,15 @@ export interface ItemData {
   gen?: number;
   /** Estandartes: capas [dibujo, color] de abajo arriba. */
   layers?: BannerLayer[];
+  // Fase 7 (encantamientos)
+  /** Encantamientos aplicados: [id, nivel] (ver enchantments.ts). */
+  ench?: [number, number][];
+  /** Libro encantado: encantamientos guardados. */
+  stored?: [number, number][];
+  /** Nombre puesto en el yunque. */
+  name?: string;
+  /** Penalización por trabajo previo en el yunque (coste que se suma cada vez). */
+  rc?: number;
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -59,10 +71,35 @@ export function sanitizeLayers(raw: unknown): BannerLayer[] | null {
   return out.length ? out : null;
 }
 
+/** Fase 7 (encantamientos): largo máximo del nombre que se pone en el yunque (Minecraft: 50). */
+export const ITEM_NAME_CHARS = 50;
+/** Tope de la penalización por trabajo previo (Minecraft la guarda como un entero). */
+const MAX_REPAIR_COST = 0x7fffffff;
+
+/** Nombre de yunque válido ('' si no queda nada). */
+export function sanitizeItemName(raw: unknown): string {
+  return cleanText(raw, ITEM_NAME_CHARS, false).trim();
+}
+
 /** Datos válidos para el objeto `id` (undefined si no lleva o no valen). */
 export function sanitizeItemData(id: number, raw: unknown): ItemData | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const r = raw as Record<string, unknown>;
+  // Fase 7 (encantamientos): lo propio del objeto y, encima, lo que cualquier pila puede llevar.
+  const out: ItemData = { ...(ownData(id, r) ?? {}) };
+  const ench = isEnchantable(id) ? sanitizeEnchList(r.ench) : null;
+  if (ench) out.ench = ench;
+  const stored = id === ENCHANTED_BOOK ? sanitizeEnchList(r.stored) : null;
+  if (stored) out.stored = stored;
+  const name = sanitizeItemName(r.name);
+  if (name) out.name = name;
+  const rc = Number(r.rc);
+  if (Number.isInteger(rc) && rc > 0) out.rc = Math.min(MAX_REPAIR_COST, rc);
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** Datos propios de cada objeto (páginas de los libros, capas de los estandartes). */
+function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
   if (id === WRITABLE_BOOK) {
     const pages = sanitizePages(r.pages);
     return pages ? { pages } : undefined;
@@ -91,5 +128,20 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.author !== undefined) c.author = d.author;
   if (d.gen !== undefined) c.gen = d.gen;
   if (d.layers) c.layers = d.layers.map((l): BannerLayer => [l[0], l[1]]);
+  // Fase 7 (encantamientos)
+  if (d.ench) c.ench = d.ench.map((e): [number, number] => [e[0], e[1]]);
+  if (d.stored) c.stored = d.stored.map((e): [number, number] => [e[0], e[1]]);
+  if (d.name !== undefined) c.name = d.name;
+  if (d.rc !== undefined) c.rc = d.rc;
   return c;
+}
+
+/**
+ * Fase 7 (encantamientos): nombre visible de una pila: el puesto en el yunque, el título de un libro
+ * escrito o el del objeto.
+ */
+export function stackName(s: ItemStack): string {
+  if (s.data?.name) return s.data.name;
+  if (s.id === WRITTEN_BOOK && s.data?.title) return s.data.title;
+  return itemName(s.id);
 }

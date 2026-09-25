@@ -7,6 +7,7 @@ import { EF_ACTION } from '../../protocol';
 import { FISH_WAIT, FISH_BITE } from '../../fishing';
 import { moveBody } from '../physics';
 import { isSplashPotion, splashPotion } from './potions'; // Fase 6 (monstruos)
+import { lureReduction } from '../../enchantEffects'; // Fase 7 (encantamientos)
 import type { PlayerView, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -100,14 +101,14 @@ export class Projectiles {
       const surface = above > 0 && BLOCK_FLUID[above] === 1 ? by + 1.1 : by + fluidHeight(cell);
       if (e.fishWait === undefined) {
         m.host.fx('fish_splash', e.x, surface, e.z);
-        e.fishWait = this.waitTime();
+        e.fishWait = this.waitTime(e.lure ?? 0);
         e.fishBite = 0;
       }
       if (e.fishBite! > 0) {
         e.fishBite! -= dt;
         if (e.fishBite! <= 0) {
           e.fishBite = 0;
-          e.fishWait = this.waitTime();
+          e.fishWait = this.waitTime(e.lure ?? 0);
         }
       } else {
         // Sin cielo encima pica la mitad de rápido; con lluvia, algo más rápido.
@@ -140,7 +141,8 @@ export class Projectiles {
     e.flags = e.fishBite! > 0 ? EF_ACTION : 0;
   }
 
-  private waitTime(): number {
-    return FISH_WAIT[0] + this.m.rand() * (FISH_WAIT[1] - FISH_WAIT[0]);
+  /** Fase 7 (encantamientos): Atracción quita 5 s de espera por nivel. */
+  private waitTime(lure = 0): number {
+    return Math.max(1, FISH_WAIT[0] + this.m.rand() * (FISH_WAIT[1] - FISH_WAIT[0]) - lureReduction(lure));
   }
 }

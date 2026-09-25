@@ -392,6 +392,15 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'fire', special: 5, cutout: true },
   { name: 'conduit_closed' },
   { name: 'conduit_open' },
+  // Fase 7 (encantamientos): mesa de encantamientos, yunques y hielo escarchado.
+  { name: 'enchanting_table_top' },
+  { name: 'enchanting_table_side' },
+  { name: 'enchanting_table_bottom' },
+  { name: 'anvil' },
+  { name: 'anvil_top' },
+  { name: 'chipped_anvil_top' },
+  { name: 'damaged_anvil_top' },
+  ...[0, 1, 2, 3].map((a): TextureDef => ({ name: `frosted_ice_${a}`, special: 3 })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

@@ -13,6 +13,10 @@ import {
 } from '../../equipment';
 import { MAX_ARROWS, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
+// Fase 7 (encantamientos): Lealtad (vuelve a su dueño), Empalamiento (más daño a los acuáticos) y
+// Conductividad (con tormenta, un rayo sobre la criatura alcanzada a cielo abierto).
+import { LOYALTY, CHANNELING, enchLevel, enchantsOf } from '../../enchantments';
+import { meleeBonus, loyaltySpeed } from '../../enchantEffects';
 
 /** Segundos que un tridente clavado espera a que lo recojan. */
 const TRIDENT_STUCK_LIFE = 300;
@@ -20,6 +24,10 @@ const TRIDENT_STUCK_LIFE = 300;
 const FIREWORK_MAX_SPEED = 36;
 
 export class GearShots {
+  /** Fase 7 (encantamientos): rayo (Conductividad) y si hay tormenta; los pone el servidor. */
+  lightning: ((x: number, y: number, z: number) => void) | null = null;
+  thundering: () => boolean = () => false;
+
   constructor(private m: Entities) {}
 
   /** Tridente lanzado por un jugador (id de sesión) o por un ahogado (id de entidad). */
@@ -30,7 +38,7 @@ export class GearShots {
     e.vy = vy;
     e.vz = vz;
     e.shooter = shooter;
-    e.stack = { id: stack.id, count: 1, ...(stack.dmg ? { dmg: stack.dmg } : {}) };
+    e.stack = { id: stack.id, count: 1, ...(stack.dmg ? { dmg: stack.dmg } : {}), ...(stack.data ? { data: stack.data } : {}) };
     e.arrowDamage = TRIDENT_THROW_DAMAGE;
     e.yaw = Math.atan2(-vx, -vz);
     e.pitch = Math.atan2(vy, Math.hypot(vx, vz));
@@ -65,7 +73,14 @@ export class GearShots {
   private tridentTick(e: Entity, dt: number, players: PlayerView[]): void {
     const m = this.m;
     const fromMob = typeof e.shooter !== 'string';
+    if (e.returning && this.returnTick(e, dt, players)) return; // Fase 7 (encantamientos): Lealtad
     if (e.stuck) {
+      // Fase 7: con Lealtad no se queda clavado: vuelve.
+      if (!fromMob && enchLevel(e.stack, LOYALTY) > 0 && players.some((p) => p.id === e.shooter && p.alive)) {
+        e.returning = true;
+        e.stuck = false;
+        return;
+      }
       e.flags = fromMob ? 0 : EF_PICKABLE;
       if (e.age > (fromMob ? 5 : TRIDENT_STUCK_LIFE)) m.remove(e.id);
       return;
@@ -101,8 +116,13 @@ export class GearShots {
         if (!o.ai || o.dead || o.id === e.shooter || MOBS[o.type].inert || (shooter && isRaider(shooter.type) && isRaider(o.type))) continue;
         const hw = o.width / 2 + 0.15;
         if (Math.abs(o.x - e.x) < hw && Math.abs(o.z - e.z) < hw && e.y > o.y - 0.1 && e.y < o.y + o.height + 0.1) {
-          m.damage(o, e.arrowDamage!, e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6);
+          // Fase 7 (encantamientos): Empalamiento contra los acuáticos y Conductividad con tormenta.
+          m.damage(o, e.arrowDamage! + meleeBonus(enchantsOf(e.stack), o.type), e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6);
+          if (enchLevel(e.stack, CHANNELING) > 0 && this.lightning && this.thundering() && m.w.skyTop(Math.floor(o.x), Math.floor(o.z)) <= Math.floor(o.y + o.height)) {
+            this.lightning(o.x, o.y, o.z);
+          }
           this.bounce(e);
+          if (!fromMob && enchLevel(e.stack, LOYALTY) > 0) e.returning = true;
           return;
         }
       }
@@ -127,6 +147,34 @@ export class GearShots {
     e.flags = 0;
   }
 
+  /**
+   * Fase 7 (encantamientos): el tridente con Lealtad vuelve volando (atraviesa los bloques) hacia su dueño,
+   * que lo recoge al tocarlo. Si el dueño se fue o murió, cae donde esté. Devuelve si lo atendió.
+   */
+  private returnTick(e: Entity, dt: number, players: PlayerView[]): boolean {
+    const owner = players.find((p) => p.id === e.shooter && p.alive);
+    if (!owner) {
+      e.returning = false;
+      return false;
+    }
+    const tx = owner.x - e.x, ty = owner.y + 1.2 - e.y, tz = owner.z - e.z;
+    const d = Math.hypot(tx, ty, tz) || 1;
+    const sp = Math.min(d / dt, loyaltySpeed(enchLevel(e.stack, LOYALTY)) + e.age * 2);
+    e.vx = (tx / d) * sp;
+    e.vy = (ty / d) * sp;
+    e.vz = (tz / d) * sp;
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    e.z += e.vz * dt;
+    e.yaw = Math.atan2(-e.vx, -e.vz);
+    e.pitch = Math.atan2(e.vy, Math.hypot(e.vx, e.vz));
+    e.age = Math.min(e.age, 20);
+    e.arrowDamage = 0;
+    // Cerca del dueño se puede recoger (el cliente lo pide al tocarlo).
+    e.flags = d < 3 ? EF_PICKABLE : 0;
+    return true;
+  }
+
   /** Tras golpear a una criatura: rebota hacia atrás y cae (el de un ahogado desaparece). */
   private bounce(e: Entity): void {
     this.m.host.fx('trident_hit', e.x, e.y, e.z);
@@ -144,6 +192,12 @@ export class GearShots {
   tryPickup(id: number, p: PlayerView): ItemStack | null | undefined {
     const e = this.m.list.get(id);
     if (!e || e.type !== ENT_TRIDENT) return undefined;
+    // Fase 7 (encantamientos): el que vuelve con Lealtad sólo lo recoge su dueño.
+    if (e.returning) {
+      if (p.id !== e.shooter || !e.stack || Math.hypot(e.x - p.x, e.y - (p.y + 0.9), e.z - p.z) > 3.5) return null;
+      this.m.remove(e.id, p.id);
+      return { ...e.stack };
+    }
     if (!e.stuck || typeof e.shooter !== 'string' || !e.stack || !ITEMS[e.stack.id]) return null;
     if (Math.hypot(e.x - p.x, e.y - (p.y + 0.9), e.z - p.z) > 3.5) return null;
     this.m.remove(e.id, p.id);

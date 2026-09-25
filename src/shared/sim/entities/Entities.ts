@@ -65,6 +65,11 @@ export class Entities {
   readonly gear = new MobGear(this);
   /** Fase 6.5 (equipo): tridentes lanzados y cohetes. */
   readonly gearShots = new GearShots(this);
+  // Fase 7 (encantamientos)
+  /** Un bloque que caía toca el suelo (antes de ponerse): el yunque hiere y se deteriora. */
+  fallingLanded: ((e: Entity) => void) | null = null;
+  /** Nivel de Saqueo del golpe que se está resolviendo (lo pone quien ataca). */
+  looting = 0;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -279,7 +284,8 @@ export class Entities {
       const stacks: ItemStack[] = [];
       for (const [id, min, max] of def.drops) {
         if (id === WHITE_WOOL && e.sheared) continue;
-        const n = min + Math.floor(this.rand() * (max - min + 1));
+        // Fase 7 (encantamientos): Saqueo suma de 0 a su nivel a cada botín.
+        const n = min + Math.floor(this.rand() * (max - min + 1)) + (this.looting > 0 ? Math.floor(this.rand() * (this.looting + 1)) : 0);
         if (n > 0) stacks.push({ id, count: n });
       }
       // Los animales que mueren ardiendo sueltan la carne cocinada.

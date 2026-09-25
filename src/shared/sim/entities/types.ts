@@ -193,6 +193,19 @@ export interface Entity extends Body {
   throwCd?: number;
   /** Cohete: segundos de vuelo que le quedan. */
   fuse?: number;
+  // Fase 7 (encantamientos)
+  /** Flecha: empuje (Retroceso), prende lo que toca (Fuego), no se recoge (Infinidad, virotes laterales). */
+  arrowKnock?: number;
+  arrowFire?: boolean;
+  noPickup?: boolean;
+  /** Flecha con Perforación: criaturas que aún puede atravesar y las que ya atravesó. */
+  pierce?: number;
+  pierced?: number[];
+  /** Tridente con Lealtad volviendo a su dueño. */
+  returning?: boolean;
+  /** Flotador: Suerte marina y Atracción de la caña. */
+  luck?: number;
+  lure?: number;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

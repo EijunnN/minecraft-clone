@@ -14,6 +14,10 @@ import {
   PIG_BOOST_SPEED,
 } from '../../equipment';
 import type { Entity, InteractResult } from '../entities';
+// Fase 7 (encantamientos): el tridente lanzado conserva sus datos (encantamientos, nombre) e Irrompibilidad.
+import { sanitizeStack } from '../../containers';
+import { UNBREAKING, enchLevel } from '../../enchantments';
+import { unbreakingSaves } from '../../enchantEffects';
 import type { Fire } from './fire';
 import type { Riding } from './riding';
 import { DT, r2, type ServerContext, type Session } from './context';
@@ -60,14 +64,22 @@ export class Equipment {
       if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return true;
       const len = Math.hypot(d[0], d[1], d[2]) || 1;
       const max = ITEMS[TRIDENT].tool!.durability;
-      // Lanzarlo lo desgasta uno; si llega al límite se rompe en el aire.
-      const dmg = Math.min(max, data + (s.mode === 'c' ? 0 : 1));
+      // Fase 7 (encantamientos): la pila entera (con sus encantamientos), si la manda el cliente.
+      const st = sanitizeStack(msg.st);
+      const held = st && st.id === TRIDENT ? st : { id: TRIDENT, count: 1 };
+      const worn = st && st.id === TRIDENT ? st.dmg ?? 0 : data;
+      // Lanzarlo lo desgasta uno (salvo que Irrompibilidad lo evite); si llega al límite se rompe en el aire.
+      const wear = s.mode === 'c' || unbreakingSaves(enchLevel(held, UNBREAKING), false, () => ctx.rand()) ? 0 : 1;
+      const dmg = Math.min(max, worn + wear);
       if (dmg >= max) {
         ctx.fx('trident_break', p[0], p[1], p[2]);
         return true;
       }
+      const thrown = { ...held, count: 1 };
+      if (dmg) thrown.dmg = dmg;
+      else delete thrown.dmg;
       ctx.entities.gearShots.spawnTrident(p[0], p[1], p[2], (d[0] / len) * TRIDENT_SPEED, (d[1] / len) * TRIDENT_SPEED, (d[2] / len) * TRIDENT_SPEED, s.id,
-        { id: TRIDENT, count: 1, ...(dmg ? { dmg } : {}) });
+        thrown);
       ctx.fx('trident_throw', p[0], p[1], p[2]);
       return true;
     }

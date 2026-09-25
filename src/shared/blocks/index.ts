@@ -183,3 +183,8 @@ export * from './equipmentBlocks';
 (INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);
 // Fase 6.5 (calderos): caldero con agua, con lava y con nieve polvo (registrados los últimos: ids nuevos).
 export * from './cauldrons';
+// Fase 7 (encantamientos): mesa de encantamientos, yunques y hielo escarchado (registrados los últimos: ids
+// nuevos) y su sitio en el inventario creativo.
+import { ENCHANT_INVENTORY } from './enchantBlocks';
+export * from './enchantBlocks';
+(INVENTORY_ORDER as number[]).push(...ENCHANT_INVENTORY);

@@ -6,6 +6,8 @@ import { attackCooldown, attackDamage, chargeFactor } from '../../combat';
 import { sanitizeStack } from '../../containers';
 import type { PlayerView } from '../entities';
 import { CROSSBOW_SPEED, CROSSBOW_ARROW_DAMAGE } from '../../equipment'; // Fase 6.5 (equipo)
+// Fase 7 (encantamientos): encantamientos del arma, del arco y de la ballesta.
+import { meleeHit, shootArrows } from './enchantCombat';
 import type { ServerContext, Session } from './context';
 
 export class PlayerActions {
@@ -33,7 +35,8 @@ export class PlayerActions {
     if (Number.isFinite(bonus)) dmg = Math.max(0, dmg + Math.max(-20, Math.min(15, bonus)));
     dmg *= chargeFactor(charge);
     if (msg.crit && charge > 0.9) dmg *= 1.5;
-    ctx.entities.damage(e, Math.max(0.5, dmg), s.p[0], s.p[2], s.id, tool?.kind === 'sword' ? 1.2 : 1);
+    // Fase 7 (encantamientos): Filo, Castigo, Perdición, Empalamiento, Empuje, Aspecto de fuego, Saqueo y barrido.
+    meleeHit(ctx, s, e, valid ? item : 0, msg, dmg, charge, tool?.kind === 'sword' ? 1.2 : 1);
   }
 
   onPickup(s: Session, id: number): void {
@@ -80,7 +83,8 @@ export class PlayerActions {
     // Fase 6.5 (equipo): el virote de la ballesta sale siempre a tope y pega más fuerte.
     const crossbow = msg.c === 1;
     const speed = crossbow ? CROSSBOW_SPEED : 55 * f;
-    ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, crossbow ? CROSSBOW_ARROW_DAMAGE : 2);
+    // Fase 7 (encantamientos): Poder, Retroceso, Fuego e Infinidad; Multidisparo y Perforación.
+    shootArrows(ctx, s, p, [d[0] / len, d[1] / len, d[2] / len], speed, crossbow ? CROSSBOW_ARROW_DAMAGE : 2, crossbow, msg.en);
     if (crossbow) ctx.fx('crossbow_shoot', p[0], p[1], p[2]);
     else ctx.fx('bow', p[0], p[1], p[2], f);
   }

@@ -498,6 +498,11 @@ export const NAUTILUS_SHELL = item('nautilus_shell', 'Concha de nautilo');
 /** Cohete y estrella de fuegos artificiales (su vuelo y sus colores van en el desgaste; ver equipment.ts). */
 export const FIREWORK_ROCKET = item('firework_rocket', 'Cohete de fuegos artificiales');
 export const FIREWORK_STAR = item('firework_star', 'Estrella de fuegos artificiales');
+// ------------------------------------------------------------------ Fase 7 (encantamientos)
+/** Libro encantado: guarda encantamientos (`data.stored`) para ponerlos con el yunque. */
+export const ENCHANTED_BOOK = item('enchanted_book', 'Libro encantado', { stack: 1 });
+/** Botella con experiencia: se lanza y al romperse suelta orbes (de 3 a 11 puntos). */
+export const EXPERIENCE_BOTTLE = item('experience_bottle', 'Botella con experiencia');
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -672,3 +677,4 @@ smelt(RAW_GOLD, GOLD_INGOT);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
 (CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);
+(CREATIVE_ITEMS as number[]).push(EXPERIENCE_BOTTLE); // Fase 7 (encantamientos): los libros, aparte (uno por encantamiento)

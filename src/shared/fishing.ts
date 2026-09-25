@@ -5,6 +5,10 @@ import {
   ITEMS, type ItemStack,
 } from './items';
 import { NAUTILUS_SHELL } from './items'; // Fase 6.5 (equipo)
+// Fase 7 (encantamientos): Suerte marina y tesoros encantados (arco, caña y libro con 30 niveles).
+import { BOOK, NAME_TAG, SADDLE } from './items';
+import { fishingWeights } from './enchantEffects';
+import { enchantWithLevels, rndFrom } from './enchanting';
 
 /** Segundos hasta que pica un pez (con lluvia, un 20 % menos). */
 export const FISH_WAIT: readonly [number, number] = [5, 30];
@@ -20,6 +24,7 @@ const JUNK: Entry[] = [
   [FISHING_ROD, 2, true],
 ];
 const TREASURE: Entry[] = [[BOW, 1, true], [FISHING_ROD, 1, true], [NAUTILUS_SHELL, 1]]; // Fase 6.5 (equipo): concha de nautilo
+TREASURE.push([BOOK, 1], [NAME_TAG, 1], [SADDLE, 1]); // Fase 7 (encantamientos): como en Minecraft
 
 function pick(table: Entry[], rand: () => number): ItemStack {
   const total = table.reduce((n, e) => n + e[1], 0);
@@ -35,8 +40,22 @@ function pick(table: Entry[], rand: () => number): ItemStack {
   return { id: table[0][0], count: 1 };
 }
 
-/** Lo que sale del agua al recoger en plena picada. */
-export function fishingLoot(rand: () => number = Math.random): ItemStack {
-  const r = rand();
-  return pick(r < 0.85 ? FISH : r < 0.95 ? JUNK : TREASURE, rand);
+/**
+ * Lo que sale del agua al recoger en plena picada. Fase 7 (encantamientos): `luck` es el nivel de Suerte
+ * marina (menos basura y más tesoros); el arco, la caña y el libro del tesoro salen encantados.
+ */
+export function fishingLoot(rand: () => number = Math.random, luck = 0): ItemStack {
+  const w = fishingWeights(luck);
+  const r = rand() * (w.fish + w.junk + w.treasure);
+  if (r >= w.fish + w.junk) {
+    const s = pick(TREASURE, rand);
+    if (s.id === BOW || s.id === FISHING_ROD || s.id === BOOK) {
+      // Como en Minecraft: el arco y la caña, gastados como mucho un 25 %.
+      if (s.dmg) s.dmg = Math.floor((ITEMS[s.id].tool?.durability ?? 0) * 0.25 * rand());
+      if (!s.dmg) delete s.dmg;
+      return enchantWithLevels(s, 30, rndFrom(rand));
+    }
+    return s;
+  }
+  return pick(r < w.fish ? FISH : JUNK, rand);
 }
