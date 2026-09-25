@@ -75,3 +75,11 @@ export const SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
 
 /** Criaturas sin huevo propio: los slimes pequeños salen al dividirse y los colmillos, del evocador. */
 export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime_small', 'evoker_fangs']);
+
+/**
+ * Fase 7.5 (abismo): huevos de las criaturas nuevas. Van aparte porque sus objetos se registran al final
+ * (items.ts), después de todos los de SPAWN_EGG_DEFS: así no se mueve ningún id guardado.
+ */
+export const DEEP_DARK_SPAWN_EGGS: readonly SpawnEggDef[] = [
+  egg('warden', 'warden', [15, 70, 73], [57, 214, 224]),
+];

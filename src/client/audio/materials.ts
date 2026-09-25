@@ -188,6 +188,20 @@ export function buildMaterialSound(
       );
       break;
     }
+    // Fase 7.5 (abismo): el sculk suena blando y húmedo (un chasquido pegajoso que se hunde).
+    case 'sculk': {
+      sources.push(
+        playNoiseBurst(ctx, { buffer: noise.brown, destination, now, filterType: 'lowpass', freq: randRange(500, 900), q: 1.4, attack: 0.004, decay: 0.12 * d, gain: 0.55 * g }),
+      );
+      sources.push(playPitchSweep(ctx, { destination, now, freqStart: randRange(260, 420), freqEnd: randRange(90, 140), attack: 0.002, decay: 0.09 * d, gain: 0.26 * g }));
+      sources.push(
+        playNoiseBurst(ctx, {
+          buffer: noise.white, destination, now: now + randRange(0.02, 0.05), filterType: 'bandpass', freq: randRange(1600, 2600), q: 6,
+          attack: 0.001, decay: 0.025, gain: 0.12 * g,
+        }),
+      );
+      break;
+    }
     default:
       sources.push(playNoiseBurst(ctx, { buffer: noise.white, destination, now, filterType: 'lowpass', freq: 800, attack: 0.004, decay: 0.08 * d, gain: 0.4 * g }));
   }

@@ -138,8 +138,8 @@ export function availableEnchants(power: number, item: number, pool: readonly nu
 
 /** Encantamientos que la mesa puede dar (sin tesoros ni maldiciones). */
 export const TABLE_POOL: readonly number[] = ENCHANT_IDS.filter((id) => !ENCHANTS[id].treasure);
-/** Los que salen en el botín y los libros de los aldeanos (todos los de esta fase). */
-export const LOOT_POOL: readonly number[] = ENCHANT_IDS;
+/** Los que salen en el botín y los libros de los aldeanos (todos menos los especiales: Fase 7.5, sigilo rápido). */
+export const LOOT_POOL: readonly number[] = ENCHANT_IDS.filter((id) => !ENCHANTS[id].special);
 
 /**
  * selectEnchantment de Minecraft: el poder sube con la encantabilidad y un poco de azar; sale uno por

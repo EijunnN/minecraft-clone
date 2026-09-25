@@ -16,6 +16,9 @@ export * from './aquaticMobs';
 // Fase 6 (asaltos): saqueadores, vindicadores, evocadores, vex, devastadores y colmillos (ids 60–69).
 import { ILLAGER_MOBS } from './illagers';
 export * from './illagers';
+// Fase 7.5 (abismo): el warden (id 70).
+import { WARDEN_DEF } from './warden';
+export * from './warden';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -103,7 +106,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   // Fase 6 (gólems/domesticar): brazos largos que se balancean y golpean hacia arriba.
   | 'golem'
   | 'flyer' // Fase 6 (fauna): abejas y loros
-  | 'illager' | 'vex' | 'ravager' | 'fangs'; // Fase 6 (asaltos)
+  | 'illager' | 'vex' | 'ravager' | 'fangs' // Fase 6 (asaltos)
+  | 'warden'; // Fase 7.5 (abismo)
 
 export interface MobDef {
   id: number;
@@ -627,6 +631,7 @@ mob({
 
 // Fase 6 (asaltos): definiciones en illagers.ts.
 for (const d of ILLAGER_MOBS) mob(d);
+mob(WARDEN_DEF); // Fase 7.5 (abismo)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

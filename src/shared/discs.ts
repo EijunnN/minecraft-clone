@@ -25,6 +25,7 @@ export const DISCS: readonly DiscDef[] = [
   { key: '11', title: '11', seconds: 71 },
   { key: 'wait', title: 'wait', seconds: 160 },
   { key: 'otherside', title: 'otherside', seconds: 134 },
+  { key: '5', title: '5', seconds: 178 }, // Fase 7.5 (abismo): de nueve fragmentos de las ciudades antiguas
 ];
 
 /** Índice del disco por su clave (-1 si no existe). */

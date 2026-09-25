@@ -44,7 +44,7 @@ export function isMusicDisc(id: number): boolean {
 }
 
 /** Discos que puede soltar un creeper (todos menos otherside, que sólo sale en los cofres). */
-export const CREEPER_DISCS: readonly number[] = MUSIC_DISCS.filter((_, i) => DISCS[i].key !== 'otherside');
+export const CREEPER_DISCS: readonly number[] = MUSIC_DISCS.filter((_, i) => DISCS[i].key !== 'otherside' && DISCS[i].key !== '5'); // Fase 7.5 (abismo): el 5, tampoco
 
 /** Título de un disco para la descripción (null si no es un disco). */
 export function discTitle(id: number): string | null {

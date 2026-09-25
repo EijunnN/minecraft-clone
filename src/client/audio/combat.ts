@@ -161,6 +161,7 @@ const TICK_PROFILES: Record<SoundMaterial, TickProfile> = {
   metal: { type: 'bandpass', freq: [1800, 3200], q: 5, buffer: 'white', tone: 520 },
   water: { type: 'bandpass', freq: [600, 1200], q: 1.2, buffer: 'white' },
   lava: { type: 'lowpass', freq: [800, 1400], q: 0.6, buffer: 'pink' },
+  sculk: { type: 'lowpass', freq: [450, 800], q: 1.2, buffer: 'brown', tone: 110 }, // Fase 7.5 (abismo)
 };
 
 /** Golpe de picado (minería): breve "tick/scrape", más suave y corto que `buildBreak`; pensado
