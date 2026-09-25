@@ -36,6 +36,7 @@ import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
+import { DolphinGuide } from './dolphinGuide'; // Fase 7.5 (océano)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -87,6 +88,8 @@ export class Entities {
   // Fase 7 (mecanismos)
   /** Entidades con comportamiento de otro sistema (la dinamita encendida): tipo → su tick. */
   readonly custom = new Map<number, (e: Entity, dt: number) => void>();
+  /** Fase 7.5 (océano): delfines que llevan a los naufragios y a las ruinas. */
+  readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
   explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
 
@@ -527,7 +530,7 @@ export class Entities {
     const r = this.companions.interact(e, item, creative, who);
     if (r) return r;
     // Fase 6 (acuáticos): cubo de agua sobre un pez, un ajolote o un renacuajo.
-    return this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative);
+    return this.dolphinGuide.feed(e, item) ?? this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative); // Fase 7.5: delfines
   }
 
   spawnPassive(p: PlayerView, force = false): void {

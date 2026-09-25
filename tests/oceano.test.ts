@@ -392,3 +392,20 @@ test('botín de los guardianes: fragmentos, bacalao o cristales; el anciano, una
   const el = drops(MOB_ELDER_GUARDIAN, 10);
   assert.equal(el.get(WET_SPONGE), 10, 'una esponja mojada cada anciano');
 });
+
+test('delfines: con pescado crudo llevan al naufragio o a las ruinas más cercanos', () => {
+  const h = makeServer(12345);
+  const W = h.gs.world;
+  const sw = locateStructure(W.gen, 'shipwreck', 0, 0, 20)!;
+  const ru = locateStructure(W.gen, 'ocean_ruins', 0, 0, 20)!;
+  const E = h.gs.entities;
+  const d = E.spawnMob(MOBS.findIndex((m) => m?.key === 'dolphin'), 0.5, 55, 0.5)!;
+  assert.equal(E.interact(d, SPAWN_EGGS.pig, false).ok, false);
+  const r = E.interact(d, COD, false);
+  assert.ok(r.ok && r.take === 1, 'se come el bacalao');
+  assert.ok(E.dolphinGuide.guiding(d));
+  const head = E.dolphinGuide.heading(d, 0.05)!;
+  const near = Math.hypot(sw[0], sw[2]) < Math.hypot(ru[0], ru[2]) ? sw : ru;
+  const l = Math.hypot(near[0], near[2]);
+  assert.ok(head[0] * (near[0] / l) + head[2] * (near[2] / l) > 0.9, 'nada hacia el más cercano');
+});
