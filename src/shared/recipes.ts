@@ -706,3 +706,15 @@ import { GUNPOWDER, HOPPER_MINECART, TNT_MINECART } from './items';
   mix([HOPPER, MINECART], HOPPER_MINECART);
   mix([TNT, MINECART], TNT_MINECART);
 }
+
+// ------------------------------------------------------------------ Fase 7.5 (abismo)
+// Sensor calibrado, brújula de recuperación, disco 5 (de nueve fragmentos), antorcha y farol de alma.
+import { SCULK_SENSOR, CALIBRATED_SCULK_SENSOR, SOUL_SAND, SOUL_SOIL, SOUL_TORCH, SOUL_LANTERN } from './blocks';
+import { ECHO_SHARD, RECOVERY_COMPASS, DISC_FRAGMENT_5, MUSIC_DISC_5 } from './items';
+{
+  shape([' A ', 'ASA'], { A: AMETHYST_SHARD, S: SCULK_SENSOR }, CALIBRATED_SCULK_SENSOR);
+  shape(['EEE', 'ECE', 'EEE'], { E: ECHO_SHARD, C: COMPASS }, RECOVERY_COMPASS);
+  mix(new Array(9).fill(DISC_FRAGMENT_5), MUSIC_DISC_5);
+  shape(['C', 'S', 'B'], { C: FUEL_COAL, S: STICK, B: [SOUL_SAND, SOUL_SOIL] }, SOUL_TORCH, 4);
+  shape(['NNN', 'NTN', 'NNN'], { N: IRON_NUGGET, T: SOUL_TORCH }, SOUL_LANTERN);
+}

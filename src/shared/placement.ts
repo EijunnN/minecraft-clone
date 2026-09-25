@@ -30,6 +30,7 @@ import { isAnvil, anvilFacing } from './blocks'; // Fase 7 (encantamientos)
 import { planRedstone } from './redstonePlacement'; // Fase 7 (redstone)
 import { isIronOpenable } from './blocks'; // Fase 7 (redstone)
 import { planMechanism } from './mechanismPlacement'; // Fase 7 (mecanismos)
+import { planDeepDark } from './deepDarkPlacement'; // Fase 7.5 (abismo)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -141,6 +142,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 7 (mecanismos): pistones, observadores, tolvas, dispensadores y soltadores orientados.
   const mech = planMechanism(hit, base, x, y, z, yaw, pitch);
   if (mech !== undefined) return mech;
+  // Fase 7.5 (abismo): sensores, chilladores, venas de sculk y antorcha y farol de alma.
+  const dd = planDeepDark(get, base, x, y, z, cur, [hit.nx, hit.ny, hit.nz], facing);
+  if (dd !== undefined) return dd;
   // Fase 6.5 (colecciones): cabezas en el suelo (16 orientaciones, mirando al jugador) o en la pared.
   const skull = skullPlacement(base, face, hit.nx, hit.nz, yaw);
   if (skull >= 0) return skull && blockSupported(skull, rel(get, x, y, z)) ? one(skull) : null;
