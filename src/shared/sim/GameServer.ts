@@ -37,6 +37,7 @@ import { PlayerActions } from './server/playerActions';
 import { Commands } from './server/commands';
 import { EntitySync } from './server/entitySync';
 import { Riding } from './server/riding'; // Fase 6 (monturas)
+import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -96,6 +97,7 @@ export class GameServer {
   private entitySync: EntitySync;
   /** Fase 6 (monturas): quién monta qué. */
   readonly riding: Riding;
+  private trading: Trading; // Fase 6 (aldeanos)
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -150,6 +152,9 @@ export class GameServer {
     this.commands = new Commands(this.ctx);
     this.entitySync = new EntitySync(this.ctx);
     this.riding = new Riding(this.ctx); // Fase 6 (monturas)
+    // Fase 6 (aldeanos): comercio y aldeanos de las aldeas nuevas.
+    this.trading = new Trading(this.ctx);
+    this.world.onVillagers = (v) => this.trading.spawnVillagers(v);
   }
 
   get seed(): number {
@@ -345,6 +350,7 @@ export class GameServer {
     if (!s) return;
     this.sessions.delete(conn);
     if (!s.joined) return;
+    this.trading.onLeave(s); // Fase 6 (aldeanos)
     this.savePlayer(s);
     this.broadcast({ t: 'leave', id: s.id });
     this.riding.onLeave(s); // Fase 6 (monturas)
@@ -473,6 +479,16 @@ export class GameServer {
         if (this.allow(s, 5)) this.entities.xp.playerDrop(s.id, n, p[0], p[1], p[2], this.now());
         break;
       }
+      // Fase 6 (aldeanos): comercio.
+      case 'topen':
+        if (this.allow(s, 1)) this.trading.onOpen(s, msg);
+        break;
+      case 'trade':
+        this.trading.onTrade(s, msg);
+        break;
+      case 'tclose':
+        this.trading.onClose(s);
+        break;
       case 'died':
         if (typeof msg.m === 'string' && this.allow(s, 5)) {
           const m = msg.m.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80);
@@ -711,6 +727,7 @@ export class GameServer {
     this.fishing.tick();
     if (this.tickCount % TICK_RATE === 0) this.spawners.tick();
     this.storms.tick(DT);
+    if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

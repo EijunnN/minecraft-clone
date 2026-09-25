@@ -29,7 +29,7 @@ export class MobRenderer {
   private shadowProg: Program;
   private meshes = new Map<number, MobMesh>();
   private skins = new Map<number, WebGLTexture>();
-  /** Fase 6 (monturas): variant = pelaje; las texturas se guardan por especie y pelaje. */
+  /** Fase 6: variant = pelaje (monturas) o profesión (aldeanos); una textura por especie y variante. */
   private texSource: (id: number, variant?: number) => MobTexture | null;
   private bones = new Float32Array(MAX_BONES * 16);
   private model = mat4.create();
@@ -186,6 +186,18 @@ export class MobRenderer {
         } else if (name === 'head') {
           out[1] = headYaw;
           out[0] = e.pitch * 0.5;
+        }
+        break;
+      case 'villager':
+        // Fase 6 (aldeanos): piernas al andar, brazos cruzados quietos (con un leve vaivén) y cabeza que mira.
+        if (name === 'legR') out[0] = swing * 0.8;
+        else if (name === 'legL') out[0] = -swing * 0.8;
+        else if (name === 'arms') out[0] = Math.sin(time * 1.2 + e.seed * 5) * 0.03;
+        else if (name === 'head') {
+          out[1] = headYaw;
+          out[0] = e.pitch;
+          // Al quedarse quieto, a veces menea la cabeza.
+          if (e.walkAmount < 0.1) out[2] = Math.sin(time * 0.7 + e.seed * 11) * 0.06;
         }
         break;
       case 'squid':

@@ -11,6 +11,10 @@ import {
   CRAFTING_TABLE, FURNACE, HAY_BALE, FARMLAND, WHEAT_CROP, CARROTS, POTATOES, COLORED_TERRACOTTA, BLOCK_OPAQUE,
   BLOCK_FLUID, isLeaves, isLog, stateOf,
 } from '../blocks';
+import {
+  COMPOSTER, SMOKER, BLAST_FURNACE, STONECUTTER, LECTERN, CARTOGRAPHY_TABLE, FLETCHING_TABLE, BARREL, LOOM, GRINDSTONE,
+  SMITHING_TABLE, CAULDRON,
+} from '../blocks'; // Fase 6 (aldeanos)
 import { SEA_LEVEL } from '../constants';
 import { mulberry32 } from './noise';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
@@ -27,6 +31,17 @@ export interface VillageCanvas {
   chest(x: number, y: number, z: number, facing: number, table: string): void;
   foundation(x: number, y: number, z: number, id: number): void;
   clearAbove(x: number, y: number, z: number, h: number): void;
+  /** Fase 6 (aldeanos): anota un aldeano que aparecerá al generarse el chunk. */
+  villager?(v: VillagerSpawn): void;
+}
+
+/** Fase 6 (aldeanos): aldeano de una aldea recién generada (pies, casa y punto de reunión). */
+export interface VillagerSpawn {
+  x: number;
+  y: number;
+  z: number;
+  home: [number, number, number] | null;
+  meet: [number, number, number];
 }
 
 /** Origen de la aldea (el pozo). */
@@ -248,6 +263,8 @@ export function buildVillage(c: VillageCanvas, s: VillageStart, gen: TerrainGene
     for (let dz = -4; dz <= 4; dz++) for (let dx = -4; dx <= 4; dx++) pathCell(c, s.x + dx, s.z + dz, s.y, st.path, st.planks);
     buildWell(c, s, st);
   }
+  // Fase 6 (aldeanos): el chunk del pozo trae a los aldeanos (3–6, en el borde del pozo).
+  if (c.villager && s.x >= c.x0 && s.x <= c.x0 + 15 && s.z >= c.z0 && s.z <= c.z0 + 15) placeVillagers(c, s, L);
   for (const p of L.pieces) {
     if (!inChunk(c, { x0: p.box.x0 - 1, z0: p.box.z0 - 1, x1: p.box.x1 + 1, z1: p.box.z1 + 1 })) continue;
     if (p.kind === 'house') buildHouse(c, p, st);
@@ -260,6 +277,33 @@ export function buildVillage(c: VillageCanvas, s: VillageStart, gen: TerrainGene
     c.set(x, g + 1, z, st.base);
     c.set(x, g + 2, z, st.fence);
     c.set(x, g + 3, z, TORCH);
+  }
+}
+
+// ------------------------------------------------------------------ Fase 6 (aldeanos)
+
+/** Bloques de trabajo que pueden aparecer dentro de las casas. */
+const HOUSE_WORKSTATIONS = [
+  COMPOSTER, SMOKER, BLAST_FURNACE, STONECUTTER, LECTERN, CARTOGRAPHY_TABLE, FLETCHING_TABLE, BARREL, LOOM, GRINDSTONE,
+  SMITHING_TABLE, CAULDRON,
+];
+
+/**
+ * Aldeanos de la aldea: de pie sobre el borde del pozo, cada uno con su casa (duermen en el centro de
+ * la casa, a la altura del suelo).
+ */
+function placeVillagers(c: VillageCanvas, s: VillageStart, L: Layout): void {
+  const rnd = mulberry32(s.rng ^ 0x5eed);
+  const n = 3 + Math.floor(rnd() * 4);
+  const homes = L.pieces.filter((p) => p.kind === 'house').map((p): [number, number, number] => [p.x, p.y + 1, p.z]);
+  const ring: [number, number][] = [];
+  for (let k = -2; k <= 2; k++) ring.push([k, -2], [k, 2], [-2, k], [2, k]);
+  const spots = [...new Map(ring.map((r) => [r.join(','), r])).values()];
+  for (let i = 0; i < n && spots.length > 0; i++) {
+    const [dx, dz] = spots.splice(Math.floor(rnd() * spots.length), 1)[0];
+    c.villager!({
+      x: s.x + dx, y: s.y + 1, z: s.z + dz, home: homes.length ? homes[i % homes.length] : null, meet: [s.x, s.y + 1, s.z],
+    });
   }
 }
 
@@ -375,6 +419,8 @@ function buildHouse(c: VillageCanvas, p: Piece, st: Style): void {
     const [x, z] = toWorld(p, W - 1, D - 1 > -D + 1 ? 0 : -D + 1);
     c.chest(x, hy + 1, z, (dir + 3) & 3, 'village');
   } else if (W >= 3) set(W - 1, 0, hy + 1, HAY_BALE);
+  // Fase 6 (aldeanos): bloque de trabajo junto a la puerta en dos de cada tres casas.
+  if (p.seed % 3 !== 0) set(-W + 1, D - 1, hy + 1, HOUSE_WORKSTATIONS[(p.seed >>> 5) % HOUSE_WORKSTATIONS.length]);
 }
 
 function buildFarm(c: VillageCanvas, p: Piece, st: Style): void {

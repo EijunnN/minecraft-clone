@@ -2,7 +2,7 @@
 import type { MobTexture } from '../render/MobRenderer';
 import { generateMobTexture } from './mobTextures';
 
-/** `variant`: pelaje (Fase 6, monturas: caballos y llamas). */
+/** `variant`: pelaje (Fase 6, monturas) o ropa según la profesión (Fase 6, aldeanos). */
 export function mobTextureSource(): (id: number, variant?: number) => MobTexture | null {
   return (id, variant = 0) => {
     try {

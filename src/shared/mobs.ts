@@ -24,6 +24,9 @@ export const MOB_GOAT = 14;
 export const MOB_POLAR_BEAR = 15;
 export const MOB_RABBIT = 16;
 export const MOB_WOLF = 17;
+// Fase 6 (aldeanos): aldeano y comerciante ambulante.
+export const MOB_VILLAGER = 18;
+export const MOB_WANDERING_TRADER = 19;
 // Fase 6 (monturas): ids 25–29.
 export const MOB_HORSE = 25;
 export const MOB_DONKEY = 26;
@@ -60,7 +63,8 @@ export interface ModelPart {
   rot?: [number, number, number];
 }
 
-export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid';
+export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid'
+  | 'villager'; // Fase 6 (aldeanos)
 
 export interface MobDef {
   id: number;
@@ -367,6 +371,29 @@ mob({
     { name: 'stirrupL', pivot: [-7, 28, -1], from: [-1, -7, -1], size: [1, 7, 2], uv: [98, 0] },
   ],
 });
+// ---------------------------------------------------------------- Fase 6 (aldeanos): aldeano y comerciante
+/** Aldeano: cabeza grande con nariz, túnica larga y los brazos cruzados delante. */
+const villagerParts = (): ModelPart[] => [
+  { name: 'head', pivot: [0, 24, 0], from: [-4, 0, -4], size: [8, 10, 8], uv: [0, 0] },
+  { name: 'nose', parent: 'head', pivot: [0, 0, 0], from: [-1, 1, -6], size: [2, 4, 2], uv: [32, 0] },
+  { name: 'body', pivot: [0, 24, 0], from: [-4, -18, -3], size: [8, 18, 6], uv: [16, 20] },
+  { name: 'arms', pivot: [0, 22, -1], from: [-4, -6, -2], size: [8, 4, 4], uv: [40, 44], rot: [0.75, 0, 0] },
+  { name: 'armR', parent: 'arms', pivot: [0, 0, 0], from: [4, -8, -2], size: [4, 8, 4], uv: [44, 22] },
+  { name: 'armL', parent: 'arms', pivot: [0, 0, 0], from: [-8, -8, -2], size: [4, 8, 4], uv: [44, 22] },
+  { name: 'legR', pivot: [2, 12, 0], from: [-2, -12, -2], size: [4, 12, 4], uv: [0, 22] },
+  { name: 'legL', pivot: [-2, 12, 0], from: [-2, -12, -2], size: [4, 12, 4], uv: [0, 22] },
+];
+mob({
+  id: MOB_VILLAGER, key: 'villager', name: 'Aldeano', hostile: false, health: 20, walk: 0.9, run: 2.2, width: 0.6, height: 1.95,
+  damage: 0, burnsInSun: false, drops: [], atlas: [64, 64], anim: 'villager', scale: 0.94, parts: villagerParts(),
+});
+mob({
+  id: MOB_WANDERING_TRADER, key: 'wandering_trader', name: 'Comerciante ambulante', hostile: false, health: 20, walk: 0.9,
+  run: 2.2, width: 0.6, height: 1.95, damage: 0, burnsInSun: false, drops: [], atlas: [64, 64], anim: 'villager', scale: 0.94,
+  parts: villagerParts(),
+});
+/** ¿Aldeano o comerciante ambulante (se comercia con ellos)? */
+export const isVillagerType = (type: number): boolean => type === MOB_VILLAGER || type === MOB_WANDERING_TRADER;
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

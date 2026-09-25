@@ -44,6 +44,7 @@ import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
 import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
+import { Trading } from './trading'; // Fase 6 (aldeanos)
 
 export interface GameConfig {
   room: string;
@@ -80,6 +81,8 @@ export class Game {
   readonly network = new ServerEvents(this);
   readonly environment = new Environment(this);
   readonly riding = new Riding(this); // Fase 6 (monturas)
+  /** Fase 6 (aldeanos): comercio con los aldeanos. */
+  readonly trading = new Trading(this);
   readonly xp = new Experience();
   readonly statusEffects = new StatusEffects();
   cfg: GameConfig;
@@ -345,12 +348,13 @@ export class Game {
 
   private anyScreenOpen(): boolean {
     return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen() ||
-      this.signEditor.isOpen();
+      this.signEditor.isOpen() || this.trading.isOpen(); // Fase 6 (aldeanos): + comercio
   }
 
   stop(): void {
     this.sendState(true);
     this.screen.close();
+    this.trading.screen.close(); // Fase 6 (aldeanos)
     this.running = false;
     this.playing = false;
     cancelAnimationFrame(this.raf);
@@ -623,6 +627,7 @@ export class Game {
       ui.showPlayerList(list, this.cfg.room, this.net?.latency ?? null);
     } else if (this.lastTabDown) ui.hidePlayerList();
     this.lastTabDown = tabDown;
+    this.trading.update(); // Fase 6 (aldeanos)
     this.screen.expirePending();
     if (this.screen.isOpen()) this.screen.render();
   }

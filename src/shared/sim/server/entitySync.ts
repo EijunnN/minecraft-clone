@@ -24,7 +24,8 @@ export class EntitySync {
   }
 
   private key(e: Entity): string {
-    return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${e.flags},${e.stack?.count ?? e.xp ?? 0}`;
+    // Fase 6 (aldeanos): la variante (profesión) también cuenta como cambio.
+    return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${e.flags},${e.stack?.count ?? e.xp ?? 0},${e.variant ?? 0}`;
   }
 
   sync(): void {
@@ -47,15 +48,13 @@ export class EntitySync {
           if ((e.type === ENT_ITEM || e.type === ENT_THROWN || e.type === ENT_DISPLAY) && e.stack) rec.push(e.stack.id, e.stack.count);
           else if (e.type === ENT_FALLING) rec.push(e.block ?? 0);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
-          else if (e.ai) {
-            rec.push(Math.round(e.health));
-            if (e.variant) rec.push(e.variant); // Fase 6 (monturas): pelaje
-          }
+          else if (e.ai) rec.push(Math.round(e.health), e.variant ?? 0); // Fase 6: variante (pelaje o profesión)
           add.push(rec);
         } else {
           const rec = [e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), e.flags];
           if (e.type === ENT_ITEM && e.stack) rec.push(e.stack.count);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
+          else if (e.villager) rec.push(e.variant ?? 0); // Fase 6 (aldeanos): profesión del aldeano
           upd.push(rec);
         }
       }

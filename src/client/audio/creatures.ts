@@ -7,6 +7,7 @@ import { playInharmonicRing, playNoiseBurst, playPitchSweep, playTonalBlip, sche
 import { noiseOffset, noiseSource, type NoiseBuffers } from './noise';
 import { buildBowTwang } from './combat';
 import { randRange, type MobSoundEvent, type MobSoundKind } from './types';
+import { villagerSound } from './villagerVoice'; // Fase 6 (aldeanos)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
 function playFootstep(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number, weight: number): AudioScheduledSourceNode[] {
@@ -464,6 +465,10 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
       return endermanSound(ctx, noise, event, destination, now);
     case 'squid':
       return squidSound(ctx, noise, event, destination, now);
+    // Fase 6 (aldeanos)
+    case 'villager':
+    case 'wandering_trader':
+      return villagerSound(ctx, noise, event, destination, now);
     default:
       return [];
   }

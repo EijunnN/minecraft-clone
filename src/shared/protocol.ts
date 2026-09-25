@@ -1,6 +1,7 @@
 // Protocolo cliente ↔ servidor (JSON por WebSocket; las ediciones iniciales van en binario).
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
+import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 
 export const PROTOCOL_VERSION = 7;
 export const MAX_PLAYERS = 16;
@@ -145,7 +146,12 @@ export type ClientMsg =
   /** Bajarse de la montura. */
   | { t: 'dismount' }
   /** El jinete mueve la montura que guía: pies de la montura y orientación. */
-  | { t: 'mpos'; e: number; p: [number, number, number]; r: number };
+  | { t: 'mpos'; e: number; p: [number, number, number]; r: number }
+  // Fase 6 (aldeanos): comercio. Abrir la pantalla con un aldeano, hacer el trato i (pay: lo que el cliente
+  // sacó de su inventario para pagar) y cerrarla.
+  | { t: 'topen'; e: number }
+  | { t: 'trade'; e: number; i: number; q: number; pay: ItemStack[] }
+  | { t: 'tclose' };
 
 export type ServerMsg =
   | {
@@ -196,7 +202,13 @@ export type ServerMsg =
   /** El jugador `id` va en la entidad e (0 = se bajó); c: la guía él; st: [velocidad, salto] de la montura. */
   | { t: 'ride'; id: string; e: number; c?: boolean; st?: [number, number] }
   /** Movimiento de la montura rechazado: vuelve a p. */
-  | { t: 'mfix'; e: number; p: [number, number, number] };
+  | { t: 'mfix'; e: number; p: [number, number, number] }
+  // Fase 6 (aldeanos): ofertas de un aldeano (p profesión, lvl nivel, xp experiencia; o ofertas
+  // [pide, n, pide2, n2, da, n, usos, máximo]), resultado de un trato (give lo que recibe, back lo que
+  // se le devuelve si no salió) y cierre de la pantalla.
+  | { t: 'trades'; e: number; p: number; lvl: number; xp: number; tr: boolean; o: TradeWire[] }
+  | { t: 'tres'; q: number; ok: boolean; give?: ItemStack | null; back?: ItemStack[]; m?: string }
+  | { t: 'tclose' };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

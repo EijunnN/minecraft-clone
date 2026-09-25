@@ -3,6 +3,7 @@ import type { ItemStack } from '../../items';
 import type { Body } from '../physics';
 import type { PathNode } from '../pathfind';
 import type { WorldSim } from '../WorldSim';
+import type { VillagerData } from './villagerLife'; // Fase 6 (aldeanos)
 
 export interface PlayerView {
   id: string;
@@ -125,7 +126,7 @@ export interface Entity extends Body {
   /** Gallinas: segundos hasta el próximo huevo. */
   eggTimer?: number;
   // Fase 6 (monturas)
-  /** Pelaje (caballos, llamas); se envía a los clientes al darla de alta. */
+  /** Variante visual para los clientes: pelaje (caballos, llamas) o profesión (aldeanos). */
   variant?: number;
   tamed?: boolean;
   /** Paciencia ganada al montarla o darle de comer (0..100): cuanto más, más fácil domarla. */
@@ -139,6 +140,8 @@ export interface Entity extends Body {
   /** Segundos que le quedan encabritada (tras tirar al jinete). */
   rear?: number;
   ai?: AI;
+  // Fase 6 (aldeanos): profesión, comercio y hogar (aldeanos y comerciante ambulante).
+  villager?: VillagerData;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

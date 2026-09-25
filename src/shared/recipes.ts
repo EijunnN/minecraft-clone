@@ -7,6 +7,7 @@ import {
   FENCES, FENCE_GATES, DOORS, TRAPDOORS, LADDER, GLASS_PANE, RED_BED, HAY_BALE, CAKE, PUMPKIN, MELON, CARVED_PUMPKIN,
   JACK_O_LANTERN, COMPOSTER, WALLS, WALL_SOURCE, BEDS, SIGNS, SMOKER, BLAST_FURNACE, CAMPFIRE, STONECUTTER,
   ORANGE_WOOL, BLACK_WOOL, LIME_WOOL, PURPLE_WOOL,
+  LECTERN, CARTOGRAPHY_TABLE, FLETCHING_TABLE, BARREL, LOOM, GRINDSTONE, SMITHING_TABLE, CAULDRON, // Fase 6 (aldeanos)
 } from './blocks';
 import {
   STICK, COAL, CHARCOAL, IRON_INGOT, GOLD_INGOT, DIAMOND, FLINT, FEATHER, STRING, PAPER, BOOK, LEATHER, BRICK,
@@ -192,6 +193,18 @@ mix([LAPIS, WHITE_WOOL], BLUE_WOOL);
 
 // --- Fase 6 (monturas): silla de montar (cuero y un lingote de hierro, como en Minecraft 1.21.6) ---
 shape(['LLL', ' I '], { L: LEATHER, I: IRON_INGOT }, SADDLE);
+// --- Fase 6 (aldeanos): bloques de trabajo ---
+{
+  const WOOD_SLABS = WOODS.map((w) => SLABS[w.key]);
+  shape(['SSS', ' B ', ' S '], { S: WOOD_SLABS, B: BOOKSHELF }, LECTERN);
+  shape(['PP', 'WW', 'WW'], { P: PAPER, W: PLANKS }, CARTOGRAPHY_TABLE);
+  shape(['FF', 'WW', 'WW'], { F: FLINT, W: PLANKS }, FLETCHING_TABLE);
+  shape(['WSW', 'W W', 'WSW'], { W: PLANKS, S: WOOD_SLABS }, BARREL);
+  shape(['SS', 'WW'], { S: STRING, W: PLANKS }, LOOM);
+  shape(['TST', 'W W'], { T: STICK, S: SLABS.stone, W: PLANKS }, GRINDSTONE);
+  shape(['II', 'WW', 'WW'], { I: IRON_INGOT, W: PLANKS }, SMITHING_TABLE);
+  shape(['I I', 'I I', 'III'], { I: IRON_INGOT }, CAULDRON);
+}
 
 export interface RecipeMatch {
   out: ItemStack;

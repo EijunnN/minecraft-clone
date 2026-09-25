@@ -1,6 +1,7 @@
 // Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
 // disparos, teletransporte del enderman, paseo y movimiento con física.
 import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA } from '../../mobs';
+import { isVillagerType } from '../../mobs'; // Fase 6 (aldeanos)
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
 import { moveBody, lineOfSight } from '../physics';
@@ -80,6 +81,8 @@ export class MobBrain {
     }
 
     if (!def.hostile && !def.aquatic) this.m.animals.animalTick(e, dt);
+    // Fase 6 (aldeanos): oficio, reposición, puertas y huida de los zombis.
+    if (isVillagerType(e.type)) this.m.villagers.tick(e, dt);
     if (e.dead || !this.m.list.has(e.id)) return;
     ai.attackCd -= dt;
     ai.shootCd -= dt;
@@ -215,6 +218,13 @@ export class MobBrain {
       moveX = dx / d + Math.sin(e.age * 3) * 0.3;
       moveZ = dz / d + Math.cos(e.age * 3) * 0.3;
       speed = def.run;
+    } else if (isVillagerType(e.type) && this.m.villagers.goal(e, players, dt)) {
+      // Fase 6 (aldeanos): comerciar, huir, ir a casa o pasear (goal deja la dirección en ai.goalDir).
+      moveX = ai.goalDir[0];
+      moveZ = ai.goalDir[1];
+      speed = ai.goalDir[2];
+      jump = ai.goalDir[3] > 0;
+      if (ai.lookAt) lookAt = ai.lookAt;
     } else if (!def.hostile && this.m.animals.animalGoal(e, players, dt)) {
       // Buscar pareja o seguir a quien lleva su comida (animalGoal deja la dirección en ai.goalDir).
       moveX = ai.goalDir[0];

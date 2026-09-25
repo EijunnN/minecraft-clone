@@ -29,7 +29,7 @@ export interface ClientEntity {
   item: number;
   count: number;
   health: number;
-  /** Fase 6 (monturas): pelaje (caballos, llamas). */
+  /** Fase 6: pelaje (caballos, llamas) o profesión (aldeanos). */
   variant: number;
   /** Animación de caminar. */
   walkPhase: number;
@@ -92,6 +92,7 @@ export class ClientEntities {
       if (!e || e.gone) continue;
       this.push(e, now, u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
       if ((e.type === ENT_ITEM || e.type === ENT_XP) && u.length > 8) e.count = u[8];
+      else if (MOBS[e.type] && u.length > 8) e.variant = u[8]; // Fase 6 (aldeanos)
     }
     for (const r of msg.rm ?? []) {
       const id = Array.isArray(r) ? r[0] : r;
