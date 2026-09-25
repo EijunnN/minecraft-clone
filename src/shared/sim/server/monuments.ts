@@ -21,6 +21,9 @@ export const MONUMENT_GUARDIAN_CAP = 12;
 const SPAWN_MIN_DIST = 16;
 
 export class OceanMonuments {
+  /** Hasta cuándo (ms) dura la maldición de cada jugador (si su cliente aún no mandó sus efectos). */
+  private cursed = new Map<string, number>();
+
   constructor(private ctx: ServerContext) {}
 
   /** Criaturas de una estructura recién generada. */
@@ -49,9 +52,12 @@ export class OceanMonuments {
     for (const s of ctx.sessions()) {
       if (!s.joined || s.mode === 'c' || s.s & STATE_DEAD) continue;
       if (Math.hypot(s.p[0] - x, s.p[1] - y, s.p[2] - z) > CURSE_RANGE) continue;
-      // Ya maldito con tiempo de sobra (según lo último que guardó su cliente).
-      const has = s.save?.fx?.find(([id]) => id === EFFECT_MINING_FATIGUE);
-      if (has && has[1] >= CURSE_AMP && has[2] >= 60) continue;
+      // Ya maldito con tiempo de sobra (según lo último que guardó su cliente o, sin eso, lo que se le dio).
+      const fx = s.save?.fx;
+      const has = fx?.find(([id]) => id === EFFECT_MINING_FATIGUE);
+      if (has ? has[1] >= CURSE_AMP && has[2] >= 60 : !fx && (this.cursed.get(s.id) ?? 0) - ctx.now() >= 60_000) continue;
+      this.cursed.set(s.id, ctx.now() + CURSE_SECONDS * 1000);
+      if (this.cursed.size > 64) for (const [k, t] of this.cursed) if (t < ctx.now()) this.cursed.delete(k);
       ctx.send(s, { t: 'effect', id: EFFECT_MINING_FATIGUE, s: CURSE_SECONDS, a: CURSE_AMP });
       ctx.send(s, { t: 'fx', k: 'elder_curse', p: [r2(x), r2(y), r2(z)] });
       if (s.save?.fx) {

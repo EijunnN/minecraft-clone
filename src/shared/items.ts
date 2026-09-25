@@ -28,7 +28,7 @@ import { CHAINMAIL_ARMOR, TURTLE_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
-import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
+import { SPAWN_EGG_DEFS, LATE_SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
@@ -559,6 +559,8 @@ export const QUARTZ = item('quartz', 'Cuarzo del Nether');
 ITEMS[HOPPER].sprite = 'hopper';
 export const HOPPER_MINECART = item('hopper_minecart', 'Vagoneta con tolva', { stack: 1 });
 export const TNT_MINECART = item('tnt_minecart', 'Vagoneta con dinamita', { stack: 1 });
+// Fase 7.5 (océano): huevos generadores del guardián y del guardián anciano.
+for (const e of LATE_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -746,3 +748,4 @@ fuel(COAL_BLOCK, 800);
 // ------------------------------------------------------------------ Fase 7 (redstone)
 (CREATIVE_ITEMS as number[]).push(QUARTZ);
 (CREATIVE_ITEMS as number[]).push(HOPPER_MINECART, TNT_MINECART); // Fase 7 (mecanismos)
+(CREATIVE_ITEMS as number[]).push(...LATE_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob])); // Fase 7.5 (océano)
