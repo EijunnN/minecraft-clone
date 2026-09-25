@@ -16,6 +16,7 @@ import {
   MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
 } from '../../shared/mobs';
+import { AQUATIC_PAINTERS } from './aquaticMobTextures'; // Fase 6 (acuáticos)
 
 export interface MobTexture {
   width: number;
@@ -1293,6 +1294,8 @@ const PAINTERS: Record<number, Painter> = {
   [MOB_POLAR_BEAR]: polarBear,
   [MOB_RABBIT]: rabbit,
   [MOB_WOLF]: wolf,
+  // Fase 6 (acuáticos).
+  ...AQUATIC_PAINTERS,
 };
 
 /** Genera el atlas de una criatura (tamaño MOBS[id].atlas). */

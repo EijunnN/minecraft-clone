@@ -243,6 +243,10 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'cracked_stone_bricks' },
   { name: 'netherrack' },
   { name: 'crying_obsidian' },
+  // Fase 6 (acuáticos): huevos de tortuga (enteros, algo agrietados y muy agrietados).
+  { name: 'turtle_egg' },
+  { name: 'turtle_egg_slightly_cracked' },
+  { name: 'turtle_egg_very_cracked' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

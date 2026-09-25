@@ -6,6 +6,7 @@ import { MOB_VS, MOB_FS, MOB_SHADOW_VS, MOB_SHADOW_FS, MAX_BONES } from './shade
 import { MOBS, boxFaces, type MobDef, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } from '../../shared/mobs';
 import { EF_ACTION, EF_ANGRY, EF_BABY, EF_SHEARED } from '../../shared/protocol';
 import type { ClientEntity } from '../game/ClientEntities';
+import { animateAquatic, hiddenAquaticPart, aquaticRoot } from './aquaticPose'; // Fase 6 (acuáticos)
 
 export interface MobTexture {
   width: number;
@@ -194,6 +195,9 @@ export class MobRenderer {
           out[2] = -Math.cos(a) * open;
         }
         break;
+      default:
+        // Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana y renacuajo.
+        animateAquatic(def, e, time, name, out);
     }
   }
 
@@ -213,14 +217,14 @@ export class MobRenderer {
       mat4.rotateZ(m, m, -rest[2] + rot[2]);
       mat4.rotateX(m, m, rest[0] + rot[0]);
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
-      if (part.name === 'wool' && e.flags & EF_SHEARED) mat4.scale(m, m, [0, 0, 0]);
+      if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name)) mat4.scale(m, m, [0, 0, 0]);
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
       b.set(m, i * 16);
     }
   }
 
-  private rootMatrix(def: MobDef, e: ClientEntity, camX: number, camY: number, camZ: number): mat4 {
+  private rootMatrix(def: MobDef, e: ClientEntity, camX: number, camY: number, camZ: number, time = 0): mat4 {
     const m = this.model;
     mat4.identity(m);
     mat4.translate(m, m, [e.x - camX, e.y - camY, e.z - camZ]);
@@ -238,7 +242,7 @@ export class MobRenderer {
       mat4.translate(m, m, [0, 0.5, 0]);
       mat4.rotateX(m, m, Math.max(-1, Math.min(1, e.pitch)) * 0.8);
       mat4.translate(m, m, [0, -0.5, 0]);
-    }
+    } else s *= aquaticRoot(def, e, m, time); // Fase 6 (acuáticos)
     mat4.scale(m, m, [s, s, s]);
     return m;
   }
@@ -258,7 +262,7 @@ export class MobRenderer {
       if (!def) continue;
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
-      const root = this.rootMatrix(def, e, camX, camY, camZ);
+      const root = this.rootMatrix(def, e, camX, camY, camZ, time);
       const hurt = e.hurtT < 0.35 || e.deathT >= 0;
       const light = lightAt(e);
       let flash = 0;
@@ -285,7 +289,7 @@ export class MobRenderer {
       if (!def) continue;
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
-      const root = this.rootMatrix(def, e, camX, camY, camZ);
+      const root = this.rootMatrix(def, e, camX, camY, camZ, time);
       p.tex2D('uSkin', this.skin(def)).m4('uModel', root as Float32Array);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
@@ -302,7 +306,7 @@ export class MobRenderer {
     this.pose(def, mesh, e, time);
     const i = mesh.names.indexOf('armR');
     if (i < 0) return null;
-    const root = mat4.clone(this.rootMatrix(def, e, camX, camY, camZ));
+    const root = mat4.clone(this.rootMatrix(def, e, camX, camY, camZ, time));
     const bone = mat4.clone(this.bones.subarray(i * 16, i * 16 + 16) as unknown as mat4);
     const out = mat4.create();
     mat4.multiply(out, root, bone);

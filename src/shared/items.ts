@@ -241,6 +241,15 @@ export const EMPTY_MAP = item('map', 'Mapa vacío');
 export const FILLED_MAP = item('filled_map', 'Mapa');
 export const SNOWBALL = item('snowball', 'Bola de nieve', { stack: 16 });
 
+// ------------------------------------------------------------------ Fase 6 (acuáticos): cubos con criatura
+// Se llenan usando un cubo de agua sobre la criatura; al vaciarlos sale el agua y la criatura.
+export const COD_BUCKET = item('cod_bucket', 'Cubo con bacalao', { stack: 1, block: WATER });
+export const SALMON_BUCKET = item('salmon_bucket', 'Cubo con salmón', { stack: 1, block: WATER });
+export const TROPICAL_FISH_BUCKET = item('tropical_fish_bucket', 'Cubo con pez tropical', { stack: 1, block: WATER });
+export const PUFFERFISH_BUCKET = item('pufferfish_bucket', 'Cubo con pez globo', { stack: 1, block: WATER });
+export const AXOLOTL_BUCKET = item('axolotl_bucket', 'Cubo con ajolote', { stack: 1, block: WATER });
+export const TADPOLE_BUCKET = item('tadpole_bucket', 'Cubo con renacuajo', { stack: 1, block: WATER });
+
 // Comida con efectos (valores de Minecraft).
 ITEMS[ROTTEN_FLESH].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.8]];
 ITEMS[RAW_CHICKEN].food!.effects = [[EFFECT_HUNGER, 30, 0, 0.3]];
@@ -359,6 +368,8 @@ export const CREATIVE_ITEMS: readonly number[] = [
   GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD, COD, COOKED_COD,
   SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, COMPASS, EMPTY_MAP,
   SNOWBALL,
+  // Fase 6 (acuáticos).
+  COD_BUCKET, SALMON_BUCKET, TROPICAL_FISH_BUCKET, PUFFERFISH_BUCKET, AXOLOTL_BUCKET, TADPOLE_BUCKET,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

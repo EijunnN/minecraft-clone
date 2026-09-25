@@ -6,6 +6,7 @@ import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, CAMPFIRE, isLitFurnace, isValidB
 import { MOBS } from '../../shared/mobs';
 import { EF_LOVE, EF_BABY, EF_FIRE } from '../../shared/protocol';
 import type { Game } from './Game';
+import { aquaticFx } from './aquaticFx'; // Fase 6 (acuáticos)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -152,6 +153,8 @@ export class Effects {
       case 'compost_empty':
         this.g.audio.playBreak('grass', p);
         break;
+      default:
+        aquaticFx(this.g, kind, p); // Fase 6 (acuáticos)
     }
   }
 

@@ -17,6 +17,9 @@ import { AnimalLife } from './animalLife';
 import { Spawner } from './spawner';
 import { XpOrbs } from './xpOrbs';
 import { Projectiles } from './projectiles';
+// Fase 6 (acuáticos).
+import { AquaticLife } from './aquaticLife';
+import { isWaterAmbient } from '../../aquaticMobs';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -31,6 +34,8 @@ export class Entities {
   readonly spawner = new Spawner(this);
   readonly xp = new XpOrbs(this);
   readonly projectiles = new Projectiles(this);
+  /** Fase 6 (acuáticos): peces, delfines, tortugas, ajolotes, ranas y renacuajos. */
+  readonly aquatic = new AquaticLife(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -179,6 +184,7 @@ export class Entities {
       if (dx * dx + dz * dz > r2) continue;
       const def = MOBS[e.type];
       if (e.type === MOB_SQUID) squid++;
+      else if (isWaterAmbient(e.type)) continue; // Fase 6 (acuáticos): tienen sus propios límites.
       else if (def.hostile) hostile++;
       else passive++;
     }
@@ -304,7 +310,7 @@ export class Entities {
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
-      if (e.ai && !e.dead && (MOBS[e.type].hostile || e.type === MOB_SQUID)) {
+      if (e.ai && !e.dead && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
         if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
           this.remove(e.id);
           continue;
@@ -332,6 +338,7 @@ export class Entities {
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));
     this.spawner.spawnTick(dt, players);
+    this.aquatic.spawnTick(dt, players); // Fase 6 (acuáticos).
   }
 
   /** Empuje entre criaturas que se solapan (sólo las que se simulan). */
@@ -359,7 +366,7 @@ export class Entities {
   serializePassive(): string {
     const out: number[][] = [];
     for (const e of this.list.values()) {
-      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
+      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) continue;
       out.push([
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
@@ -392,7 +399,8 @@ export class Entities {
   }
 
   interact(e: Entity, item: number, creative: boolean): InteractResult {
-    return this.animals.interact(e, item, creative);
+    // Fase 6 (acuáticos): cubo de agua sobre un pez, un ajolote o un renacuajo.
+    return this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative);
   }
 
   spawnPassive(p: PlayerView, force = false): void {

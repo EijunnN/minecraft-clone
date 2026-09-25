@@ -34,6 +34,7 @@ import {
   CRYING_OBSIDIAN,
 } from './structures';
 import { SNOW_LAYER } from './weather';
+import { TURTLE_EGG } from './aquaticBlocks';
 
 export * from './registry';
 export * from './classic';
@@ -46,6 +47,8 @@ export * from './underground';
 export * from './structures';
 export * from './weather';
 export * from './queries';
+// Fase 6 (acuáticos): huevos de tortuga.
+export * from './aquaticBlocks';
 
 {
   const kindOf = new Map<number, number>();
@@ -97,6 +100,8 @@ export const INVENTORY_ORDER: readonly number[] = [
   // Fase 5: estructuras.
   MOB_SPAWNER, COBWEB, CHISELED_SANDSTONE, CUT_SANDSTONE, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, NETHERRACK, CRYING_OBSIDIAN,
   SNOW_LAYER,
+  // Fase 6 (acuáticos).
+  TURTLE_EGG,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [

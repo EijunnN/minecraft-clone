@@ -5,6 +5,9 @@ import {
   ENDER_PEARL, SPIDER_EYE, COD, SALMON,
 } from './items';
 import { WHITE_WOOL } from './blocks';
+// Fase 6 (acuáticos): peces, delfín, tortuga, ajolote, rana, renacuajo y calamar brillante (ids 30–39).
+import { AQUATIC_MOBS } from './aquaticMobs';
+export * from './aquaticMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -54,7 +57,9 @@ export interface ModelPart {
   rot?: [number, number, number];
 }
 
-export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid';
+export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid'
+  // Fase 6 (acuáticos).
+  | 'fish' | 'puffer' | 'dolphin' | 'turtle' | 'axolotl' | 'frog' | 'tadpole';
 
 export interface MobDef {
   id: number;
@@ -298,6 +303,9 @@ mob({
     ...quadLegs(8, 2, [-5, 5], [24, 26], 2),
   ],
 });
+
+// Fase 6 (acuáticos): definiciones en aquaticMobs.ts.
+for (const d of AQUATIC_MOBS) mob(d);
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

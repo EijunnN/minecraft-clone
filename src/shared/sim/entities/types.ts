@@ -37,6 +37,8 @@ export interface EntityHost {
   trample(x: number, y: number, z: number): void;
   /** Un jugador recoge orbes de experiencia por valor de `n`. */
   giveXp(playerId: string, n: number): void;
+  /** Fase 6 (acuáticos): da un efecto de estado a un jugador (veneno del pez globo). */
+  giveEffect?(playerId: string, effect: number, seconds: number, amp: number): void;
 }
 
 /** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */

@@ -23,6 +23,7 @@ import { migrateStore, type ServerStore } from './store';
 import { TICK_RATE, DT, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type PlayerRecord, type ServerContext } from './server/context';
 import { BlockRules, fallsThrough } from './server/blockRules';
 import { Nature } from './server/nature';
+import { TurtleEggs } from './server/turtleEggs'; // Fase 6 (acuáticos)
 import { Spawners } from './server/spawners';
 import { Storms } from './server/storms';
 import { Farming } from './server/farming';
@@ -80,6 +81,7 @@ export class GameServer {
   private ctx: ServerContext;
   private rules: BlockRules;
   private nature: Nature;
+  private turtleEggs: TurtleEggs;
   private spawners: Spawners;
   private storms: Storms;
   private farming: Farming;
@@ -133,6 +135,7 @@ export class GameServer {
     this.rules = new BlockRules(this.ctx);
     this.nature = new Nature(this.ctx);
     this.farming = new Farming(this.ctx, this.nature);
+    this.turtleEggs = new TurtleEggs(this.ctx, this.nature); // Fase 6 (acuáticos)
     this.beds = new Beds(this.ctx);
     this.containers = new ContainerSystem(this.ctx, store);
     this.world.onLoot = (chests) => this.containers.fillLoot(chests);
@@ -249,6 +252,12 @@ export class GameServer {
       },
       giveXp: (id, n) => {
         for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
+      },
+      // Fase 6 (acuáticos): veneno del pez globo.
+      giveEffect: (id, effect, secs, amp) => {
+        for (const s of this.sessions.values()) {
+          if (s.id === id && s.joined && s.mode !== 'c' && !(s.s & STATE_DEAD)) this.send(s, { t: 'effect', id: effect, s: secs, a: amp });
+        }
       },
     };
   }

@@ -10,6 +10,7 @@
 // Herramientas en diagonal: mango abajo-izquierda, cabeza arriba-derecha.
 
 import { ITEM_SPRITES } from '../../shared/items';
+import { AQUATIC_SPRITES } from './aquaticSprites'; // Fase 6 (acuáticos)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2202,6 +2203,8 @@ const SPRITES: Record<string, SpriteDef> = {
     },
     holes: true,
   },
+  // Fase 6 (acuáticos): cubos con criatura.
+  ...AQUATIC_SPRITES,
 };
 
 // ---------------------------------------------------------------------------
