@@ -408,6 +408,59 @@ export class TerrainGenerator {
     return out;
   }
 
+  /**
+   * Barreras de agua (como las de los acuíferos de Minecraft). El agua del generador es quieta: si una
+   * cueva o un hueco bajo un saliente queda al lado o debajo de ella, se vería una pared o un techo de
+   * agua colgando en el aire. Cada aire que toca agua generada (de este chunk o, en los bordes, del
+   * vecino, calculada con las mismas reglas) se vuelve roca. Sólo cambia el lado del aire, así que los
+   * dos chunks coinciden sin tener que generarse juntos.
+   */
+  private sealGeneratedWater(blocks: Uint16Array, x0: number, z0: number): void {
+    const columns = new Map<number, { h: number; amp: number; top: number; ceiling: number; aquifer: number; ice: boolean }>();
+    const column = (x: number, z: number) => {
+      const k = (x - x0 + 1) * 18 + (z - z0 + 1);
+      let c = columns.get(k);
+      if (!c) {
+        const inf = this.columnInfo(x, z, { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 });
+        const top = this.surfaceAt(x, z, inf);
+        c = {
+          h: inf.height, amp: inf.amp, top, ceiling: this.caveCeiling(x, z, top), aquifer: this.aquiferLevel(x, z, top),
+          ice: inf.temp < -0.58,
+        };
+        columns.set(k, c);
+      }
+      return c;
+    };
+    // ¿Hay agua generada en una celda de fuera del chunk? (mar sobre el fondo o cueva inundada del acuífero)
+    const waterOutside = (x: number, y: number, z: number): boolean => {
+      const c = column(x, z);
+      if (c.top < SEA_LEVEL - 1 && y > c.top) return !(c.ice && y === SEA_LEVEL - 1);
+      if (y > c.aquifer || y > c.ceiling || y <= MIN_Y + 10) return false;
+      return this.solidAt(x, y, z, c.h, c.amp) && this.caveAt(x, y, z);
+    };
+    for (let y = MIN_Y + 1; y < SEA_LEVEL; y++) {
+      for (let lz = 0; lz < 16; lz++) {
+        for (let lx = 0; lx < 16; lx++) {
+          const i = blockIndex(lx, y, lz);
+          if (blocks[i] !== AIR) continue;
+          let wet = blocks[blockIndex(lx, y + 1, lz)] === WATER;
+          for (let d = 0; d < 4 && !wet; d++) {
+            const nx = lx + DIR_X[d], nz = lz + DIR_Z[d];
+            wet = nx >= 0 && nx < 16 && nz >= 0 && nz < 16
+              ? blocks[blockIndex(nx, y, nz)] === WATER
+              : waterOutside(x0 + nx, y, z0 + nz);
+          }
+          if (!wet) continue;
+          // La barrera imita al suelo de debajo (arena, grava, tierra…) o es roca.
+          const below = blocks[blockIndex(lx, y - 1, lz)];
+          blocks[i] = below === GRASS || below === SNOWY_GRASS || below === MYCELIUM ? DIRT
+            : below !== WATER && below !== STONE && below !== DEEPSLATE && BLOCK_OPAQUE[below] && !isLeaves(below) ? below
+              : this.rockAt(x0 + lx, y, z0 + lz);
+        }
+      }
+    }
+  }
+
   /** Altura máxima (inclusive) hasta la que se excavan cuevas en una columna. */
   private caveCeiling(x: number, z: number, top: number): number {
     // Cerca del mar/lagos no abrimos la superficie (el agua no fluye).
@@ -585,6 +638,8 @@ export class TerrainGenerator {
         tops[lz * 16 + lx] = top;
       }
     }
+    // --- 5b. Barreras: ningún hueco queda al lado o debajo del agua generada ---
+    this.sealGeneratedWater(blocks, x0, z0);
 
     // --- 6. Minerales y vetas de roca ---
     const rng = mulberry32(hash2(cx, cz, seed ^ 0x5eed1234));
