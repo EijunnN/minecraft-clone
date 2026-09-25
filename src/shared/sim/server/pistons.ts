@@ -10,7 +10,7 @@
 //   «escupe» su bloque.
 // - Romper la base quita la cabeza; romper la cabeza rompe la base (y suelta el pistón).
 import {
-  AIR, SLIME_BLOCK, BLOCK_COLLIDE, isPiston, isStickyPiston, pistonExtended, pistonState, isPistonHead, headState, facingOf,
+  AIR, SLIME_BLOCK, HONEY_BLOCK, BLOCK_COLLIDE, isPiston, isStickyPiston, pistonExtended, pistonState, isPistonHead, headState, facingOf,
   MOVING_BLOCK, PISTON, STICKY_PISTON, familyBase,
 } from '../../blocks';
 import { registerRedstone, FACE_X, FACE_Y, FACE_Z, DOWN, type RedstoneApi } from '../../redstone';
@@ -223,7 +223,8 @@ export class Pistons {
 
   /**
    * Las entidades que ocupan el sitio al que llega un bloque que choca se apartan hacia donde se mueve (los
-   * jugadores los aparta su cliente); el slime, además, las lanza.
+   * jugadores los aparta su cliente); el slime, además, las lanza, y la miel se lleva las que tiene pegadas
+   * (encima o a los lados).
    */
   private pushEntities(cells: MovingCell[], dir: number): void {
     if (cells.length === 0) return;
@@ -231,15 +232,22 @@ export class Pistons {
     for (const e of this.ctx.entities.list.values()) {
       if (e.dead || e.type === ENT_DISPLAY || isHangingType(e.type) || isVehicleType(e.type)) continue;
       const hw = e.width / 2, h = Math.max(0.1, e.height);
-      let need = 0, slime = false;
+      let need = 0, slime = false, honey = false;
       for (const c of cells) {
         if (BLOCK_COLLIDE[c.block] === 0) continue;
+        if (c.block === HONEY_BLOCK) {
+          // Pegada a la miel (tocando su caja de antes de moverse, salvo por la cara de delante).
+          const ox = c.x - ax, oy = c.y - ay, oz = c.z - az, m = 0.02;
+          const touch = e.x + hw > ox - m && e.x - hw < ox + 1 + m && e.y + h > oy - m && e.y < oy + 1 + m && e.z + hw > oz - m && e.z - hw < oz + 1 + m;
+          if (touch) honey = true;
+        }
         if (e.x + hw <= c.x || e.x - hw >= c.x + 1 || e.y + h <= c.y || e.y >= c.y + 1 || e.z + hw <= c.z || e.z - hw >= c.z + 1) continue;
         const d = ax > 0 ? c.x + 1 - (e.x - hw) : ax < 0 ? e.x + hw - c.x : ay > 0 ? c.y + 1 - e.y : ay < 0 ? e.y + h - c.y
           : az > 0 ? c.z + 1 - (e.z - hw) : e.z + hw - c.z;
         need = Math.max(need, Math.min(1.01, d + 0.01));
         if (c.block === SLIME_BLOCK) slime = true;
       }
+      if (honey && need === 0) need = 1;
       if (need > 0) {
         e.x += ax * need;
         e.y += ay * need;

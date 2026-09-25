@@ -3,12 +3,12 @@
 //   dónde sale, qué bloque es y hacia dónde va) y aquí se dibuja suelto mientras su sitio es un «bloque
 //   en movimiento» (invisible) y un poco más, hasta que el bloque asentado ya está en la malla.
 // - Al jugador lo aparta su propio cliente (como en Minecraft): si un bloque que se mueve le alcanza, lo
-//   empuja; si es de slime, lo lanza.
+//   empuja; si es de slime, lo lanza; si es de miel y lo tiene pegado, se lo lleva.
 // - Dinamita encendida: el bloque que parpadea en blanco y se hincha justo antes de explotar.
 // - Efectos: el pistón, el clic y el humo del dispensador y del soltador, y la mecha.
 // - La armadura que le pone al jugador un dispensador ('equip').
 import { mat4 } from 'gl-matrix';
-import { BLOCK_COLLIDE, SLIME_BLOCK, MOVING_BLOCK, isValidBlockId } from '../../shared/blocks';
+import { BLOCK_COLLIDE, SLIME_BLOCK, HONEY_BLOCK, MOVING_BLOCK, isValidBlockId } from '../../shared/blocks';
 import { FACE_X, FACE_Y, FACE_Z } from '../../shared/redstone';
 import { ITEMS } from '../../shared/items';
 import { PISTON_MOVE_TICKS } from '../../shared/mechanisms';
@@ -35,8 +35,9 @@ interface Moving {
   /** Cuándo empezó (s) y cuándo se asentó (−1 aún no). */
   t0: number;
   settled: number;
-  /** Ya lanzó al jugador (el slime). */
+  /** Ya lanzó al jugador (el slime) y el avance del frame anterior (la miel lo lleva pegado). */
   launched: boolean;
+  lastK: number;
 }
 
 type LightOf = (x: number, y: number, z: number) => [number, number];
@@ -51,7 +52,7 @@ export class MechanismsClient {
   /** Un bloque empieza a deslizarse desde la celda (x, y, z) hacia `dir`. */
   add(block: number, x: number, y: number, z: number, dir: number): void {
     if (!isValidBlockId(block) || dir < 0 || dir > 5 || this.moving.length > 512) return;
-    this.moving.push({ block, x, y, z, dir, t0: now(), settled: -1, launched: false });
+    this.moving.push({ block, x, y, z, dir, t0: now(), settled: -1, launched: false, lastK: 0 });
   }
 
   /** Avance (0..1) de un bloque que se mueve. */
@@ -93,10 +94,20 @@ export class MechanismsClient {
     for (const m of this.moving) {
       if (!BLOCK_COLLIDE[m.block] || m.settled >= 0) continue;
       const k = this.progress(m, t);
+      const prev = m.lastK;
+      m.lastK = k;
       const ax = FACE_X[m.dir], ay = FACE_Y[m.dir], az = FACE_Z[m.dir];
       const bx = m.x + ax * k, by = m.y + ay * k, bz = m.z + az * k;
-      const touching = p.x + hw > bx - 0.01 && p.x - hw < bx + 1.01 && p.y + h > by - 0.01 && p.y < by + 1.01 && p.z + hw > bz - 0.01 && p.z - hw < bz + 1.01;
+      const touching = p.x + hw > bx - 0.02 && p.x - hw < bx + 1.02 && p.y + h > by - 0.02 && p.y < by + 1.02 && p.z + hw > bz - 0.02 && p.z - hw < bz + 1.02;
       if (!touching) continue;
+      // La miel se lleva al jugador que tiene pegado (encima o a un lado).
+      const ahead = ax * (p.x - (bx + 0.5)) + ay * (p.y + h / 2 - (by + 0.5)) + az * (p.z - (bz + 0.5)) > 0.5;
+      if (m.block === HONEY_BLOCK && !ahead) {
+        p.x += ax * (k - prev);
+        p.y += ay * (k - prev);
+        p.z += az * (k - prev);
+        continue;
+      }
       // Lo que tiene que moverse para quedar fuera de la cara de delante del bloque.
       const need = ax > 0 ? bx + 1 - (p.x - hw) : ax < 0 ? p.x + hw - bx : ay > 0 ? by + 1 - p.y : ay < 0 ? p.y + h - by : az > 0 ? bz + 1 - (p.z - hw) : p.z + hw - bz;
       if (need > 0 && need < 1.1 && (ax * (p.x - (bx + 0.5)) + ay * (p.y + h / 2 - (by + 0.5)) + az * (p.z - (bz + 0.5))) > -0.6) {
