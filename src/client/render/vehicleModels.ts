@@ -11,11 +11,13 @@ import {
   ENT_BOAT, ENT_CHEST_BOAT, ENT_MINECART, ENT_CHEST_MINECART, ENT_FURNACE_MINECART, RAFT_VARIANT, VF_PADDLE_L, VF_PADDLE_R,
   VF_HURT_FLIP, VF_LIT, isVehicleType, isCartType,
 } from '../../shared/vehicles';
+import { ENT_HOPPER_MINECART, ENT_TNT_MINECART, VF_PRIMED } from '../../shared/vehicles'; // Fase 7 (mecanismos)
 import type { ClientEntity } from '../game/ClientEntities';
 
 export type VehicleMaterial =
   | 'hull' | 'floor' | 'paddle' | 'blade' | 'chest' | 'lid' | 'latch' | 'iron' | 'ironFloor' | 'wheel' | 'furnace' | 'stalk'
-  | 'beam';
+  | 'beam'
+  | 'hopper' | 'tnt'; // Fase 7 (mecanismos)
 
 export interface VehiclePart extends ModelPart {
   mat: VehicleMaterial;
@@ -106,7 +108,7 @@ function chestBoxes(y0: number, z0: number): Box[] {
   ];
 }
 
-function cartBoxes(content: 'none' | 'chest' | 'furnace'): Box[] {
+function cartBoxes(content: 'none' | 'chest' | 'furnace' | 'hopper' | 'tnt'): Box[] {
   const out = [
     box('bottom', 'ironFloor', [0, 0, 0], [-8, 2, -10], [16, 2, 20]),
     box('left', 'iron', [0, 0, 0], [-8, 4, -10], [2, 8, 20]),
@@ -120,6 +122,11 @@ function cartBoxes(content: 'none' | 'chest' | 'furnace'): Box[] {
   ];
   if (content === 'chest') out.push(...chestBoxes(4, -6));
   if (content === 'furnace') out.push(box('furnace', 'furnace', [0, 0, 0], [-6, 4, -6], [12, 12, 12]));
+  // Fase 7 (mecanismos): la tolva (el cuenco y el embudo) y la dinamita, dentro de la cuba.
+  if (content === 'hopper') {
+    out.push(box('bowl', 'hopper', [0, 0, 0], [-6, 9, -6], [12, 5, 12]), box('funnel', 'hopper', [0, 0, 0], [-4, 4, -4], [8, 5, 8]));
+  }
+  if (content === 'tnt') out.push(box('tnt', 'tnt', [0, 0, 0], [-6, 4, -6], [12, 12, 12]));
   return out;
 }
 
@@ -141,6 +148,8 @@ add(model(CHEST_RAFT_MODEL, 'chest_raft', 'Balsa con cofre', raftBoxes(true), nu
 add(model(ENT_MINECART, 'minecart', 'Vagoneta', cartBoxes('none'), null));
 add(model(ENT_CHEST_MINECART, 'chest_minecart', 'Vagoneta con cofre', cartBoxes('chest'), null));
 add(model(ENT_FURNACE_MINECART, 'furnace_minecart', 'Vagoneta con horno', cartBoxes('furnace'), null));
+add(model(ENT_HOPPER_MINECART, 'hopper_minecart', 'Vagoneta con tolva', cartBoxes('hopper'), null)); // Fase 7 (mecanismos)
+add(model(ENT_TNT_MINECART, 'tnt_minecart', 'Vagoneta con dinamita', cartBoxes('tnt'), null));
 
 /** Modelo de un id de modelo (el tipo de entidad, o el de la balsa). */
 export function vehicleModelById(id: number): VehicleModel | undefined {
@@ -165,6 +174,8 @@ export function isVehicleModelId(id: number): boolean {
 
 /** Piel: la madera de la barca; en la vagoneta con horno, 1 si está encendido. */
 export function vehicleSkinVariant(e: ClientEntity): number {
+  // Fase 7 (mecanismos): la vagoneta con dinamita encendida parpadea (piel 1: blanca) cada 5 ticks.
+  if (e.type === ENT_TNT_MINECART) return e.flags & VF_PRIMED && Math.floor(performance.now() / 250) % 2 === 0 ? 1 : 0;
   if (isCartType(e.type)) return e.flags & VF_LIT ? 1 : 0;
   return e.variant;
 }

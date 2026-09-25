@@ -8,6 +8,7 @@ import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { buildRedstoneSfx } from './redstoneSounds'; // Fase 7 (redstone)
+import { buildMechanismSfx } from './mechanismSounds'; // Fase 7 (mecanismos)
 import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
 import { buildEquipmentSfx } from './equipmentSounds'; // Fase 6.5 (equipo)
 import { buildPotionSfx } from './potionSounds'; // Fase 7 (pociones)
@@ -414,6 +415,11 @@ export class AudioEngine {
   /** Fase 7 (redstone): chasquidos de los componentes, puertas movidas por la potencia y notas del bloque musical. */
   playRedstoneSfx(kind: string, pos: Vec3, a = 0, b = 0): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildRedstoneSfx(ctx, noise, kind, a, b, dest, now), kind === 'note' ? 0.45 : 0.25));
+  }
+
+  /** Fase 7 (mecanismos): pistones, dispensadores y soltadores. */
+  playMechanismSfx(kind: string, pos: Vec3, a = 0): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildMechanismSfx(ctx, noise, kind, a, dest, now), 0.3));
   }
 
   /** Fase 6.5 (decoración): campana, colgar/descolgar cuadros y marcos, girar el objeto del marco. */

@@ -31,6 +31,8 @@ import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
 import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY } from '../../shared/mobs';
+import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
+import { pushPrimedTnt } from '../game/mechanismsClient';
 import { TIPPED_ARROW } from '../../shared/items'; // Fase 7 (pociones)
 // Fase 6.5 (decoración): cuadros y marcos.
 import { isHangingType } from '../../shared/paintings';
@@ -131,6 +133,8 @@ export interface FrameState {
   offhandGlint?: boolean;
   /** Fase 7 (encantamientos): el libro que flota sobre las mesas de encantamientos. */
   enchantBooks?: ItemDraw[];
+  /** Fase 7 (mecanismos): bloques que mueven los pistones. */
+  movingBlocks?: ItemDraw[];
   offhandUseKind?: 'none' | 'eat' | 'block';
   offhandUse?: number;
   /** Bloque que se está minando y fase de la grieta (0..9). */
@@ -901,6 +905,8 @@ export class Renderer {
         mat4.translate(m, m, [rx, ry + 0.49, rz]);
         mat4.scale(m, m, [0.98, 0.98, 0.98]);
         out.push({ model, m, light: lightOf(e.x, e.y + 0.5, e.z) });
+      } else if (e.type === ENT_TNT && e.item > 0) {
+        pushPrimedTnt(out, e, this.items, rx, ry, rz, lightOf); // Fase 7 (mecanismos): dinamita encendida
       } else if (isHangingType(e.type)) {
         pushHangingDraws(out, e, this.items, rx, ry, rz, lightOf); // Fase 6.5 (decoración): cuadros y marcos
       } else if (e.type === ENT_ARMOR_STAND) {
@@ -915,6 +921,7 @@ export class Renderer {
       }
     }
     if (s.enchantBooks) out.push(...s.enchantBooks); // Fase 7 (encantamientos)
+    if (s.movingBlocks) out.push(...s.movingBlocks); // Fase 7 (mecanismos)
     for (const l of s.fishLines ?? []) this.pushFishLine(out, s, l, lightOf);
     // Fase 6.5 (remate): correas, más gruesas y de cuero, y el nudo de cada valla.
     const lead = this.items.blockModel(WOOL.brown);

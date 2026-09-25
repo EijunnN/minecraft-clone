@@ -69,6 +69,7 @@ import { CLOCK } from '../../shared/items';
 // Fase 7 (encantamientos)
 import { EnchantClient } from './enchantClient';
 import { EnchantBooks } from './enchantBooks';
+import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
 import { hasGlint } from '../../shared/enchantments';
 
 export interface GameConfig {
@@ -151,6 +152,8 @@ export class Game {
   /** Fase 7 (encantamientos): mesa, yunque, afiladora, efectos de los encantamientos y el libro de la mesa. */
   readonly enchant = new EnchantClient(this);
   readonly enchantBooks = new EnchantBooks(this);
+  /** Fase 7 (mecanismos): lo que mueven los pistones y la armadura de los dispensadores. */
+  readonly mechanisms = new MechanismsClient(this);
   selected = 0;
   time: WorldTime = { base: 0.08, at: Date.now(), rate: 1 / DAY_LENGTH_SECONDS };
   private running = false;
@@ -763,6 +766,7 @@ export class Game {
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
     // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
     if (!this.riding.update(dt, controls, active) && !this.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
+    this.mechanisms.update(); // Fase 7 (mecanismos): los bloques que empujan los pistones apartan al jugador
     const moved = this.riding.active || this.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
     // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
     if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
@@ -1053,6 +1057,10 @@ export class Game {
       heldGlint: hasGlint(this.heldStack), // Fase 7 (encantamientos)
       offhandGlint: hasGlint(this.inv.offhand),
       enchantBooks: this.enchantBooks.draws(this.renderer.items, camX, camY, camZ, (x, y, z) => {
+        const l = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
+        return [(l >> 4) / 15, (l & 15) / 15];
+      }),
+      movingBlocks: this.mechanisms.draws(this.renderer.items, camX, camY, camZ, (x, y, z) => { // Fase 7 (mecanismos)
         const l = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
         return [(l >> 4) / 15, (l & 15) / 15];
       }),

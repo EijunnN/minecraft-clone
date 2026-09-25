@@ -283,7 +283,8 @@ export class InventoryScreen {
       }
     } else if (kind === 'chest') {
       const n = this.chestSlots;
-      top = `<h3>${n > 27 ? 'Cofre grande' : this.title || 'Cofre'}</h3><div class="grid g9">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
+      const cols = n === 9 ? 3 : n === 5 ? 5 : 9; // Fase 7 (mecanismos): dispensador y soltador (3×3) y tolva (5)
+      top = `<h3>${n > 27 ? 'Cofre grande' : this.title || 'Cofre'}</h3><div class="grid g${cols}">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
     } else if (kind === 'loom') {
       top = LOOM_HTML;
     } else if (kind === 'brewing') {

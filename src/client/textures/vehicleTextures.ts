@@ -105,6 +105,21 @@ function paint(mat: VehicleMaterial, p: Face, wood: RGB, lit: boolean, gx: numbe
       if (p.f === 4 && p.v === 4 && p.u >= 2 && p.u < p.w - 2) return [92, 92, 94];
       return stone;
     }
+    // Fase 7 (mecanismos): la tolva (hierro oscuro; arriba, el cuenco) y la dinamita (encendida: blanca).
+    case 'hopper': {
+      if (p.f === 2) return p.u === 0 || p.v === 0 || p.u === p.w - 1 || p.v === p.h - 1 ? [120, 120, 128] : shade([40, 40, 44], 0.9 + n * 0.2);
+      return shade([74, 74, 80], (p.v === 0 ? 1.3 : 1) + (n - 0.5) * 0.1);
+    }
+    case 'tnt': {
+      if (lit) return shade([250, 250, 250], 0.95 + n * 0.05);
+      if (p.f === 2 || p.f === 3) {
+        const d = Math.hypot((p.u % 6) - 2.5, (p.v % 6) - 2.5);
+        return d > 2.4 ? [120, 22, 18] : d > 1.4 ? [214, 58, 42] : [226, 214, 192];
+      }
+      const band = p.v >= Math.floor(p.h * 0.35) && p.v <= Math.floor(p.h * 0.62);
+      if (band) return shade([232, 226, 206], 0.95 + n * 0.08);
+      return shade(p.u % 3 === 2 ? [150, 30, 22] : [206, 50, 38], 0.95 + n * 0.08);
+    }
   }
 }
 

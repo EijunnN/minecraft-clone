@@ -215,6 +215,21 @@ export class ItemRenderer {
     return m;
   }
 
+  /**
+   * Fase 7 (mecanismos): un bloque tal cual está (con su orientación y su forma) para dibujarlo suelto: lo
+   * que mueve un pistón. null si no se dibuja así (plantas, antorchas…).
+   */
+  stateModel(block: number): ItemModel | null {
+    const key = 's' + block;
+    const hit = this.cache.get(key);
+    if (hit) return hit;
+    const r = BLOCK_RENDER[block];
+    if (r === R_NONE || r === R_CROSS || r === R_TORCH) return null;
+    const m = r === R_MODEL ? this.upload(this.boxesData(block), true, BLOCK_MODEL_CUTOUT[block] === 1, false) : this.blockModel(block);
+    this.cache.set(key, m);
+    return m;
+  }
+
   /** Fase 7 (encantamientos): cubo con la textura `name` en las seis caras (el libro de la mesa). */
   textureCube(name: string): ItemModel {
     const key = 't' + name;

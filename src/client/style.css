@@ -1045,6 +1045,11 @@ kbd {
   grid-template-columns: repeat(3, 52px);
 }
 
+/* Fase 7 (mecanismos): tolva */
+.inv2 .g5 {
+  grid-template-columns: repeat(5, 52px);
+}
+
 .inv2 .g2 {
   grid-template-columns: repeat(2, 52px);
 }

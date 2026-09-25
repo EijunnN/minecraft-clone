@@ -7,6 +7,7 @@ import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración
 import { ENT_ARMOR_STAND } from '../../shared/armorStands'; // Fase 6.5 (remate)
 import { ENT_EFFECT_CLOUD } from '../../shared/potions'; // Fase 7 (pociones)
 import { isVehicleType, vehicleSize } from '../../shared/vehicles'; // Fase 7 (transporte)
+import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
 
 interface Snap {
   t: number;
@@ -93,8 +94,8 @@ export class ClientEntities {
       }
       const e: ClientEntity = {
         id, type, snaps: [{ t: now, x, y, z, yaw, body, pitch }], x, y, z, yaw, bodyYaw: body, pitch, flags,
-        item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN || type === ENT_DISPLAY || isHangingType(type) ? e1 ?? 0 : 0,
-        count: type === ENT_ITEM ? e2 ?? 1 : type === ENT_XP ? e1 ?? 1 : 1,
+        item: type === ENT_ITEM || type === ENT_FALLING || type === ENT_THROWN || type === ENT_DISPLAY || isHangingType(type) || type === ENT_TNT ? e1 ?? 0 : 0,
+        count: type === ENT_ITEM ? e2 ?? 1 : type === ENT_XP ? e1 ?? 1 : type === ENT_TNT ? e2 ?? 80 : 1, // Fase 7 (mecanismos): mecha
         health: MOBS[type] ? e1 ?? MOBS[type].health : 1,
         variant: MOBS[type] && Number.isInteger(e2) ? Math.max(0, Math.min(255, e2)) : 0, // Fase 6 (monturas)
         walkPhase: 0, walkAmount: 0, age: 0, hurtT: flags & EF_HURT ? 0 : 99, deathT: flags & EF_DEAD ? 0 : -1,

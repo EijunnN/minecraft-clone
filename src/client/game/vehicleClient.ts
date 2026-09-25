@@ -19,6 +19,7 @@ import {
   vehicleContainerPos, vehicleOfContainer, VF_PADDLE_L, VF_PADDLE_R,
 } from '../../shared/vehicles';
 import { vehicleForItem, isRideable, vehicleTitle } from '../../shared/vehicleItems';
+import { ENT_HOPPER_MINECART } from '../../shared/vehicles'; // Fase 7 (mecanismos)
 import { RIDER_HIP } from '../../shared/mounts';
 import type { ItemStack } from '../../shared/items';
 import { isRail, BLOCK_FLUID } from '../../shared/blocks';
@@ -176,11 +177,12 @@ export class VehicleClient {
     const g = this.g;
     const item = held?.id ?? 0;
     // Vagoneta con horno: carbón (y empujón); vagonetas nuevas (tolva, TNT…): su propio uso en el servidor.
-    if (target.type === ENT_FURNACE_MINECART || (!isRideable(target.type) && target.type !== ENT_CHEST_MINECART)) {
+    const hopper = target.type === ENT_HOPPER_MINECART; // Fase 7 (mecanismos): se abre como la de cofre
+    if (target.type === ENT_FURNACE_MINECART || (!isRideable(target.type) && target.type !== ENT_CHEST_MINECART && !hopper)) {
       g.interaction.interactEntity(target, item);
       return true;
     }
-    const chest = target.type === ENT_CHEST_MINECART || (target.type === ENT_CHEST_BOAT && g.player.sneaking);
+    const chest = target.type === ENT_CHEST_MINECART || hopper || (target.type === ENT_CHEST_BOAT && g.player.sneaking);
     if (chest) {
       const pos = vehicleContainerPos(target.id);
       g.interaction.pendingOpen = pos;
