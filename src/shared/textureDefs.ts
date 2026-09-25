@@ -392,6 +392,18 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'fire', special: 5, cutout: true },
   { name: 'conduit_closed' },
   { name: 'conduit_open' },
+  // Fase 7 (redstone): polvo (un color por potencia), antorchas, repetidor y comparador (la textura de
+  // arriba va girada con cada orientación), palanca, lámpara, sensor, diana, bloque musical, cuerda,
+  // cofre trampa, pararrayos y bombilla de cobre (por fase) y la puerta y la trampilla de hierro.
+  ...Array.from({ length: 16 }, (_, p): TextureDef => ({ name: `redstone_dust_${p}`, cutout: true })),
+  { name: 'redstone_torch', cutout: true },
+  { name: 'redstone_torch_off', cutout: true },
+  ...['redstone_torch_side_on', 'redstone_torch_side_off', 'redstone_torch_top_on', 'redstone_torch_top_off'].map((name): TextureDef => ({ name })),
+  ...['repeater', 'comparator'].flatMap((k) => ['off', 'on'].flatMap((m) => [0, 1, 2, 3].map((f): TextureDef => ({ name: `${k}_${m}_${f}` })))),
+  ...['lever_handle', 'redstone_block', 'redstone_lamp', 'redstone_lamp_on', 'daylight_detector_top', 'daylight_detector_inverted_top',
+    'daylight_detector_side', 'target_side', 'target_top', 'note_block', 'tripwire', 'trapped_chest_front', 'trapped_chest_front_seam_left',
+    'trapped_chest_front_seam_right', 'lightning_rod_on', 'iron_door_top', 'iron_door_bottom', 'iron_trapdoor'].map((name): TextureDef => ({ name })),
+  ...['', 'exposed_', 'weathered_', 'oxidized_'].flatMap((p) => ['lightning_rod', 'copper_bulb', 'copper_bulb_lit'].map((k): TextureDef => ({ name: p + k }))),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

@@ -183,3 +183,8 @@ export * from './equipmentBlocks';
 (INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);
 // Fase 6.5 (calderos): caldero con agua, con lava y con nieve polvo (registrados los últimos: ids nuevos).
 export * from './cauldrons';
+// Fase 7 (redstone): polvo, antorchas, palanca, botones, placas, repetidor, comparador, lámpara, sensores,
+// cofre trampa, bombilla y pararrayos de cobre, puerta y trampilla de hierro (registrados los últimos: ids nuevos).
+import { REDSTONE_INVENTORY } from './redstoneBlocks';
+export * from './redstoneBlocks';
+(INVENTORY_ORDER as number[]).push(...REDSTONE_INVENTORY);

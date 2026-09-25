@@ -29,7 +29,8 @@ export function copperTexture(base: string, stage: number): string {
 }
 
 export type CopperKind =
-  | 'block' | 'cut' | 'chiseled' | 'grate' | 'cut_stairs' | 'cut_slab' | 'door' | 'trapdoor' | 'bars' | 'chain' | 'lantern';
+  | 'block' | 'cut' | 'chiseled' | 'grate' | 'cut_stairs' | 'cut_slab' | 'door' | 'trapdoor' | 'bars' | 'chain' | 'lantern'
+  | 'bulb' | 'lightning_rod'; // Fase 7 (redstone)
 
 interface CopperInfo {
   kind: CopperKind;
@@ -76,6 +77,18 @@ function variants(
       if (id !== existing) INVENTORY.push(id);
     }
   }
+}
+
+/**
+ * Fase 7 (redstone): tipos de cobre que se registran en otros módulos (la bombilla y el pararrayos) con
+ * sus ocho variantes; oxidación, cera y raspado les funcionan como a los demás. Devuelve COPPER[kind].
+ */
+export function addCopperVariants(
+  kind: CopperKind, keyBase: string, noun: string, props: [string, number][],
+  make: (stage: number) => (st: Record<string, number>) => Opts,
+): number[][] {
+  variants(kind, keyBase, noun, props, make);
+  return COPPER[kind];
 }
 
 // ------------------------------------------------------------------ bloques completos

@@ -36,7 +36,8 @@ export type SoundMaterial =
   | 'water'
   | 'lava';
 
-export type BlockCategory = 'construccion' | 'naturaleza' | 'minerales' | 'decoracion' | 'colores';
+export type BlockCategory = 'construccion' | 'naturaleza' | 'minerales' | 'decoracion' | 'colores'
+  | 'redstone'; // Fase 7 (redstone)
 
 export interface BlockDef {
   id: number;
