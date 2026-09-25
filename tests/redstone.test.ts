@@ -522,6 +522,9 @@ test('rendimiento: una red grande y varios relojes sin pasarse de tiempo', () =>
   assert.ok(toggles >= 80, `los relojes siguen andando (${toggles} cambios)`);
   assert.ok(clocks.every((x) => get(x, by, z0 + 42) !== AIR), 'ninguna antorcha se ha roto');
   console.log(`rendimiento: ${ms.toFixed(3)} ms por tick, ${h.gs.redstone.updates} avisos, ${h.gs.redstone.scheduledCount} ticks pendientes`);
-  assert.ok(ms < 8, `${ms.toFixed(2)} ms por tick de media`);
+  // El tiempo depende de la máquina (con la suite entera va al doble): margen amplio, y el trabajo
+  // (número de avisos) se comprueba aparte, que no depende de la carga.
+  assert.ok(ms < 15, `${ms.toFixed(2)} ms por tick de media`);
+  assert.ok(h.gs.redstone.updates < 60000, `${h.gs.redstone.updates} avisos`);
   assert.ok(h.gs.redstone.scheduledCount < 100);
 });

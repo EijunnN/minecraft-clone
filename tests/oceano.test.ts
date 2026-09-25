@@ -287,7 +287,8 @@ test('guardián: fuera del agua da saltos pero no se ahoga; ataca también a los
   c2.pos(x2 + 40, y2 + 1, z2); // el jugador, lejos del alcance del láser
   const g2 = h2.gs.entities.spawnMob(MOB_GUARDIAN, x2 - 4.5, y2 + 1, z2 + 0.5)!;
   const sq = h2.gs.entities.spawnMob(MOB_SQUID, x2 + 4.5, y2 + 2, z2 + 0.5)!;
-  for (let i = 0; i < 20 * 6 && sq.health === sq.maxHealth; i++) {
+  // Elegir presa lleva un rato al azar y el láser carga 4 s: hasta 12 s.
+  for (let i = 0; i < 20 * 12 && sq.health === sq.maxHealth; i++) {
     sq.x = x2 + 4.5;
     sq.z = z2 + 0.5;
     h2.tick(1);

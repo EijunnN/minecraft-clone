@@ -37,6 +37,8 @@ interface GuardianState {
   moving: boolean;
   /** Mirada al azar cuando no hay presa. */
   look: number;
+  /** Segundos hasta volver a buscar un calamar o un ajolote (con su espera propia: no depende del ritmo del tick). */
+  scan: number;
 }
 
 /** Daño de un ataque cuerpo a cuerpo de Minecraft según la dificultad (fácil: mitad + 1; difícil: ×1,5). */
@@ -53,7 +55,7 @@ export class GuardianAI {
   state(e: Entity): GuardianState {
     let s = this.states.get(e);
     if (!s) {
-      s = { prey: null, laser: 0, goal: null, wait: this.m.rand() * 3, moving: false, look: this.m.rand() * 4 };
+      s = { prey: null, laser: 0, goal: null, wait: this.m.rand() * 3, moving: false, look: this.m.rand() * 4, scan: this.m.rand() };
       this.states.set(e, s);
     }
     return s;
@@ -70,6 +72,7 @@ export class GuardianAI {
     const st = this.state(e);
     const ai = e.ai!;
     ai.attackCd -= dt;
+    st.scan -= dt;
     const prey = this.findPrey(e, st, players);
     let lookAt: [number, number, number] | null = null;
     if (prey) {
@@ -137,7 +140,9 @@ export class GuardianAI {
       st.prey = p.id;
       return { id: p.id, pos: [p.x, p.y + 1.2, p.z] };
     }
-    if (e.age % 1 < 0.06) {
+    // Más o menos una vez por segundo (antes miraba `age % 1`, que se saltaba con ticks más largos).
+    if (st.scan <= 0) {
+      st.scan = 0.5 + this.m.rand();
       for (const o of this.m.list.values()) {
         if (!PREY.has(o.type) || o.dead || Math.abs(o.x - ex) > LASER_RANGE || Math.abs(o.z - ez) > LASER_RANGE) continue;
         if (!valid(o.x, o.y + o.height / 2, o.z, false)) continue;

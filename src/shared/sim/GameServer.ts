@@ -105,6 +105,8 @@ export interface GameServerOptions {
   local?: boolean;
   /** Segundos entre guardados (las escrituras cuestan en el plan gratuito de Cloudflare). */
   flushSeconds?: number;
+  /** Azar del servidor y de las criaturas (por defecto Math.random; las pruebas pasan uno con semilla). */
+  rand?: () => number;
 }
 
 export class GameServer {
@@ -208,6 +210,7 @@ export class GameServer {
     // Mundos guardados con bloques de 1 byte: pasarlos al formato de 16 bits antes de leerlos.
     migrateStore(store);
     this.now = opts.now ?? Date.now;
+    if (opts.rand) this.rand = opts.rand;
     this.local = !!opts.local;
     this.flushTicks = Math.max(1, Math.round((opts.flushSeconds ?? 30) * TICK_RATE));
     let seed = Number(store.getMeta('seed'));
@@ -236,6 +239,7 @@ export class GameServer {
       washAway: (x, y, z, id) => this.entities.dropStacks(blockDrops(id, 0, this.rand), x + 0.5, y + 0.3, z + 0.5),
     };
     this.entities = new Entities(this.makeHost());
+    this.entities.rand = this.rand;
     this.entities.restorePassive(store.getMeta('mobs'));
 
     this.ctx = this.makeContext();
