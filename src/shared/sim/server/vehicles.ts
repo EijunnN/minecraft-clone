@@ -244,7 +244,7 @@ export class Transport {
       return false;
     }
     const occupied = v.seats.filter(Boolean).length;
-    const [x, y, z] = seatPos(v.e.type, v.e.x, v.e.y, v.e.z, v.e.yaw, seat, occupied);
+    const [x, y, z] = seatPos(v.e.type, v.e.x, v.e.y, v.e.z, v.e.yaw, seat, occupied, v.e.variant ?? 0);
     m.x = x;
     m.y = y - 0.35;
     m.z = z;

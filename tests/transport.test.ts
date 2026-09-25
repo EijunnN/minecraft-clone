@@ -427,6 +427,6 @@ test('servidor: la barca se guarda y la criatura sentada vuelve a su sitio', () 
   const cb = back.find((e) => e.type === ENT_CHEST_BOAT);
   assert.ok(cb && cb.variant === BOAT_WOODS.indexOf('mangrove'), 'barca de mangle con cofre');
   const b2 = back.find((e) => e.type === ENT_BOAT)!;
-  const pig2 = back.find((e) => e.type === MOB_PIG);
-  assert.equal(pig2?.vehicle, b2.id, 'el cerdo sigue en la barca');
+  // (Puede haber aparecido algún otro cerdo por la zona: basta con que uno siga sentado en la barca.)
+  assert.ok(back.some((e) => e.type === MOB_PIG && e.vehicle === b2.id), 'el cerdo sigue en la barca');
 });

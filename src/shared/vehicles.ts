@@ -44,8 +44,9 @@ export function vehicleSize(type: number): [number, number] {
 }
 
 /** Altura del asiento (donde apoya la cadera el pasajero) sobre la base de la entidad. */
-export function seatHeight(type: number): number {
-  return isBoatType(type) ? 0.2 : 0.28;
+export function seatHeight(type: number, variant = 0): number {
+  if (isBoatType(type)) return variant === RAFT_VARIANT ? 0.5 : 0.2; // la balsa lleva la cubierta más alta
+  return 0.28;
 }
 
 /**
@@ -59,9 +60,11 @@ export function seatOffset(type: number, seat: number, occupied: number): number
 }
 
 /** Posición de una plaza: [x, y, z] del pasajero (la cadera) para una entidad en (x, y, z) con ese yaw. */
-export function seatPos(type: number, x: number, y: number, z: number, yaw: number, seat: number, occupied: number): [number, number, number] {
+export function seatPos(
+  type: number, x: number, y: number, z: number, yaw: number, seat: number, occupied: number, variant = 0,
+): [number, number, number] {
   const f = seatOffset(type, seat, occupied);
-  return [x - Math.sin(yaw) * f, y + seatHeight(type), z - Math.cos(yaw) * f];
+  return [x - Math.sin(yaw) * f, y + seatHeight(type, variant), z - Math.cos(yaw) * f];
 }
 
 /** Bits de estado propios (se suman a EF_HURT, recién golpeada): remos que reman y horno encendido. */

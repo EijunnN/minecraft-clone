@@ -135,7 +135,7 @@ function model(id: number, key: string, name: string, boxes: Box[], mask: [numbe
 const MODELS = new Map<number, VehicleModel>();
 const add = (m: VehicleModel) => MODELS.set(m.def.id, m);
 add(model(ENT_BOAT, 'boat', 'Barca', boatBoxes(false), [-8, -14, 8, 14, 8]));
-add(model(ENT_CHEST_BOAT, 'chest_boat', 'Barca con cofre', boatBoxes(true), [-8, -14, 8, 2, 8]));
+add(model(ENT_CHEST_BOAT, 'chest_boat', 'Barca con cofre', boatBoxes(true), [-8, -14, 8, 14, 8]));
 add(model(RAFT_MODEL, 'raft', 'Balsa', raftBoxes(false), null));
 add(model(CHEST_RAFT_MODEL, 'chest_raft', 'Balsa con cofre', raftBoxes(true), null));
 add(model(ENT_MINECART, 'minecart', 'Vagoneta', cartBoxes('none'), null));

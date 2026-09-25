@@ -358,7 +358,7 @@ export class VehicleClient {
     if (!at) return;
     const type = this.type || e?.type || ENT_BOAT;
     const occupied = Math.max(this.seat + 1, [...this.riders.values()].filter((r) => r[0] === this.entityId).length + this.mobsIn(e));
-    const [sx, sy, sz] = seatPos(type, at[0], at[1], at[2], at[3], this.seat, occupied);
+    const [sx, sy, sz] = seatPos(type, at[0], at[1], at[2], at[3], this.seat, occupied, e?.variant ?? 0);
     p.x = sx;
     p.y = sy - RIDER_HIP;
     p.z = sz;
@@ -406,7 +406,7 @@ export class VehicleClient {
       for (const [mid, seat] of this.mobSeats.get(e.id) ?? []) {
         const m = this.g.ents.list.get(mid);
         if (!m) continue;
-        const [sx, sy, sz] = seatPos(e.type, e.x, e.y, e.z, e.yaw, seat, occupied);
+        const [sx, sy, sz] = seatPos(e.type, e.x, e.y, e.z, e.yaw, seat, occupied, e.variant);
         [m.x, m.y, m.z] = [sx, sy - 0.35, sz];
         m.yaw = m.bodyYaw = e.yaw + (e.type === ENT_BOAT && occupied > 1 && seat === 1 ? Math.PI / 2 : 0);
         m.lastX = m.x;
@@ -423,7 +423,7 @@ export class VehicleClient {
     const e = this.g.ents.list.get(r[0]);
     if (!e) return false;
     const occupied = Math.max(r[1] + 1, [...this.riders.values()].filter((x) => x[0] === r[0]).length + this.mobsIn(e));
-    const [sx, sy, sz] = seatPos(e.type, e.x, e.y, e.z, e.yaw, r[1], occupied);
+    const [sx, sy, sz] = seatPos(e.type, e.x, e.y, e.z, e.yaw, r[1], occupied, e.variant);
     v.x = sx;
     v.y = sy - RIDER_HIP;
     v.z = sz;
