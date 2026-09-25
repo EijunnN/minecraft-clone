@@ -7,7 +7,7 @@ import { BREW_BOTTLES, BREW_FUEL, BREW_FUEL_USES, BREW_INGREDIENT, BREW_TIME } f
 import type { ContainerState } from '../../shared/containers';
 
 export const BREWING_HTML =
-  '<h3>Alambique alquímico</h3><div class="brew">' +
+  '<h3>Soporte para pociones</h3><div class="brew">' +
   `<div class="brew-fuel"><div class="slot2" data-s="cont:${BREW_FUEL}" data-hint="Polvo de blaze"></div>` +
   '<div class="brew-blaze" title="Combustible"><i></i></div></div>' +
   '<div class="brew-main">' +
