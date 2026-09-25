@@ -29,6 +29,7 @@ import { MOB_DOLPHIN } from '../../shared/aquaticMobs'; // Fase 7.5 (océano)
 import { COD, SALMON } from '../../shared/items'; // Fase 7.5 (océano)
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
+import { critterCanInteract } from './critterInteraction'; // Fase 7.5 (fauna)
 import { afterDrinkOminous } from './raidClient'; // Fase 6 (asaltos)
 import { useAxeOnWood } from './woodInteraction'; // Fase 6.5 (maderas)
 import { canAddCandle } from '../../shared/blocks'; // Fase 6.5 (colores)
@@ -786,6 +787,8 @@ export class Interaction {
     if (companionUse(e.type, e.flags, item)) return true; // Fase 6 (gólems/domesticar)
     const fauna = faunaCanInteract(e, item); // Fase 6 (fauna): cepillo
     if (fauna !== undefined) return fauna;
+    const critter = critterCanInteract(e, item); // Fase 7.5 (fauna): champiñaca
+    if (critter !== undefined) return critter;
     if (BREED_FOOD[def.key]?.includes(item)) return true;
     if (item === SHEARS) return e.type === MOB_SHEEP && !baby && !(e.flags & EF_SHEARED);
     if (item === BUCKET) return e.type === MOB_COW && !baby;

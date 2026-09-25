@@ -58,6 +58,11 @@ function tracks(m: Entities): Map<string, PlayerTrack> {
   return t;
 }
 
+/** Fase 7.5 (fauna): velocidad horizontal suavizada de un jugador (bloques/s); el ocelote se asusta si corre. */
+export function playerSpeed(m: Entities, id: string): number {
+  return tracks(m).get(id)?.speed ?? 0;
+}
+
 /** Reloj de la fauna (lo llama el spawner en cada tick): abejas y velocidad de los jugadores. */
 export function faunaWorldTick(m: Entities, dt: number, players: PlayerView[]): void {
   const t = tracks(m);

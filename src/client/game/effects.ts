@@ -18,6 +18,7 @@ import { potionFx } from './potionClient'; // Fase 7 (pociones)
 import { enchantFx } from './enchantFx'; // Fase 7 (encantamientos)
 import { mechanismFx } from './mechanismsClient'; // Fase 7 (mecanismos)
 import { oceanFx } from './oceanFx'; // Fase 7.5 (océano)
+import { critterFx } from './critterFx'; // Fase 7.5 (fauna)
 import { allayFx } from './allayFx'; // Fase 7.5 (mansión)
 
 export class Effects {
@@ -248,7 +249,7 @@ export class Effects {
         if (oceanFx(this.g, kind, p, a)) break; // Fase 7.5 (océano)
         // Fase 6 (acuáticos, fauna)
         // Fase 6.5 (equipo): mechero, fuego, ballesta, tridente, cuerno, cohetes, armaduras de animales y conducto.
-        if (!potionFx(this.g, kind, p, a, b) && !transportFx(this.g, kind, p, a) && !aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b) && !equipmentFx(this.g, kind, p, a, b) && !redstoneFx(this.g, kind, p, a, b) && !mechanismFx(this.g, kind, p, a, b) && !allayFx(this.g, kind, p)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones)
+        if (!potionFx(this.g, kind, p, a, b) && !transportFx(this.g, kind, p, a) && !aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b) && !equipmentFx(this.g, kind, p, a, b) && !redstoneFx(this.g, kind, p, a, b) && !mechanismFx(this.g, kind, p, a, b) && !critterFx(this.g, kind, p) && !allayFx(this.g, kind, p)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones); 7.5 (fauna, mansión)
     }
   }
 

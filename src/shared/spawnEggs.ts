@@ -83,5 +83,12 @@ export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime
 export const LATE_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('guardian', 'guardián', [90, 130, 114], [241, 125, 48]), // Fase 7.5 (océano)
   egg('elder_guardian', 'guardián anciano', [206, 205, 186], [116, 118, 147]),
+  // Fase 7.5 (fauna)
+  egg('bat', 'murciélago', [76, 62, 48], [15, 15, 15]),
+  egg('ocelot', 'ocelote', [239, 222, 125], [86, 68, 52]),
+  egg('mooshroom', 'champiñaca', [160, 15, 16], [183, 183, 183]),
+  egg('trader_llama', 'llama de comerciante', [234, 164, 48], [69, 98, 150]),
+  egg('skeleton_horse', 'caballo esqueleto', [104, 104, 79], [229, 229, 216]),
+  egg('zombie_horse', 'caballo zombi', [49, 82, 52], [151, 194, 132]),
   egg('allay', 'alay', [0, 218, 255], [0, 173, 255]), // Fase 7.5 (mansión)
 ];

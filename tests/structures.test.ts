@@ -7,6 +7,7 @@ import {
   AIR, STONE, SANDSTONE, MOSSY_COBBLESTONE, COBBLESTONE, MOB_SPAWNER, COBWEB, OBSIDIAN, SNOW_BLOCK, FENCES, OAK_PLANKS,
   isChest, DARK_OAK_LOG,
   PRISMARINE_BRICKS, // Fase 7.5 (océano)
+  SPRUCE_PLANKS, BONE_BLOCK, BONE_BLOCK_AXIS, // Fase 7.5 (fauna)
 } from '../src/shared/blocks';
 import { DARK_OAK_PLANKS } from '../src/shared/blocks'; // Fase 7.5 (mansión)
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
@@ -50,6 +51,9 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     monument: (c) => (c.get(PRISMARINE_BRICKS) ?? 0) > 200,
     ocean_ruins: (_c, ch) => ch.some((t) => t.startsWith('underwater_ruin')),
     buried_treasure: (_c, ch) => ch.includes('buried_treasure'),
+    // Fase 7.5 (fauna)
+    swamp_hut: (c) => (c.get(SPRUCE_PLANKS) ?? 0) > 40,
+    fossil: (c) => (c.get(BONE_BLOCK) ?? 0) + (c.get(BONE_BLOCK_AXIS) ?? 0) + (c.get(BONE_BLOCK_AXIS + 1) ?? 0) > 5,
     mansion: (c, ch) => ch.includes('woodland_mansion') || (c.get(DARK_OAK_PLANKS) ?? 0) > 200, // Fase 7.5 (mansión)
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {

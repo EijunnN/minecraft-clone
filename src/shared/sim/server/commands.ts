@@ -22,6 +22,7 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   // Fase 7.5 (océano)
   monumento: 'monument', monumento_oceanico: 'monument', ruinas: 'ocean_ruins', ruinas_oceanicas: 'ocean_ruins',
   tesoro: 'buried_treasure', tesoro_enterrado: 'buried_treasure',
+  cabana_de_bruja: 'swamp_hut', cabana: 'swamp_hut', choza_de_bruja: 'swamp_hut', fosil: 'fossil', fosiles: 'fossil', // Fase 7.5 (fauna)
   mansion: 'mansion', mansion_del_bosque: 'mansion', // Fase 7.5 (mansión)
 };
 
@@ -171,7 +172,7 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|mansion>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];

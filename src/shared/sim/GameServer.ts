@@ -71,6 +71,7 @@ import { BellResonance } from './server/bellResonance'; // Fase 7 (efectos)
 import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
 import { OceanMonuments } from './server/monuments'; // Fase 7.5 (océano)
+import { CritterWorld } from './server/critterWorld'; // Fase 7.5 (fauna)
 import { Allays } from './server/allays'; // Fase 7.5 (mansión)
 
 export { TICK_RATE, type Conn };
@@ -197,6 +198,8 @@ export class GameServer {
   private bells: BellResonance;
   /** Fase 7.5 (océano): criaturas de estructura, guardianes de los monumentos y maldición del anciano. */
   readonly monuments: OceanMonuments;
+  /** Fase 7.5 (fauna): trampa del rayo, llamas del comerciante y cabañas de bruja. */
+  readonly critters: CritterWorld;
   /** Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y objetos). */
   private allays: Allays;
 
@@ -365,6 +368,7 @@ export class GameServer {
     // Entities.spawnMob.
     this.monuments = new OceanMonuments(this.ctx); // Fase 7.5 (océano)
     this.world.onStructureMobs = (m) => this.monuments.spawnStructureMobs(m);
+    this.critters = new CritterWorld(this.ctx, this.storms, this.trading); // Fase 7.5 (fauna)
     // Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y los objetos que les dan los jugadores).
     this.allays = new Allays(this.ctx, this.collections);
     const interact3 = this.farming.extraInteract;
@@ -1063,6 +1067,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     if (this.tickCount % TICK_RATE === 0) this.collections.tick(); // Fase 6.5 (colecciones)
+    if (this.tickCount % TICK_RATE === 0) this.critters.tick(); // Fase 7.5 (fauna)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.banners.endTick(); // Fase 6.5 (libros y estandartes)

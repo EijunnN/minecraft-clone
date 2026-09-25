@@ -12,6 +12,7 @@ import { buildMonsterSound } from './monsterSounds'; // Fase 6 (monstruos)
 import { buildIllagerSound } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildWildlifeSound } from './wildlife'; // Fase 6 (fauna)
 import { buildGuardianSound } from './oceanSounds'; // Fase 7.5 (océano)
+import { buildCritterSound } from './critterSounds'; // Fase 7.5 (fauna)
 import { buildAllaySound } from './allaySounds'; // Fase 7.5 (mansión)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
@@ -486,7 +487,9 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
         const raider = buildIllagerSound(ctx, noise, kind, event, destination, now);
         if (raider.length) return raider;
         if (kind === 'allay') return buildAllaySound(ctx, noise, kind, event, destination, now); // Fase 7.5 (mansión)
-        return buildWildlifeSound(ctx, noise, kind, event, destination, now);
+        // Fase 7.5 (fauna): murciélago, ocelote y caballos no muertos.
+        const critter = buildCritterSound(ctx, noise, kind, event, destination, now);
+        return critter.length ? critter : buildWildlifeSound(ctx, noise, kind, event, destination, now);
       }
   }
 }

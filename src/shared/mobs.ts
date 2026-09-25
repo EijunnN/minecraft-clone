@@ -19,6 +19,9 @@ export * from './illagers';
 // Fase 7.5 (océano): guardián y guardián anciano (ids 73–74).
 import { OCEAN_MOBS } from './oceanMobs';
 export * from './oceanMobs';
+// Fase 7.5 (fauna): murciélago, ocelote, champiñaca, llama de comerciante y caballos no muertos (ids 78–83).
+import { critterMobs } from './critters';
+export * from './critters';
 // Fase 7.5 (mansión): el alay (id 76).
 import { ALLAY_DEF } from './allay';
 export { MOB_ALLAY } from './allay';
@@ -638,6 +641,8 @@ mob({
 // Fase 6 (asaltos): definiciones en illagers.ts.
 for (const d of ILLAGER_MOBS) mob(d);
 for (const d of OCEAN_MOBS) mob(d); // Fase 7.5 (océano)
+// Fase 7.5 (fauna): definiciones en critters.ts (reutilizan los modelos del gato, la vaca, la llama y el caballo).
+for (const d of critterMobs(MOBS, { cat: MOB_CAT, cow: MOB_COW, llama: MOB_LLAMA, horse: MOB_HORSE })) mob(d);
 mob(ALLAY_DEF); // Fase 7.5 (mansión)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);

@@ -28,6 +28,7 @@ import {
   potionEffects, potionColor,
 } from '../../potions';
 import { EF_ACTION } from '../../protocol';
+import { felineNear } from './critters'; // Fase 7.5 (fauna): los phantoms no se acercan a gatos ni ocelotes
 import { moveBody, lineOfSight } from '../physics';
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
@@ -511,6 +512,12 @@ export class MonsterAI {
       s.cx = target.x;
       s.cz = target.z;
       s.cy = target.y + 12;
+    }
+    // Fase 7.5 (fauna): con un gato u ocelote a 16 bloques no se lanza en picado (y remonta).
+    if (felineNear(this.m, e.x, e.y, e.z, 16)) {
+      if (s.swoop > 0) s.cy = Math.max(s.cy, e.y + 6);
+      s.swoop = 0;
+      s.swoopCd = Math.max(s.swoopCd, 1);
     }
     let tx: number, ty: number, tz: number, speed: number, turn: number;
     if (s.swoop > 0 && target) {

@@ -42,6 +42,7 @@ const STRUCTURES: [string, string][] = [
   ['templo_de_la_jungla', 'jungle_temple'], ['naufragio', 'shipwreck'], ['portal_en_ruinas', 'ruined_portal'],
   ['iglu', 'igloo'], ['pozo', 'desert_well'], ['mina', 'mineshaft'],
   ['monumento', 'monument'], ['ruinas', 'ocean_ruins'], ['tesoro', 'buried_treasure'], // Fase 7.5 (océano)
+  ['cabana_de_bruja', 'swamp_hut'], ['fosil', 'fossil'], // Fase 7.5 (fauna)
   ['mansion', 'mansion'], // Fase 7.5 (mansión)
 ];
 

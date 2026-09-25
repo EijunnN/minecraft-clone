@@ -23,6 +23,9 @@ import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { buildOutpost, outpostCandidate, OUTPOST_RADIUS, OUTPOST_VILLAGE_GAP } from './outposts'; // Fase 6 (asaltos)
 import { OCEAN_STRUCTURES, OCEAN_STRUCTURE_NAMES } from './oceanStructures'; // Fase 7.5 (océano)
+// Fase 7.5 (fauna): cabañas de bruja y fósiles.
+import { buildSwampHut, swampHutSite, SWAMP_HUT_RADIUS, SWAMP_HUT_SALT } from './swampHut';
+import { buildFossil, fossilSite, FOSSIL_RADIUS } from './fossils';
 import { buildMansion, mansionSite, MANSION_RADIUS } from './mansion'; // Fase 7.5 (mansión)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
@@ -39,6 +42,8 @@ export interface StructureMob {
   x: number;
   y: number;
   z: number;
+  /** Fase 7.5 (fauna): variante (la piel del gato negro de la cabaña de bruja). */
+  variant?: number;
 }
 
 /** Lienzo de un chunk: escribe sólo dentro del chunk y anota los cofres. */
@@ -55,8 +60,8 @@ export class Canvas {
   ) {}
 
   /** Fase 7.5 (océano, mansión): criatura de la estructura en (x, y, z) (la anota el chunk que la contiene). */
-  mob(type: number, x: number, y: number, z: number): void {
-    if (this.inside(Math.floor(x), Math.floor(y), Math.floor(z))) this.mobs.push({ type, x, y, z });
+  mob(type: number, x: number, y: number, z: number, variant?: number): void {
+    if (this.inside(Math.floor(x), Math.floor(y), Math.floor(z))) this.mobs.push(variant === undefined ? { type, x, y, z } : { type, x, y, z, variant });
   }
 
   inside(x: number, y: number, z: number): boolean {
@@ -228,6 +233,17 @@ const GRID: GridType[] = [
     build: buildOutpost,
   },
   ...OCEAN_STRUCTURES, // Fase 7.5 (océano): monumentos, ruinas oceánicas y tesoros enterrados
+  // Fase 7.5 (fauna): cabañas de bruja en los pantanos y fósiles enterrados (desiertos y pantanos).
+  {
+    key: 'swamp_hut', spacing: 32, separation: 8, salt: SWAMP_HUT_SALT, radius: SWAMP_HUT_RADIUS,
+    site: (gen, x, z, inf) => swampHutSite(inf.biome, gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp))),
+    build: buildSwampHut,
+  },
+  {
+    key: 'fossil', spacing: 6, separation: 2, salt: 14357921, radius: FOSSIL_RADIUS,
+    site: (gen, x, z, inf) => fossilSite(gen, x, z, inf.biome, gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp))),
+    build: (c, s, gen) => buildFossil(c, s, gen.seed),
+  },
   // Fase 7.5 (mansión): la mansión del bosque, sólo en el bosque oscuro y muy rara (como en Minecraft).
   {
     key: 'mansion', spacing: 80, separation: 20, salt: 10387319, radius: MANSION_RADIUS,
@@ -242,6 +258,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   ruined_portal: 'Portal en ruinas', igloo: 'Iglú', desert_well: 'Pozo del desierto', mineshaft: 'Mina abandonada',
   village: 'Aldea', pillager_outpost: 'Puesto de saqueadores',
   ...OCEAN_STRUCTURE_NAMES, // Fase 7.5 (océano)
+  swamp_hut: 'Cabaña de bruja', fossil: 'Fósil', // Fase 7.5 (fauna)
   mansion: 'Mansión del bosque', // Fase 7.5 (mansión)
 };
 

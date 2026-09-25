@@ -9,6 +9,7 @@ import { isGolem, isTameable, variantBits, CAT_SKINS } from '../../companions';
 import type { PlayerView, InteractResult, Entity } from './types';
 import type { Entities } from './Entities';
 import { GolemBrain } from './golemBrain';
+import { isFeline } from './critters'; // Fase 7.5 (fauna): los ocelotes también asustan a los creepers
 import { Tameable } from './tameable';
 
 /** Enemigo resuelto: una criatura o un jugador, con su posición y tamaño. */
@@ -180,7 +181,7 @@ export class Companions {
   /** Los creepers huyen de los gatos: pone al creeper en pánico si hay uno cerca. */
   scaredOfCat(creeper: Entity): boolean {
     for (const o of this.m.list.values()) {
-      if (o.type !== MOB_CAT || o.dead) continue;
+      if (!isFeline(o.type) || o.dead) continue;
       if (Math.abs(o.x - creeper.x) > CAT_SCARE || Math.abs(o.z - creeper.z) > CAT_SCARE) continue;
       if (Math.hypot(o.x - creeper.x, o.y - creeper.y, o.z - creeper.z) > CAT_SCARE) continue;
       const ai = creeper.ai!;

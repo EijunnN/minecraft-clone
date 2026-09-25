@@ -62,6 +62,11 @@ export type MobSoundKind =
   // Fase 7.5 (océano).
   | 'guardian'
   | 'elder_guardian'
+  // Fase 7.5 (fauna).
+  | 'bat'
+  | 'ocelot'
+  | 'skeleton_horse'
+  | 'zombie_horse'
   | 'allay'; // Fase 7.5 (mansión)
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
