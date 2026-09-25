@@ -131,7 +131,7 @@ export class EnchantPanel implements WorkPanel {
       b.innerHTML = `<span class="ench-lapis n${i + 1}"><b>${i + 1}</b></span>` +
         `<img class="ench-runes" alt="" src="${runeWordUrl(this.words[i], ok)}">` +
         `<span class="ench-cost${ok ? '' : ' no'}">${o.cost}</span>`;
-      // Vista previa (la pista) y lo que falta, como en Minecraft.
+      // Vista previa (la pista) y lo que falta, como en Minecraft: la enseña la pantalla al pasar el ratón.
       const need: string[] = [];
       if (!this.host.creative()) {
         if (lapis < i + 1) need.push(`Hace falta${i ? 'n' : ''} ${i + 1} lapislázuli${i ? 's' : ''}`);
@@ -141,27 +141,6 @@ export class EnchantPanel implements WorkPanel {
         `<span class="tt-dim">${i + 1} lapislázuli${i ? 's' : ''} · ${i + 1} nivel${i ? 'es' : ''} de experiencia</span>` +
         need.map((n) => `<span class="tt-bad">${esc(n)}</span>`).join('');
     });
-    this.bindTip(panel);
-  }
-
-  /** Vista previa al pasar el ratón por una oferta (la descripción flotante de siempre). */
-  private bindTip(panel: HTMLElement): void {
-    const list = panel.querySelector('.ench-offers') as HTMLElement | null;
-    if (!list || list.dataset.bound) return;
-    list.dataset.bound = '1';
-    const tip = document.createElement('div');
-    tip.className = 'tooltip hidden';
-    list.appendChild(tip);
-    list.addEventListener('mousemove', (e) => {
-      const b = (e.target as HTMLElement).closest('.ench-offer') as HTMLElement | null;
-      const html = b?.dataset.tip;
-      tip.classList.toggle('hidden', !html);
-      if (!html) return;
-      if (tip.innerHTML !== html) tip.innerHTML = html;
-      tip.style.left = `${e.clientX + 14}px`;
-      tip.style.top = `${e.clientY + 14}px`;
-    });
-    list.addEventListener('mouseleave', () => tip.classList.add('hidden'));
   }
 
   click(target: HTMLElement, grid: (ItemStack | null)[]): boolean {

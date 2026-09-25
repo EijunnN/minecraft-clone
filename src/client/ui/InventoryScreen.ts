@@ -85,6 +85,8 @@ export class InventoryScreen {
   private drag: { btn: number; keys: string[] } | null = null;
   /** Último clic (para el doble clic). */
   private lastClick = { key: '', at: 0 };
+  /** Fase 7 (encantamientos): la descripción flotante muestra la pista de una oferta de la mesa. */
+  private workTip = false;
 
   constructor(host: ScreenHost, inv: Inventory) {
     this.host = host;
@@ -128,6 +130,26 @@ export class InventoryScreen {
         this.inv.changed();
         this.render();
       }
+    });
+    // Fase 7 (encantamientos): la pista de las ofertas de la mesa, en la misma descripción flotante que los
+    // objetos (dentro del panel no valdría `position: fixed`: el desenfoque del fondo lo recoloca).
+    this.panel.addEventListener('mousemove', (e) => {
+      const b = (e.target as HTMLElement).closest('[data-tip]') as HTMLElement | null;
+      const html = this.work && !this.inv.cursor ? b?.dataset.tip : undefined;
+      if (!html) {
+        if (this.workTip) this.tooltip.classList.add('hidden');
+        this.workTip = false;
+        return;
+      }
+      this.workTip = true;
+      if (this.tooltip.innerHTML !== html) this.tooltip.innerHTML = html;
+      this.tooltip.classList.remove('hidden');
+      this.tooltip.style.left = `${e.clientX + 14}px`;
+      this.tooltip.style.top = `${e.clientY + 14}px`;
+    });
+    this.panel.addEventListener('mouseleave', () => {
+      if (this.workTip) this.tooltip.classList.add('hidden');
+      this.workTip = false;
     });
     // Fase 6.5 (libros y estandartes): telar, elegir el dibujo.
     this.panel.addEventListener('mousedown', (e) => {
