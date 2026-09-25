@@ -7,6 +7,7 @@ import { MapImage } from './maps';
 import { structureMapOf } from '../../shared/structureMaps'; // Fase 7.5 (océano)
 import type { Game } from './Game';
 import '../ui/navigation.css';
+import { updateRecoveryCompass } from './recoveryCompass'; // Fase 7.5 (abismo)
 
 export class Navigation {
   private mapEl: HTMLDivElement | null = null;
@@ -25,6 +26,7 @@ export class Navigation {
     const compass = main?.id === COMPASS || off?.id === COMPASS;
     this.updateMap(mapKey);
     this.updateCompass(compass && !mapKey);
+    updateRecoveryCompass(g, !!mapKey); // Fase 7.5 (abismo)
   }
 
   /** Imagen de un mapa (se crea al verlo por primera vez y se sigue completando). */

@@ -21,6 +21,8 @@ import type { WorkHost } from '../ui/enchantScreens';
 import type { RayHit } from './raycast';
 import { OFFHAND } from './Inventory';
 import type { Game } from './Game';
+import { sneakSpeedFactor } from '../../shared/enchantEffects'; // Fase 7.5 (abismo)
+import { SWIFT_SNEAK } from '../../shared/enchantments';
 
 /** Radio en el que la mesa suelta runas hacia el libro (como en Minecraft, sólo si hay un jugador cerca). */
 const GLYPH_RANGE = 16;
@@ -116,6 +118,7 @@ export class EnchantClient {
     surv.respiration = airDrainFactor(this.armorLevel(0, RESPIRATION));
     surv.burnFactor = burnTimeFactor(this.armorSum(FIRE_PROTECTION));
     p.depthStrider = depthStriderFactor(this.armorLevel(3, DEPTH_STRIDER));
+    p.sneakFactor = sneakSpeedFactor(this.armorLevel(2, SWIFT_SNEAK)); // Fase 7.5 (abismo): Sigilo rápido
     // Paso helado: en el suelo (no en el agua), cada vez que se cambia de celda.
     const frost = this.armorLevel(3, FROST_WALKER);
     if (frost > 0 && p.onGround && !p.inWater && !surv.dead && !p.flying) {

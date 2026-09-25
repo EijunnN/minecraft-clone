@@ -55,6 +55,8 @@ export function deathMessage(cause: DamageCause): string {
     // Fase 7.5 (océano)
     guardian: 'fue fulminado por un guardián', elder_guardian: 'fue fulminado por un guardián anciano',
     guardian_laser: 'fue fulminado por el láser de un guardián', guardian_thorns: 'murió pinchado por un guardián',
+    // Fase 7.5 (abismo)
+    warden: 'fue destrozado por un warden', sonic_boom: 'fue aniquilado por un chillido cargado sónicamente',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

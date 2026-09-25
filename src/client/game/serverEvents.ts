@@ -11,6 +11,7 @@ import { lighten } from './gameTypes';
 import type { Game } from './Game';
 import { EFFECT_INSTANT_DAMAGE } from '../../shared/effects'; // Fase 7 (pociones)
 import { totalForLevel, xpToNext } from '../../shared/experience'; // Fase 7 (encantamientos)
+import { setLastDeath } from './recoveryCompass'; // Fase 7.5 (abismo)
 
 export class ServerEvents {
   constructor(private g: Game) {}
@@ -120,6 +121,10 @@ export class ServerEvents {
         else this.g.statusEffects.add(Number(msg.id), Number(msg.s), Number(msg.a), this.g.survival);
         break;
       // Fase 6 (asaltos): barra del asalto cercano.
+      // Fase 7.5 (abismo): dónde murió por última vez (brújula de recuperación).
+      case 'death':
+        setLastDeath(this.g, msg.p);
+        break;
       case 'raid':
         this.g.raid = msg.s ? { s: msg.s, w: msg.w, n: msg.n, h: msg.h, r: msg.r } : null;
         break;

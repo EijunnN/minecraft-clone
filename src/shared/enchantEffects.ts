@@ -125,7 +125,7 @@ const FIRE_CAUSES = new Set(['fire', 'lava', 'campfire']);
 const BLAST_CAUSES = new Set(['explosion', 'creeper']);
 const PROJECTILE_CAUSES = new Set(['arrow', 'trident', 'llama', 'snowball']);
 /** Lo que ninguna protección reduce (el vacío y /matar). */
-const UNPROTECTED = new Set(['void', 'kill']);
+const UNPROTECTED = new Set(['void', 'kill', 'sonic_boom']); // Fase 7.5 (abismo): el estampido del warden atraviesa las protecciones
 
 /**
  * Factor de protección de los encantamientos (EPF) de la armadura puesta contra una causa: Protección
@@ -167,6 +167,14 @@ export function airDrainFactor(level: number): number {
 /** Agilidad acuática: parte del frenado del agua que se quita (un tercio por nivel, hasta 3). */
 export function depthStriderFactor(level: number): number {
   return Math.min(3, level) / 3;
+}
+
+/**
+ * Fase 7.5 (abismo): Sigilo rápido: velocidad agachado (y gateando) respecto a la de andar: 30 % + 15 % por
+ * nivel (como mucho, la de andar).
+ */
+export function sneakSpeedFactor(level: number): number {
+  return Math.min(1, 0.3 + 0.15 * Math.max(0, level));
 }
 
 /** Paso helado: radio del disco de hielo (2 + nivel, como mucho 16). */

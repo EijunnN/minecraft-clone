@@ -5,6 +5,10 @@
 import type { MobDef } from './mobs';
 import { packParts } from './aquaticMobs';
 import { SCULK_CATALYST } from './blocks';
+import { ARMOR_BYPASS } from './armor';
+
+// El estampido sónico atraviesa la armadura (y los escudos y las protecciones: ver lifeCycle.ts y enchantEffects.ts).
+(ARMOR_BYPASS as Set<string>).add('sonic_boom');
 
 export const MOB_WARDEN = 70;
 

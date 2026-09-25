@@ -74,6 +74,7 @@ import { EnchantClient } from './enchantClient';
 import { EnchantBooks } from './enchantBooks';
 import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
 import { hasGlint } from '../../shared/enchantments';
+import { isDeepDark } from '../../shared/world/deepDark'; // Fase 7.5 (abismo)
 
 export interface GameConfig {
   room: string;
@@ -1161,7 +1162,8 @@ export class Game {
 
     // Depuración.
     if (this.debug) {
-      const biome = BIOME_NAMES[gen.biomeAt(Math.floor(p.x), Math.floor(p.z))];
+      // Fase 7.5 (abismo): el Deep Dark es un bioma de cueva (depende también de la altura).
+      const biome = isDeepDark(gen, Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)) ? 'Deep Dark' : BIOME_NAMES[gen.biomeAt(Math.floor(p.x), Math.floor(p.z))];
       const hours = Math.floor(((dayTime * 24 + 6) % 24));
       const mins = Math.floor(((dayTime * 24 * 60) % 60));
       const r = this.renderer;

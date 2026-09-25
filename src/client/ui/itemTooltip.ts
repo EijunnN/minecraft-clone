@@ -23,6 +23,7 @@ import { stackName } from '../../shared/potions';
 // guardados en los libros encantados.
 import { ENCHANTS, enchantName, enchantsOf, storedOf, sortedForTooltip, hasGlint } from '../../shared/enchantments';
 import { ENCHANTED_BOOK, EXPERIENCE_BOTTLE } from '../../shared/items';
+import { DISC_FRAGMENT_5, RECOVERY_COMPASS } from '../../shared/items'; // Fase 7.5 (abismo)
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -83,6 +84,9 @@ export function itemTooltipHtml(s: ItemStack): string {
   // Fase 6.5 (colecciones): título del disco y para qué sirve llevar una cabeza.
   const title = discTitle(s.id);
   if (title) lines.push(`<span class="tt-dim">${esc(title)}</span>`);
+  // Fase 7.5 (abismo): el fragmento del disco 5 y la brújula de recuperación.
+  if (s.id === DISC_FRAGMENT_5) lines.push('<span class="tt-dim">Disco de música - 5</span>');
+  if (s.id === RECOVERY_COMPASS) lines.push('<span class="tt-dim">Apunta a donde moriste por última vez</span>');
   const skull = skullKind(s.id);
   if (skull && skull !== 'player') {
     const who = { zombie: 'los zombis', skeleton: 'los esqueletos', creeper: 'los creepers' }[skull];
