@@ -462,6 +462,28 @@ shape(['SSS', ' S ', 'SLS'], { S: STICK, L: SLABS.smooth_stone }, ARMOR_STAND);
 import { CHISELED_BOOKSHELF } from './blocks';
 shape(['PPP', 'SSS', 'PPP'], { P: PLANKS, S: WOODS.map((w) => SLABS[w.key]).filter((id) => id !== undefined) }, CHISELED_BOOKSHELF);
 
+// --- Fase 6.5 (materiales): bloques de almacenamiento (9 ↔ 1), hielo compacto y azul, tierra gruesa ---
+import {
+  RAW_IRON_BLOCK, RAW_GOLD_BLOCK, COAL_BLOCK, LAPIS_BLOCK, BONE_BLOCK, SLIME_BLOCK, ICE, PACKED_ICE, BLUE_ICE, DIRT,
+  COARSE_DIRT,
+} from './blocks';
+import { RAW_IRON, RAW_GOLD } from './items';
+{
+  const nine = (unit: number, blockId: number) => {
+    shape(['UUU', 'UUU', 'UUU'], { U: unit }, blockId);
+    mix([blockId], unit, 9);
+  };
+  nine(RAW_IRON, RAW_IRON_BLOCK);
+  nine(RAW_GOLD, RAW_GOLD_BLOCK);
+  nine(COAL, COAL_BLOCK);
+  nine(LAPIS, LAPIS_BLOCK);
+  nine(BONE_MEAL, BONE_BLOCK);
+  nine(SLIME_BALL, SLIME_BLOCK);
+  shape(['III', 'III', 'III'], { I: ICE }, PACKED_ICE);
+  shape(['III', 'III', 'III'], { I: PACKED_ICE }, BLUE_ICE);
+  shape(['DG', 'GD'], { D: DIRT, G: GRAVEL }, COARSE_DIRT, 4);
+}
+
 export interface RecipeMatch {
   out: ItemStack;
 }

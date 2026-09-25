@@ -25,6 +25,7 @@ import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
+import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -402,6 +403,12 @@ export const DYED_BUNDLES = {} as Record<DyeColor, number>;
 for (const c of DYE_COLORS) DYED_BUNDLES[c] = item(`${c}_bundle`, `Saco ${COLOR_NAMES[c][0]}`, { stack: 1 });
 /** Soporte para armadura: se pone sobre un bloque y se le viste con clic derecho. */
 export const ARMOR_STAND = item('armor_stand', 'Soporte para armadura', { stack: 16 });
+// ------------------------------------------------------------------ Fase 6.5 (materiales)
+/** Hierro y oro en bruto: los sueltan sus menas; se funden en lingotes. */
+export const RAW_IRON = item('raw_iron', 'Hierro en bruto');
+export const RAW_GOLD = item('raw_gold', 'Oro en bruto');
+/** Cubo de nieve polvo: un cubo vacío sobre la nieve polvo la recoge; al vaciarlo, la pone y queda el cubo. */
+export const POWDER_SNOW_BUCKET = item('powder_snow_bucket', 'Cubo de nieve polvo', { stack: 1, block: POWDER_SNOW });
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -554,3 +561,10 @@ smelt(DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_BRICKS);
 smelt(DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES);
 smelt(SANDSTONE, SMOOTH_SANDSTONE);
 smelt(RED_SANDSTONE, SMOOTH_RED_SANDSTONE);
+// Fase 6.5 (materiales): el hierro y el oro en bruto se funden en lingotes (horno y alto horno); el bloque
+// de carbón arde como 9 de carbón (80 objetos); las ranas crían con bolas de slime (y ponen huevos).
+smelt(RAW_IRON, IRON_INGOT);
+smelt(RAW_GOLD, GOLD_INGOT);
+fuel(COAL_BLOCK, 800);
+(BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
+(CREATIVE_ITEMS as number[]).push(RAW_IRON, RAW_GOLD, POWDER_SNOW_BUCKET);

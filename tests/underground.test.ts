@@ -14,13 +14,15 @@ import { planPlacement } from '../src/shared/placement';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { blockIndex, MIN_Y } from '../src/shared/constants';
 import { makeServer } from './harness';
+import { RAW_IRON } from '../src/shared/items'; // Fase 6.5 (materiales)
 
 test('pizarra profunda: botín, fundición y recetas', () => {
   const pick = TOOLS.iron.pickaxe;
   assert.deepEqual(blockDrops(DEEPSLATE, pick), [{ id: COBBLED_DEEPSLATE, count: 1 }]);
   assert.deepEqual(blockDrops(DEEPSLATE_ORE[DIAMOND_ORE], pick), [{ id: DIAMOND, count: 1 }]);
   assert.deepEqual(blockDrops(DEEPSLATE_ORE[COAL_ORE], pick), [{ id: COAL, count: 1 }]);
-  assert.deepEqual(blockDrops(DEEPSLATE_ORE[IRON_ORE], pick), [{ id: DEEPSLATE_ORE[IRON_ORE], count: 1 }], 'la de hierro suelta la mena');
+  // Fase 6.5 (materiales): la de hierro suelta hierro en bruto (antes, la mena).
+  assert.deepEqual(blockDrops(DEEPSLATE_ORE[IRON_ORE], pick), [{ id: RAW_IRON, count: 1 }], 'la de hierro suelta hierro en bruto');
   assert.deepEqual(blockDrops(DEEPSLATE_ORE[DIAMOND_ORE], TOOLS.stone.pickaxe), [], 'diamante: hace falta pico de hierro');
   assert.equal(ITEMS[DEEPSLATE_ORE[IRON_ORE]].smelt, IRON_INGOT);
   assert.equal(ITEMS[COPPER_ORE].smelt, COPPER_INGOT);

@@ -24,6 +24,7 @@ import { placeBeeNest } from './beeNests'; // Fase 6 (fauna)
 import { placeWoodTree, growWoodTree, placeBamboo } from './woodTrees'; // Fase 6.5 (maderas)
 import { placeStones } from './stones'; // Fase 6.5 (piedras)
 import { decorate65 } from './oceanDecor'; // Fase 6.5 (océano y plantas)
+import { decorateMaterials } from './materialDecor'; // Fase 6.5 (materiales)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -866,6 +867,9 @@ export class TerrainGenerator {
         blocks[blockIndex(lx, y + 1, lz)] = SNOW_LAYER;
       }
     }
+
+    // Fase 6.5 (materiales): podsol en las taigas, nieve polvo en las cumbres y pizarra profunda infestada.
+    decorateMaterials(seed, blocks, tops, infos, cx, cz);
 
     // --- 9. Lecho de roca (en y = −64 y salpicado hasta −60) ---
     for (let lz = 0; lz < 16; lz++) {

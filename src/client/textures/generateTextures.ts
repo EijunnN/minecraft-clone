@@ -44,6 +44,7 @@ import { COPPER_GENERATORS } from './genCopper'; // Fase 6.5 (cobre)
 import { DECOR_GENERATORS } from './genDecor'; // Fase 6.5 (decoración)
 import { OCEAN_GENERATORS } from './genOcean'; // Fase 6.5 (océano y plantas)
 import { FINISHING_GENERATORS } from './genFinishing'; // Fase 6.5 (remate)
+import { MATERIAL_GENERATORS } from './genMaterials'; // Fase 6.5 (materiales)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -80,6 +81,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...DECOR_GENERATORS, // Fase 6.5 (decoración)
   ...OCEAN_GENERATORS, // Fase 6.5 (océano y plantas)
   ...FINISHING_GENERATORS, // Fase 6.5 (remate)
+  ...MATERIAL_GENERATORS, // Fase 6.5 (materiales)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

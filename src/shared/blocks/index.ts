@@ -164,3 +164,9 @@ export * from './hangingSigns';
 import { CHISELED_BOOKSHELF } from './chiseledBookshelf';
 export * from './chiseledBookshelf';
 (INVENTORY_ORDER as number[]).push(CHISELED_BOOKSHELF);
+// Fase 6.5 (materiales): bloques en bruto, de carbón, lapislázuli, huesos y slime; hielo azul; tierra
+// gruesa, podsol, tierra enraizada y camino de tierra; nieve polvo; más infestados; tartas con vela y
+// huevos de rana (registrados los últimos: ids nuevos).
+import { MATERIAL_INVENTORY } from './materialBlocks';
+export * from './materialBlocks';
+(INVENTORY_ORDER as number[]).push(...MATERIAL_INVENTORY);

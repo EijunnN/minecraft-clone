@@ -15,6 +15,7 @@ import {
 import { CHUNK_SIZE, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3 } from '../constants';
 import { mulberry32 } from './noise';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
+import { iglooBrick } from './materialDecor'; // Fase 6.5 (materiales)
 import {
   BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN,
 } from './biomeIds';
@@ -699,7 +700,7 @@ function buildIgloo(c: Canvas, s: Start): void {
     c.fill(ox - 2, by, oz - 3, ox + 3, by + 4, oz + 2, (x, y, z) => {
       const wall = x === ox - 2 || x === ox + 3 || z === oz - 3 || z === oz + 2 || y === by || y === by + 4;
       if (x === ox + 1 && z === oz + 1 && y > by) return stateOf(LADDER, { facing: 0 });
-      return wall ? STONE_BRICKS : AIR;
+      return wall ? iglooBrick(x, y, z, s.rng) : AIR; // Fase 6.5 (materiales): musgosos, agrietados e infestados
     });
     c.chest(ox - 1, by + 1, oz - 2, 2, 'igloo');
     c.set(ox + 2, by + 3, oz - 2, TORCH);

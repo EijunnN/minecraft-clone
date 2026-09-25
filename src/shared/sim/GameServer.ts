@@ -50,6 +50,8 @@ import { Shelves } from './server/shelves'; // Fase 6.5 (remate)
 import { Leashes } from './server/leashes'; // Fase 6.5 (remate)
 import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
+import { Materials } from './server/materials'; // Fase 6.5 (materiales)
+import { Frogspawn } from './server/frogspawn'; // Fase 6.5 (materiales)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -133,6 +135,10 @@ export class GameServer {
   private stands: ArmorStands;
   /** Fase 6.5 (océano y plantas): corales, algas, esponjas, bayas dulces y plantaformas. */
   readonly oceanLife: OceanLife;
+  /** Fase 6.5 (materiales): suelos, tartas con vela y caminos. */
+  private materials: Materials;
+  /** Fase 6.5 (materiales): cría de las ranas y huevos de rana. */
+  readonly frogspawn: Frogspawn;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -211,6 +217,10 @@ export class GameServer {
     this.leashes = new Leashes(this.ctx); // Fase 6.5 (remate)
     this.stands = new ArmorStands(this.ctx, store); // Fase 6.5 (remate)
     this.farming.extraInteract = (s, e, msg) => this.stands.onInteract(s, e, msg) ?? this.leashes.onInteract(s, e, msg);
+    // Fase 6.5 (materiales).
+    this.materials = new Materials(this.ctx);
+    this.edits.materials = (s, x, y, z, id, item, h) => this.materials.useBlock(s, x, y, z, id, item, h);
+    this.frogspawn = new Frogspawn(this.ctx, this.nature);
   }
 
   get seed(): number {
@@ -803,6 +813,7 @@ export class GameServer {
     this.shelves?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (remate)
     this.stands?.onBlockChanged(x, y, z); // Fase 6.5 (remate)
     this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
+    this.materials?.onBlockChanged(x, y, z, id); // Fase 6.5 (materiales)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -827,6 +838,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
+    this.frogspawn.tick(); // Fase 6.5 (materiales)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

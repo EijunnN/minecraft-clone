@@ -5,6 +5,10 @@ import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluid
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { moveBox, boxBlocked } from '../../shared/collide';
 import { scaffoldClimb, scaffoldFloor } from '../../shared/scaffoldPhysics'; // Fase 6.5 (decoración)
+import { // Fase 6.5 (materiales): hielo, slime y nieve polvo
+  blockUnder, groundGrip, groundSpeed, slimeBounce, inPowderSnow, powderSnowFloor, POWDER_SINK_SPEED, POWDER_WALK_FACTOR,
+  POWDER_CLIMB_SPEED,
+} from '../../shared/materialPhysics';
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
 
 export interface BlockSource {
@@ -55,6 +59,9 @@ export class Player {
   inWeb = false;
   /** Fase 6.5 (océano y plantas): dentro de un arbusto de bayas dulces (frena y pincha). */
   inBush = false;
+  /** Fase 6.5 (materiales): dentro de la nieve polvo, y si lleva botas de cuero (camina por encima). */
+  inPowder = false;
+  leatherBoots = false;
   /** Distancia horizontal recorrida en el suelo (para pasos y balanceo). */
   walkDistance = 0;
   /** 0..1: cuánto se está moviendo (para animaciones). */
@@ -203,6 +210,7 @@ export class Player {
   update(dt: number, c: MoveControls, world: BlockSource): void {
     dt = Math.min(dt, 0.05);
     this.checkFluids(world);
+    this.inPowder = inPowderSnow(world, this.x, this.y, this.z, HW, this.height); // Fase 6.5 (materiales)
     this.onLadder = !this.flying && this.checkLadder(world);
     const wasGround = this.onGround;
     const fwd = (c.forward ? 1 : 0) - (c.back ? 1 : 0);
@@ -251,8 +259,10 @@ export class Player {
       // Salir del agua trepando a la orilla.
       if (c.jump && this.inWater && !this.eyeInWater && this.touchingWall(world)) this.vy = Math.max(this.vy, 5.5);
     } else {
-      const speed = (this.pose === 'crawl' ? CRAWL_SPEED : this.sneaking ? 1.31 : this.sprinting ? 5.61 : 4.32) * this.slow;
-      const k = 1 - Math.exp(-dt * (this.onGround ? 16 : 3.2));
+      // Fase 6.5 (materiales): el hielo resbala y el slime frena.
+      const under = this.onGround ? blockUnder(world, this.x, this.y, this.z) : 0;
+      const speed = (this.pose === 'crawl' ? CRAWL_SPEED : this.sneaking ? 1.31 : this.sprinting ? 5.61 : 4.32) * this.slow * groundSpeed(under);
+      const k = 1 - Math.exp(-dt * (this.onGround ? 16 * groundGrip(under) : 3.2));
       this.vx += (wx * speed - this.vx) * k;
       this.vz += (wz * speed - this.vz) * k;
       this.vy -= GRAVITY * dt;
@@ -304,6 +314,21 @@ export class Player {
       dz *= 0.8;
       dy *= 0.75;
     }
+    // Fase 6.5 (materiales): en la nieve polvo se hunde despacio y casi no se avanza; con botas de
+    // cuero se sube saltando y se baja agachado.
+    if (this.inPowder && !this.flying) {
+      this.fallDistance = 0;
+      if (this.leatherBoots) {
+        if (c.jump) this.vy = POWDER_CLIMB_SPEED;
+        else if (this.vy < -POWDER_SINK_SPEED) this.vy = -POWDER_SINK_SPEED;
+        dy = this.vy * dt;
+      } else {
+        dx *= POWDER_WALK_FACTOR;
+        dz *= POWDER_WALK_FACTOR;
+        if (this.vy < -POWDER_SINK_SPEED) this.vy = -POWDER_SINK_SPEED;
+        dy = this.vy * dt * (this.vy > 0 ? 0.85 : 1);
+      }
+    }
     // Agachado: no caer por los bordes.
     if (this.sneaking && this.onGround && !this.inWater) {
       if (dx !== 0 && !this.groundBelow(this.x + dx, this.z, world)) { dx = 0; this.vx = 0; }
@@ -331,6 +356,21 @@ export class Player {
     const floor = this.flying || c.sneak || r.dy >= 0 ? null : scaffoldFloor(world, this.x, this.z, HW, oy, this.y);
     if (floor !== null) {
       this.y = floor;
+      this.vy = 0;
+      this.onGround = true;
+    }
+    // Fase 6.5 (materiales): rebote en el bloque de slime (agachado no) y suelo de nieve polvo con botas de cuero.
+    if (r.hitY && prevVy < 0 && !this.flying) {
+      const bounce = slimeBounce(blockUnder(world, this.x, this.y, this.z), prevVy, c.sneak);
+      if (bounce !== null) {
+        this.vy = bounce;
+        this.onGround = false;
+        this.fallDistance = 0;
+      }
+    }
+    const snowFloor = this.leatherBoots && !this.flying && !c.sneak && r.dy < 0 ? powderSnowFloor(world, this.x, this.z, HW, oy, this.y) : null;
+    if (snowFloor !== null) {
+      this.y = snowFloor;
       this.vy = 0;
       this.onGround = true;
     }

@@ -1,6 +1,7 @@
 // Física de cajas (AABB) contra la rejilla de bloques, compartida por criaturas, objetos y flechas.
 import { BLOCK_SOLID, BLOCK_FLUID, COBWEB } from '../blocks';
 import { moveBox, boxBlocked } from '../collide';
+import { blockUnder, groundSpeed, slimeBounce, inPowderSnow, POWDER_SINK_SPEED, POWDER_WALK_FACTOR } from '../materialPhysics'; // Fase 6.5 (materiales)
 
 export interface BlockGetter {
   /** Id del bloque o -1 si no está cargado (se trata como sólido). */
@@ -45,7 +46,15 @@ export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
   // Telaraña: las criaturas también se quedan casi quietas.
   const fx = Math.floor(b.x), fz = Math.floor(b.z);
   const web = w.getBlock(fx, Math.floor(b.y + 0.1), fz) === COBWEB || w.getBlock(fx, Math.floor(b.y + b.height * 0.6), fz) === COBWEB;
-  const kh = web ? 0.25 : 1, kv = web ? 0.05 : 1;
+  let kh = web ? 0.25 : 1;
+  const kv = web ? 0.05 : 1;
+  // Fase 6.5 (materiales): el slime frena al andar por encima y la nieve polvo hunde despacio.
+  if (b.onGround) kh *= groundSpeed(blockUnder(w, b.x, b.y, b.z));
+  if (inPowderSnow(w, b.x, b.y, b.z, b.width / 2, b.height)) {
+    kh *= POWDER_WALK_FACTOR;
+    if (b.vy < -POWDER_SINK_SPEED) b.vy = -POWDER_SINK_SPEED;
+  }
+  const vy0 = b.vy;
   const r = moveBox(w, b.x, b.y, b.z, b.width, b.height, b.vx * dt * kh, b.vy * dt * kv, b.vz * dt * kh, step, b.onGround);
   b.x += r.dx;
   b.y += r.dy;
@@ -54,6 +63,12 @@ export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
   if (r.hitZ) b.vz = 0;
   if (r.hitY) b.vy = 0;
   b.onGround = r.onGround;
+  // Fase 6.5 (materiales): al caer sobre un bloque de slime, rebota (y no toca el suelo).
+  const bounce = r.hitY && vy0 < 0 ? slimeBounce(blockUnder(w, b.x, b.y, b.z), vy0, false) : null;
+  if (bounce !== null) {
+    b.vy = bounce;
+    b.onGround = false;
+  }
   b.hitWall = r.hitX || r.hitZ;
   updateFluids(b, w);
 }

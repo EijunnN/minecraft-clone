@@ -52,6 +52,8 @@ import { Trading } from './trading'; // Fase 6 (aldeanos)
 import { renderRaidBar, type RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
 // Fase 6.5 (decoración): catalejo, reloj y rayo contra cuadros y marcos.
 import { renderDecorHud } from '../ui/decorHud';
+import { renderFrostHud } from '../ui/frostHud'; // Fase 6.5 (materiales)
+import { Freezing } from './freezing'; // Fase 6.5 (materiales)
 import { raycastHangings } from './decorInteraction';
 import { CLOCK } from '../../shared/items';
 
@@ -715,6 +717,7 @@ export class Game {
     // Usar un objeto frena mucho; los efectos Velocidad y Lentitud multiplican.
     p.usingItem = !!this.interaction.use;
     p.slow = (this.interaction.use ? 0.25 : 1) * this.statusEffects.speed;
+    p.leatherBoots = ITEMS[this.inv.armor[3]?.id ?? 0]?.armor?.material === 'leather'; // Fase 6.5 (materiales): nieve polvo
     world.renderDistance = settings.render.renderDistance;
     const wasInWater = p.inWater;
     const wasGround = p.onGround;
@@ -847,6 +850,7 @@ export class Game {
     renderRaidBar(this.raid, !this.hudHidden); // Fase 6 (asaltos)
     renderDecorHud(this.interaction.use?.kind === 'spyglass', this.heldId === CLOCK || this.inv.offhand?.id === CLOCK ? worldTime : null,
       !surv.dead && !this.hudHidden); // Fase 6.5 (decoración)
+    renderFrostHud(this.life.freezing.fraction, Freezing.eyesInPowder(this), !surv.dead && !this.hudHidden); // Fase 6.5 (materiales)
     renderAttackIndicator(this.interaction.attackCharge(), !surv.dead && !this.hudHidden && !this.anyScreenOpen());
     renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
     renderXpBar(this.xp, !this.creative && !surv.dead);

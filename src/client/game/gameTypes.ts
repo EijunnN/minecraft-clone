@@ -1,10 +1,11 @@
 // Constantes y tipos que comparten Game y sus controladores.
 import { GRASS, DIRT, SNOWY_GRASS, ALL_SAPLINGS } from '../../shared/blocks';
+import { PODZOL, COARSE_DIRT, ROOTED_DIRT } from '../../shared/blocks'; // Fase 6.5 (materiales)
 
 export const REACH_CREATIVE = 5.5;
 export const REACH_SURVIVAL = 4.6;
 export const ATTACK_REACH = 3.4;
-export const SOIL = new Set([GRASS, DIRT, SNOWY_GRASS]);
+export const SOIL = new Set([GRASS, DIRT, SNOWY_GRASS, PODZOL, COARSE_DIRT, ROOTED_DIRT]); // Fase 6.5: suelos nuevos
 export const SAPLINGS = new Set(ALL_SAPLINGS);
 
 export interface Mining {

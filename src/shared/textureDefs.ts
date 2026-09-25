@@ -371,6 +371,13 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'chiseled_bookshelf_occupied' },
   { name: 'chiseled_bookshelf_top' },
   { name: 'chiseled_bookshelf_side' },
+  // Fase 6.5 (materiales): bloques en bruto, de carbón, lapislázuli, huesos y slime; hielo azul; suelos;
+  // nieve polvo y huevos de rana.
+  ...['raw_iron_block', 'raw_gold_block', 'coal_block', 'lapis_block', 'bone_block_side', 'bone_block_top', 'blue_ice',
+    'coarse_dirt', 'podzol_top', 'podzol_side', 'rooted_dirt', 'dirt_path_top', 'dirt_path_side'].map((name): TextureDef => ({ name })),
+  { name: 'powder_snow', sss: 0.3 },
+  { name: 'slime_block', special: 4, sss: 0.3 },
+  { name: 'frogspawn', sss: 0.4, cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

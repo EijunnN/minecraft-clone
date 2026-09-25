@@ -20,6 +20,8 @@ import { planDecor, planScaffoldTower } from './decorPlacement'; // Fase 6.5 (de
 import { HANGING_WALL_OF, CHISELED_BOOKSHELF, isChiseledShelf } from './blocks'; // Fase 6.5 (remate)
 import { isRipeBerryBush } from './blocks'; // Fase 6.5 (océano y plantas)
 import { planPlant65, canFertilize65 } from './plantPlacement'; // Fase 6.5 (océano y plantas)
+import { planMaterial } from './materialPlacement'; // Fase 6.5 (materiales)
+import { isCandleCake } from './blocks'; // Fase 6.5 (materiales)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -70,6 +72,8 @@ function rel(get: GetBlock, x: number, y: number, z: number): NeighborGet {
  */
 export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: number): Edit[] | null {
   const base = familyBase(item);
+  const mat = planMaterial(get, hit, base); // Fase 6.5 (materiales): tartas con vela y huevos de rana
+  if (mat !== undefined) return mat;
   // Nenúfar: sobre una fuente de agua (el rayo del cliente se detiene en ella).
   if (base === LILY_PAD) {
     if (BLOCK_FLUID[hit.id] !== 1 || BLOCK_FLUID_LEVEL[hit.id] !== 0 || hit.y + 1 >= MAX_Y) return null;
@@ -259,7 +263,8 @@ export function isUsable(id: number): boolean {
   return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id) ||
     isCandle(id) || // Fase 6.5 (colores): encender o apagar velas
     isRipeBerryBush(id) || // Fase 6.5 (océano y plantas): cosechar las bayas dulces
-    isChiseledShelf(id); // Fase 6.5 (remate): meter y sacar libros
+    isChiseledShelf(id) || // Fase 6.5 (remate): meter y sacar libros
+    isCandleCake(id); // Fase 6.5 (materiales): encender, apagar o comer la tarta con vela
 }
 
 /** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */
