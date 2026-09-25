@@ -23,8 +23,8 @@ function resistanceOf(id: number): number {
   const base = familyBase(id);
   const key = defs[base]?.key ?? d.key;
   const h = BLOCK_HARDNESS[id];
-  if (h < 0) return 3_600_000;
   if (BLOCK_FLUID[id]) return 100;
+  if (h < 0) return 3_600_000;
   if (base === OBSIDIAN || base === CRYING_OBSIDIAN || base === ENCHANTING_TABLE || isAnvil(id)) return 1200;
   if (key in RESISTANCE) return RESISTANCE[key];
   if (/_terracotta$/.test(key) && !/glazed/.test(key)) return 4.2;
