@@ -76,8 +76,8 @@ export class DeepDark {
     this.sculk.onBlockChanged(x, y, z, old, id);
   }
 
-  onFx(kind: string, x: number, y: number, z: number): void {
-    this.vibrations.onFx(kind, x, y, z);
+  onFx(kind: string, x: number, y: number, z: number, a?: number): void {
+    this.vibrations.onFx(kind, x, y, z, a);
   }
 
   /** Cae un rayo. */

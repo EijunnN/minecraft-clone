@@ -512,7 +512,7 @@ export class GameServer {
   private fx(kind: string, x: number, y: number, z: number, a?: number, b?: number): void {
     // Fase 7 (efectos): toda campana que suena (tocada o con redstone) pasa por aquí.
     if (kind === 'bell') this.bells?.ring(x, y, z);
-    this.deepDark?.onFx(kind, x, y, z); // Fase 7.5 (abismo): explosiones, notas, campanas… vibran
+    this.deepDark?.onFx(kind, x, y, z, a); // Fase 7.5 (abismo): explosiones, notas, campanas… vibran
     const msg: ServerMsg = { t: 'fx', k: kind, p: [r2(x), r2(y), r2(z)] };
     if (a !== undefined) msg.a = a;
     if (b !== undefined) msg.b = b;

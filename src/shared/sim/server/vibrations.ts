@@ -497,9 +497,13 @@ export class Vibrations {
     this.emit(ev, x + 0.5, y + 0.5, z + 0.5, src);
   }
 
-  /** Efectos del servidor que son también vibraciones (explosiones, rayos, notas, campanas…). */
-  onFx(kind: string, x: number, y: number, z: number): void {
+  /**
+   * Efectos del servidor que son también vibraciones (explosiones, notas, campanas, golpes y muertes…). `a`: el
+   * dato del efecto (en los de las criaturas, su tipo: lo que le pasa al warden no vibra).
+   */
+  onFx(kind: string, x: number, y: number, z: number, a?: number): void {
     if (this.blockCount === 0 && this.entityListeners.size === 0) return;
+    if (a === MOB_WARDEN && kind.startsWith('mob_')) return;
     const ev = FX_EVENTS[kind];
     if (ev) this.emit(ev, x, y, z);
   }
