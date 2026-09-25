@@ -17,6 +17,7 @@ import type { Game } from './Game';
 import { COPPER_TORCH, COPPER_WALL_TORCH } from '../../shared/blocks'; // Fase 6.5 (cobre)
 import { plantParticles } from './plantParticles'; // Fase 6.5 (océano y plantas)
 import { isFire } from '../../shared/blocks'; // Fase 6.5 (equipo)
+import { redstoneTorchTip, redstoneAmbient, dustMote } from './redstoneClient'; // Fase 7 (redstone)
 
 type P3 = [number, number, number];
 
@@ -35,6 +36,8 @@ export class AmbientParticles {
   private lava: P3[] = [];
   /** Fase 6.5 (equipo): bloques de fuego (llamas, humo y chisporroteo). */
   private blazes: P3[] = [];
+  /** Fase 7 (redstone): puntas de las antorchas de redstone encendidas (motas rojas). */
+  private redTorches: P3[] = [];
   private scanT = 0;
   private tint = [0, 0, 0];
 
@@ -55,6 +58,7 @@ export class AmbientParticles {
     // Fuentes fijas.
     for (const [x, y, z] of this.torches) if (Math.random() < dt * 2.2) fx.torch(x, y, z);
     for (const [x, y, z] of this.copperTorches) if (Math.random() < dt * 2.2) fx.torch(x, y, z, true); // Fase 6.5 (cobre)
+    for (const [x, y, z] of this.redTorches) if (Math.random() < dt * 2.5) dustMote(fx, x, y, z, 15, 0.04); // Fase 7 (redstone)
     for (const [x, y, z, f] of this.furnaces) {
       if (Math.random() < dt * 1.2) {
         // Llama junto a la boca del horno y humo encima.
@@ -89,6 +93,7 @@ export class AmbientParticles {
       const b = world.getBlock(x, y, z);
       if (b <= 0) continue;
       if (plantParticles(fx, b, x, y, z)) continue; // Fase 6.5 (océano y plantas): flor de esporas, pepinos de mar
+      if (redstoneAmbient(fx, (a, c, d) => world.getBlock(a, c, d), b, x, y, z)) continue; // Fase 7 (redstone): polvo, menas y diodos
       if (isLeaves(b)) {
         const below = world.getBlock(x, y - 1, z);
         if (below !== 0) continue;
@@ -134,6 +139,7 @@ export class AmbientParticles {
     const torches: P3[] = [], furnaces: [number, number, number, number][] = [], fires: P3[] = [], lava: P3[] = [];
     const copperTorches: P3[] = []; // Fase 6.5 (cobre)
     const blazes: P3[] = []; // Fase 6.5 (equipo)
+    const redTorches: P3[] = []; // Fase 7 (redstone)
     for (let dy = -SCAN_H; dy <= SCAN_H; dy++) {
       for (let dz = -SCAN_R; dz <= SCAN_R; dz++) {
         for (let dx = -SCAN_R; dx <= SCAN_R; dx++) {
@@ -157,6 +163,11 @@ export class AmbientParticles {
             if (stateProps(b)?.lit === 1 && fires.length < 12) fires.push([x, y, z]);
           } else if (BLOCK_FLUID[b] === 2 && lava.length < 32 && world.getBlock(x, y + 1, z) === 0) lava.push([x, y, z]);
           else if (isFire(b) && blazes.length < 32) blazes.push([x, y, z]); // Fase 6.5 (equipo)
+          else if (redTorches.length < 64) {
+            // Fase 7 (redstone): antorchas de redstone encendidas.
+            const tip = redstoneTorchTip(b, x, y, z);
+            if (tip) redTorches.push(tip);
+          }
         }
       }
     }
@@ -166,6 +177,7 @@ export class AmbientParticles {
     this.fires = fires;
     this.lava = lava;
     this.blazes = blazes;
+    this.redTorches = redTorches;
   }
 
   /** Color de las hojas que caen: fijo para abedul y abeto; del bioma para el resto. */

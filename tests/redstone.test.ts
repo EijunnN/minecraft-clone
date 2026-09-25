@@ -19,6 +19,10 @@ import { redstoneUseState, containerSignal } from '../src/shared/redstone';
 import { blockDrops } from '../src/shared/sim/drops';
 import { TEXTURE_DEFS } from '../src/shared/textureDefs';
 import { makeServer, type Harness, type Client } from './harness';
+import {
+  RAIL, RAIL_POWERED, RAIL_DETECTOR, RAIL_PLAIN, RAIL_EW, RAIL_NS, RAIL_SE, RAIL_NE, RAIL_SHAPE, railState, railIsPowered, BREWING_STAND, CAKE, WATER_CAULDRON,
+} from '../src/shared/blocks';
+import { BLAZE_POWDER } from '../src/shared/items';
 
 const hitOn = (x: number, y: number, z: number, nx: number, ny: number, nz: number, id: number): PlaceHit =>
   ({ x, y, z, nx, ny, nz, px: x + 0.5 + nx * 0.5, py: y + 0.5 + ny * 0.5, pz: z + 0.5 + nz * 0.5, id });
@@ -408,6 +412,76 @@ test('sensor de luz solar, diana, gancho y cuerda, pararrayos y mena de redstone
   c.pos(x + 0.5, by, oz + 0.5);
   h.tick(2);
   assert.equal(get(x, by - 1, oz), LIT_REDSTONE_ORE);
+});
+
+test('raíles: propulsores con potencia (8 más en línea), detector y cruce en T', () => {
+  const { h, bx, by, bz, set, get } = lab();
+  // Línea de 12 propulsores; un bloque de redstone junto al primero enciende ése y 8 más.
+  const x0 = bx - 8, z = bz - 10;
+  for (let i = 0; i < 12; i++) set(x0 + i, by, z, railState(RAIL_POWERED, RAIL_EW));
+  h.tick(1);
+  set(x0, by, z - 1, REDSTONE_BLOCK);
+  h.tick(1);
+  const on = () => Array.from({ length: 12 }, (_, i) => (railIsPowered(get(x0 + i, by, z)) ? 1 : 0)).join('');
+  assert.equal(on(), '111111111000');
+  set(x0, by, z - 1, AIR);
+  h.tick(1);
+  assert.equal(on(), '000000000000');
+  // También a través de un bloque: palanca en un bloque de piedra que está debajo de un raíl.
+  set(x0 + 11, by - 1, z, STONE);
+  set(x0 + 11, by - 1, z + 1, AIR);
+  set(x0 + 11, by - 1, z + 1, stateOf(LEVER, { mount: MOUNT_WALL, facing: 2, powered: 1 }));
+  h.tick(1);
+  assert.equal(on(), '000111111111', 'la palanca carga el bloque de debajo del último');
+  // Detector: con una vagoneta encima da potencia (la lámpara de al lado se enciende) y se apaga al irse.
+  const dz = bz - 14;
+  set(x0, by, dz, railState(RAIL_DETECTOR, RAIL_EW));
+  set(x0, by, dz + 1, REDSTONE_LAMP);
+  h.tick(1);
+  h.gs.transport.rails.press(x0, by, dz);
+  h.tick(1);
+  assert.equal(get(x0, by, dz + 1), REDSTONE_LAMP + 1);
+  h.tick(16);
+  assert.equal(get(x0, by, dz + 1), REDSTONE_LAMP);
+  // Cruce en T: sin potencia tuerce hacia el sur y el este; con potencia, hacia el norte y el este.
+  const tx = bx + 8, tz = bz - 14;
+  set(tx, by, tz - 1, railState(RAIL_PLAIN, RAIL_NS));
+  set(tx, by, tz + 1, railState(RAIL_PLAIN, RAIL_NS));
+  set(tx + 1, by, tz, railState(RAIL_PLAIN, RAIL_EW));
+  set(tx, by, tz, railState(RAIL_PLAIN, RAIL_SE));
+  h.tick(1);
+  set(tx - 1, by, tz, REDSTONE_BLOCK);
+  h.tick(1);
+  assert.equal(RAIL_SHAPE[get(tx, by, tz)], RAIL_NE, 'con potencia cambia de lado');
+  set(tx - 1, by, tz, AIR);
+  h.tick(1);
+  assert.equal(RAIL_SHAPE[get(tx, by, tz)], RAIL_SE, 'y vuelve sin ella');
+  void RAIL;
+});
+
+test('comparador: lee el alambique, la tarta y el caldero', () => {
+  const { h, c, bx, by, bz, set, get } = lab();
+  const x = bx + 10, z = bz + 10;
+  set(x, by, z, stateOf(COMPARATOR, { facing: 1 }));
+  set(x + 1, by, z, wireState(0, false));
+  set(x - 1, by, z, BREWING_STAND);
+  h.tick(4);
+  assert.equal(wirePower(get(x + 1, by, z)), 0, 'alambique vacío');
+  c.pos(x + 0.5, by + 2, z + 0.5);
+  c.send({ t: 'open', x: x - 1, y: by, z });
+  c.send({ t: 'cput', x: x - 1, y: by, z, stack: { id: BLAZE_POWDER, count: 1 }, q: 1 });
+  h.tick(4);
+  assert.equal(wirePower(get(x + 1, by, z)), 1, 'con algo dentro, 1');
+  c.send({ t: 'close' });
+  set(x - 1, by, z, CAKE);
+  h.tick(4);
+  assert.equal(wirePower(get(x + 1, by, z)), 14, 'tarta entera: 14');
+  set(x - 1, by, z, stateOf(CAKE, { bites: 3 }));
+  h.tick(4);
+  assert.equal(wirePower(get(x + 1, by, z)), 8, 'con tres mordiscos: 8');
+  set(x - 1, by, z, stateOf(WATER_CAULDRON, { level: 1 }));
+  h.tick(4);
+  assert.equal(wirePower(get(x + 1, by, z)), 2, 'caldero con dos tercios: 2');
 });
 
 test('rendimiento: una red grande y varios relojes sin pasarse de tiempo', () => {

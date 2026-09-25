@@ -263,7 +263,10 @@ export class ContainerSystem {
     if (id < 0 || !isBrewingStand(id)) return;
     if (c.cook > 0 || c.slots[BREW_INGREDIENT] || (c.burn <= 0 && c.slots[BREW_FUEL])) {
       const res = brewTick(c, dt);
-      if (res.changed) this.dirty.add(k);
+      if (res.changed) {
+        this.dirty.add(k);
+        this.contentsChanged?.(x, y, z); // Fase 7 (redstone)
+      }
       if (res.done) this.ctx.fx('brew_done', x + 0.5, y + 0.6, z + 0.5);
       if (res.changed || c.cook > 0) this.sendView(k);
     }

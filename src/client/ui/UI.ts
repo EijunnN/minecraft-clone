@@ -6,6 +6,7 @@ import { itemTooltipHtml } from './itemTooltip';
 import { ChatCompletion } from './chatCompletion';
 import { BLOCKS, INVENTORY_ORDER, type BlockCategory } from '../../shared/blocks';
 import { CREATIVE_ITEMS, ITEMS, type ItemStack } from '../../shared/items';
+import { REDSTONE } from '../../shared/items'; // Fase 7 (redstone)
 import type { GameMode } from '../../shared/protocol';
 import { applyPreset, saveSettings, type Settings } from '../game/settings';
 import type { PresetName } from '../render/Renderer';
@@ -32,6 +33,7 @@ const CATEGORIES: { id: InvCategory; label: string }[] = [
   { id: 'colores', label: 'Colores' },
   { id: 'objetos', label: 'Objetos' },
   { id: 'pociones', label: 'Pociones' }, // Fase 7 (pociones): alambique, ingredientes y pociones
+  { id: 'redstone', label: 'Redstone' }, // Fase 7 (redstone): el polvo y los componentes
 ];
 
 function escapeHtml(s: string): string {
@@ -590,6 +592,7 @@ export class UI {
         if (this.invCategory === 'todo' || BLOCKS[id].category === this.invCategory) ids.push(id);
       }
     }
+    if (this.invCategory === 'redstone') ids.unshift(REDSTONE); // Fase 7 (redstone): el polvo, el primero
     if (this.invCategory === 'todo' || this.invCategory === 'objetos') ids.push(...CREATIVE_ITEMS);
     // Fase 7 (pociones): su pestaña (alambique, frascos e ingredientes) y cada poción con su tipo.
     if (this.invCategory === 'pociones') ids.push(...CREATIVE_BREWING);

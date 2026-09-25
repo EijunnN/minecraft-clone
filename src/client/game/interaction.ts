@@ -43,6 +43,7 @@ import { collectionUse } from './collectionInteraction'; // Fase 6.5 (coleccione
 import { potionUse, drinkPotion, hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
 import { TIPPED_ARROW } from '../../shared/items';
 import { isVehicleType } from '../../shared/vehicles'; // Fase 7 (transporte)
+import { redstoneUse } from './redstoneClient'; // Fase 7 (redstone)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
@@ -182,6 +183,8 @@ export class Interaction {
     if (pressed && hit && held && useOnCopper(this.g, this, hit, held)) return;
     // Fase 6.5 (materiales): caminos y suelos, tartas con vela, nieve polvo y huevos de rana.
     if (materialsUse(this.g, this, pressed, hit, held, dir)) return;
+    // Fase 7 (redstone): palancas, botones, repetidores, comparadores, sensores, bloques musicales y polvo.
+    if (redstoneUse(this.g, pressed, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       // Fase 6.5 (colores): con la misma vela en la mano se añade otra en vez de encenderla o apagarla.

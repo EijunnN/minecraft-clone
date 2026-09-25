@@ -20,7 +20,7 @@ import {
   LIGHTNING_ROD, rodPowered, rodWith, COPPER_BULB, bulbLit, bulbPowered, bulbWith, isIronOpenable,
   LIT_REDSTONE_ORE, LIT_DEEPSLATE_REDSTONE_ORE, redstoneOreLit, isWire, wirePower, REDSTONE_WIRE,
 } from '../blocks/redstoneBlocks';
-import { DEEPSLATE_ORE, REDSTONE_ORE } from '../blocks';
+import { DEEPSLATE_ORE, REDSTONE_ORE, BREWING_STAND } from '../blocks';
 import {
   registerRedstone, isConductor, FACE_X, FACE_Y, FACE_Z, HFACE, PRIORITY_EXTREMELY_HIGH, PRIORITY_VERY_HIGH, PRIORITY_HIGH,
   PRIORITY_NORMAL, type RedstoneApi, type EntityFilter,
@@ -642,7 +642,7 @@ export function containerSignal(slots: readonly (ItemStack | null)[] | null): nu
 const containerReader = (api: RedstoneApi, x: number, y: number, z: number) => containerSignal(api.containerSlots(x, y, z));
 registerRedstone(
   [CHEST, CHEST + 1, CHEST + 2, CHEST + 3, FURNACE, FURNACE + 1, FURNACE + 2, FURNACE + 3, FURNACE_LIT, FURNACE_LIT + 1,
-    FURNACE_LIT + 2, FURNACE_LIT + 3, CHEST_DOUBLE, SMOKER, BLAST_FURNACE, BARREL, TRAPPED_CHEST, TRAPPED_CHEST_DOUBLE],
+    FURNACE_LIT + 2, FURNACE_LIT + 3, CHEST_DOUBLE, SMOKER, BLAST_FURNACE, BARREL, TRAPPED_CHEST, TRAPPED_CHEST_DOUBLE, BREWING_STAND],
   { analog: containerReader },
 );
 registerRedstone([CAULDRON, WATER_CAULDRON, LAVA_CAULDRON, POWDER_SNOW_CAULDRON], {
