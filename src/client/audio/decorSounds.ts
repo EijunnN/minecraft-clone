@@ -55,6 +55,22 @@ export function buildDecorSfx(ctx: AudioContext, noise: NoiseBuffers, kind: stri
         playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'bandpass', freq: 2600, q: 2, attack: 0.002, decay: 0.08, gain: 0.14 }),
         playTonalBlip(ctx, { destination: dest, now, freq: 620, freqEnd: 480, wave: 'square', attack: 0.002, decay: 0.07, gain: 0.04 }),
       ];
+    // Fase 6.5 (calderos): llenar el cubo (sorbo grave), vaciarlo (chapoteo) y lavar (chapoteo y frote).
+    case 'cauldron_fill':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 700, q: 1.5, attack: 0.02, decay: 0.3, gain: 0.35 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 180, freqEnd: 320, wave: 'sine', attack: 0.02, decay: 0.25, gain: 0.08 }),
+      ];
+    case 'cauldron_empty':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 1100, q: 0.9, attack: 0.01, decay: 0.35, gain: 0.3 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 300, freqEnd: 150, wave: 'sine', attack: 0.01, decay: 0.25, gain: 0.07 }),
+      ];
+    case 'cauldron_wash':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 1500, q: 1.2, attack: 0.01, decay: 0.25, gain: 0.25 }),
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now: now + 0.12, filterType: 'highpass', freq: 3000, q: 0.7, attack: 0.01, decay: 0.2, gain: 0.08 }),
+      ];
     case 'leash_break':
       return [
         playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 1800, q: 0.8, attack: 0.001, decay: 0.06, gain: 0.25 }),

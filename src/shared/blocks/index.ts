@@ -181,3 +181,5 @@ export * from './collections';
 import { EQUIPMENT_INVENTORY } from './equipmentBlocks';
 export * from './equipmentBlocks';
 (INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);
+// Fase 6.5 (calderos): caldero con agua, con lava y con nieve polvo (registrados los últimos: ids nuevos).
+export * from './cauldrons';

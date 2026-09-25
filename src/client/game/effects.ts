@@ -51,6 +51,9 @@ export class Effects {
       case 'leash':
       case 'leash_break':
       case 'stand_place':
+      case 'cauldron_fill': // Fase 6.5 (calderos)
+      case 'cauldron_empty':
+      case 'cauldron_wash':
       case 'stand_equip':
       case 'stand_break':
       case 'shelf_take':

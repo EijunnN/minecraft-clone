@@ -47,6 +47,7 @@ import { ColorBlocks } from './server/colorBlocks'; // Fase 6.5 (colores)
 import { Copper } from './server/copper'; // Fase 6.5 (cobre)
 import { Hangings } from './server/hangings'; // Fase 6.5 (decoración)
 import { Shelves } from './server/shelves'; // Fase 6.5 (remate)
+import { Cauldrons } from './server/cauldrons'; // Fase 6.5 (calderos)
 import { Leashes } from './server/leashes'; // Fase 6.5 (remate)
 import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
@@ -141,6 +142,8 @@ export class GameServer {
   readonly hangings: Hangings;
   /** Fase 6.5 (remate): libros de las estanterías cinceladas. */
   private shelves: Shelves;
+  /** Fase 6.5 (calderos): calderos con agua, lava o nieve polvo. */
+  private cauldrons: Cauldrons;
   /** Fase 6.5 (remate): etiquetas y correas. */
   private leashes: Leashes;
   /** Fase 6.5 (remate): soportes para armadura. */
@@ -235,6 +238,8 @@ export class GameServer {
     this.storms.onStrike = (x, y, z) => this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z));
     this.hangings = new Hangings(this.ctx, store); // Fase 6.5 (decoración)
     this.shelves = new Shelves(this.ctx, store); // Fase 6.5 (remate)
+    this.cauldrons = new Cauldrons(this.ctx, this.nature); // Fase 6.5 (calderos)
+    this.edits.cauldrons = (s, x, y, z, id, item) => this.cauldrons.use(s, x, y, z, id, item);
     this.leashes = new Leashes(this.ctx); // Fase 6.5 (remate)
     this.stands = new ArmorStands(this.ctx, store); // Fase 6.5 (remate)
     this.farming.extraInteract = (s, e, msg) => this.stands.onInteract(s, e, msg) ?? this.leashes.onInteract(s, e, msg);
@@ -897,6 +902,7 @@ export class GameServer {
     this.nature.tick();
     this.entities.tick(DT);
     this.leashes.tick(DT); // Fase 6.5 (remate)
+    this.cauldrons.tick(); // Fase 6.5 (calderos)
     this.riding.tick(); // Fase 6 (monturas)
     this.beds.tick();
     this.composters.tick();

@@ -33,6 +33,7 @@ import { canAddCandle } from '../../shared/blocks'; // Fase 6.5 (colores)
 import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 import { decorUse, decorAfterEat } from './decorInteraction'; // Fase 6.5 (decoración)
 import { leashUse } from './leashInteraction'; // Fase 6.5 (remate)
+import { cauldronClick } from './cauldronInteraction'; // Fase 6.5 (calderos)
 import { equipmentUse, equipmentHold, equipmentRelease, EQUIPMENT_WEARLESS } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { ENT_TRIDENT } from '../../shared/equipment';
 import { TRIDENT } from '../../shared/items';
@@ -145,6 +146,8 @@ export class Interaction {
     this.placeCooldown = 0.2;
     // Fase 6.5 (decoración): marcos, cuadros, macetas, campanas, huevos generadores y catalejo.
     if (decorUse(this.g, this, pressed, hit, target, held)) return;
+    // Fase 6.5 (calderos): cubos y estandartes sobre un caldero.
+    if (cauldronClick(this.g, pressed, hit, held)) return;
     // Fase 6.5 (remate): etiquetas y correas.
     if (leashUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6.5 (libros y estandartes): telar, atril y libros en la mano.

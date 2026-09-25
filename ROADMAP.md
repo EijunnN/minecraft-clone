@@ -12,9 +12,9 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
 | Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 6 (y 3 elementos decorativos) |
 | Criaturas | más de 80, incluidos 2 jefes | 52 |
-| Bloques | ~1.290 contando colores y variantes | ~780 (ver `docs/cobertura.md`) |
-| Objetos | ~1.650 | ~950 (bloques incluidos) |
-| Recetas | más de 2.000 | ~740 |
+| Bloques | ~1.290 contando colores y variantes | ~850 (ver `docs/cobertura.md`) |
+| Objetos | ~1.650 | ~1.050 (bloques incluidos) |
+| Recetas | más de 2.000 | ~790 |
 | Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319) |
 | Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | supervivencia, fluidos, criaturas, cofres y hornos, clima, comercio, domesticar y montar |
 
@@ -393,7 +393,7 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
 - ✅ **Luz bajo el agua.** La mano y las partículas reciben la luz del sol filtrada por el agua (antes
   salían negras a pocos bloques de profundidad).
 
-### Fase 6.5 — Catálogo del mundo normal (XL) · 🟡 en curso
+### Fase 6.5 — Catálogo del mundo normal (XL) · ✅ hecha
 Todo lo del mundo normal que no pertenece a la redstone (fase 7), al Nether y al End (fase 8) ni a las
 novedades recientes (fase 9), con sus recetas, sacado del catálogo de Minecraft 26.3 (ver
 `docs/cobertura.md`): los 16 colores (tintes, lana, alfombras, hormigón, cristal tintado, terracota
@@ -426,18 +426,27 @@ Antes de empezar se amplió el motor: hasta 1024 texturas (10 bits en el vértic
   caras), estantería cincelada (6 huecos para libros), anflorcha en maceta, etiqueta (nombre sobre la
   criatura, que ya no desaparece), correa (al jugador o a una valla), saco y sus 16 colores (hasta 64
   de peso, se mete y se saca con clic derecho), soporte para armadura y saco de tinta del calamar.
-- 🟡 **Falta (del mundo normal, sin redstone ni Nether/End ni novedades de 2025–2026):**
-  - Bloques: de carbón, de lapislázuli, de hueso, de slime, hielo azul, tierra gruesa, podsol, tierra
-    enraizada, camino de tierra, nieve polvo (y su cubo), bloques de hierro y oro en bruto, más bloques
-    infestados, tartas con vela y huevos de rana.
-  - Objetos y equipo: hierro y oro en bruto, mechero, armadura de cota de malla, ballesta, tridente,
-    escama y caparazón de tortuga, armaduras de caballo y de lobo, caña con zanahoria, cuerno de cabra,
-    pata de conejo, patata venenosa, manzana de oro encantada, corazón del mar y conducto, cohetes.
-  - Colecciones: cabezas de criaturas, tocadiscos y discos, saco de tinta luminosa y marco luminoso,
-    libro y pluma (y libro escrito), estandartes con dibujos (telar).
-  - Además: los corales y el hielo compacto necesitan toque de seda (fase 7). La prismarina y las
-    esponjas sólo salen en creativo hasta que haya guardianes y monumentos oceánicos, que todavía no
-    tienen fase asignada.
+- ✅ **Materiales y suelos.** Hierro y oro en bruto (las menas los sueltan) y sus bloques; bloques de
+  carbón, lapislázuli, hueso y slime (rebota); hielo azul (y el hielo ya resbala); tierra gruesa, podsol,
+  tierra enraizada y camino de tierra; nieve polvo (te hundes y te congelas; botas de cuero) y su cubo;
+  más bloques infestados; tartas con vela; ranas que crían con slime y ponen huevos.
+- ✅ **Equipo.** Fuego que se propaga y mechero; cota de malla; ballesta; tridente; escama y caparazón
+  de tortuga; armaduras de caballo y de lobo; caña con zanahoria; cuerno de cabra (las cabras embisten);
+  pata de conejo, patata venenosa y manzana de oro encantada; corazón del mar, concha de nautilo y
+  conducto; cohetes y estrellas de fuegos artificiales.
+- ✅ **Colecciones.** Cabezas de zombi, esqueleto, creeper y jugador (se ponen y se llevan); creepers
+  cargados por los rayos; tocadiscos y 13 discos con música propia; saco de tinta brillante y marco
+  brillante.
+- ✅ **Libros y estandartes.** Libro y pluma, libro escrito (se firma y se copia) y atril para leerlo;
+  telar con 39 dibujos y 7 diseños de estandarte, hasta 6 capas.
+- ✅ **Calderos.** Con agua, lava o nieve polvo: se llenan y vacían con los cubos, la lluvia y la nieve
+  los llenan, el agua apaga a quien arde, la lava quema y en el agua se lava la última capa de un
+  estandarte.
+- Lo que queda del catálogo (ver `docs/cobertura.md`) es de otras fases: redstone, encantamientos,
+  pociones, yunque y mesa de encantamientos (fase 7); Nether y End (fase 8); novedades de 2025–2026
+  y arqueología (fase 9). Sin fase todavía: el Deep Dark y la ciudad antigua, los monumentos oceánicos
+  y los guardianes (la prismarina y las esponjas sólo salen en creativo), la mansión del bosque, el
+  tesoro enterrado y los mapas de explorador (ver «Decisiones pendientes»).
 
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,
@@ -456,6 +465,11 @@ permisos y operadores, libro de recetas, subtítulos; contenido de 2025–2026: 
 creaking, cámaras de desafío y breeze, arqueología, cuevas de azufre, bosque moteado y campamentos.
 
 ## 5. Decisiones pendientes
+
+- **Estructuras y criaturas del mundo normal sin fase:** el Deep Dark (sculk, guardián —el *warden*—,
+  ciudad antigua, eco y brújula de recuperación), los monumentos oceánicos con guardianes, la mansión
+  del bosque con sus illagers, el tesoro enterrado y los mapas de explorador del cartógrafo. Hay que
+  decidir en qué fase entran.
 
 - **¿Paridad total o lo esencial?** Recomiendo priorizar lo que más se usa jugando con amigos
   (fases 3 a 6) antes que redstone avanzada, el End o las novedades de los últimos años.

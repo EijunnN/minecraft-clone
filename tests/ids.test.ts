@@ -136,6 +136,29 @@ test('los ids del remate de la fase 6.5 no cambian', () => {
   assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 508), 2692556884, 'huella de los objetos');
 });
 
+// Cierre de la fase 6.5: libros y estandartes, materiales, colecciones y equipo.
+import { LECTERN_BOOK, RAW_IRON_BLOCK, FROGSPAWN, SKULLS, JUKEBOX, CONDUIT } from '../src/shared/blocks';
+import { ENT_ARMOR_STAND } from '../src/shared/armorStands';
+import { ENT_TRIDENT, ENT_FIREWORK } from '../src/shared/equipment';
+import { ENT_GLOW_FRAME } from '../src/shared/paintings';
+import { WRITABLE_BOOK, RAW_IRON, GLOW_ITEM_FRAME, MUSIC_DISCS, FLINT_AND_STEEL, FIREWORK_ROCKET } from '../src/shared/items';
+
+test('los ids del cierre de la fase 6.5 no cambian', () => {
+  assert.deepEqual([LECTERN_BOOK, RAW_IRON_BLOCK, FROGSPAWN, SKULLS.zombie, JUKEBOX, CONDUIT], [4322, 4323, 4375, 4376, 4456, 4475]);
+  assert.deepEqual([WRITABLE_BOOK, RAW_IRON, GLOW_ITEM_FRAME, MUSIC_DISCS[0], FLINT_AND_STEEL, FIREWORK_ROCKET], [508, 517, 521, 522, 535, 557]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 4479), 2196960239, 'huella de los bloques');
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 559), 3860640922, 'huella de los objetos');
+  // Entidades: soporte para armadura, tridente, cohete y marco brillante.
+  assert.deepEqual([ENT_ARMOR_STAND, ENT_TRIDENT, ENT_FIREWORK, ENT_GLOW_FRAME], [109, 110, 111, 120]);
+});
+
+// Calderos con agua, lava y nieve polvo (lo último de la fase 6.5).
+import { WATER_CAULDRON, LAVA_CAULDRON, POWDER_SNOW_CAULDRON } from '../src/shared/blocks';
+test('los ids de los calderos no cambian', () => {
+  assert.deepEqual([WATER_CAULDRON, LAVA_CAULDRON, POWDER_SNOW_CAULDRON], [4479, 4482, 4483]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 4486), 2085594669, 'huella de los bloques');
+});
+
 // El estado de la maceta es el índice de su planta en esta lista (se guarda): sólo se añaden al final.
 import { pottablePlants } from '../src/shared/blocks';
 test('las plantas de maceta no cambian de índice', () => {

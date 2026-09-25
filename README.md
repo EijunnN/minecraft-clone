@@ -30,7 +30,10 @@ Objects). Pensado para PC (teclado y ratón).
   plantaformas; macetas, faroles, cadenas, campana, andamios, cuadros y marcos; carteles colgantes,
   estantería cincelada (se meten y sacan libros), soporte para armadura, etiquetas para poner nombre a
   las criaturas, correas (al jugador o a una valla) y sacos para llevar varios objetos en una ranura;
-  nuevas comidas, 52 huevos generadores, catalejo y reloj.
+  nuevas comidas, 52 huevos generadores, catalejo y reloj. También fuego y mechero, ballesta, tridente,
+  armaduras de caballo y de lobo, cohetes, conducto, cabezas de criaturas (con creepers cargados),
+  tocadiscos con 13 discos de música propia, libros que se escriben y se leen en el atril, estandartes
+  con dibujos (telar), calderos, nieve polvo, bloque de slime que rebota y los suelos que faltaban.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
   Minado con tiempos reales según la dureza del bloque y la herramienta (con grietas), desgaste de
@@ -155,6 +158,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Muestrario de maderas, colores, piedras, cobre, prismarina y corales, con flores altas y decoración](docs/screenshots/catalog.png) | ![Macetas, faroles, campana, andamios, un cuadro y un marco de noche](docs/screenshots/decoration.png) |
 | ![Arrecife de coral con pepinos de mar que brillan](docs/screenshots/coral_reef.png) | ![Bosque de algas en un océano templado](docs/screenshots/kelp_forest.png) |
 | ![Carteles colgantes, estantería cincelada, soporte con armadura y un cerdo con nombre atado a una valla](docs/screenshots/finishing.png) | ![Saco con objetos dentro en el inventario](docs/screenshots/bundle.png) |
+| ![Calderos con agua, lava y nieve polvo, cabezas de criaturas y bloques nuevos de noche](docs/screenshots/cauldrons.png) | |
 
 ## Controles
 

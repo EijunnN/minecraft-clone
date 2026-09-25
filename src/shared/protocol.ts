@@ -5,7 +5,7 @@ import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import type { BannerLayer } from './bannerPatterns';
 
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;

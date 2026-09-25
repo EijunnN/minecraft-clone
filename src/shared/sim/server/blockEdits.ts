@@ -37,6 +37,8 @@ export class BlockEdits {
   placed: ((s: Session, msg: Extract<ClientMsg, { t: 'place' }>, edits: readonly Edit[]) => void) | null = null;
   /** Fase 6.5 (materiales): tartas con vela, pala y azada sobre los suelos nuevos (`h`: altura del clic). */
   materials: ((s: Session, x: number, y: number, z: number, id: number, item: number, h: number) => boolean) | null = null;
+  /** Fase 6.5 (calderos): llenar, vaciar y lavar en un caldero. */
+  cauldrons: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
 
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
@@ -151,6 +153,9 @@ export class BlockEdits {
       if (!(Number.isInteger(item) && this.campfires.use(x, y, z, item))) ctx.reject(s, x, y, z);
       return;
     }
+    // Fase 6.5 (calderos): cubos y estandartes sobre un caldero.
+    const cauldron = this.cauldrons;
+    if (cauldron && ctx.asActor(s.id, () => cauldron(s, x, y, z, id, item))) return;
     // Fase 6.5 (materiales): tartas con vela, caminos de tierra, tierra gruesa y enraizada.
     const mat = this.materials;
     if (mat && ctx.asActor(s.id, () => mat(s, x, y, z, id, item, Number(msg.h)))) return;

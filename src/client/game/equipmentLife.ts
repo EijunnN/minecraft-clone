@@ -1,6 +1,7 @@
 // Fase 6.5 (equipo): lo que el equipo cambia en el jugador cada frame: el caparazón de tortuga (10 s de
 // respiración acuática al sacar la cabeza del agua), el efecto Resistencia (lo aplica Survival), si
 // el jugador está dentro del fuego y la estela de los cohetes en vuelo.
+import { cauldronFill, CAULDRON_LAVA } from '../../shared/blocks'; // Fase 6.5 (calderos)
 import type { Game } from './Game';
 import { isFire } from '../../shared/blocks';
 import { TURTLE_HELMET } from '../../shared/items';
@@ -28,5 +29,8 @@ export function playerInFire(g: Game): boolean {
   const p = g.player, w = g.world;
   if (!w) return false;
   const x = Math.floor(p.x), z = Math.floor(p.z);
-  return isFire(w.getBlock(x, Math.floor(p.y + 0.05), z)) || isFire(w.getBlock(x, Math.floor(p.y + 1), z));
+  const feet = w.getBlock(x, Math.floor(p.y + 0.05), z);
+  // Fase 6.5 (calderos): meterse en un caldero con lava también quema.
+  if (cauldronFill(feet)?.kind === CAULDRON_LAVA && p.y - Math.floor(p.y) < 0.95) return true;
+  return isFire(feet) || isFire(w.getBlock(x, Math.floor(p.y + 1), z));
 }
