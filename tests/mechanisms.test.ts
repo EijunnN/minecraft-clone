@@ -431,6 +431,22 @@ test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar',
   inv.open(x, by, mz)!.state.slots[0] = { id: FLINT_AND_STEEL, count: 1 };
   pulse(x, mz);
   assert.equal(inv.open(x, by, mz)!.state.slots[0]?.dmg, 1, 'se desgasta');
+  // Como en Minecraft Java: puesto donde ya hay potencia no dispara hasta que le llega un aviso.
+  const pz = z + 20;
+  const shot = () => [...h.gs.entities.list.values()].filter((e) => e.type === ENT_ARROW).length;
+  const before = shot();
+  set(x - 1, by, pz, REDSTONE_BLOCK);
+  h.tick(2);
+  set(x, by, pz, facingState(DISPENSER, EAST));
+  const o = inv.open(x, by, pz)!;
+  o.state.slots[0] = { id: ARROW, count: 2 };
+  o.done();
+  h.tick(6);
+  assert.ok(!dispenserTriggered(get(x, by, pz)), 'puesto con potencia, no se dispara');
+  assert.equal(shot(), before);
+  set(x, by, pz + 1, STONE);
+  h.tick(6);
+  assert.equal(shot(), before + 1, 'con un aviso, sí');
 });
 
 test('dinamita: mecha, explosión como en Minecraft, cadena y agua', () => {

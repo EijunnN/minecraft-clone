@@ -238,8 +238,8 @@ export class Pistons {
     } finally {
       this.busy = false;
     }
-    // Lo que se asienta mira a su alrededor (en Minecraft, neighborChanged sobre sí mismo: un dispensador
-    // empujado a un sitio con potencia dispara) y el pistón mira otra vez la potencia.
+    // Lo que se asienta recibe un aviso propio (en Minecraft, neighborChanged sobre sí mismo) y el pistón
+    // mira otra vez la potencia.
     for (const c of placed) this.rs.updateAt(c.x, c.y, c.z);
     this.rs.updateAt(m.x, m.y, m.z);
   }
