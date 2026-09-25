@@ -611,3 +611,15 @@ export function fireworkCraft(grid: readonly (ItemStack | null)[]): ItemStack | 
 export function fireworkMask(s: ItemStack): number {
   return s.id === FIREWORK_STAR ? (s.dmg ?? 0) & 0xffff : s.id === FIREWORK_ROCKET ? fireworkColors(s.dmg) : 0;
 }
+
+// ------------------------------------------------------------------ Fase 7 (pociones)
+// Alambique (vara de blaze sobre tres piedras: guijarro o pizarra profunda rocosa), polvo de blaze, crema
+// de magma, ojo de araña fermentado y piedra luminosa con su polvo (como en Minecraft). Las flechas con
+// efecto van aparte (tippedArrowCraft en potions.ts: el tipo de la poción viaja en la pila).
+import { BREWING_STAND, GLOWSTONE } from './blocks';
+import { BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, FERMENTED_SPIDER_EYE, GLOWSTONE_DUST, SPIDER_EYE } from './items';
+shape([' B ', 'SSS'], { B: BLAZE_ROD, S: [COBBLESTONE, COBBLED_DEEPSLATE] }, BREWING_STAND);
+mix([BLAZE_ROD], BLAZE_POWDER, 2);
+mix([BLAZE_POWDER, SLIME_BALL], MAGMA_CREAM);
+mix([SPIDER_EYE, BROWN_MUSHROOM, SUGAR], FERMENTED_SPIDER_EYE);
+shape(['GG', 'GG'], { G: GLOWSTONE_DUST }, GLOWSTONE);

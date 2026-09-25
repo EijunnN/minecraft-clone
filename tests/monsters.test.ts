@@ -299,10 +299,10 @@ test('servidor: la bruja lanza pociones y bebe curación cuando está herida', (
   }
   assert.ok(thrown, 'lanza una poción');
   assert.ok(hit, 'la poción alcanza al jugador (efecto o daño)');
-  // Herida: bebe y se cura.
+  // Herida: bebe y se cura (Fase 7: una poción de curación I, 4 de vida, como en Minecraft).
   witch.health = 8;
   h.tick(20 * 6);
-  assert.ok(witch.health >= 14, `se cura bebiendo: ${witch.health}`);
+  assert.ok(witch.health >= 12, `se cura bebiendo: ${witch.health}`);
 });
 
 test('servidor: una poción de veneno envenena a quien está cerca', () => {

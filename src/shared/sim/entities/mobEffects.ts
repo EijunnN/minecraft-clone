@@ -1,11 +1,11 @@
 // Fase 7 (pociones): efectos de estado de las criaturas (los de los jugadores los lleva su cliente).
 // Pociones arrojadizas, nubes persistentes, flechas con efecto y lo que beben las brujas. Veneno y
 // regeneración (los no muertos no los notan), curación y daño instantáneos (al revés en los no muertos),
-// velocidad y lentitud, invisibilidad (no se las dibuja), resistencia al fuego (no les quema) y
-// resistencia (menos daño). Alrededor de quien lleva efectos salen remolinos de su color.
+// velocidad y lentitud, caída lenta, invisibilidad (no se las dibuja), resistencia al fuego (no les
+// quema) y resistencia (menos daño). Alrededor de quien lleva efectos salen remolinos de su color.
 import {
   EFFECTS, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_INSTANT_HEALTH, EFFECT_INSTANT_DAMAGE, EFFECT_SPEED, EFFECT_SLOWNESS,
-  EFFECT_INVISIBILITY, EFFECT_FIRE_RESISTANCE, EFFECT_RESISTANCE, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, instantHeal, instantHarm,
+  EFFECT_INVISIBILITY, EFFECT_FIRE_RESISTANCE, EFFECT_RESISTANCE, EFFECT_SLOW_FALLING, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, instantHeal, instantHarm,
   regenInterval, poisonInterval, speedMultiplier, resistanceFactor, mixEffectColor, packColor,
 } from '../../effects';
 import {
@@ -87,6 +87,8 @@ export class MobEffects {
   clear(e: Entity): void {
     e.effects = undefined;
     e.flags &= ~EF_INVISIBLE;
+    e.speedMul = undefined;
+    e.slowFall = undefined;
   }
 
   /** Multiplicador del daño recibido (Resistencia). */
@@ -125,31 +127,26 @@ export class MobEffects {
       if (fx.time <= 0) list.delete(id);
     }
     if (e.dead || !this.m.list.has(e.id)) return;
+    // Velocidad y Lentitud (el paso de moveBody) y Caída lenta (baja despacio y no se hace daño).
+    const k = speedMultiplier(this.amp(e, EFFECT_SPEED), this.amp(e, EFFECT_SLOWNESS));
+    e.speedMul = k !== 1 ? k : undefined;
+    e.slowFall = list.has(EFFECT_SLOW_FALLING) || undefined;
+    if (e.slowFall) e.fallStart = e.y;
     // Resistencia al fuego: arde pero no se quema.
-    if (list.has(EFFECT_FIRE_RESISTANCE)) e.burnAcc = 0;
-    const x0 = e.x, z0 = e.z;
+    const fireProof = list.has(EFFECT_FIRE_RESISTANCE);
+    if (fireProof) e.burnAcc = 0;
     think();
     if (e.dead || !this.m.list.has(e.id)) return;
-    if (list.has(EFFECT_FIRE_RESISTANCE)) e.burnAcc = 0;
-    // Velocidad y Lentitud: escalan lo que se movió y su velocidad.
-    const k = speedMultiplier(this.amp(e, EFFECT_SPEED), this.amp(e, EFFECT_SLOWNESS));
-    if (k !== 1) {
-      if (k < 1) {
-        e.x = x0 + (e.x - x0) * k;
-        e.z = z0 + (e.z - z0) * k;
-      }
-      e.vx *= k;
-      e.vz *= k;
-    }
+    if (fireProof) e.burnAcc = 0;
     if (list.has(EFFECT_INVISIBILITY)) e.flags |= EF_INVISIBLE;
     else e.flags &= ~EF_INVISIBLE;
-    // Remolinos del color de sus efectos.
+    // Remolinos del color de sus efectos (más tenues si es invisible).
     e.swirl = (e.swirl ?? 0) - dt;
     if (e.swirl <= 0 && list.size > 0) {
-      e.swirl = SWIRL_EVERY;
+      e.swirl = list.has(EFFECT_INVISIBILITY) ? SWIRL_EVERY * 3 : SWIRL_EVERY;
       const color = mixEffectColor([...list].map(([id, fx]) => [id, fx.amp] as const));
       if (color) this.m.host.fx('effect_swirl', e.x, e.y, e.z, packColor(color), Math.round(e.height * 10));
     }
-    if (list.size === 0) e.effects = undefined;
+    if (list.size === 0) this.clear(e);
   }
 }

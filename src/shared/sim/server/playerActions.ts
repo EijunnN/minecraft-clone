@@ -6,6 +6,12 @@ import { attackCooldown, attackDamage, chargeFactor } from '../../combat';
 import { sanitizeStack } from '../../containers';
 import type { PlayerView } from '../entities';
 import { CROSSBOW_SPEED, CROSSBOW_ARROW_DAMAGE } from '../../equipment'; // Fase 6.5 (equipo)
+import { SPLASH_POTION, LINGERING_POTION } from '../../items'; // Fase 7 (pociones)
+import { isPotionType } from '../../potions';
+
+/** Fase 7 (pociones): velocidad (bloques/s) y ángulo hacia arriba con que salen las pociones lanzadas. */
+const POTION_THROW_SPEED = 10;
+const POTION_THROW_UP = (20 * Math.PI) / 180;
 import type { ServerContext, Session } from './context';
 
 export class PlayerActions {
@@ -80,15 +86,22 @@ export class PlayerActions {
     // Fase 6.5 (equipo): el virote de la ballesta sale siempre a tope y pega más fuerte.
     const crossbow = msg.c === 1;
     const speed = crossbow ? CROSSBOW_SPEED : 55 * f;
-    ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, crossbow ? CROSSBOW_ARROW_DAMAGE : 2);
+    const arrow = ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, crossbow ? CROSSBOW_ARROW_DAMAGE : 2);
+    // Fase 7 (pociones): flecha con efecto (el tipo de poción que lleva).
+    const ap = Number(msg.ap);
+    if (msg.ap !== undefined && isPotionType(ap)) arrow.arrowPotion = ap;
     if (crossbow) ctx.fx('crossbow_shoot', p[0], p[1], p[2]);
     else ctx.fx('bow', p[0], p[1], p[2], f);
   }
 
-  /** Lanzar un huevo (el cliente ya lo quitó del inventario). */
+  /** Lanzar un huevo (el cliente ya lo quitó del inventario). Fase 7 (pociones): o una poción (w, su tipo). */
   onThrow(s: Session, msg: Extract<ClientMsg, { t: 'throw' }>): void {
     const ctx = this.ctx;
     const item = Number(msg.item);
+    if (item === SPLASH_POTION || item === LINGERING_POTION) {
+      this.throwPotion(s, msg, item);
+      return;
+    }
     if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
     const p = msg.p.map(Number), d = msg.d.map(Number);
     if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite)) return;
@@ -97,6 +110,26 @@ export class PlayerActions {
     // 1,5 bloques por tick, como en Minecraft.
     const speed = 30;
     ctx.entities.spawnThrown(item, p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id);
+    ctx.fx('throw', p[0], p[1], p[2]);
+  }
+
+  /**
+   * Fase 7 (pociones): poción arrojadiza o persistente. Como en Minecraft sale algo hacia arriba (20°) y
+   * más despacio que un huevo.
+   */
+  private throwPotion(s: Session, msg: Extract<ClientMsg, { t: 'throw' }>, item: number): void {
+    const ctx = this.ctx;
+    if (s.s & STATE_DEAD || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
+    const p = msg.p.map(Number), d = msg.d.map(Number);
+    if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite)) return;
+    if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
+    const type = Number(msg.w ?? 0);
+    const len = Math.hypot(d[0], d[1], d[2]) || 1;
+    const pitch = Math.asin(Math.max(-1, Math.min(1, d[1] / len))) + POTION_THROW_UP;
+    const h = Math.hypot(d[0], d[2]) || 1;
+    const c = Math.cos(pitch) * POTION_THROW_SPEED;
+    const vx = (d[0] / h) * c, vz = (d[2] / h) * c, vy = Math.sin(pitch) * POTION_THROW_SPEED;
+    ctx.entities.spawnThrown(item, p[0], p[1], p[2], vx, vy, vz, s.id, isPotionType(type) ? type : 0);
     ctx.fx('throw', p[0], p[1], p[2]);
   }
 }

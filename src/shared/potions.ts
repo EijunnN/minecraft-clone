@@ -11,8 +11,10 @@ import {
   POTION, SPLASH_POTION, LINGERING_POTION, TIPPED_ARROW, SPLASH_HARMING, SPLASH_SLOWNESS, SPLASH_POISON, ARROW, NETHER_WART,
   REDSTONE, GLOWSTONE_DUST, FERMENTED_SPIDER_EYE, GUNPOWDER, DRAGON_BREATH, SUGAR, GLISTERING_MELON_SLICE, SPIDER_EYE,
   GHAST_TEAR, BLAZE_POWDER, MAGMA_CREAM, RABBIT_FOOT, GOLDEN_CARROT, PUFFERFISH, TURTLE_HELMET, PHANTOM_MEMBRANE, itemName,
-  type ItemStack,
+  GLASS_BOTTLE, type ItemStack,
 } from './items';
+import { MOBS, MOB_WITCH } from './mobs';
+import { ARMOR_BYPASS } from './armor';
 
 /** Entidad de la nube de efecto que deja una poción persistente al romperse. */
 export const ENT_EFFECT_CLOUD = 150;
@@ -145,6 +147,12 @@ export function potionEffects(type: number, kind: PotionKind = 'drink'): PotionE
 
 export function potionColor(type: number): [number, number, number] {
   return POTIONS[type]?.color ?? WATER_COLOR;
+}
+
+/** ¿Sólo tiene efectos instantáneos (curación o daño)? Sus salpicaduras brillan distinto. */
+export function isInstantPotion(type: number): boolean {
+  const list = POTIONS[type]?.effects ?? [];
+  return list.length > 0 && list.every(([e]) => EFFECTS[e]?.instant);
 }
 
 /** ¿Una de las bases sin efecto (agua, mundana, espesa, rara)? */
@@ -280,3 +288,10 @@ export function potionEffectLines(kind: PotionKind, type: number): [string, bool
     return [`${d.name}${lvl}${time}`, d.good];
   });
 }
+
+// ------------------------------------------------------------------ bruja y magia
+
+// Las brujas sueltan también frascos de cristal y polvo de piedra luminosa (como en Minecraft).
+MOBS[MOB_WITCH].drops.push([GLASS_BOTTLE, 0, 2], [GLOWSTONE_DUST, 0, 2]);
+// El daño instantáneo es magia: atraviesa la armadura.
+(ARMOR_BYPASS as Set<string>).add('magic');

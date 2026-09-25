@@ -58,6 +58,8 @@ import { Frogspawn } from './server/frogspawn'; // Fase 6.5 (materiales)
 import { Collections } from './server/collections'; // Fase 6.5 (colecciones)
 // Fase 6.5 (equipo): fuego, conductos y el equipo de los jugadores.
 import { Fire } from './server/fire';
+import { potionView, effectColorFrom } from './server/potionPlayers'; // Fase 7 (pociones)
+import { STATE_INVISIBLE } from '../potions';
 import { Conduits } from './server/conduits';
 import { Equipment } from './server/equipment';
 
@@ -377,9 +379,10 @@ export class GameServer {
         for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
       },
       // Fase 6 (monstruos): efectos de estado que causan las criaturas (los aplica el cliente).
-      effectPlayer: (id, effect, seconds, amp) => {
+      // Fase 7 (pociones): las pociones también afectan a los jugadores en creativo (`creativeToo`).
+      effectPlayer: (id, effect, seconds, amp, creativeToo) => {
         for (const s of this.sessions.values()) {
-          if (s.id !== id || !s.joined || s.mode === 'c' || s.s & STATE_DEAD) continue;
+          if (s.id !== id || !s.joined || (s.mode === 'c' && !creativeToo) || s.s & STATE_DEAD) continue;
           this.send(s, { t: 'effect', id: effect, s: seconds, a: amp });
         }
       },
@@ -395,6 +398,7 @@ export class GameServer {
         id: s.id, name: s.name, x: s.p[0], y: s.p[1], z: s.p[2], alive: !(s.s & STATE_DEAD), creative: s.mode === 'c',
         lookingAt: s.lookUntil > now ? s.lookAt : -1, held: s.h,
         head: s.a[0], // Fase 6.5 (colecciones)
+        ...potionView(s), // Fase 7 (pociones): invisible, armadura, efectos y vida
       });
     }
     return out;
@@ -763,7 +767,8 @@ export class GameServer {
     const yaw = ((r[0] % TAU) + TAU) % TAU;
     s.p = [r2(clamp(p[0], -WORLD_LIMIT, WORLD_LIMIT)), r2(clamp(p[1], VOID_Y - 64, 1024)), r2(clamp(p[2], -WORLD_LIMIT, WORLD_LIMIT))];
     s.r = [Math.round(yaw * 1000) / 1000, Math.round(clamp(r[1], -Math.PI / 2, Math.PI / 2) * 1000) / 1000];
-    s.s = (Number(msg.s) | 0) & STATE_MASK;
+    s.s = (Number(msg.s) | 0) & (STATE_MASK | STATE_INVISIBLE); // Fase 7 (pociones): invisible
+    s.ec = effectColorFrom(msg.ec);
     const h = Number(msg.h), o = Number(msg.o);
     s.h = Number.isInteger(h) && isValidItem(h) ? h : 0;
     s.o = Number.isInteger(o) && isValidItem(o) ? o : 0;
@@ -773,7 +778,7 @@ export class GameServer {
       const id = Number(a[slot]);
       return Number.isInteger(id) && isValidItem(id) && ITEMS[id]?.armor?.slot === slot ? id : 0;
     });
-    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a }, s);
+    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.ec ? { ec: s.ec } : {}) }, s);
   }
 
   /** Distancia del ojo del jugador al centro del bloque. */

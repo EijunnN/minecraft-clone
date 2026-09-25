@@ -138,3 +138,14 @@ import { ENCHANTED_GOLDEN_APPLE, HORSE_ARMOR, HEART_OF_THE_SEA, FLINT_AND_STEEL,
   add('shipwreck_supply', [chain.boots, 1, 1, 1]);
   add('pillager_outpost', [CROSSBOW, 4, 1, 1]);
 }
+// ------------------------------------------------------------------ Fase 7 (pociones)
+// Hasta que haya Nether (fase 8), algunos de sus ingredientes salen en los portales en ruinas, las
+// mazmorras y los templos; el aliento de dragón, sólo en creativo.
+import { NETHER_WART, BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, GHAST_TEAR, GLOWSTONE_DUST, GLASS_BOTTLE } from './items';
+{
+  const add = (table: string, ...entries: Entry[]) => LOOT_TABLES[table].entries.push(...entries);
+  add('ruined_portal', [NETHER_WART, 20, 1, 4], [BLAZE_POWDER, 6, 1, 3], [MAGMA_CREAM, 6, 1, 2], [GLOWSTONE_DUST, 10, 2, 6]);
+  add('dungeon', [NETHER_WART, 6, 1, 3], [BLAZE_ROD, 3, 1, 1], [GLASS_BOTTLE, 8, 1, 3]);
+  add('desert_pyramid', [GHAST_TEAR, 3, 1, 1], [BLAZE_ROD, 3, 1, 2]);
+  add('jungle_temple', [NETHER_WART, 4, 1, 3], [GLOWSTONE_DUST, 5, 1, 4]);
+}
