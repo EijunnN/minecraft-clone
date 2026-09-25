@@ -8,7 +8,7 @@ import { ITEMS, itemName, type ItemStack } from '../../shared/items';
 import { EFFECTS, effectLevel } from '../../shared/effects';
 import { attackDamage, attackSpeed } from '../../shared/combat';
 import { SUSPICIOUS_STEW, SPYGLASS, CLOCK } from '../../shared/items'; // Fase 6.5 (decoración)
-import { stewEffectText } from '../../shared/decorFood'; // Fase 6.5 (decoración)
+import { stewEffect, stewEffectText } from '../../shared/decorFood'; // Fase 6.5 (decoración)
 // Fase 6.5 (libros y estandartes).
 import { WRITABLE_BOOK, WRITTEN_BOOK } from '../../shared/items';
 import { BOOK_GENERATIONS } from '../../shared/books';
@@ -70,7 +70,10 @@ export function itemTooltipHtml(s: ItemStack): string {
   if (def?.drink && s.id !== POTION) lines.push('<span class="tt-dim">Quita todos los efectos</span>');
   lines.push(...potionTooltip(s)); // Fase 7 (pociones)
   // Fase 6.5 (decoración): efecto del estofado sospechoso y uso del catalejo y del reloj.
-  if (s.id === SUSPICIOUS_STEW && s.dmg) lines.push(`<span class="tt-good">${esc(stewEffectText(s.dmg))}</span>`);
+  if (s.id === SUSPICIOUS_STEW && s.dmg) {
+    const good = EFFECTS[stewEffect(s.dmg)?.[0] ?? 0]?.good ?? true; // Fase 7 (efectos): la ceguera, en rojo
+    lines.push(`<span class="${good ? 'tt-good' : 'tt-bad'}">${esc(stewEffectText(s.dmg))}</span>`);
+  }
   if (s.id === SPYGLASS) lines.push('<span class="tt-dim">Mantén el clic derecho para mirar de lejos</span>');
   if (s.id === CLOCK) lines.push('<span class="tt-dim">En la mano muestra la hora</span>');
   if (s.id === FILLED_MAP && s.dmg) {

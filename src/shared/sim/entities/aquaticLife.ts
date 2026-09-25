@@ -14,6 +14,7 @@ import {
 } from '../../world/biomeIds';
 import { EF_ACTION, EF_ANGRY } from '../../protocol';
 import { EFFECT_POISON } from '../../effects';
+import { EFFECT_DOLPHINS_GRACE, DOLPHIN_GRACE_RANGE, DOLPHIN_GRACE_SECONDS } from '../../effects'; // Fase 7 (efectos)
 import { MIN_Y } from '../../constants';
 import { moveBody } from '../physics';
 import { GRAVITY, GROW_SECONDS, TAU, lerpAngle, type PlayerView, type InteractResult, type Entity } from './types';
@@ -429,7 +430,12 @@ export class AquaticLife {
       const l = Math.hypot(tx, ty, tz) || 1;
       [dx, dy, dz] = [tx / l, ty / l, tz / l];
       speed = def.run * 0.8;
-    } else if (near) {
+    }
+    // Fase 7 (efectos): a quien bucea cerca le da Gracia del delfín (se renueva a menudo mientras nada con él).
+    if (near && near.swimming && best <= DOLPHIN_GRACE_RANGE && this.m.rand() < dt * 2) {
+      this.m.host.effectPlayer?.(near.id, EFFECT_DOLPHINS_GRACE, DOLPHIN_GRACE_SECONDS, 0, true);
+    }
+    if (near && best <= 3) {
       // Junto al jugador: dar vueltas a su alrededor.
       const a = e.age * 0.8 + e.id;
       dx = Math.cos(a);

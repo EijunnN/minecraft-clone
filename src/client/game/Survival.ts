@@ -70,6 +70,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'kill': return 'abandonó este mundo';
     case 'llama': return 'murió de un escupitajo de llama'; // Fase 6 (monturas)
     case 'magic': return 'murió por arte de magia'; // Fase 7 (pociones)
+    case 'wither': return 'se marchitó'; // Fase 7 (efectos)
     default: return mobs[cause] ?? 'murió';
   }
 }
@@ -110,6 +111,9 @@ export class Survival {
    */
   respiration = 1;
   burnFactor = 1;
+  /** Fase 7 (efectos), los pone el juego cada frame: vida máxima (Salud mejorada) y ciego (no se corre). */
+  maxHealth = 20;
+  blind = false;
 
   reset(): void {
     this.health = 20;
@@ -170,7 +174,7 @@ export class Survival {
 
   heal(n: number): void {
     if (this.dead) return;
-    const h = Math.min(20, this.health + n);
+    const h = Math.max(this.health, Math.min(this.maxHealth, this.health + n));
     if (h !== this.health) {
       this.health = h;
       this.version++;
@@ -188,7 +192,7 @@ export class Survival {
   }
 
   canSprint(): boolean {
-    return this.food > 6;
+    return this.food > 6 && !this.blind;
   }
 
   update(dt: number, ctx: SurvivalContext): void {
@@ -217,13 +221,13 @@ export class Survival {
           this.version++;
         }
       }
-    } else if (this.health < 20 && this.food >= 20 && this.saturation > 0) {
+    } else if (this.health < this.maxHealth && this.food >= 20 && this.saturation > 0) {
       if (this.regenTimer >= 0.5) {
         this.regenTimer = 0;
         this.heal(1);
         this.addExhaustion(Math.min(this.saturation, 6));
       }
-    } else if (this.health < 20 && this.food >= 18) {
+    } else if (this.health < this.maxHealth && this.food >= 18) {
       if (this.regenTimer >= 4) {
         this.regenTimer = 0;
         this.heal(1);

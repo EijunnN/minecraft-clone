@@ -440,7 +440,7 @@ export class Interaction {
     const cur = this.mining!;
     const p = this.g.player;
     const mb = this.g.enchant.miningBonus(); // Fase 7 (encantamientos): Eficiencia y Afinidad acuática
-    const t = breakTime(hit.id, this.g.heldId, p.eyeInWater && !mb.aqua, p.onGround || p.inWater, mb.efficiency);
+    const t = breakTime(hit.id, this.g.heldId, p.eyeInWater && !mb.aqua, p.onGround || p.inWater, mb.efficiency, this.g.statusEffects.miningSpeed); // Fase 7 (efectos)
     if (this.g.swingT < 0) this.g.swingT = 0;
     if (t === Infinity) return;
     if (t === 0) {
@@ -498,7 +498,8 @@ export class Interaction {
 
   /** Carga del ataque (0..1) según el ritmo del arma en la mano. */
   attackCharge(): number {
-    return Math.min(1, (performance.now() - this.lastSwing) / 1000 / attackCooldown(this.g.heldId));
+    // Fase 7 (efectos): Prisa y Fatiga minera cambian el ritmo de la barra.
+    return Math.min(1, (performance.now() - this.lastSwing) / 1000 / attackCooldown(this.g.heldId) * this.g.statusEffects.attackSpeed);
   }
 
   /** Golpear o dar un manotazo al aire vacía la barra de ataque. */
@@ -510,12 +511,15 @@ export class Interaction {
     const p = this.g.player;
     // Crítico: cayendo y con la barra casi llena (el servidor lo vuelve a comprobar).
     const charged = this.attackCharge() > 0.9;
-    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying && charged;
+    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying && charged && !this.g.statusEffects.blind; // Fase 7: ciego, sin críticos
     // Fase 7 (encantamientos): la espada barre con el golpe cargado, en el suelo, sin correr ni crítico.
     const sw = charged && !crit && p.onGround && !p.sprinting && ITEMS[this.g.heldId]?.tool?.kind === 'sword' ? 1 : 0;
     this.resetAttack();
     const b = this.g.statusEffects.melee;
-    this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}), ...this.g.enchant.heldField(), ...(sw ? { sw } : {}) });
+    const k = this.g.statusEffects.attackSpeed; // Fase 7 (efectos): ritmo de ataque
+    this.g.net?.send({
+      t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}), ...this.g.enchant.heldField(), ...(sw ? { sw } : {}), ...(k !== 1 ? { k } : {}),
+    });
     this.g.swing(false);
     this.g.net?.send({ t: 'swing' });
     if (crit) this.g.renderer.entities.spawnCrit(e.x, e.y + 1, e.z, 10);

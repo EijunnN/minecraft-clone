@@ -3,6 +3,8 @@
 // regeneración (los no muertos no los notan), curación y daño instantáneos (al revés en los no muertos),
 // velocidad y lentitud, caída lenta, invisibilidad (no se las dibuja), resistencia al fuego (no les
 // quema) y resistencia (menos daño). Alrededor de quien lleva efectos salen remolinos de su color.
+// Fase 7 (efectos): Brillo (bit de estado: los clientes dibujan su contorno), Marchitamiento (daño que
+// sí mata) y Levitación (sube despacio).
 import {
   EFFECTS, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_INSTANT_HEALTH, EFFECT_INSTANT_DAMAGE, EFFECT_SPEED, EFFECT_SLOWNESS,
   EFFECT_INVISIBILITY, EFFECT_FIRE_RESISTANCE, EFFECT_RESISTANCE, EFFECT_SLOW_FALLING, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, instantHeal, instantHarm,
@@ -12,6 +14,7 @@ import {
   MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_DROWNED, MOB_ZOMBIE_VILLAGER, MOB_PHANTOM,
 } from '../../mobs';
 import { EF_INVISIBLE } from '../../potions';
+import { EFFECT_GLOWING, EFFECT_WITHER, EFFECT_LEVITATION, EF_GLOWING, witherInterval } from '../../effects'; // Fase 7 (efectos)
 import type { Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -86,9 +89,11 @@ export class MobEffects {
   /** Quita todos los efectos (leche). */
   clear(e: Entity): void {
     e.effects = undefined;
-    e.flags &= ~EF_INVISIBLE;
+    e.flags &= ~(EF_INVISIBLE | EF_GLOWING);
     e.speedMul = undefined;
     e.slowFall = undefined;
+    e.levitation = undefined;
+    e.levVy = undefined;
   }
 
   /** Multiplicador del daño recibido (Resistencia). */
@@ -123,6 +128,15 @@ export class MobEffects {
           fx.acc -= iv;
           e.health = Math.min(e.maxHealth, e.health + 1);
         }
+      } else if (id === EFFECT_WITHER) {
+        // Fase 7 (efectos): como el veneno, pero sí mata.
+        fx.acc += dt;
+        const iv = witherInterval(fx.amp);
+        while (fx.acc >= iv && !e.dead) {
+          fx.acc -= iv;
+          e.invuln = 0;
+          this.m.damage(e, 1, e.x, e.z, null, 0);
+        }
       }
       if (fx.time <= 0) list.delete(id);
     }
@@ -132,6 +146,9 @@ export class MobEffects {
     e.speedMul = k !== 1 ? k : undefined;
     e.slowFall = list.has(EFFECT_SLOW_FALLING) || undefined;
     if (e.slowFall) e.fallStart = e.y;
+    // Fase 7 (efectos): Levitación (la física lo hace subir).
+    e.levitation = list.get(EFFECT_LEVITATION)?.amp;
+    if (e.levitation === undefined) e.levVy = undefined;
     // Resistencia al fuego: arde pero no se quema.
     const fireProof = list.has(EFFECT_FIRE_RESISTANCE);
     if (fireProof) e.burnAcc = 0;
@@ -140,6 +157,8 @@ export class MobEffects {
     if (fireProof) e.burnAcc = 0;
     if (list.has(EFFECT_INVISIBILITY)) e.flags |= EF_INVISIBLE;
     else e.flags &= ~EF_INVISIBLE;
+    if (list.has(EFFECT_GLOWING)) e.flags |= EF_GLOWING; // Fase 7 (efectos)
+    else e.flags &= ~EF_GLOWING;
     // Remolinos del color de sus efectos (más tenues si es invisible).
     e.swirl = (e.swirl ?? 0) - dt;
     if (e.swirl <= 0 && list.size > 0) {

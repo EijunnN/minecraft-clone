@@ -138,10 +138,7 @@ export function decorUse(
 /** Después de comer: los estofados dejan el cuenco y el sospechoso da el efecto de su flor. */
 export function decorAfterEat(g: Game, ia: Interaction, item: number, slot: number, dmg: number): void {
   const fx = stewEffect(dmg);
-  if (item === SUSPICIOUS_STEW && fx) {
-    if (fx[0] === 0) g.survival.eat(1, 2);
-    else g.statusEffects.add(fx[0], fx[1], 0, g.survival);
-  }
+  if (item === SUSPICIOUS_STEW && fx) g.statusEffects.add(fx[0], fx[1], 0, g.survival);
   const rest = EATEN_REMAINDER[item];
   if (!rest || g.creative) return;
   const give = { id: rest, count: 1 };

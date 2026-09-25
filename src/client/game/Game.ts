@@ -37,6 +37,7 @@ import { useLook } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { equipmentFrame } from './equipmentLife';
 // Fase 7 (pociones): física de los efectos, remolinos, nubes, invisibles y nombres de las pociones.
 import { potionPhysics, potionPosState, potionFrame } from './potionClient';
+import { effectsPhysics, effectsPosState, effectsView } from './effectsClient'; // Fase 7 (efectos)
 import { stackName, EF_INVISIBLE, STATE_INVISIBLE } from '../../shared/potions';
 import type { Use } from './gameTypes';
 import { leashLines } from './leashLines'; // Fase 6.5 (remate)
@@ -50,6 +51,7 @@ import { renderXpBar } from '../ui/xpBar';
 import { renderEffectsHud } from '../ui/effectsHud';
 import { renderAttackIndicator } from '../ui/attackIndicator';
 import { EFFECT_POISON, EFFECT_HUNGER } from '../../shared/effects';
+import { EFFECT_WITHER, MAX_HEALTH_CAP } from '../../shared/effects'; // Fase 7 (efectos)
 import { Effects } from './effects';
 import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
@@ -350,7 +352,7 @@ export class Game {
       this.xp.total = Math.max(0, Math.floor(Number(save.xp) || 0));
       this.enchant.restore(save); // Fase 7 (encantamientos): semilla de encantamiento
       this.survival.reset();
-      this.survival.health = Math.max(0, Math.min(20, save.hp));
+      this.survival.health = Math.max(0, Math.min(MAX_HEALTH_CAP, save.hp)); // Fase 7 (efectos): Salud mejorada
       this.survival.food = Math.max(0, Math.min(20, save.food));
       this.survival.saturation = Math.max(0, Math.min(20, save.sat));
       this.survival.air = save.air ?? 15;
@@ -622,7 +624,7 @@ export class Game {
     const p = this.player;
     const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
       (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0) | (p.pose !== 'stand' ? STATE_PRONE : 0) |
-      useState(this.interaction.use) | potionPosState(this).s; // Fase 7 (pociones): invisible
+      useState(this.interaction.use) | potionPosState(this).s | effectsPosState(this); // Fase 7 (pociones y efectos): invisible y brillo
     const ec = potionPosState(this).ec;
     const q = (v: number, step: number) => Math.round(v / step);
     const armor = this.inv.armorIds();
@@ -749,6 +751,7 @@ export class Game {
     p.usingItem = !!this.interaction.use;
     p.slow = (this.interaction.use ? 0.25 : 1) * this.statusEffects.speed;
     potionPhysics(this); // Fase 7 (pociones): Supersalto y Caída lenta
+    effectsPhysics(this); // Fase 7 (efectos): Levitación, Gracia del delfín, Ceguera y Salud mejorada
     p.leatherBoots = ITEMS[this.inv.armor[3]?.id ?? 0]?.armor?.material === 'leather'; // Fase 6.5 (materiales): nieve polvo
     world.renderDistance = settings.render.renderDistance;
     const wasInWater = p.inWater;
@@ -885,7 +888,7 @@ export class Game {
     const fx = this.statusEffects;
     ui.setSurvival(
       !this.creative && !surv.dead, surv.health, surv.food, surv.air, surv.hurtTime < 0.3, surv.absorption,
-      fx.has(EFFECT_POISON), fx.has(EFFECT_HUNGER),
+      fx.has(EFFECT_POISON), fx.has(EFFECT_HUNGER), surv.maxHealth, fx.has(EFFECT_WITHER), // Fase 7 (efectos)
     );
     renderEffectsHud(fx, !surv.dead && !this.hudHidden);
     renderRaidBar(this.raid, !this.hudHidden); // Fase 6 (asaltos)
@@ -972,6 +975,7 @@ export class Game {
         armor: this.inv.armorIds(),
         riding: this.riding.active || this.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
         glint: this.enchant.glintBits(), // Fase 7 (encantamientos)
+        glowing: this.statusEffects.glowing, // Fase 7 (efectos)
       });
     }
 
@@ -1082,6 +1086,7 @@ export class Game {
       fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, localRod, views),
       leashes: leashLines(this.ents.list, this.net?.id ?? null, localRod, views), // Fase 6.5 (remate)
       showHand: this.thirdPerson === 0 && !this.hudHidden && this.interaction.use?.kind !== 'spyglass',
+      ...effectsView(this, dt), // Fase 7 (efectos): náuseas, ceguera y oscuridad
     };
     this.renderer.render(state);
     this.hurtRoll *= Math.exp(-dt * 5);

@@ -157,7 +157,7 @@ export type ClientMsg =
   | { t: 'ping'; c: number }
   /** b: daño extra por efectos (Fuerza +3 por nivel, Debilidad −4). */
   /** Fase 7 (encantamientos): en, encantamientos del arma; sw, golpe que barre (espada, cargado, en el suelo). */
-  | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number; en?: [number, number][]; sw?: number }
+  | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number; en?: [number, number][]; sw?: number; k?: number }
   | { t: 'pickup'; e: number }
   | { t: 'drop'; items: ItemStack[]; p: [number, number, number]; v?: [number, number, number] }
   /** c: 1 = virote de ballesta (Fase 6.5, equipo). Fase 7: ap, tipo de la flecha con efecto (pociones); en, encantamientos. */

@@ -3,6 +3,7 @@ import { BLOCK_SOLID, BLOCK_FLUID, COBWEB } from '../blocks';
 import { moveBox, boxBlocked } from '../collide';
 import { blockUnder, groundSpeed, slimeBounce, inPowderSnow, POWDER_SINK_SPEED, POWDER_WALK_FACTOR } from '../materialPhysics'; // Fase 6.5 (materiales)
 import { SLOW_FALL_SPEED } from '../effects'; // Fase 7 (pociones)
+import { levitate } from '../effects'; // Fase 7 (efectos)
 
 export interface BlockGetter {
   /** Id del bloque o -1 si no está cargado (se trata como sólido). */
@@ -26,6 +27,12 @@ export interface Body {
   /** Fase 7 (pociones): multiplicador del paso horizontal (Velocidad y Lentitud) y caída lenta. */
   speedMul?: number;
   slowFall?: boolean;
+  /**
+   * Fase 7 (efectos): nivel de Levitación y la velocidad vertical que lleva con ella (sube despacio sin
+   * gravedad: la que le pone su turno no cuenta).
+   */
+  levitation?: number;
+  levVy?: number;
 }
 
 const EPS = 1e-4;
@@ -61,6 +68,7 @@ export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
   // Fase 7 (pociones): Velocidad y Lentitud; con Caída lenta se baja despacio.
   if (b.speedMul !== undefined) kh *= b.speedMul;
   if (b.slowFall && b.vy < -SLOW_FALL_SPEED) b.vy = -SLOW_FALL_SPEED;
+  if (b.levitation !== undefined) b.vy = levitate(b.levVy ?? Math.max(0, b.vy), b.levitation, dt);
   const vy0 = b.vy;
   const r = moveBox(w, b.x, b.y, b.z, b.width, b.height, b.vx * dt * kh, b.vy * dt * kv, b.vz * dt * kh, step, b.onGround);
   b.x += r.dx;
@@ -77,6 +85,7 @@ export function moveBody(b: Body, w: BlockGetter, dt: number, step = 0): void {
     b.onGround = false;
   }
   b.hitWall = r.hitX || r.hitZ;
+  if (b.levitation !== undefined) b.levVy = b.vy;
   updateFluids(b, w);
 }
 

@@ -116,7 +116,7 @@ test('comida nueva: valores de Minecraft y recetas', () => {
   assert.deepEqual(stewEffect(poppy.dmg), [EFFECT_NIGHT_VISION, 5]);
   const lily = matchRecipe([RED_MUSHROOM, BROWN_MUSHROOM, BOWL, FLOWERS.lily_of_the_valley], 2)!.out;
   assert.deepEqual(stewEffect(lily.dmg), [EFFECT_POISON, 11]);
-  assert.equal(SUSPICIOUS_FLOWERS.length, 12);
+  assert.equal(SUSPICIOUS_FLOWERS.length, 13); // Fase 7 (efectos): y la anflorcha
   assert.equal(stewEffect(undefined), null);
 });
 

@@ -38,7 +38,7 @@ export const ARMOR_STATS: Readonly<Record<ArmorMaterial, { points: readonly numb
 };
 
 /** Causas de daño que la armadura no reduce (como en Minecraft). */
-export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'starve', 'kill', 'poison']);
+export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'starve', 'kill', 'poison', 'wither']);
 
 /**
  * Daño tras la armadura (fórmula de Minecraft):

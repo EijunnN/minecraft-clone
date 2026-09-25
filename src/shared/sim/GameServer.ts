@@ -67,6 +67,8 @@ import { EnchantWork } from './server/enchantWork'; // Fase 7 (encantamientos)
 import { thunderAt } from '../weather'; // Fase 7 (encantamientos): Conductividad
 import { Redstone } from './server/redstone'; // Fase 7 (redstone)
 import { Mechanisms } from './server/mechanisms'; // Fase 7 (mecanismos)
+import { BellResonance } from './server/bellResonance'; // Fase 7 (efectos)
+import { STATE_GLOWING, MAX_HEALTH_CAP } from '../effects'; // Fase 7 (efectos)
 import { discOfItem } from '../collections';
 
 export { TICK_RATE, type Conn };
@@ -178,6 +180,8 @@ export class GameServer {
   readonly redstone: Redstone;
   /** Fase 7 (mecanismos): pistones, observadores, tolvas, dispensadores, soltadores y dinamita. */
   readonly mechanisms: Mechanisms;
+  /** Fase 7 (efectos): la campana hace brillar a los saqueadores. */
+  private bells: BellResonance;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -279,6 +283,7 @@ export class GameServer {
     // Fase 6.5 (equipo): fuego (los rayos también lo encienden), conductos y equipo.
     this.fire = new Fire(this.ctx, this.nature);
     this.conduits = new Conduits(this.ctx, this.nature);
+    this.bells = new BellResonance(this.ctx); // Fase 7 (efectos)
     this.equipment = new Equipment(this.ctx, this.fire, this.riding);
     const strike = this.storms.onStrike;
     this.storms.onStrike = (x, y, z) => {
@@ -478,6 +483,8 @@ export class GameServer {
   }
 
   private fx(kind: string, x: number, y: number, z: number, a?: number, b?: number): void {
+    // Fase 7 (efectos): toda campana que suena (tocada o con redstone) pasa por aquí.
+    if (kind === 'bell') this.bells?.ring(x, y, z);
     const msg: ServerMsg = { t: 'fx', k: kind, p: [r2(x), r2(y), r2(z)] };
     if (a !== undefined) msg.a = a;
     if (b !== undefined) msg.b = b;
@@ -864,7 +871,7 @@ export class GameServer {
     const yaw = ((r[0] % TAU) + TAU) % TAU;
     s.p = [r2(clamp(p[0], -WORLD_LIMIT, WORLD_LIMIT)), r2(clamp(p[1], VOID_Y - 64, 1024)), r2(clamp(p[2], -WORLD_LIMIT, WORLD_LIMIT))];
     s.r = [Math.round(yaw * 1000) / 1000, Math.round(clamp(r[1], -Math.PI / 2, Math.PI / 2) * 1000) / 1000];
-    s.s = (Number(msg.s) | 0) & (STATE_MASK | STATE_INVISIBLE); // Fase 7 (pociones): invisible
+    s.s = (Number(msg.s) | 0) & (STATE_MASK | STATE_INVISIBLE | STATE_GLOWING); // Fase 7 (pociones y efectos): invisible y brillo
     s.ec = effectColorFrom(msg.ec);
     const h = Number(msg.h), o = Number(msg.o);
     s.h = Number.isInteger(h) && isValidItem(h) ? h : 0;
@@ -910,7 +917,7 @@ export class GameServer {
     }
     const save: PlayerSave = {
       inv,
-      hp: num(raw.hp, 0, 20, 20),
+      hp: num(raw.hp, 0, MAX_HEALTH_CAP, 20), // Fase 7 (efectos): con Salud mejorada pasa de 20
       food: num(raw.food, 0, 20, 20),
       sat: num(raw.sat, 0, 20, 5),
       air: num(raw.air, 0, 15, 15),
@@ -1031,6 +1038,7 @@ export class GameServer {
     this.frogspawn.tick(); // Fase 6.5 (materiales)
     this.fire.tick(); // Fase 6.5 (equipo)
     this.conduits.tick();
+    this.bells.tick(DT); // Fase 7 (efectos)
     this.equipment.tick();
     this.enchantWork.tick(); // Fase 7 (encantamientos)
     this.redstone.tick(); // Fase 7 (redstone)

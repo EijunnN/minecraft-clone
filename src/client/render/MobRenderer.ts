@@ -356,6 +356,27 @@ export class MobRenderer {
     gl.bindVertexArray(null);
   }
 
+  /**
+   * Fase 7 (efectos): siluetas de las criaturas que brillan con el programa `p` (sólo la forma: la piel
+   * decide qué píxeles son transparentes). Para el contorno del efecto Brillo.
+   */
+  drawSilhouettes(list: ClientEntity[], camX: number, camY: number, camZ: number, time: number, p: Program): void {
+    const gl = this.gl;
+    const bonesLoc = p.loc('uBones');
+    for (const e of list) {
+      const def = MOBS[e.type];
+      if (!def) continue;
+      const mesh = this.mesh(def);
+      this.pose(def, mesh, e, time);
+      const root = this.rootMatrix(def, e, camX, camY, camZ, time);
+      p.tex2D('uSkin', this.skin(def, e.variant || mobVariant(e))).m4('uModel', root as Float32Array);
+      gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
+      gl.bindVertexArray(mesh.vao);
+      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    }
+    gl.bindVertexArray(null);
+  }
+
   /** Fase 6.5 (colecciones): un fotograma de la textura del aura (del tamaño del atlas de la especie). */
   private auraSkin(def: MobDef, frame: number): WebGLTexture {
     let t = this.auraSkins[frame];
