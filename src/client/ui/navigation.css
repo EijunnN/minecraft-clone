@@ -48,6 +48,15 @@
   background: #fff;
 }
 
+/* Fase 7.5 (mansión): destino de un mapa de explorador (mansión, monumento). */
+.map-mark.target {
+  width: 18px;
+  height: 18px;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+}
+
 .map-mark.other {
   width: 8px;
   height: 8px;

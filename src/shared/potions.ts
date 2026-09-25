@@ -181,6 +181,8 @@ export function potionName(kind: PotionKind, type: number): string {
 /** Nombre visible de una pila (las pociones, según su tipo). */
 export function stackName(s: ItemStack): string {
   const kind = potionKind(s.id);
+  const explorer = s.data?.explore ? EXPLORER_KINDS[s.data.explore.k] : undefined; // Fase 7.5 (mansión): mapas de explorador
+  if (explorer) return explorer.name;
   return kind ? potionName(kind, potionType(s)) : itemName(s.id);
 }
 
@@ -303,3 +305,5 @@ export function potionEffectLines(kind: PotionKind, type: number): [string, bool
 MOBS[MOB_WITCH].drops.push([GLASS_BOTTLE, 0, 2], [GLOWSTONE_DUST, 0, 2]);
 // El daño instantáneo es magia: atraviesa la armadura.
 (ARMOR_BYPASS as Set<string>).add('magic');
+
+import { EXPLORER_KINDS } from './explorerMaps'; // Fase 7.5 (mansión)

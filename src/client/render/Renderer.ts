@@ -31,6 +31,7 @@ import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
 import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY } from '../../shared/mobs';
+import { MOB_ALLAY } from '../../shared/allay'; // Fase 7.5 (mansión)
 import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
 import { pushPrimedTnt } from '../game/mechanismsClient';
 import { TIPPED_ARROW } from '../../shared/items'; // Fase 7 (pociones)
@@ -1030,6 +1031,16 @@ export class Renderer {
       if (e.deathT >= 0) continue;
       const hand = this.mobs.handMatrix(e, s.camX, s.camY, s.camZ, s.time);
       if (!hand) continue;
+      // Fase 7.5 (mansión): el alay lleva su objeto delante, pequeño y de frente.
+      if (e.type === MOB_ALLAY) {
+        const model = e.gear ? this.items.model(e.gear) : null;
+        if (!model) continue;
+        const m = mat4.clone(hand);
+        const k = model.flat ? 0.34 : 0.2;
+        mat4.scale(m, m, [k, k, k]);
+        list.push({ model, m, light: [1, 1] });
+        continue;
+      }
       const m = mat4.clone(hand);
       mat4.rotateX(m, m, -Math.PI / 2);
       mat4.rotateY(m, m, Math.PI / 2);

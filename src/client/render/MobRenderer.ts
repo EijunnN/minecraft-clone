@@ -19,6 +19,8 @@ import { gearTexture, GEAR_INFLATE } from '../textures/gearTextures'; // Fase 6.
 import { MOB_DROWNED } from '../../shared/mobs';
 import { EF_INVISIBLE } from '../../shared/potions'; // Fase 7 (remate)
 import { vehicleModel, vehicleSkinVariant, animateVehicle, vehicleRoot } from './vehicleModels'; // Fase 7 (transporte)
+import { animateAllay, allayRoot, ALLAY_HOLD } from './allayPose'; // Fase 7.5 (mansión)
+import { MOB_ALLAY } from '../../shared/allay';
 
 export interface MobTexture {
   width: number;
@@ -162,6 +164,7 @@ export class MobRenderer {
     out[0] = out[1] = out[2] = 0;
     if (animateVehicle(def, e, time, name, out)) return; // Fase 7 (transporte): remos
     if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
+    if (animateAllay(def, e, time, name, out)) return; // Fase 7.5 (mansión)
     const swing = Math.sin(e.walkPhase) * 1.1 * e.walkAmount;
     const headYaw = clampAngle(e.yaw - e.bodyYaw, 1.3);
     const acting = (e.flags & EF_ACTION) !== 0;
@@ -303,6 +306,7 @@ export class MobRenderer {
       mat4.translate(m, m, [0, -0.5, 0]);
     } else s *= aquaticRoot(def, e, m, time); // Fase 6 (acuáticos)
     illagerRoot(def, e, m, time); // Fase 6 (asaltos): colmillos que brotan, vex que flota
+    allayRoot(def, e, m, time); // Fase 7.5 (mansión): el alay flota y baila
     const k = monsterRoot(def, e, m); // Fase 6 (monstruos): picado del phantom, slime que se estira
     mat4.scale(m, m, [s * k[0], s * k[1], s * k[2]]);
     sitRoot(def, e.flags, m); // Fase 6 (gólems/domesticar)
@@ -474,16 +478,19 @@ export class MobRenderer {
   handMatrix(e: ClientEntity, camX: number, camY: number, camZ: number, time: number): mat4 | null {
     const def = MOBS[e.type];
     // (Fase 6.5, equipo: también el ahogado que lleva un tridente o una concha.)
-    if (!def || (def.id !== MOB_SKELETON && def.id !== MOB_STRAY && !(def.id === MOB_DROWNED && e.gear))) return null;
+    // (Fase 7.5, mansión: y el alay, que lleva su objeto delante del cuerpo.)
+    const allay = def?.id === MOB_ALLAY && !!e.gear;
+    if (!def || (def.id !== MOB_SKELETON && def.id !== MOB_STRAY && !(def.id === MOB_DROWNED && e.gear) && !allay)) return null;
     const mesh = this.mesh(def);
     this.pose(def, mesh, e, time);
-    const i = mesh.names.indexOf('armR');
+    const i = mesh.names.indexOf(allay ? 'body' : 'armR');
     if (i < 0) return null;
     const root = mat4.clone(this.rootMatrix(def, e, camX, camY, camZ, time));
     const bone = mat4.clone(this.bones.subarray(i * 16, i * 16 + 16) as unknown as mat4);
     const out = mat4.create();
     mat4.multiply(out, root, bone);
-    mat4.translate(out, out, [0, -9 * P, -1 * P]);
+    if (allay) mat4.translate(out, out, [ALLAY_HOLD[0] * P, ALLAY_HOLD[1] * P, ALLAY_HOLD[2] * P]);
+    else mat4.translate(out, out, [0, -9 * P, -1 * P]);
     return out;
   }
 }

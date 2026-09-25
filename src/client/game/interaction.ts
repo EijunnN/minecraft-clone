@@ -37,6 +37,8 @@ import { cauldronClick } from './cauldronInteraction'; // Fase 6.5 (calderos)
 import { equipmentUse, equipmentHold, equipmentRelease, EQUIPMENT_WEARLESS } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { ENT_TRIDENT } from '../../shared/equipment';
 import { TRIDENT } from '../../shared/items';
+import { MOB_ALLAY } from '../../shared/allay'; // Fase 7.5 (mansión)
+import { allayCanInteract } from './allayClient';
 import { SWEET_BERRY_BUSH, isWaterlogged } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { withWater, emptyAfterPlayerBreak } from '../../shared/blocks'; // Fase 7: anegar con el cubo y el hielo que deja agua
 import { levelIn } from '../../shared/enchantEffects';
@@ -180,7 +182,7 @@ export class Interaction {
     if (this.g.vehicles.place(this, pressed, target ? null : hit, held, dir)) return;
     // Criatura delante: dar de comer, esquilar u ordeñar (Fase 6: domesticar y sentar, también con la mano vacía).
     if (pressed && target && this.canInteract(target, held?.id ?? 0)) {
-      this.interactEntity(target, held?.id ?? 0);
+      this.interactEntity(target, held?.id ?? 0, undefined, target.type === MOB_ALLAY && held ? held : undefined); // Fase 7.5: al alay, la pila entera
       return;
     }
     // Fase 6 (fauna): cosechar un nido o colmena llenos con tijeras o un frasco.
@@ -777,6 +779,8 @@ export class Interaction {
     const def = MOBS[e.type];
     if (!def || def.hostile || e.deathT >= 0) return false;
     const baby = (e.flags & EF_BABY) !== 0;
+    const allay = allayCanInteract(e, item); // Fase 7.5 (mansión)
+    if (allay !== undefined) return allay;
     if (companionUse(e.type, e.flags, item)) return true; // Fase 6 (gólems/domesticar)
     const fauna = faunaCanInteract(e, item); // Fase 6 (fauna): cepillo
     if (fauna !== undefined) return fauna;
@@ -787,12 +791,12 @@ export class Interaction {
     return false;
   }
 
-  /** `name`: el nombre de la etiqueta (Fase 6.5). */
-  interactEntity(e: ClientEntity, item: number, name?: string): void {
+  /** `name`: el nombre de la etiqueta (Fase 6.5). `st`: la pila entera (Fase 7.5: lo que se le da al alay). */
+  interactEntity(e: ClientEntity, item: number, name?: string, st?: ItemStack): void {
     const q = ++this.interactQ;
     this.pendingInteract.set(q, { slot: this.g.selected, item });
     if (this.pendingInteract.size > 32) this.pendingInteract.delete(this.pendingInteract.keys().next().value!);
-    this.g.net?.send({ t: 'interact', e: e.id, item, q, ...(name ? { n: name } : {}) });
+    this.g.net?.send({ t: 'interact', e: e.id, item, q, ...(name ? { n: name } : {}), ...(st ? { st } : {}) });
     this.g.swing(true);
   }
 

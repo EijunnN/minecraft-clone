@@ -2,6 +2,7 @@
 // armadura, lo que alimenta y sus efectos, qué bloquea el escudo y la durabilidad que le queda.
 import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { FILLED_MAP } from '../../shared/items';
+import { explorerInfo, EXPLORER_SCALE, EXPLORER_SPAN } from '../../shared/explorerMaps'; // Fase 7.5 (mansión)
 import { mapOrigin, MAP_SIZE } from '../../shared/maps';
 import './itemTooltip.css';
 import { ITEMS, itemName, type ItemStack } from '../../shared/items';
@@ -79,6 +80,12 @@ export function itemTooltipHtml(s: ItemStack): string {
   if (s.id === FILLED_MAP && s.dmg) {
     const [x0, z0] = mapOrigin(s.dmg);
     lines.push(`<span class="tt-dim">Zona: x ${x0} a ${x0 + MAP_SIZE - 1}, z ${z0} a ${z0 + MAP_SIZE - 1}</span>`);
+  }
+  // Fase 7.5 (mansión): mapa de explorador (escala 1:4, con el destino marcado).
+  const ex = explorerInfo(s);
+  if (ex) {
+    lines.push(`<span class="tt-dim">Mapa de explorador · escala 1:${EXPLORER_SCALE}</span>`);
+    lines.push(`<span class="tt-dim">Zona: x ${ex.x0} a ${ex.x0 + EXPLORER_SPAN - 1}, z ${ex.z0} a ${ex.z0 + EXPLORER_SPAN - 1}</span>`);
   }
   // Fase 6.5 (colecciones): título del disco y para qué sirve llevar una cabeza.
   const title = discTitle(s.id);

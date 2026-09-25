@@ -328,3 +328,29 @@ test('cartógrafo: vende el mapa que apunta a la mansión más cercana (sin monu
   assert.equal(res.give.id, FILLED_MAP);
   assert.equal(explorerInfo(res.give)?.kind.name, 'Mapa de mansión del bosque');
 });
+
+// ------------------------------------------------------------------ cliente
+
+test('alay en el cliente: textura que brilla, qué se le puede dar y alas que baten', async () => {
+  const { generateMobTexture } = await import('../src/client/textures/mobTextures');
+  const { allayCanInteract } = await import('../src/client/game/allayClient');
+  const { animateAllay } = await import('../src/client/render/allayPose');
+  const t = generateMobTexture(MOB_ALLAY);
+  const alphas = new Set<number>();
+  for (let i = 3; i < t.rgba.length; i += 4) if (t.rgba[i]) alphas.add(t.rgba[i]);
+  assert.equal(alphas.size, 1, 'toda la piel pintada es emisiva');
+  assert.ok(![...alphas].includes(255));
+  const e = { type: MOB_ALLAY, flags: 0, gear: 0, seed: 0.3, walkAmount: 0, yaw: 0, bodyYaw: 0, pitch: 0 } as never as Parameters<typeof allayCanInteract>[0];
+  assert.equal(allayCanInteract(e, WHEAT), true, 'sin nada, coge cualquier objeto');
+  assert.equal(allayCanInteract(e, 0), false);
+  (e as { gear: number }).gear = WHEAT;
+  assert.equal(allayCanInteract(e, 0), true, 'con la mano vacía devuelve el suyo');
+  assert.equal(allayCanInteract(e, AMETHYST_SHARD), false, 'sin bailar, la amatista no');
+  (e as { flags: number }).flags = EF_ALLAY_DANCING;
+  assert.equal(allayCanInteract(e, AMETHYST_SHARD), true, 'bailando, la amatista sí');
+  assert.equal(allayCanInteract({ ...e, type: MOB_VILLAGER } as never, 0), undefined);
+  const a = [0, 0, 0], b = [0, 0, 0];
+  animateAllay(MOBS[MOB_ALLAY], e, 0.1, 'wingR', a);
+  animateAllay(MOBS[MOB_ALLAY], e, 0.13, 'wingR', b);
+  assert.notEqual(a[1], b[1], 'las alas se mueven');
+});

@@ -23,6 +23,7 @@ import { MONSTER_PAINTERS } from './monsterTextures'; // Fase 6 (monstruos)
 import { AQUATIC_PAINTERS } from './aquaticMobTextures'; // Fase 6 (acuáticos)
 import { faunaPainter } from './faunaTextures'; // Fase 6 (fauna)
 import { ILLAGER_PAINTERS } from './illagerTextures'; // Fase 6 (asaltos)
+import { ALLAY_PAINTERS } from './allayTextures'; // Fase 7.5 (mansión)
 
 export interface MobTexture {
   width: number;
@@ -1515,7 +1516,8 @@ export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   const mob = MOBS[mobId];
   // Fase 6 (aldeanos): el aldeano y el comerciante se pintan según su profesión (villagerTextures.ts).
   if (mob && isVillagerType(mobId)) return paintMob(mobId, villagerPainter(mobId, variant));
-  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId] ?? ILLAGER_PAINTERS[mobId]; // Fase 6 (monturas): pelajes
+  const painter = VARIANT_PAINTERS[mobId]?.(variant) ?? PAINTERS[mobId] ?? MONSTER_PAINTERS[mobId] ?? ILLAGER_PAINTERS[mobId] // Fase 6 (monturas): pelajes
+    ?? ALLAY_PAINTERS[mobId]; // Fase 7.5 (mansión)
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }
