@@ -37,6 +37,7 @@ import { Survival } from '../src/client/game/Survival';
 import { Player } from '../src/client/game/Player';
 import { generateItemSprites } from '../src/client/textures/itemSprites';
 import { POTION_VARIANTS, potionSpriteLayer, potionIconKey } from '../src/client/textures/potionSprites';
+import { fishingLoot } from '../src/shared/fishing';
 import { makeServer, type Harness, type Client } from './harness';
 
 /** Destila `type` (frasco) con `ingredient`; -1 si no cambia. */
@@ -462,4 +463,18 @@ test('servidor: jugador invisible (las criaturas lo ven de muy cerca) y la bruja
   witch.fire = 5;
   h.tick(20 * 5);
   assert.ok(witch.effects?.has(EFFECT_FIRE_RESISTANCE), 'bebe resistencia al fuego al arder');
+});
+
+test('suerte: más tesoros al pescar (y menos con mala suerte)', () => {
+  const treasure = new Set([ITEMS.findIndex((i) => i?.key === 'bow'), ITEMS.findIndex((i) => i?.key === 'nautilus_shell')]);
+  const count = (luck: number) => {
+    let seed = 7;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    let n = 0;
+    for (let i = 0; i < 6000; i++) if (treasure.has(fishingLoot(rand, luck).id)) n++;
+    return n;
+  };
+  const base = count(0), lucky = count(3), unlucky = count(-2);
+  assert.ok(lucky > base * 1.6, `con Suerte III, más tesoros (${lucky} frente a ${base})`);
+  assert.ok(unlucky < base * 0.5, `con Mala suerte, menos (${unlucky})`);
 });

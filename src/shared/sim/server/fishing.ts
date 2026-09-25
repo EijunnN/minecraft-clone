@@ -6,6 +6,7 @@ import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { fishingLoot, FISH_XP } from '../../fishing';
 import type { Entity } from '../entities';
 import type { ServerContext, Session } from './context';
+import { playerLuck } from './potionPlayers'; // Fase 7 (pociones)
 
 /** Velocidad del lanzamiento (bloques/s). */
 const CAST_SPEED = 16;
@@ -47,7 +48,7 @@ export class Fishing {
   private reel(s: Session, e: Entity): number {
     const ctx = this.ctx;
     if ((e.fishBite ?? 0) > 0) {
-      const stack = fishingLoot(ctx.rand);
+      const stack = fishingLoot(ctx.rand, playerLuck(s)); // Fase 7 (pociones): Suerte y Mala suerte
       // Tiro hacia el jugador teniendo en cuenta el rozamiento y la gravedad de los objetos.
       const reach = (1 - Math.exp(-ITEM_DRAG * PULL_TIME)) / ITEM_DRAG;
       const tx = s.p[0] - e.x, ty = s.p[1] + 1 - e.y, tz = s.p[2] - e.z;

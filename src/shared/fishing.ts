@@ -35,8 +35,12 @@ function pick(table: Entry[], rand: () => number): ItemStack {
   return { id: table[0][0], count: 1 };
 }
 
-/** Lo que sale del agua al recoger en plena picada. */
-export function fishingLoot(rand: () => number = Math.random): ItemStack {
-  const r = rand();
-  return pick(r < 0.85 ? FISH : r < 0.95 ? JUNK : TREASURE, rand);
+/**
+ * Lo que sale del agua al recoger en plena picada. Fase 7 (pociones): `luck` (Suerte, −Mala suerte)
+ * cambia los pesos como en Minecraft: peces 85 − luck, basura 10 − 2·luck y tesoros 5 + 2·luck.
+ */
+export function fishingLoot(rand: () => number = Math.random, luck = 0): ItemStack {
+  const fish = Math.max(0, 85 - luck), junk = Math.max(0, 10 - 2 * luck), treasure = Math.max(0, 5 + 2 * luck);
+  const r = rand() * (fish + junk + treasure);
+  return pick(r < fish ? FISH : r < fish + junk ? JUNK : TREASURE, rand);
 }
