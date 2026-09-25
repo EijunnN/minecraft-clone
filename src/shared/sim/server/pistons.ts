@@ -28,6 +28,17 @@ export const MOVE_TICKS = 2;
 /** Velocidad (bloques/s) con la que lanza un bloque de slime empujado (1 bloque por tick). */
 const SLIME_LAUNCH = 20;
 
+/** Lo que se mueve de una barca o vagoneta. */
+export interface VehicleBody {
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  onGround: boolean;
+}
+
 interface MovingCell extends Cell {
   /** Bloque que quedará al asentarse. */
   block: number;
@@ -64,6 +75,8 @@ export class Pistons {
   private cells = new Set<number>();
   /** Mientras mueve bloques no reacciona a sus propios cambios (cabezas y bases). */
   private busy = false;
+  /** Cuerpo (posición y velocidad) de la barca o vagoneta de una entidad (lo engancha el transporte). */
+  vehicleBody: ((entityId: number) => VehicleBody | undefined) | null = null;
 
   constructor(private ctx: ServerContext, private rs: Redstone, private rules: BlockRules) {
     SYSTEMS.set(rs, this);
@@ -238,7 +251,10 @@ export class Pistons {
     if (cells.length === 0) return;
     const ax = FACE_X[dir], ay = FACE_Y[dir], az = FACE_Z[dir];
     for (const e of this.ctx.entities.list.values()) {
-      if (e.dead || e.type === ENT_DISPLAY || isHangingType(e.type) || isVehicleType(e.type)) continue;
+      if (e.dead || e.type === ENT_DISPLAY || isHangingType(e.type)) continue;
+      // Barcas y vagonetas: se mueve su cuerpo (lo que las mueve cada tick).
+      const body = isVehicleType(e.type) ? this.vehicleBody?.(e.id) : e;
+      if (!body) continue;
       const hw = e.width / 2, h = Math.max(0.1, e.height);
       let need = 0, slime = false, honey = false;
       for (const c of cells) {
@@ -257,16 +273,16 @@ export class Pistons {
       }
       if (honey && need === 0) need = 1;
       if (need > 0) {
-        e.x += ax * need;
-        e.y += ay * need;
-        e.z += az * need;
+        body.x += ax * need;
+        body.y += ay * need;
+        body.z += az * need;
         if (ay !== 0) e.fallStart = e.y;
       }
       if (slime) {
-        if (ax) e.vx = ax * SLIME_LAUNCH;
-        if (ay) e.vy = ay * SLIME_LAUNCH;
-        if (az) e.vz = az * SLIME_LAUNCH;
-        e.onGround = false;
+        if (ax) body.vx = ax * SLIME_LAUNCH;
+        if (ay) body.vy = ay * SLIME_LAUNCH;
+        if (az) body.vz = az * SLIME_LAUNCH;
+        body.onGround = false;
       }
     }
   }

@@ -71,6 +71,10 @@ export class Mechanisms {
     this.explosives = new Explosives(ctx, redstone, d.transport);
     this.dispensers = new Dispensers(ctx, redstone, this.inventories, this.explosives, d.fire, d.transport, d.stands, { fertilize: d.fertilize });
     bindCarts(d.transport, { inv: this.inventories, containers: d.containers, tnt: this.explosives });
+    this.pistons.vehicleBody = (id) => {
+      const v = d.transport.vehicleOf(id);
+      return v?.cart ?? v?.boat;
+    };
   }
 
   /** Cada cambio de bloque: pistones (base y cabeza) y observadores que lo vigilan. */
