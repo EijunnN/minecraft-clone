@@ -156,3 +156,11 @@ import { WILD_PLANT_INVENTORY } from './wildPlants';
 export * from './ocean';
 export * from './wildPlants';
 (INVENTORY_ORDER as number[]).push(...OCEAN_INVENTORY, ...WILD_PLANT_INVENTORY);
+// Fase 6.5 (remate): carteles colgantes de todas las maderas (registrados los últimos: ids nuevos).
+import { HANGING_SIGN_INVENTORY } from './hangingSigns';
+export * from './hangingSigns';
+(INVENTORY_ORDER as number[]).push(...HANGING_SIGN_INVENTORY);
+// Fase 6.5 (remate): estantería cincelada.
+import { CHISELED_BOOKSHELF } from './chiseledBookshelf';
+export * from './chiseledBookshelf';
+(INVENTORY_ORDER as number[]).push(CHISELED_BOOKSHELF);

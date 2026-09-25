@@ -1,4 +1,5 @@
 // Interfaz de usuario en DOM: menú principal, HUD, chat, inventario, pausa, ajustes y carga.
+import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { ago, type RecentWorld } from './recentWorlds';
 import { KEY_ACTIONS, assignKey, defaultKeybinds, keyLabel } from '../game/keybinds';
 import { itemTooltipHtml } from './itemTooltip';
@@ -799,6 +800,13 @@ export function paintSlot(el: HTMLElement, s: ItemStack | null, icons: Map<numbe
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
       bar.style.background = `hsl(${Math.round(f * 120)}, 90%, 50%)`;
+    } else if (s && isBundle(s.id) && s.bag?.length) {
+      // Fase 6.5 (remate): lo lleno que está el saco.
+      const f = Math.min(1, bagWeight(s.bag) / BUNDLE_CAPACITY);
+      dur.style.display = '';
+      const bar = dur.firstElementChild as HTMLElement;
+      bar.style.width = `${Math.round(f * 100)}%`;
+      bar.style.background = f >= 1 ? '#e8503a' : '#6aa8ff';
     } else dur.style.display = 'none';
   }
 }

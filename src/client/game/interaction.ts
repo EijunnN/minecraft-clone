@@ -2,6 +2,7 @@
 // camas, tartas, compostadores), comer y beber, arco, escudo, cubos, azada, polvo de hueso, tallar
 // calabazas, lanzar huevos, pescar, animales (dar de comer, esquilar, ordeñar), ponerse armadura,
 // recoger y tirar objetos.
+import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { raycast, type RayHit } from './raycast';
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
@@ -31,6 +32,7 @@ import { useAxeOnWood } from './woodInteraction'; // Fase 6.5 (maderas)
 import { canAddCandle } from '../../shared/blocks'; // Fase 6.5 (colores)
 import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 import { decorUse, decorAfterEat } from './decorInteraction'; // Fase 6.5 (decoración)
+import { leashUse } from './leashInteraction'; // Fase 6.5 (remate)
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
@@ -65,7 +67,7 @@ export class Interaction {
   };
   onPicked(s: ItemStack): void {
     if (!s || !isValidItem(s.id)) return;
-    const rest = this.g.inv.add({ id: s.id, count: Math.max(1, Math.min(64, s.count | 0)), dmg: s.dmg });
+    const rest = this.g.inv.add({ id: s.id, count: Math.max(1, Math.min(64, s.count | 0)), dmg: s.dmg, ...(s.bag ? { bag: s.bag } : {}) });
     if (rest) this.throwStack(rest, false);
     this.g.audio.playPickup();
   }
@@ -133,6 +135,8 @@ export class Interaction {
     this.placeCooldown = 0.2;
     // Fase 6.5 (decoración): marcos, cuadros, macetas, campanas, huevos generadores y catalejo.
     if (decorUse(this.g, this, pressed, hit, target, held)) return;
+    // Fase 6.5 (remate): etiquetas y correas.
+    if (leashUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6 (aldeanos): clic derecho sobre un aldeano abre el comercio.
     if (pressed && target && this.g.trading.canTrade(target)) {
       this.g.trading.open(target);
@@ -194,6 +198,16 @@ export class Interaction {
     }
     if (held.id === EGG || held.id === SNOWBALL) {
       if (pressed) this.throwEgg(dir, held.id);
+      return;
+    }
+    // Fase 6.5 (remate): usar un saco lo vacía delante del jugador.
+    if (isBundle(held.id)) {
+      if (pressed && held.bag?.length) {
+        for (const s of bundleEmpty(held)) this.throwStack(s, false);
+        this.g.inv.changed();
+        this.g.audio.playPickup();
+        this.g.swing(false);
+      }
       return;
     }
     if (held.id === EMPTY_MAP) {
@@ -288,6 +302,7 @@ export class Interaction {
     const def = ITEMS[held.id];
     if (!def) return false;
     if (def.block !== undefined || def.drink || def.armor) return true;
+    if (isBundle(held.id)) return !!held.bag?.length; // Fase 6.5 (remate)
     if (def.food) return def.food.always || this.g.survival.food < 20 || this.g.creative;
     const kind = def.tool?.kind;
     if (kind === 'hoe' || kind === 'shield' || kind === 'bow' || kind === 'fishing_rod') return true;
@@ -704,11 +719,12 @@ export class Interaction {
     return false;
   }
 
-  interactEntity(e: ClientEntity, item: number): void {
+  /** `name`: el nombre de la etiqueta (Fase 6.5). */
+  interactEntity(e: ClientEntity, item: number, name?: string): void {
     const q = ++this.interactQ;
     this.pendingInteract.set(q, { slot: this.g.selected, item });
     if (this.pendingInteract.size > 32) this.pendingInteract.delete(this.pendingInteract.keys().next().value!);
-    this.g.net?.send({ t: 'interact', e: e.id, item, q });
+    this.g.net?.send({ t: 'interact', e: e.id, item, q, ...(name ? { n: name } : {}) });
     this.g.swing(true);
   }
 
@@ -718,7 +734,8 @@ export class Interaction {
     this.pendingInteract.delete(msg.q);
     if (!p || !msg.ok) return;
     let slot = p.slot;
-    if (this.g.inv.slots[slot]?.id !== p.item) slot = this.g.inv.slots.findIndex((st) => st?.id === p.item);
+    // (Con la mano vacía no hay nada que buscar: lo que se recibe va a su ranura o a la primera libre.)
+    if (p.item && this.g.inv.slots[slot]?.id !== p.item) slot = this.g.inv.slots.findIndex((st) => st?.id === p.item);
     if (slot < 0) return;
     if (msg.take && !this.g.creative) this.g.inv.consume(slot, msg.take);
     if (msg.wear && !this.g.creative && this.g.inv.wear(slot, msg.wear)) this.g.ui.toast('¡Se rompió la herramienta!');

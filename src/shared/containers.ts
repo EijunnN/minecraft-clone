@@ -1,6 +1,8 @@
 // Contenedores (cofres y hornos): contenido, reglas de clic compartidas por cliente (predicción)
 // y servidor (autoridad), y la lógica del horno.
 import { MAX_MAP_KEY } from './maps';
+import { isBundle, fitsInBundle, bundleInsert } from './bundles'; // Fase 6.5 (remate)
+import { stackToWire, stackFromWire, type WireStack } from './protocol';
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
 import { IRON_ORE, GOLD_ORE } from './blocks';
 
@@ -48,13 +50,14 @@ export function cloneStack(s: ItemStack | null | undefined): ItemStack | null {
   if (!s || s.count <= 0) return null;
   const c: ItemStack = { id: s.id, count: s.count };
   if (s.dmg) c.dmg = s.dmg;
+  if (s.bag?.length) c.bag = s.bag.map((b) => cloneStack(b)).filter((b): b is ItemStack => !!b); // Fase 6.5 (remate)
   return c;
 }
 
 /** Valida una pila recibida por la red. */
-export function sanitizeStack(raw: unknown): ItemStack | null {
+export function sanitizeStack(raw: unknown, inBag = false): ItemStack | null {
   if (!raw || typeof raw !== 'object') return null;
-  const r = raw as { id?: unknown; count?: unknown; dmg?: unknown };
+  const r = raw as { id?: unknown; count?: unknown; dmg?: unknown; bag?: unknown };
   const id = Number(r.id), count = Number(r.count), dmg = r.dmg === undefined ? 0 : Number(r.dmg);
   if (!Number.isInteger(id) || !isValidItem(id)) return null;
   if (!Number.isInteger(count) || count < 1 || count > maxStack(id)) return null;
@@ -62,6 +65,15 @@ export function sanitizeStack(raw: unknown): ItemStack | null {
   if (!Number.isInteger(dmg) || dmg < 0 || dmg > MAX_MAP_KEY) return null;
   const s: ItemStack = { id, count };
   if (dmg > 0) s.dmg = dmg;
+  // Fase 6.5 (remate): lo que lleva un saco, pila a pila, sin pasarse de su capacidad.
+  if (!inBag && isBundle(id) && Array.isArray(r.bag)) {
+    const holder: ItemStack = { id, count: 1 };
+    for (const b of r.bag.slice(0, 64).reverse()) {
+      const inner = sanitizeStack(b, true);
+      if (inner && fitsInBundle(inner)) bundleInsert(holder, inner);
+    }
+    if (holder.bag?.length) s.bag = holder.bag;
+  } else if (inBag && isBundle(id)) return null;
   return s;
 }
 
@@ -239,7 +251,7 @@ export function furnaceTick(c: ContainerState, dt: number, variant: FurnaceVaria
 /** Serialización compacta para guardar y enviar. */
 export interface ContainerWire {
   k: 'c' | 'f';
-  s: ([number, number] | [number, number, number] | null)[];
+  s: (WireStack | null)[];
   b?: number;
   bm?: number;
   ck?: number;
@@ -248,7 +260,7 @@ export interface ContainerWire {
 export function containerToWire(c: ContainerState): ContainerWire {
   const w: ContainerWire = {
     k: c.kind === 'chest' ? 'c' : 'f',
-    s: c.slots.map((s) => (s ? (s.dmg ? [s.id, s.count, s.dmg] : [s.id, s.count]) : null)),
+    s: c.slots.map((s) => stackToWire(s)), // Fase 6.5: con el contenido de los sacos
   };
   if (c.kind === 'furnace') {
     w.b = Math.round(c.burn * 100) / 100;
@@ -263,7 +275,7 @@ export function containerFromWire(w: ContainerWire): ContainerState | null {
   const c = newContainer(w.k === 'c' ? 'chest' : 'furnace', w.k === 'c' && w.s.length === DOUBLE_CHEST_SLOTS ? DOUBLE_CHEST_SLOTS : undefined);
   for (let i = 0; i < c.slots.length; i++) {
     const s = w.s[i];
-    c.slots[i] = Array.isArray(s) ? sanitizeStack({ id: s[0], count: s[1], dmg: s[2] }) : null;
+    c.slots[i] = Array.isArray(s) ? sanitizeStack(stackFromWire(s)) : null;
   }
   if (c.kind === 'furnace') {
     c.burn = Number.isFinite(w.b) ? Math.max(0, w.b!) : 0;

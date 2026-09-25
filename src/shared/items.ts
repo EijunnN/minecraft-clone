@@ -393,6 +393,15 @@ export function spawnEggMob(id: number): string {
 
 /** Bolsa de tinta: la suelta el calamar; da el tinte negro. */
 export const INK_SAC = item('ink_sac', 'Saco de tinta');
+// Fase 6.5 (remate): etiqueta (pone nombre a una criatura) y correa (la ata al jugador o a una valla).
+export const NAME_TAG = item('name_tag', 'Etiqueta');
+export const LEAD = item('lead', 'Correa');
+/** Saco: guarda varios objetos distintos en una ranura (hasta 64 de peso). Liso y de los 16 colores. */
+export const BUNDLE = item('bundle', 'Saco', { stack: 1 });
+export const DYED_BUNDLES = {} as Record<DyeColor, number>;
+for (const c of DYE_COLORS) DYED_BUNDLES[c] = item(`${c}_bundle`, `Saco ${COLOR_NAMES[c][0]}`, { stack: 1 });
+/** Soporte para armadura: se pone sobre un bloque y se le viste con clic derecho. */
+export const ARMOR_STAND = item('armor_stand', 'Soporte para armadura', { stack: 16 });
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -483,10 +492,12 @@ export interface ItemStack {
   id: number;
   count: number;
   dmg?: number;
+  /** Fase 6.5 (remate): lo que lleva dentro un saco (el primero es el último que entró). */
+  bag?: ItemStack[];
 }
 
 export function sameKind(a: ItemStack | null, b: ItemStack | null): boolean {
-  return !!a && !!b && a.id === b.id && (a.dmg ?? 0) === (b.dmg ?? 0) && !ITEMS[a.id]?.tool;
+  return !!a && !!b && a.id === b.id && (a.dmg ?? 0) === (b.dmg ?? 0) && !ITEMS[a.id]?.tool && !a.bag && !b.bag;
 }
 
 /** Objetos del inventario creativo que no son bloques. */
@@ -515,7 +526,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   BOWL, IRON_NUGGET, GOLD_NUGGET, COCOA_BEANS, COOKIE, MUSHROOM_STEW, RABBIT_STEW, BEETROOT_SOUP, SUSPICIOUS_STEW, GOLDEN_CARROT,
   GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, ...Object.values(SPAWN_EGGS),
   DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
-  INK_SAC,
+  INK_SAC, NAME_TAG, LEAD, BUNDLE, ...DYE_COLORS.map((c) => DYED_BUNDLES[c]), ARMOR_STAND,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

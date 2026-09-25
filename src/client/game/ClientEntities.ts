@@ -2,8 +2,9 @@
 // caen, orbes de experiencia) con interpolación entre instantáneas (se dibujan ~110 ms en el pasado
 // para suavizar).
 import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../shared/mobs';
-import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd } from '../../shared/protocol';
+import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd, type EntExtra } from '../../shared/protocol';
 import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
+import { ENT_ARMOR_STAND } from '../../shared/armorStands'; // Fase 6.5 (remate)
 
 interface Snap {
   t: number;
@@ -50,6 +51,11 @@ export interface ClientEntity {
   seed: number;
   lastX: number;
   lastZ: number;
+  /** Fase 6.5 (remate): nombre de etiqueta ('' sin nombre) y a qué está atada (jugador, valla o nada). */
+  name?: string;
+  leash?: string | [number, number, number] | 0;
+  /** Fase 6.5 (remate): soporte para armadura: ids de [cabeza, pecho, piernas, pies]. */
+  armor?: number[];
 }
 
 const DELAY = 0.11;
@@ -68,7 +74,7 @@ export class ClientEntities {
   /** Aviso de golpe recibido por una criatura (sonido/partículas se gestionan fuera). */
   onRemoved: ((e: ClientEntity) => void) | null = null;
 
-  apply(msg: { a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[] }, now: number): void {
+  apply(msg: { a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[]; ex?: EntExtra[] }, now: number): void {
     for (const a of msg.a ?? []) {
       const [id, type, x, y, z, yaw, body, pitch, flags, e1, e2] = a;
       const prev = this.list.get(id);
@@ -86,6 +92,7 @@ export class ClientEntities {
         actionT: flags & EF_ACTION ? 0 : -1,
         collector: null, collectT: 0, gone: false, seed: (id * 2654435761) % 1000 / 1000, lastX: x, lastZ: z,
       };
+      if (type === ENT_ARMOR_STAND) e.armor = [0, 1, 2, 3].map((k) => Number(a[9 + k]) || 0); // Fase 6.5 (remate)
       this.list.set(id, e);
     }
     for (const u of msg.u ?? []) {
@@ -94,6 +101,13 @@ export class ClientEntities {
       this.push(e, now, u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
       if ((e.type === ENT_ITEM || e.type === ENT_XP) && u.length > 8) e.count = u[8];
       else if (MOBS[e.type] && u.length > 8) e.variant = u[8]; // Fase 6 (aldeanos)
+    }
+    // Fase 6.5 (remate): nombre y correa.
+    for (const [id, name, leash] of msg.ex ?? []) {
+      const e = this.list.get(id);
+      if (!e) continue;
+      e.name = typeof name === 'string' ? name.slice(0, 32) : '';
+      e.leash = typeof leash === 'string' || (Array.isArray(leash) && leash.length === 3) ? leash : 0;
     }
     for (const r of msg.rm ?? []) {
       const id = Array.isArray(r) ? r[0] : r;

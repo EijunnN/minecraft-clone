@@ -6,10 +6,12 @@ import type { RayHit } from './raycast';
 import type { ClientEntity, ClientEntities } from './ClientEntities';
 import type { Interaction } from './interaction';
 import type { Game } from './Game';
-import { FLOWER_POT, familyBase, isBell, pottedPlant, potWith } from '../../shared/blocks';
+import { FLOWER_POT, familyBase, isBell, pottedPlant, potWith, isChiseledShelf, shelfSlotAt, stateProps, SHELF_BOOK_KEYS } from '../../shared/blocks';
 import { ITEMS, PAINTING, ITEM_FRAME, SPYGLASS, SUSPICIOUS_STEW, spawnEggMob, type ItemStack } from '../../shared/items';
 import { EATEN_REMAINDER, stewEffect } from '../../shared/decorFood';
 import { ENT_FRAME, hangingBox, isHangingType } from '../../shared/paintings';
+import { ENT_ARMOR_STAND, standBox } from '../../shared/armorStands'; // Fase 6.5 (remate)
+import { ARMOR_STAND } from '../../shared/items';
 
 /** Dirección horizontal (0 N, 1 E, 2 S, 3 O) de una normal de cara lateral. */
 function dirOfNormal(nx: number, nz: number): number {
@@ -43,6 +45,16 @@ export function decorUse(
     }
     return true;
   }
+  // Fase 6.5 (remate): soporte para armadura delante: vestirlo (con su desgaste) o quitarle una pieza.
+  if (target && target.type === ENT_ARMOR_STAND) {
+    const piece = heldId ? ITEMS[heldId]?.armor : undefined;
+    if (heldId && !piece) return true;
+    const q = ++ia.interactQ;
+    ia.pendingInteract.set(q, { slot: g.selected, item: heldId });
+    g.net?.send({ t: 'interact', e: target.id, item: heldId, q, ...(held?.dmg ? { d: held.dmg } : {}) });
+    g.swing(true);
+    return true;
+  }
   // Catalejo: se mira mientras se mantiene el botón.
   if (heldId === SPYGLASS) {
     ia.use = { kind: 'spyglass', t: 0, slot: g.selected, item: heldId, soundT: 0 };
@@ -51,6 +63,14 @@ export function decorUse(
   }
   if (!hit) return false;
   const yaw = g.player.yaw;
+  // Fase 6.5 (remate): poner un soporte para armadura encima de un bloque.
+  if (heldId === ARMOR_STAND) {
+    if (hit.ny > 0) {
+      askServer(ia, g, heldId, (q) => g.net?.send({ t: 'stand', x: hit.x, y: hit.y, z: hit.z, yaw: g.player.yaw, q }));
+      g.swing(true);
+    }
+    return true;
+  }
   // Colgar un cuadro o un marco en la cara lateral de un bloque.
   if (heldId === PAINTING || heldId === ITEM_FRAME) {
     if (hit.ny === 0) {
@@ -61,6 +81,16 @@ export function decorUse(
     return true;
   }
   if (!g.player.sneaking) {
+    // Fase 6.5 (remate): estantería cincelada. Hueco lleno: sacar el libro; vacío y con un libro: meterlo.
+    if (isChiseledShelf(hit.id)) {
+      const slot = shelfSlotAt(hit.id, hit.x, hit.y, hit.z, hit.px, hit.py, hit.pz, hit.nx, hit.nz);
+      const full = slot >= 0 && (stateProps(hit.id)!.books & (1 << slot)) !== 0;
+      if (slot >= 0 && (full || SHELF_BOOK_KEYS.has(ITEMS[heldId]?.key ?? ''))) {
+        askServer(ia, g, heldId, (q) => g.net?.send({ t: 'shelf', x: hit.x, y: hit.y, z: hit.z, slot, item: heldId, q }));
+        g.swing(true);
+        return true;
+      }
+    }
     // Campana: suena (el servidor avisa a todos los que están cerca).
     if (isBell(hit.id)) {
       g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw });
@@ -124,8 +154,9 @@ export function raycastHangings(
 ): { e: ClientEntity; dist: number } | null {
   let best: { e: ClientEntity; dist: number } | null = null;
   for (const e of ents.list.values()) {
-    if (!isHangingType(e.type) || e.gone) continue;
-    const b = hangingBox(e.type, e.item, e.x, e.y, e.z, e.yaw);
+    const stand = e.type === ENT_ARMOR_STAND; // Fase 6.5 (remate): los soportes para armadura también
+    if ((!isHangingType(e.type) && !stand) || e.gone) continue;
+    const b = stand ? standBox(e.x, e.y, e.z) : hangingBox(e.type, e.item, e.x, e.y, e.z, e.yaw);
     let tmin = 0, tmax = maxDist, ok = true;
     const o = [ox, oy, oz];
     for (let k = 0; k < 3 && ok; k++) {

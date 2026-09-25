@@ -3,7 +3,7 @@ import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -79,7 +79,8 @@ export interface PlayerInfo {
 }
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
-export type WireStack = [number, number] | [number, number, number];
+/** [id, cantidad, desgaste?, contenido del saco?] (Fase 6.5: el saco lleva sus pilas en el cuarto campo). */
+export type WireStack = [number, number] | [number, number, number] | [number, number, number, WireStack[]];
 
 /** Estado del jugador que guarda el servidor (el inventario lo gestiona el cliente). */
 export interface PlayerSave {
@@ -109,6 +110,8 @@ export interface PlayerSave {
 export type EntAdd = number[];
 /** Actualización: [id, x, y, z, yaw, cuerpo, pitch, flags, cantidad?]. */
 export type EntUpd = number[];
+/** Fase 6.5 (remate): [id, nombre ('' sin nombre), atada a: id de jugador, [x, y, z] de una valla o 0]. */
+export type EntExtra = [number, string, string | [number, number, number] | 0];
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
@@ -121,7 +124,9 @@ export type ClientMsg =
   /** Al morir: soltar orbes con esta experiencia en la posición p. */
   | { t: 'dropxp'; n: number; p: [number, number, number] }
   /** Usar el objeto de la mano sobre una criatura (dar de comer, esquilar, ordeñar). */
-  | { t: 'interact'; e: number; item: number; q: number }
+  | { t: 'interact'; e: number; item: number; q: number; n?: string; d?: number }
+  /** Fase 6.5 (remate): atar a la valla (x, y, z) las criaturas que lleva el jugador con correa. */
+  | { t: 'leash'; x: number; y: number; z: number }
   /** El jugador cayó sobre tierra de cultivo y la pisoteó. */
   | { t: 'trample'; x: number; y: number; z: number }
   | { t: 'wake' }
@@ -164,7 +169,12 @@ export type ClientMsg =
   // Fase 6.5 (decoración): colgar un cuadro o un marco (item) en la cara f (0 N, 1 E, 2 S, 3 O) del bloque
   // (x, y, z); usar un marco (poner el objeto de la mano o girar el que tiene). Respuesta: 'ires' con q.
   | { t: 'hang'; x: number; y: number; z: number; f: number; item: number; q: number }
-  | { t: 'frame'; e: number; item: number; q: number };
+  | { t: 'frame'; e: number; item: number; q: number }
+  // Fase 6.5 (remate): clic derecho en el hueco `slot` de una estantería cincelada con `item` en la mano
+  // (sacar el libro o meter el de la mano). Respuesta: 'ires' con q (take 1 al meterlo, give al sacarlo).
+  | { t: 'shelf'; x: number; y: number; z: number; slot: number; item: number; q: number }
+  // Fase 6.5 (remate): poner un soporte para armadura sobre el bloque (x, y, z), mirando a `yaw`.
+  | { t: 'stand'; x: number; y: number; z: number; yaw: number; q: number };
 
 export type ServerMsg =
   | {
@@ -187,7 +197,11 @@ export type ServerMsg =
   | { t: 'swing'; id: string }
   | { t: 'pong'; c: number; now: number }
   | { t: 'error'; m: string }
-  | { t: 'ents'; a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[] }
+  | {
+      t: 'ents'; a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[];
+      /** Fase 6.5 (remate): nombre y correa de las criaturas que cambiaron: [id, nombre, atada a (jugador, valla o 0)]. */
+      ex?: EntExtra[];
+    }
   | { t: 'hurt'; a: number; k: [number, number, number]; c: string }
   | { t: 'picked'; e: number; s: ItemStack }
   | { t: 'fx'; k: string; p: [number, number, number]; a?: number; b?: number }
@@ -281,12 +295,18 @@ export function worldTimeAt(t: WorldTime, serverNow: number): number {
 
 export function stackToWire(s: ItemStack | null): WireStack | null {
   if (!s || s.count <= 0) return null;
+  if (s.bag?.length) return [s.id, s.count, s.dmg ?? 0, s.bag.map((b) => stackToWire(b)).filter((b): b is WireStack => !!b)];
   return s.dmg ? [s.id, s.count, s.dmg] : [s.id, s.count];
 }
 
-export function stackFromWire(w: unknown): ItemStack | null {
+export function stackFromWire(w: unknown, depth = 0): ItemStack | null {
   if (!Array.isArray(w) || w.length < 2) return null;
   const s: ItemStack = { id: Number(w[0]), count: Number(w[1]) };
   if (w.length > 2 && Number(w[2]) > 0) s.dmg = Number(w[2]);
+  // Fase 6.5 (remate): contenido del saco (sin sacos dentro).
+  if (depth === 0 && Array.isArray(w[3]) && w[3].length) {
+    const bag = (w[3] as unknown[]).slice(0, 64).map((b) => stackFromWire(b, 1)).filter((b): b is ItemStack => !!b);
+    if (bag.length) s.bag = bag;
+  }
   return s;
 }

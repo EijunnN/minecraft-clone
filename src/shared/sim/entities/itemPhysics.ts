@@ -75,7 +75,7 @@ export class ItemPhysics {
       }
       for (const o of near) {
         if (o === e || o.type !== ENT_ITEM || o.dead || !o.stack || !e.stack || !this.m.list.has(o.id)) continue;
-        if (o.stack.id !== e.stack.id || (o.stack.dmg ?? 0) !== (e.stack.dmg ?? 0) || ITEMS[e.stack.id]?.tool) continue;
+        if (o.stack.id !== e.stack.id || (o.stack.dmg ?? 0) !== (e.stack.dmg ?? 0) || ITEMS[e.stack.id]?.tool || o.stack.bag || e.stack.bag) continue;
         if (Math.abs(o.x - e.x) > 0.6 || Math.abs(o.y - e.y) > 0.6 || Math.abs(o.z - e.z) > 0.6) continue;
         const room = maxStack(e.stack.id) - e.stack.count;
         if (room <= 0) continue;

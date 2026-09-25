@@ -258,6 +258,15 @@ export class MobBrain {
       moveX = dx / d + Math.sin(e.age * 3) * 0.3;
       moveZ = dz / d + Math.cos(e.age * 3) * 0.3;
       speed = def.run;
+    } else if (e.leashTo && Math.hypot(e.leashTo[0] - e.x, e.leashTo[2] - e.z) > 2.5) {
+      // Fase 6.5 (remate): atada con correa, camina hacia quien la lleva (o hacia la valla).
+      const dx = e.leashTo[0] - e.x, dz = e.leashTo[2] - e.z;
+      const d = Math.hypot(dx, dz);
+      moveX = dx / d;
+      moveZ = dz / d;
+      speed = d > 5 ? def.run : def.walk;
+      jump = e.hitWall;
+      lookAt = e.leashTo;
     } else if (isVillagerType(e.type) && this.m.villagers.goal(e, players, dt)) {
       // Fase 6 (aldeanos): comerciar, huir, ir a casa o pasear (goal deja la dirección en ai.goalDir).
       moveX = ai.goalDir[0];

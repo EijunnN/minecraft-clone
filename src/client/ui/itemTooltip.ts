@@ -1,5 +1,6 @@
 // Descripción de un objeto al pasar el ratón: nombre y, según lo que sea, daño y velocidad de ataque,
 // armadura, lo que alimenta y sus efectos, qué bloquea el escudo y la durabilidad que le queda.
+import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { FILLED_MAP } from '../../shared/items';
 import { mapOrigin, MAP_SIZE } from '../../shared/maps';
 import './itemTooltip.css';
@@ -53,6 +54,12 @@ export function itemTooltipHtml(s: ItemStack): string {
   if (s.id === FILLED_MAP && s.dmg) {
     const [x0, z0] = mapOrigin(s.dmg);
     lines.push(`<span class="tt-dim">Zona: x ${x0} a ${x0 + MAP_SIZE - 1}, z ${z0} a ${z0 + MAP_SIZE - 1}</span>`);
+  }
+  // Fase 6.5 (remate): lo que lleva el saco.
+  if (isBundle(s.id)) {
+    for (const b of (s.bag ?? []).slice(0, 6)) lines.push(`<span class="tt-dim">${esc(ITEMS[b.id]?.name ?? '?')} ×${b.count}</span>`);
+    if ((s.bag?.length ?? 0) > 6) lines.push(`<span class="tt-dim">y ${s.bag!.length - 6} más…</span>`);
+    lines.push(`<span class="tt-dim">${bagWeight(s.bag)} / ${BUNDLE_CAPACITY} · clic derecho: meter o sacar</span>`);
   }
   const max = tool?.durability ?? armor?.durability;
   if (max) lines.push(`<span class="tt-dim">Durabilidad: ${max - (s.dmg ?? 0)} / ${max}</span>`);

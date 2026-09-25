@@ -101,7 +101,7 @@ test('bloques nuevos: nombres, objetos, anegados e inventario', () => {
 test('texturas: todas las nuevas tienen generador y caben', () => {
   const first = TEXTURE_DEFS.findIndex((t) => t.name === 'tube_coral_block');
   assert.ok(first > 0);
-  const mine = TEXTURE_DEFS.slice(first).map((t) => t.name);
+  const mine = TEXTURE_DEFS.slice(first, TEXTURE_DEFS.findIndex((t) => t.name === 'spore_blossom') + 1).map((t) => t.name);
   assert.ok(mine.length <= 110, `${mine.length} texturas nuevas`);
   for (const name of ['kelp', 'spore_blossom', 'dead_horn_coral_fan', 'sweet_berry_bush_stage3', 'pitcher_plant_top']) assert.ok(mine.includes(name), name);
   for (const name of mine) assert.ok(Object.prototype.hasOwnProperty.call(OCEAN_GENERATORS, name), `${name} sin generador`);

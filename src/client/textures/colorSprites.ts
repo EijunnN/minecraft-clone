@@ -19,7 +19,7 @@ const shade = (c: RGB, k: number): RGB => [Math.min(255, c[0] * k), Math.min(255
 const toward = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
 /** Color de cada tinte. */
-const DYE: Record<string, RGB> = {
+export const DYE: Record<string, RGB> = {
   white: [236, 238, 234], orange: [240, 118, 20], magenta: [196, 70, 186], light_blue: [70, 172, 226],
   yellow: [250, 208, 44], lime: [122, 196, 36], pink: [240, 140, 172], gray: [74, 78, 84], light_gray: [154, 154, 148],
   cyan: [30, 146, 160], purple: [128, 52, 184], blue: [52, 64, 170], brown: [120, 78, 44], green: [86, 110, 34],

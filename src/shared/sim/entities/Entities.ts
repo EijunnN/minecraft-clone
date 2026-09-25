@@ -24,6 +24,7 @@ import { AquaticLife } from './aquaticLife';
 import { isWaterAmbient } from '../../aquaticMobs';
 // Fase 6 (gólems/domesticar)
 import { Companions } from './companions';
+import { ENT_ARMOR_STAND } from '../../armorStands'; // Fase 6.5 (remate)
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
 
 export class Entities {
@@ -335,7 +336,7 @@ export class Entities {
     for (const e of this.list.values()) {
       const near = this.nearestPlayer2D(e, players);
       // Monstruos y calamares desaparecen lejos de todos (como en Minecraft).
-      if (e.ai && !e.dead && e.raid === undefined && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
+      if (e.ai && !e.dead && e.raid === undefined && !e.customName && !e.leash && (MOBS[e.type].hostile || this.aquatic.despawns(e))) {
         if (near > 96 || (MOBS[e.type].hostile && this.host.difficulty() === 0) || (near > 32 && this.rand() < dt / 40)) {
           this.remove(e.id);
           continue;
@@ -358,7 +359,7 @@ export class Entities {
       else if (e.type === ENT_XP) this.xp.orbTick(e, dt, players);
       else if (e.type === ENT_THROWN) this.projectiles.thrownTick(e, dt, players);
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
-      else if (e.type === ENT_DISPLAY || isHangingType(e.type)) e.flags = 0; // Fase 6.5: cuadros y marcos
+      else if (e.type === ENT_DISPLAY || isHangingType(e.type) || e.type === ENT_ARMOR_STAND) e.flags = 0; // Fase 6.5: cuadros, marcos y soportes
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));
@@ -391,7 +392,8 @@ export class Entities {
   serializePassive(): string {
     const out: number[][] = [];
     for (const e of this.list.values()) {
-      if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) continue;
+      // Fase 6.5 (remate): los que llevan nombre se guardan siempre (también monstruos y calamares).
+      if (!e.ai || e.dead || ((MOBS[e.type].hostile || e.type === MOB_SQUID || isWaterAmbient(e.type)) && !e.customName)) continue;
       const row = [
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
@@ -405,6 +407,8 @@ export class Entities {
       // Fase 6 (gólems/domesticar): dueño, sentado, piel y gólem hecho a mano.
       const extra = this.companions.save(e);
       if (extra) (row as unknown[]).push(extra);
+      // Fase 6.5 (remate): nombre y valla a la que está atada (la correa en la mano de un jugador no se guarda).
+      if (e.customName || Array.isArray(e.leash)) (row as unknown[]).push({ tag: e.customName ?? '', fence: Array.isArray(e.leash) ? e.leash : 0 });
       out.push(row);
     }
     return JSON.stringify(out);
@@ -427,6 +431,13 @@ export class Entities {
         if (typeof mount === 'number') this.mounts.load(e, mount); // Fase 6 (monturas)
         // Fase 6 (aldeanos): datos del aldeano (objeto con clave 'vil' en cualquier posición de la fila).
         if (Array.isArray(row)) this.villagers.restore(e, (row as unknown[]).find((c) => !!c && typeof c === 'object' && 'vil' in (c as object)));
+        // Fase 6.5 (remate): nombre y valla.
+        const tag = (row as unknown[]).find((c) => !!c && typeof c === 'object' && 'tag' in (c as object)) as { tag?: unknown; fence?: unknown } | undefined;
+        if (tag) {
+          if (typeof tag.tag === 'string' && tag.tag) e.customName = tag.tag.slice(0, 32);
+          const f = tag.fence;
+          if (Array.isArray(f) && f.length === 3 && f.every(Number.isInteger)) e.leash = [f[0], f[1], f[2]];
+        }
       }
     } catch {
       /* ignorar */

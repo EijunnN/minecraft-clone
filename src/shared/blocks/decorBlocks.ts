@@ -17,6 +17,8 @@ import { PAINTINGS, paintingCellTexture } from '../paintings';
 export const POT_STATES = 64;
 /** Plantas en cruz que no van en maceta (hierba, caña, telaraña…), por clave. */
 const NOT_POTTABLE = new Set(['short_grass', 'sugar_cane', 'cobweb', 'tall_grass', 'large_fern', 'pointed_dripstone']);
+/** Plantas con apoyo propio que sí van en maceta (la anflorcha sólo necesita suelo). */
+const POTTABLE_WITH_SUPPORT = new Set(['torchflower']);
 
 let pottable: number[] | null = null;
 let pottableIndex: Map<number, number> | null = null;
@@ -33,7 +35,7 @@ export function pottablePlants(): readonly number[] {
     pottable = [];
     for (const b of defs) {
       if (!b || (b.base !== undefined && b.base !== b.id) || b.noItem || NOT_POTTABLE.has(b.key)) continue;
-      if ((b.render === R_CROSS && !b.support && b.category !== null) || b.id === CACTUS) pottable.push(b.id);
+      if ((b.render === R_CROSS && (!b.support || POTTABLE_WITH_SUPPORT.has(b.key)) && b.category !== null) || b.id === CACTUS) pottable.push(b.id);
     }
     pottable = pottable.slice(0, POT_STATES - 1);
     pottableIndex = new Map(pottable.map((id, i) => [id, i + 1]));

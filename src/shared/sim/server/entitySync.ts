@@ -1,8 +1,9 @@
 // Envío de entidades a cada jugador: sólo las cercanas y sólo lo que cambió desde el último envío
 // (altas, actualizaciones y bajas, con quién recogió cada objeto para la animación).
 import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mobs';
-import type { ServerMsg } from '../../protocol';
+import type { ServerMsg, EntExtra } from '../../protocol';
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
+import { ENT_ARMOR_STAND } from '../../armorStands'; // Fase 6.5 (remate)
 import type { Entity } from '../entities';
 import { r2, type ServerContext } from './context';
 
@@ -12,6 +13,8 @@ const ENTITY_RANGE = 80;
 export class EntitySync {
   /** Entidades retiradas desde el último envío: id → jugador que la recogió. */
   private collected = new Map<number, string>();
+  /** Fase 6.5 (remate): nombre y correa ya enviados a cada jugador, por entidad ('' si nada). */
+  private extraSent = new Map<string, Map<number, string>>();
 
   constructor(private ctx: ServerContext) {}
 
@@ -35,11 +38,21 @@ export class EntitySync {
     for (const s of ctx.sessions()) {
       if (!s.joined) continue;
       const add: number[][] = [], upd: number[][] = [], rm: (number | [number, string])[] = [];
+      const ex: EntExtra[] = [];
+      let sent = this.extraSent.get(s.id);
+      if (!sent) this.extraSent.set(s.id, (sent = new Map()));
       const seen = new Set<number>();
       for (const e of ctx.entities.list.values()) {
         const dx = e.x - s.p[0], dz = e.z - s.p[2];
         if (dx * dx + dz * dz > ENTITY_RANGE * ENTITY_RANGE) continue;
         seen.add(e.id);
+        // Fase 6.5 (remate): nombre y correa (se mandan aparte, sólo cuando cambian).
+        const extra = e.customName || e.leash ? `${e.customName ?? ''}|${Array.isArray(e.leash) ? e.leash.join(',') : e.leash ?? ''}` : '';
+        if ((sent.get(e.id) ?? '') !== extra) {
+          if (extra) sent.set(e.id, extra);
+          else sent.delete(e.id);
+          ex.push([e.id, e.customName ?? '', e.leash ? (Array.isArray(e.leash) ? [...e.leash] as [number, number, number] : e.leash) : 0]);
+        }
         const key = this.key(e);
         const prev = s.known.get(e.id);
         if (prev === key) continue;
@@ -50,6 +63,7 @@ export class EntitySync {
           else if (e.type === ENT_FALLING) rec.push(e.block ?? 0);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (isHangingType(e.type)) rec.push(e.variant ?? 0); // Fase 6.5: variante del cuadro u objeto del marco
+          else if (e.type === ENT_ARMOR_STAND) rec.push(...(e.standArmor ?? [0, 0, 0, 0])); // Fase 6.5 (remate): su armadura
           else if (e.ai) rec.push(Math.round(e.health), e.variant ?? 0); // Fase 6: variante (pelaje o profesión)
           add.push(rec);
         } else {
@@ -63,11 +77,13 @@ export class EntitySync {
       for (const id of s.known.keys()) {
         if (seen.has(id)) continue;
         s.known.delete(id);
+        sent.delete(id);
         const who = removedInfo.get(id);
         rm.push(who ? [id, who] : id);
       }
-      if (add.length || upd.length || rm.length) {
+      if (add.length || upd.length || rm.length || ex.length) {
         const msg: ServerMsg = { t: 'ents' };
+        if (ex.length) msg.ex = ex;
         if (add.length) msg.a = add;
         if (upd.length) msg.u = upd;
         if (rm.length) msg.rm = rm;
@@ -75,5 +91,11 @@ export class EntitySync {
       }
     }
     removedInfo.clear();
+    // Jugadores que ya no están.
+    if (this.extraSent.size > 0) {
+      const ids = new Set<string>();
+      for (const s of ctx.sessions()) ids.add(s.id);
+      for (const id of this.extraSent.keys()) if (!ids.has(id)) this.extraSent.delete(id);
+    }
   }
 }

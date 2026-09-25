@@ -7,7 +7,7 @@
 // sincronización de entidades. Los sistemas sólo ven un ServerContext (ver server/context.ts).
 import {
   PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, STATE_MASK, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
-  stackFromWire, type ClientMsg, type ServerMsg, type PlayerInfo, type WorldTime, type PlayerSave, type WireStack,
+  stackFromWire, stackToWire, type ClientMsg, type ServerMsg, type PlayerInfo, type WorldTime, type PlayerSave, type WireStack,
 } from '../protocol';
 import { WORLD_LIMIT, CHUNK_SIZE, VOID_Y } from '../constants';
 import { AIR, isValidBlockId } from '../blocks';
@@ -46,6 +46,9 @@ import { Raids } from './server/raids'; // Fase 6 (asaltos)
 import { ColorBlocks } from './server/colorBlocks'; // Fase 6.5 (colores)
 import { Copper } from './server/copper'; // Fase 6.5 (cobre)
 import { Hangings } from './server/hangings'; // Fase 6.5 (decoración)
+import { Shelves } from './server/shelves'; // Fase 6.5 (remate)
+import { Leashes } from './server/leashes'; // Fase 6.5 (remate)
+import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
 
 export { TICK_RATE, type Conn };
@@ -122,6 +125,12 @@ export class GameServer {
   private copper: Copper;
   /** Fase 6.5 (decoración): cuadros y marcos colgados. */
   readonly hangings: Hangings;
+  /** Fase 6.5 (remate): libros de las estanterías cinceladas. */
+  private shelves: Shelves;
+  /** Fase 6.5 (remate): etiquetas y correas. */
+  private leashes: Leashes;
+  /** Fase 6.5 (remate): soportes para armadura. */
+  private stands: ArmorStands;
   /** Fase 6.5 (océano y plantas): corales, algas, esponjas, bayas dulces y plantaformas. */
   readonly oceanLife: OceanLife;
 
@@ -198,6 +207,10 @@ export class GameServer {
     this.edits.copper = this.copper;
     this.storms.onStrike = (x, y, z) => this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z));
     this.hangings = new Hangings(this.ctx, store); // Fase 6.5 (decoración)
+    this.shelves = new Shelves(this.ctx, store); // Fase 6.5 (remate)
+    this.leashes = new Leashes(this.ctx); // Fase 6.5 (remate)
+    this.stands = new ArmorStands(this.ctx, store); // Fase 6.5 (remate)
+    this.farming.extraInteract = (s, e, msg) => this.stands.onInteract(s, e, msg) ?? this.leashes.onInteract(s, e, msg);
   }
 
   get seed(): number {
@@ -405,6 +418,7 @@ export class GameServer {
     this.broadcast({ t: 'leave', id: s.id });
     this.riding.onLeave(s); // Fase 6 (monturas)
     this.raids.onLeave(s); // Fase 6 (asaltos)
+    this.leashes.onLeave(s); // Fase 6.5 (remate)
     this.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} salió del mundo.` });
     if (this.playerCount === 0) this.flush(true);
   }
@@ -482,7 +496,7 @@ export class GameServer {
         break;
       case 'attack':
         // Fase 6.5 (decoración): los golpes a cuadros y marcos los atiende su sistema.
-        if (this.allow(s, 1) && !this.hangings.onAttack(s, Number(msg.e))) this.actions.onAttack(s, msg);
+        if (this.allow(s, 1) && !this.hangings.onAttack(s, Number(msg.e)) && !this.stands.onAttack(s, Number(msg.e))) this.actions.onAttack(s, msg);
         break;
       case 'pickup':
         if (this.allow(s, 0.5)) this.actions.onPickup(s, Number(msg.e));
@@ -568,6 +582,15 @@ export class GameServer {
         break;
       case 'frame':
         if (this.allow(s, 1)) this.hangings.onFrame(s, msg);
+        break;
+      case 'stand': // Fase 6.5 (remate)
+        if (this.allow(s, 1)) this.stands.onPlace(s, msg);
+        break;
+      case 'leash': // Fase 6.5 (remate)
+        if (this.allow(s, 1)) this.leashes.onFence(s, msg);
+        break;
+      case 'shelf': // Fase 6.5 (remate)
+        if (this.allow(s, 1)) this.shelves.onShelf(s, msg);
         break;
     }
   }
@@ -697,7 +720,7 @@ export class GameServer {
     if (Array.isArray(raw.inv)) {
       for (let i = 0; i < Math.min(46, raw.inv.length); i++) {
         const st = sanitizeStack(stackFromWire(raw.inv[i]));
-        inv.push(st ? (st.dmg ? [st.id, st.count, st.dmg] : [st.id, st.count]) : null);
+        inv.push(stackToWire(st)); // Fase 6.5: con el contenido de los sacos
       }
     }
     const save: PlayerSave = {
@@ -723,7 +746,7 @@ export class GameServer {
     }
     if (raw.off !== undefined) {
       const st = sanitizeStack(stackFromWire(raw.off));
-      save.off = st ? (st.dmg ? [st.id, st.count, st.dmg] : [st.id, st.count]) : null;
+      save.off = stackToWire(st);
     }
     if (Array.isArray(raw.armor)) {
       // Cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies).
@@ -777,6 +800,8 @@ export class GameServer {
     this.golems.onBlockChanged(x, y, z, id); // Fase 6 (gólems/domesticar)
     this.colorBlocks.onBlockChanged(x, y, z, old, id); // Fase 6.5 (colores)
     this.hangings?.onBlockChanged(x, y, z); // Fase 6.5 (decoración)
+    this.shelves?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (remate)
+    this.stands?.onBlockChanged(x, y, z); // Fase 6.5 (remate)
     this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
   }
 
@@ -790,6 +815,7 @@ export class GameServer {
     this.fluids.step(this.fluidWorld);
     this.nature.tick();
     this.entities.tick(DT);
+    this.leashes.tick(DT); // Fase 6.5 (remate)
     this.riding.tick(); // Fase 6 (monturas)
     this.beds.tick();
     this.composters.tick();
@@ -874,6 +900,8 @@ export class GameServer {
     this.monsters.flush(this.store);
     this.raids.flush(this.store); // Fase 6 (asaltos)
     this.hangings.flush(this.store); // Fase 6.5 (decoración)
+    this.shelves.flush(this.store); // Fase 6.5 (remate)
+    this.stands.flush(this.store); // Fase 6.5 (remate)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

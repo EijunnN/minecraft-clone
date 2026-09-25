@@ -1,6 +1,6 @@
 // Carteles en el cliente: el texto de cada uno (lo manda el servidor) y la lista de los cercanos que
 // hay que dibujar.
-import { BLOCK_WALL, isSign, stateProps } from '../../shared/blocks';
+import { BLOCK_WALL, isSign, stateProps, hangingSignKind } from '../../shared/blocks';
 import { sanitizeSignLines, signIsBlank } from '../../shared/signText';
 import type { SignDraw } from '../render/SignTextRenderer';
 
@@ -33,7 +33,7 @@ export class SignTexts {
       if (Math.abs(x + 0.5 - camX) > SIGN_RANGE || Math.abs(y + 0.5 - camY) > SIGN_RANGE || Math.abs(z + 0.5 - camZ) > SIGN_RANGE) continue;
       const id = getBlock(x, y, z);
       if (!isSign(id)) continue;
-      out.push({ x, y, z, facing: stateProps(id)!.facing, wall: BLOCK_WALL[id] >= 0, lines });
+      out.push({ x, y, z, facing: stateProps(id)!.facing, wall: BLOCK_WALL[id] >= 0, hanging: hangingSignKind(id), lines });
     }
     return out;
   }

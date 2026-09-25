@@ -140,6 +140,11 @@ export function addSign(wood: string, name: string): void {
 }
 for (const [wood, name] of SIGN_WOODS) addSign(wood, name);
 
+/** Otros carteles (colgantes) que cuentan como carteles: se escribe su texto igual. */
+export function addSignBase(id: number): void {
+  SIGN_BASES.add(id);
+}
+
 /** ¿Cartel (de pie o de pared)? */
 export function isSign(id: number): boolean {
   return SIGN_BASES.has(familyBase(id));

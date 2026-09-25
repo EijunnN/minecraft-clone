@@ -366,6 +366,11 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'glow_lichen', sss: 0.4, cutout: true },
   { name: 'hanging_roots', sss: 0.5, cutout: true },
   { name: 'spore_blossom', sss: 0.6, cutout: true },
+  // Fase 6.5 (remate): estantería cincelada.
+  { name: 'chiseled_bookshelf_empty' },
+  { name: 'chiseled_bookshelf_occupied' },
+  { name: 'chiseled_bookshelf_top' },
+  { name: 'chiseled_bookshelf_side' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

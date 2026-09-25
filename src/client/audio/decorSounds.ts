@@ -35,6 +35,38 @@ export function buildDecorSfx(ctx: AudioContext, noise: NoiseBuffers, kind: stri
         playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 2500, q: 0.7, attack: 0.002, decay: 0.05, gain: 0.08 }),
         playTonalBlip(ctx, { destination: dest, now, freq: 900, freqEnd: 700, wave: 'triangle', attack: 0.002, decay: 0.05, gain: 0.05 }),
       ];
+    // Fase 6.5 (remate): etiqueta (roce de papel), atar la correa (cuerda tensada) y romperla (chasquido).
+    case 'name_tag':
+      return [playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'bandpass', freq: 3000, q: 1.2, attack: 0.01, decay: 0.12, gain: 0.12 })];
+    case 'leash':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 900, q: 2, attack: 0.004, decay: 0.1, gain: 0.2 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 140, freqEnd: 180, wave: 'triangle', attack: 0.004, decay: 0.09, gain: 0.08 }),
+      ];
+    // Soporte para armadura: madera al ponerlo o romperlo, y metal al vestirlo.
+    case 'stand_place':
+    case 'stand_break':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: kind === 'stand_break' ? 1400 : 900, q: 0.8, attack: 0.002, decay: kind === 'stand_break' ? 0.16 : 0.09, gain: 0.32 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 200, freqEnd: 130, wave: 'triangle', attack: 0.002, decay: 0.1, gain: 0.12 }),
+      ];
+    case 'stand_equip':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'bandpass', freq: 2600, q: 2, attack: 0.002, decay: 0.08, gain: 0.14 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 620, freqEnd: 480, wave: 'square', attack: 0.002, decay: 0.07, gain: 0.04 }),
+      ];
+    case 'leash_break':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 1800, q: 0.8, attack: 0.001, decay: 0.06, gain: 0.25 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 320, freqEnd: 90, wave: 'triangle', attack: 0.001, decay: 0.12, gain: 0.1 }),
+      ];
+    // Fase 6.5 (remate): meter o sacar un libro de la estantería (roce de papel y golpe de madera).
+    case 'shelf_put':
+    case 'shelf_take':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: kind === 'shelf_put' ? 1800 : 2400, q: 1, attack: 0.004, decay: 0.09, gain: 0.18 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: kind === 'shelf_put' ? 160 : 210, freqEnd: 120, wave: 'triangle', attack: 0.002, decay: 0.07, gain: 0.1 }),
+      ];
     default:
       return [];
   }

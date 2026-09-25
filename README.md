@@ -27,8 +27,10 @@ Objects). Pensado para PC (teclado y ratón).
   terracota esmaltada, camas, velas y estandartes), todas las piedras con escaleras, losas y muros, el
   cobre que se oxida (el panal lo encera y el hacha lo raspa) con sus herramientas y armadura,
   arrecifes de coral, bosques de algas, prismarina y esponjas, flores altas, bayas dulces, azaleas y
-  plantaformas; macetas, faroles, cadenas, campana, andamios, cuadros y marcos; nuevas comidas, 52
-  huevos generadores, catalejo y reloj.
+  plantaformas; macetas, faroles, cadenas, campana, andamios, cuadros y marcos; carteles colgantes,
+  estantería cincelada (se meten y sacan libros), soporte para armadura, etiquetas para poner nombre a
+  las criaturas, correas (al jugador o a una valla) y sacos para llevar varios objetos en una ranura;
+  nuevas comidas, 52 huevos generadores, catalejo y reloj.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
   Minado con tiempos reales según la dureza del bloque y la herramienta (con grietas), desgaste de
@@ -152,6 +154,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Pétalos cayendo bajo las ramas de un cerezo](docs/screenshots/cherry_petals.png) | ![Asistente de comandos del chat con sugerencias e iconos](docs/screenshots/chat.png) |
 | ![Muestrario de maderas, colores, piedras, cobre, prismarina y corales, con flores altas y decoración](docs/screenshots/catalog.png) | ![Macetas, faroles, campana, andamios, un cuadro y un marco de noche](docs/screenshots/decoration.png) |
 | ![Arrecife de coral con pepinos de mar que brillan](docs/screenshots/coral_reef.png) | ![Bosque de algas en un océano templado](docs/screenshots/kelp_forest.png) |
+| ![Carteles colgantes, estantería cincelada, soporte con armadura y un cerdo con nombre atado a una valla](docs/screenshots/finishing.png) | ![Saco con objetos dentro en el inventario](docs/screenshots/bundle.png) |
 
 ## Controles
 

@@ -35,6 +35,8 @@ export interface SignDraw {
   facing: number;
   /** En la pared (tablero más bajo y pegado al fondo) o de pie. */
   wall: boolean;
+  /** Cartel colgante: 0 no, 1 del techo, 2 de pared (texto por las dos caras). */
+  hanging?: number;
   lines: readonly string[];
 }
 
@@ -115,17 +117,27 @@ export class SignTextRenderer {
       for (const s of signs) {
         // Esquinas del texto en dieciseisavos (mirando al norte): de pie el tablero va de y 8 a 16 con
         // la cara en z = 7; en la pared, de y 4 a 12 con la cara en z = 14. Visto de frente, x baja.
-        const [top, bottom, face] = s.wall ? [11.6, 4.4, 13.92] : [15.6, 8.4, 6.92];
-        const pts = [[15, top], [1, top], [1, bottom], [15, bottom]];
-        const uv = [[0, 0], [1, 0], [1, 1], [0, 1]];
-        for (let k = 0; k < 4; k++) {
-          let x = pts[k][0], z = face;
-          for (let r = 0; r < (s.facing & 3); r++) [x, z] = [16 - z, x];
-          data.set([s.x + x / 16 - camX, s.y + pts[k][1] / 16 - camY, s.z + z / 16 - camZ, uv[k][0], uv[k][1]], k * 5);
+        // Colgantes: tablero de y 0 a 10 con caras en z = 7 y z = 9 (el de pared, girado 90°: sus caras
+        // miran a los lados de la pared); el texto va por las dos caras.
+        const hanging = s.hanging ?? 0;
+        const faces: [number, number, number, number][] = hanging
+          ? [[9.4, 1.2, 6.92, 0], [9.4, 1.2, 9.08, 1]]
+          : [[...(s.wall ? [11.6, 4.4, 13.92] : [15.6, 8.4, 6.92]), 0] as [number, number, number, number]];
+        const facing = hanging === 2 ? s.facing + 1 : s.facing;
+        const tex = this.texture(`${s.x},${s.y},${s.z}`, s.lines);
+        for (const [top, bottom, face, back] of faces) {
+          // Por detrás, x crece (se lee bien desde el otro lado).
+          const pts = back ? [[1, top], [15, top], [15, bottom], [1, bottom]] : [[15, top], [1, top], [1, bottom], [15, bottom]];
+          const uv = [[0, 0], [1, 0], [1, 1], [0, 1]];
+          for (let k = 0; k < 4; k++) {
+            let x = pts[k][0], z = face;
+            for (let r = 0; r < (facing & 3); r++) [x, z] = [16 - z, x];
+            data.set([s.x + x / 16 - camX, s.y + pts[k][1] / 16 - camY, s.z + z / 16 - camZ, uv[k][0], uv[k][1]], k * 5);
+          }
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
+          p.tex2D('uText', tex);
+          gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
         }
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
-        p.tex2D('uText', this.texture(`${s.x},${s.y},${s.z}`, s.lines));
-        gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
       }
       gl.bindVertexArray(null);
       gl.enable(gl.CULL_FACE);

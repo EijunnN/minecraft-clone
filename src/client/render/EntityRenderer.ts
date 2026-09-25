@@ -344,6 +344,41 @@ export class EntityRenderer {
     gl.bindVertexArray(null);
   }
 
+  /** Fase 6.5 (remate): sólo la armadura (soportes para armadura), con las cajas del jugador. */
+  drawArmorOnly(views: RemotePlayerView[], camX: number, camY: number, camZ: number, bindLighting: (p: Program) => Program): void {
+    if (views.length === 0) return;
+    let armor: Program | null = null;
+    for (const p of views) {
+      let bound: ArmorMaterial | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
+        if (!armor) armor = bindLighting(this.pArmor.use());
+        if (!bound) armor.f2('uLightLevel', p.light[0], p.light[1]);
+        if (mat !== bound) {
+          const sh = ARMOR_SHINE[mat];
+          armor.tex2D('uSkin', this.armorTex.get(mat)!).f3('uMat', sh.rough, sh.metal, sh.sheen);
+          bound = mat;
+        }
+        this.drawMesh(armor, mesh, m);
+      });
+    }
+    this.gl.bindVertexArray(null);
+  }
+
+  /** Fase 6.5 (remate): sombra de la armadura de los soportes. */
+  drawArmorOnlyShadow(views: RemotePlayerView[], camX: number, camY: number, camZ: number): void {
+    if (views.length === 0) return;
+    const prog = this.pEntityShadow.use();
+    for (const p of views) {
+      let bound: ArmorMaterial | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
+        if (mat !== bound) prog.tex2D('uSkin', this.armorTex.get(mat)!);
+        bound = mat;
+        this.drawMesh(prog, mesh, m);
+      });
+    }
+    this.gl.bindVertexArray(null);
+  }
+
   // ---------------------------------------------------------------- contorno
 
   drawOutline(sel: { x: number; y: number; z: number; box?: number[] }, camX: number, camY: number, camZ: number): void {

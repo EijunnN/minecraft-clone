@@ -17,6 +17,7 @@ import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
 import { isCandle, canAddCandle, candleCount, isLitCandle, candleState, isGlazedTerracotta } from './blocks';
 import { copperPlacement } from './blocks'; // Fase 6.5 (cobre)
 import { planDecor, planScaffoldTower } from './decorPlacement'; // Fase 6.5 (decoración)
+import { HANGING_WALL_OF, CHISELED_BOOKSHELF, isChiseledShelf } from './blocks'; // Fase 6.5 (remate)
 import { isRipeBerryBush } from './blocks'; // Fase 6.5 (océano y plantas)
 import { planPlant65, canFertilize65 } from './plantPlacement'; // Fase 6.5 (océano y plantas)
 
@@ -146,6 +147,16 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     const id = stateOf(POINTED_DRIPSTONE, { dir: face === 'down' ? 1 : 0, part: 0 });
     return blockSupported(id, rel(get, x, y, z)) ? one(id) : null;
   }
+  // Fase 6.5 (remate): estantería cincelada con el frente hacia el jugador (vacía).
+  if (base === CHISELED_BOOKSHELF) return one(stateOf(base, { facing: (facing + 2) & 3, books: 0 }));
+  // Fase 6.5 (remate): cartel colgante, debajo de un bloque (con el texto hacia el jugador) o en un lateral.
+  if (HANGING_WALL_OF[base] !== undefined) {
+    if (face === 'up') return null;
+    const id = face === 'side'
+      ? stateOf(HANGING_WALL_OF[base], { facing: dirOfNormal(hit.nx, hit.nz) })
+      : stateOf(base, { facing: (facing + 2) & 3 });
+    return blockSupported(id, rel(get, x, y, z)) ? one(id) : null;
+  }
   if (SIGN_WALL_OF[base] !== undefined) {
     if (face === 'down') return null;
     if (face === 'side') {
@@ -247,7 +258,8 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
 export function isUsable(id: number): boolean {
   return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id) ||
     isCandle(id) || // Fase 6.5 (colores): encender o apagar velas
-    isRipeBerryBush(id); // Fase 6.5 (océano y plantas): cosechar las bayas dulces
+    isRipeBerryBush(id) || // Fase 6.5 (océano y plantas): cosechar las bayas dulces
+    isChiseledShelf(id); // Fase 6.5 (remate): meter y sacar libros
 }
 
 /** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */

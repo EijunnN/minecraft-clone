@@ -12,8 +12,12 @@ import { rainAt } from '../../weather';
 import { SAPLINGS } from './plants';
 import type { Nature } from './nature';
 import type { ServerContext, Session } from './context';
+import type { Entity, InteractResult } from '../entities'; // Fase 6.5 (remate)
 
 export class Farming {
+  /** Fase 6.5 (remate): etiquetas y correas (antes que dar de comer, domesticar…). */
+  extraInteract: ((s: Session, e: Entity, msg: Extract<ClientMsg, { t: 'interact' }>) => InteractResult | null) | null = null;
+
   constructor(private ctx: ServerContext, private nature: Nature) {
     nature.addRandomTickHandler((id, x, y, z) => this.randomTick(id, x, y, z));
   }
@@ -29,7 +33,8 @@ export class Farming {
       ctx.send(s, { t: 'ires', q, ok: false });
       return;
     }
-    const r = ctx.entities.interact(e, item, s.mode === 'c', s.name); // Fase 6: el nombre, para domesticar
+    const extra = this.extraInteract?.(s, e, msg) ?? null;
+    const r = extra ?? ctx.entities.interact(e, item, s.mode === 'c', s.name); // Fase 6: el nombre, para domesticar
     ctx.send(s, { t: 'ires', q, ...r });
   }
 

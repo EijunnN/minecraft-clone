@@ -44,6 +44,14 @@ export class Effects {
       case 'frame_add':
       case 'frame_remove':
       case 'frame_rotate':
+      case 'shelf_put': // Fase 6.5 (remate)
+      case 'name_tag':
+      case 'leash':
+      case 'leash_break':
+      case 'stand_place':
+      case 'stand_equip':
+      case 'stand_break':
+      case 'shelf_take':
         this.g.audio.playDecorSfx(kind, p);
         break;
       case 'snowball_break':

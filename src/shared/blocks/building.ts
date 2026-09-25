@@ -58,6 +58,11 @@ export const DOORS: Record<string, number> = {};
 export const TRAPDOORS: Record<string, number> = {};
 const FENCE_IDS = new Set<number>();
 
+/** ¿Valla? (se atan a ella las correas). */
+export function isFence(id: number): boolean {
+  return FENCE_IDS.has(id);
+}
+
 const GATE_BASES = new Set<number>();
 function isGate(id: number): boolean {
   return GATE_BASES.has(familyBase(id));

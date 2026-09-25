@@ -33,6 +33,9 @@ import { Interaction } from './interaction';
 import { Experience } from './experience';
 import { StatusEffects } from './statusEffects';
 import { fishingLines } from './fishingLines';
+import { leashLines } from './leashLines'; // Fase 6.5 (remate)
+import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
+import { MAX_NAME } from '../../shared/nameTags';
 import { SignTexts } from './signs';
 import { SignEditor } from '../ui/SignEditor';
 import { renderArmorBar } from '../ui/armorBar';
@@ -124,6 +127,8 @@ export class Game {
     this.net?.send({ t: 'sign', x: pos[0], y: pos[1], z: pos[2], l: lines });
     this.afterScreenClosed();
   });
+  /** Fase 6.5 (remate): nombre de la etiqueta. */
+  readonly namePrompt = new NamePrompt(MAX_NAME);
   selected = 0;
   time: WorldTime = { base: 0.08, at: Date.now(), rate: 1 / DAY_LENGTH_SECONDS };
   private running = false;
@@ -360,7 +365,7 @@ export class Game {
 
   private anyScreenOpen(): boolean {
     return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen() ||
-      this.signEditor.isOpen() || this.trading.isOpen(); // Fase 6 (aldeanos): + comercio
+      this.signEditor.isOpen() || this.trading.isOpen() || this.namePrompt.isOpen(); // Fase 6 (aldeanos): + comercio
   }
 
   stop(): void {
@@ -491,6 +496,19 @@ export class Game {
   }
 
   /** Editor del texto de un cartel (al colocarlo o con clic derecho). */
+  /** Fase 6.5 (remate): ventana del nombre de la etiqueta. */
+  openNamePrompt(current: string, done: (name: string | null) => void): void {
+    this.interaction.mining = null;
+    this.interaction.use = null;
+    this.input.gameKeys = false;
+    this.input.releaseAll();
+    this.input.exitLock();
+    this.namePrompt.open(current, (name) => {
+      done(name);
+      this.afterScreenClosed();
+    });
+  }
+
   openSignEditor(x: number, y: number, z: number): void {
     this.interaction.mining = null;
     this.interaction.use = null;
@@ -612,7 +630,7 @@ export class Game {
       input.movement = new Set([k.forward, k.back, k.left, k.right]);
     }
     if (!ui.isChatOpen() && !surv.dead) {
-      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen()) this.toggleInventory();
+      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen() && !this.namePrompt.isOpen()) this.toggleInventory();
       else if (input.wasPressed('Escape') && (ui.isInventoryOpen() || this.screen.isOpen())) this.toggleInventory();
       if (input.locked && !this.anyScreenOpen()) {
         if (input.wasPressed(k.chat) || input.wasPressed('Enter')) this.openChat('');
@@ -963,6 +981,10 @@ export class Game {
     const use = this.interaction.use;
     const mainUse = use && use.slot !== OFFHAND ? use : null;
     const offUse = use && use.slot === OFFHAND ? use : null;
+    const localRod = {
+      cam: [camX, camY, camZ] as [number, number, number], yaw, pitch, firstPerson: this.thirdPerson === 0,
+      feet: [p.x, p.y, p.z] as [number, number, number], bodyYaw: p.yaw,
+    };
     const state: FrameState = {
       camX, camY, camZ, yaw, pitch, roll: this.hurtRoll,
       time: performance.now() / 1000,
@@ -996,9 +1018,8 @@ export class Game {
       players: views,
       signs: this.signs.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ),
       bolts: this.bolts,
-      fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, {
-        cam: [camX, camY, camZ], yaw, pitch, firstPerson: this.thirdPerson === 0, feet: [p.x, p.y, p.z], bodyYaw: p.yaw,
-      }, views),
+      fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, localRod, views),
+      leashes: leashLines(this.ents.list, this.net?.id ?? null, localRod, views), // Fase 6.5 (remate)
       showHand: this.thirdPerson === 0 && !this.hudHidden && this.interaction.use?.kind !== 'spyglass',
     };
     this.renderer.render(state);
@@ -1027,6 +1048,14 @@ export class Game {
       const d = Math.hypot(v.x - camX, v.y - camY, v.z - camZ);
       const visible = d < 72 && !this.hudHidden && !(rp.state & STATE_DEAD);
       tags.push({ id: rp.id, name: rp.name, pos: visible ? this.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null });
+    }
+    // Fase 6.5 (remate): criaturas con nombre (etiqueta), hasta 16 bloques.
+    for (const e of this.ents.list.values()) {
+      if (!e.name || e.gone || e.deathT >= 0) continue;
+      const def = MOBS[e.type];
+      const d = Math.hypot(e.x - camX, e.y - camY, e.z - camZ);
+      const visible = d < 16 && !this.hudHidden && !!def;
+      tags.push({ id: `m${e.id}`, name: e.name, pos: visible ? this.renderer.project(e.x, e.y + (def?.height ?? 1) + 0.35, e.z) : null });
     }
     ui.updateNameTags(tags);
     this.renderer.entities.prune(new Set(views.map((v) => v.id)));

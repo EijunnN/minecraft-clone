@@ -124,6 +124,30 @@ test('los ids de la fase 6.5 no cambian', () => {
   assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 487), 2003609854, 'huella de los objetos');
 });
 
+// Remate de la fase 6.5: carteles colgantes, estantería cincelada, etiqueta, correa, sacos y soporte.
+import { HANGING_SIGNS } from '../src/shared/blocks';
+import { NAME_TAG, LEAD, BUNDLE, DYED_BUNDLES, ARMOR_STAND } from '../src/shared/items';
+import { CHISELED_BOOKSHELF } from '../src/shared/blocks';
+
+test('los ids del remate de la fase 6.5 no cambian', () => {
+  assert.deepEqual([HANGING_SIGNS.oak, HANGING_SIGNS.bamboo, CHISELED_BOOKSHELF], [3986, 4058, 4066]);
+  assert.deepEqual([NAME_TAG, LEAD, BUNDLE, DYED_BUNDLES.red, ARMOR_STAND], [488, 489, 490, 505, 507]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 4322), 3111528934, 'huella de los bloques');
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 508), 2692556884, 'huella de los objetos');
+});
+
+// El estado de la maceta es el índice de su planta en esta lista (se guarda): sólo se añaden al final.
+import { pottablePlants } from '../src/shared/blocks';
+test('las plantas de maceta no cambian de índice', () => {
+  const keys = pottablePlants().map((id) => BLOCKS[id]?.key);
+  assert.deepEqual(keys.slice(0, 29), [
+    'cactus', 'fern', 'poppy', 'dandelion', 'cornflower', 'dead_bush', 'red_mushroom', 'brown_mushroom', 'oak_sapling',
+    'birch_sapling', 'spruce_sapling', 'jungle_sapling', 'acacia_sapling', 'dark_oak_sapling', 'cherry_sapling', 'blue_orchid',
+    'allium', 'azure_bluet', 'red_tulip', 'orange_tulip', 'white_tulip', 'pink_tulip', 'oxeye_daisy', 'lily_of_the_valley',
+    'azalea', 'flowering_azalea', 'mangrove_propagule', 'pale_oak_sapling', 'torchflower',
+  ]);
+});
+
 test('los ids de criatura guardados no cambian', () => {
   assert.deepEqual([MOB_FOX, MOB_WOLF, MOB_VILLAGER, MOB_WANDERING_TRADER], [13, 17, 18, 19]);
   assert.deepEqual([MOB_IRON_GOLEM, MOB_SNOW_GOLEM, MOB_CAT, MOB_HORSE, MOB_CAMEL], [20, 21, 22, 25, 29]);

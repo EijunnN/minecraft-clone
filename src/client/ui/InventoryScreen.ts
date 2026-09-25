@@ -3,6 +3,7 @@
 // derecho reparte o deja de uno en uno, mayúsculas mueve rápido, 1–9 intercambia con la barra,
 // F con la mano secundaria y Q suelta. Arrastrar con una pila la reparte (izquierdo a partes
 // iguales, derecho de uno en uno) y el doble clic junta en el cursor los objetos iguales. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
+import { isBundle, fitsInBundle, bundleInsert, bundleTake, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
 import { matchRecipe, CRAFT_REMAINDER } from '../../shared/recipes';
 import {
@@ -348,11 +349,56 @@ export class InventoryScreen {
     } else if (shift) this.quickMove(r);
     else {
       const arr = r.kind === 'inv' ? this.inv.slots : this.grid;
+      // Fase 6.5 (remate): clic derecho con sacos (meter o sacar).
+      if (btn === 1 && this.bundleClick(arr, r.i)) {
+        this.inv.changed();
+        this.render();
+        return;
+      }
       const fake: ContainerState = { kind: 'chest', slots: arr, burn: 0, burnMax: 0, cook: 0 };
       this.inv.cursor = clickSlot(fake, r.i, btn, this.inv.cursor);
     }
     this.inv.changed();
     this.render();
+  }
+
+  /**
+   * Fase 6.5 (remate): clic derecho con sacos. Con un saco en el cursor, se mete en él la pila del hueco
+   * (o, si el hueco está vacío, sale al hueco la última pila del saco). Sobre un saco: se mete la pila
+   * del cursor o, con el cursor vacío, sale la última. Devuelve si hizo algo.
+   */
+  private bundleClick(arr: (ItemStack | null)[], i: number): boolean {
+    const slot = arr[i], cur = this.inv.cursor;
+    if (cur && isBundle(cur.id)) {
+      if (slot && fitsInBundle(slot)) {
+        const rest = bundleInsert(cur, slot);
+        if (rest && rest.count === slot.count) return false;
+        arr[i] = rest;
+        return true;
+      }
+      if (!slot) {
+        const out = bundleTake(cur);
+        if (!out) return false;
+        arr[i] = out;
+        return true;
+      }
+      return false;
+    }
+    if (slot && isBundle(slot.id)) {
+      if (cur && fitsInBundle(cur)) {
+        const rest = bundleInsert(slot, cur);
+        if (rest && rest.count === cur.count) return false;
+        this.inv.cursor = rest;
+        return true;
+      }
+      if (!cur) {
+        const out = bundleTake(slot);
+        if (!out) return false;
+        this.inv.cursor = out;
+        return true;
+      }
+    }
+    return false;
   }
 
   private clickOutput(shift: boolean): void {
@@ -368,6 +414,11 @@ export class InventoryScreen {
       }
       this.host.sound('craft');
       return;
+    }
+    // Fase 6.5 (remate): al teñir un saco, se queda con lo que llevaba.
+    if (isBundle(res.id)) {
+      const old = this.grid.find((g) => g && isBundle(g.id) && g.bag?.length);
+      if (old) res.bag = cloneStack(old)!.bag;
     }
     const cur = this.inv.cursor;
     if (!cur) this.inv.cursor = { ...res };
@@ -596,6 +647,13 @@ export class InventoryScreen {
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
       bar.style.background = `hsl(${Math.round(f * 120)}, 90%, 50%)`;
+    } else if (s && isBundle(s.id) && s.bag?.length) {
+      // Fase 6.5 (remate): lo lleno que está el saco (azul; rojo si no cabe más).
+      const f = Math.min(1, bagWeight(s.bag) / BUNDLE_CAPACITY);
+      dur.style.display = '';
+      const bar = dur.firstElementChild as HTMLElement;
+      bar.style.width = `${Math.round(f * 100)}%`;
+      bar.style.background = f >= 1 ? '#e8503a' : '#6aa8ff';
     } else dur.style.display = 'none';
   }
 

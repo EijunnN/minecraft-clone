@@ -393,7 +393,7 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
 - ✅ **Luz bajo el agua.** La mano y las partículas reciben la luz del sol filtrada por el agua (antes
   salían negras a pocos bloques de profundidad).
 
-### Fase 6.5 — Catálogo del mundo normal (XL) · ✅ hecha
+### Fase 6.5 — Catálogo del mundo normal (XL) · 🟡 en curso
 Todo lo del mundo normal que no pertenece a la redstone (fase 7), al Nether y al End (fase 8) ni a las
 novedades recientes (fase 9), con sus recetas, sacado del catálogo de Minecraft 26.3 (ver
 `docs/cobertura.md`): los 16 colores (tintes, lana, alfombras, hormigón, cristal tintado, terracota
@@ -422,9 +422,22 @@ Antes de empezar se amplió el motor: hasta 1024 texturas (10 bits en el vértic
 - ✅ **Comida y decoración.** Galleta, estofados, sopa de remolacha, zanahoria dorada; macetas para
   cualquier planta, faroles, cadena y barrotes de hierro, campana, andamios, vasija decorada, cuadros
   y marcos; 52 huevos de aparición, catalejo y reloj. El calamar suelta sacos de tinta (tinte negro).
-- 🟡 **Pendiente.** Bolsa, etiqueta, correa y soporte para armaduras; estantería cincelada; carteles
-  colgantes; los corales y el hielo compacto necesitan toque de seda (fase 7); guardianes y monumentos
-  (fase 8) para la prismarina y las esponjas.
+- ✅ **Remate.** Carteles colgantes de las 10 maderas (del techo o de la pared, texto por las dos
+  caras), estantería cincelada (6 huecos para libros), anflorcha en maceta, etiqueta (nombre sobre la
+  criatura, que ya no desaparece), correa (al jugador o a una valla), saco y sus 16 colores (hasta 64
+  de peso, se mete y se saca con clic derecho), soporte para armadura y saco de tinta del calamar.
+- 🟡 **Falta (del mundo normal, sin redstone ni Nether/End ni novedades de 2025–2026):**
+  - Bloques: de carbón, de lapislázuli, de hueso, de slime, hielo azul, tierra gruesa, podsol, tierra
+    enraizada, camino de tierra, nieve polvo (y su cubo), bloques de hierro y oro en bruto, más bloques
+    infestados, tartas con vela y huevos de rana.
+  - Objetos y equipo: hierro y oro en bruto, mechero, armadura de cota de malla, ballesta, tridente,
+    escama y caparazón de tortuga, armaduras de caballo y de lobo, caña con zanahoria, cuerno de cabra,
+    pata de conejo, patata venenosa, manzana de oro encantada, corazón del mar y conducto, cohetes.
+  - Colecciones: cabezas de criaturas, tocadiscos y discos, saco de tinta luminosa y marco luminoso,
+    libro y pluma (y libro escrito), estandartes con dibujos (telar).
+  - Además: los corales y el hielo compacto necesitan toque de seda (fase 7). La prismarina y las
+    esponjas sólo salen en creativo hasta que haya guardianes y monumentos oceánicos, que todavía no
+    tienen fase asignada.
 
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,

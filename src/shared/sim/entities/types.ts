@@ -164,6 +164,15 @@ export interface Entity extends Body {
   captain?: boolean;
   /** Patrulla: punto hacia el que camina. */
   patrolTo?: [number, number];
+  // Fase 6.5 (remate)
+  /** Nombre puesto con una etiqueta (la criatura ya no desaparece). */
+  customName?: string;
+  /** Atada con una correa: al jugador (id de sesión) o a una valla (posición). */
+  leash?: string | [number, number, number];
+  /** Soporte para armadura: la armadura puesta [cabeza, pecho, piernas, pies] (ids, 0 = nada). */
+  standArmor?: number[];
+  /** Punto del que tira su correa ahora mismo (lo pone el sistema de correas cada tick). */
+  leashTo?: [number, number, number];
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

@@ -81,7 +81,7 @@ export class Trading {
   onTrade(s: Session, msg: Extract<ClientMsg, { t: 'trade' }>): void {
     const ctx = this.ctx;
     const q = Number(msg.q) | 0;
-    const pay = (Array.isArray(msg.pay) ? msg.pay.slice(0, 4) : []).map(sanitizeStack).filter((p): p is ItemStack => !!p);
+    const pay = (Array.isArray(msg.pay) ? msg.pay.slice(0, 4) : []).map((p) => sanitizeStack(p)).filter((p): p is ItemStack => !!p);
     const fail = (m?: string) => ctx.send(s, { t: 'tres', q, ok: false, back: pay, ...(m ? { m } : {}) });
     const id = Number(msg.e);
     if (this.open.get(s.id) !== id || !ctx.allow(s, 1)) return fail();

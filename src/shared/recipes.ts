@@ -441,6 +441,27 @@ shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
   }
 }
 
+// Fase 6.5 (remate): carteles colgantes (2 cadenas y 6 troncos descortezados → 6).
+import { HANGING_SIGNS, HANGING_SIGN_LOG } from './blocks';
+for (const [k, id] of Object.entries(HANGING_SIGNS)) shape(['C C', 'LLL', 'LLL'], { C: IRON_CHAIN, L: HANGING_SIGN_LOG[k] }, id, 6);
+// Correa (4 cuerdas y una bola de slime → 2) y etiqueta (papel y cuerda).
+import { LEAD, NAME_TAG, SLIME_BALL } from './items';
+shape(['SS ', 'SB ', '  S'], { S: STRING, B: SLIME_BALL }, LEAD, 2);
+mix([PAPER, STRING], NAME_TAG);
+// Saco (cuerda sobre cuero) y teñirlo de cualquiera de los 16 colores (se queda con lo que lleva).
+import { BUNDLE, DYED_BUNDLES } from './items';
+shape(['S', 'L'], { S: STRING, L: LEATHER }, BUNDLE);
+{
+  const ANY_BUNDLE = [BUNDLE, ...Object.values(DYED_BUNDLES)];
+  for (const c of DYE_COLORS) mix([ANY_BUNDLE, DYES[c]], DYED_BUNDLES[c]);
+}
+// Soporte para armadura: 6 palos y una losa de piedra lisa.
+import { ARMOR_STAND } from './items';
+shape(['SSS', ' S ', 'SLS'], { S: STICK, L: SLABS.smooth_stone }, ARMOR_STAND);
+// Estantería cincelada: 6 tablones y 3 losas de madera (de cualquier madera).
+import { CHISELED_BOOKSHELF } from './blocks';
+shape(['PPP', 'SSS', 'PPP'], { P: PLANKS, S: WOODS.map((w) => SLABS[w.key]).filter((id) => id !== undefined) }, CHISELED_BOOKSHELF);
+
 export interface RecipeMatch {
   out: ItemStack;
 }

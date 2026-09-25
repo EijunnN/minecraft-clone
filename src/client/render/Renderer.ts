@@ -34,11 +34,13 @@ import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY }
 // Fase 6.5 (decoración): cuadros y marcos.
 import { isHangingType } from '../../shared/paintings';
 import { pushHangingDraws } from './hangingDraws';
+import { pushStandDraws, standArmorView } from './standDraws'; // Fase 6.5 (remate)
+import { ENT_ARMOR_STAND } from '../../shared/armorStands';
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { LightningRenderer, type Bolt } from './LightningRenderer';
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
-import { WHITE_WOOL, RED_WOOL, BLACK_WOOL } from '../../shared/blocks';
+import { WHITE_WOOL, RED_WOOL, BLACK_WOOL, WOOL } from '../../shared/blocks';
 
 export interface RenderSettings {
   renderScale: number;
@@ -133,6 +135,8 @@ export interface FrameState {
   roll?: number;
   /** Sedales de pesca: [punta de la caña, flotador]. */
   fishLines?: FishLine[];
+  /** Fase 6.5 (remate): correas (y los nudos en las vallas). */
+  leashes?: { lines: FishLine[]; knots: [number, number, number][] };
   /** Carteles con texto cercanos. */
   signs?: SignDraw[];
   /** Rayos de tormenta en pantalla. */
@@ -154,6 +158,8 @@ for (let i = 1; i <= 16; i++) {
 const SUN_TILT = (25 * Math.PI) / 180;
 
 export class Renderer {
+  /** Fase 6.5 (remate): armadura de los soportes de este frame (la llena buildDropDraws). */
+  private standViews: RemotePlayerView[] = [];
   readonly gl: GL;
   readonly caps: GLCaps;
   readonly canvas: HTMLCanvasElement;
@@ -539,6 +545,7 @@ export class Renderer {
         .tex('uAlbedo', gl.TEXTURE_2D_ARRAY, this.textures.albedo);
       this.terrain.draw(this.pShadowCut, this.terrain.shadowList, 'cutout', s.camX, s.camY, s.camZ);
       this.entities.drawPlayersShadow(s.players, s.camX, s.camY, s.camZ);
+      this.entities.drawArmorOnlyShadow(this.standViews, s.camX, s.camY, s.camZ); // Fase 6.5 (remate)
       this.mobs.drawShadow(s.mobs, s.camX, s.camY, s.camZ, s.time);
       this.items.drawShadow(dropDraws);
       // Profundidad de la superficie del agua (para cáusticas y absorción de la luz).
@@ -591,6 +598,7 @@ export class Renderer {
       this.items.drawCrack(c.x, c.y, c.z, c.stage, s.camX, s.camY, s.camZ, this.viewProj, bindLighting, c.box);
     }
     this.entities.drawPlayers(s.players, s.camX, s.camY, s.camZ, bindLighting);
+    this.entities.drawArmorOnly(this.standViews, s.camX, s.camY, s.camZ, bindLighting); // Fase 6.5 (remate)
     const lightOf = (x: number, y: number, z: number): [number, number] => {
       const l = s.lightAt(Math.floor(x), Math.floor(y), Math.floor(z));
       return [(l >> 4) / 15, (l & 15) / 15];
@@ -798,6 +806,7 @@ export class Renderer {
   /** Objetos tirados, flechas y bloques que caen: lista de dibujo. */
   private buildDropDraws(s: FrameState): ItemDraw[] {
     const out: ItemDraw[] = [];
+    this.standViews.length = 0;
     const lightOf = (x: number, y: number, z: number): [number, number] => {
       const l = s.lightAt(Math.floor(x), Math.floor(y), Math.floor(z));
       return [(l >> 4) / 15, (l & 15) / 15];
@@ -869,17 +878,31 @@ export class Renderer {
         out.push({ model, m, light: lightOf(e.x, e.y + 0.5, e.z) });
       } else if (isHangingType(e.type)) {
         pushHangingDraws(out, e, this.items, rx, ry, rz, lightOf); // Fase 6.5 (decoración): cuadros y marcos
+      } else if (e.type === ENT_ARMOR_STAND) {
+        // Fase 6.5 (remate): soporte para armadura (la armadura se dibuja aparte, con las cajas del jugador).
+        pushStandDraws(out, e, this.items, rx, ry, rz, lightOf);
+        const v = standArmorView(e, lightOf(e.x, e.y + 1, e.z));
+        if (v) this.standViews.push(v);
       }
     }
     for (const l of s.fishLines ?? []) this.pushFishLine(out, s, l, lightOf);
+    // Fase 6.5 (remate): correas, más gruesas y de cuero, y el nudo de cada valla.
+    const lead = this.items.blockModel(WOOL.brown);
+    for (const l of s.leashes?.lines ?? []) this.pushFishLine(out, s, l, lightOf, lead, 0.035);
+    for (const k of s.leashes?.knots ?? []) {
+      const m = mat4.create();
+      mat4.translate(m, m, [k[0] - s.camX, k[1] - s.camY, k[2] - s.camZ]);
+      mat4.scale(m, m, [0.2, 0.2, 0.2]);
+      out.push({ model: lead, m, light: lightOf(k[0], k[1], k[2]) });
+    }
     return out;
   }
 
   /** Sedal: segmentos finos de una curva que cuelga entre la punta de la caña y el flotador. */
   private pushFishLine(
     out: ItemDraw[], s: FrameState, l: FishLine, lightOf: (x: number, y: number, z: number) => [number, number],
+    model = this.items.blockModel(BLACK_WOOL), thick = 0.012,
   ): void {
-    const model = this.items.blockModel(BLACK_WOOL);
     const len = Math.hypot(l[3] - l[0], l[4] - l[1], l[5] - l[2]);
     if (!(len > 0.05) || len > 40) return;
     const sag = Math.min(1.2, len * 0.06);
@@ -897,7 +920,7 @@ export class Renderer {
       mat4.translate(m, m, [(a[0] + b[0]) / 2 - s.camX, (a[1] + b[1]) / 2 - s.camY, (a[2] + b[2]) / 2 - s.camZ]);
       mat4.rotateY(m, m, Math.atan2(dx, dz));
       mat4.rotateX(m, m, -Math.atan2(dy, Math.hypot(dx, dz)));
-      mat4.scale(m, m, [0.012, 0.012, d]);
+      mat4.scale(m, m, [thick, thick, d]);
       out.push({ model, m, light });
       a = b;
     }
