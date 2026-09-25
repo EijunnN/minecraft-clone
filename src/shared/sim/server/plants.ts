@@ -5,7 +5,7 @@ export const LOGS: ReadonlySet<number> = new Set(ALL_LOGS);
 export const LEAVES: ReadonlySet<number> = new Set(ALL_LEAVES);
 /**
  * Brote → tipo de árbol: su posición en WOOD_TYPES (0 roble, 1 abedul, 2 abeto, 3 jungla, 4 acacia,
- * 5 roble oscuro, 6 cerezo).
+ * 5 roble oscuro, 6 cerezo; fase 6.5: 7 mangle, 8 roble pálido).
  */
 export const SAPLINGS: ReadonlyMap<number, number> = new Map(WOOD_TYPES.map((w, i) => [w.sapling, i]));
 /** Suelo donde crecen brotes y caña. */

@@ -256,6 +256,34 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
   ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
     'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (maderas): mangle, roble pálido y bambú; troncos sin corteza de todas las maderas.
+  ...['mangrove', 'pale_oak'].flatMap((k): TextureDef[] => [
+    { name: `${k}_log_side` },
+    { name: `${k}_log_top` },
+    { name: `${k}_planks` },
+    k === 'mangrove'
+      ? { name: `${k}_leaves`, tint: 3, wave: 1, sss: 0.85, cutout: true }
+      : { name: `${k}_leaves`, wave: 1, sss: 0.8, cutout: true },
+    { name: k === 'mangrove' ? 'mangrove_propagule' : `${k}_sapling`, wave: 2, sss: 0.75, cutout: true },
+    { name: `${k}_door_top`, cutout: true },
+    { name: `${k}_door_bottom`, cutout: true },
+    { name: `${k}_trapdoor`, cutout: true },
+  ]),
+  { name: 'mangrove_roots', sss: 0.2, cutout: true },
+  { name: 'muddy_mangrove_roots_top' },
+  { name: 'muddy_mangrove_roots_side' },
+  { name: 'bamboo_stalk', sss: 0.4, cutout: true },
+  { name: 'bamboo_small_leaves', sss: 0.8, cutout: true },
+  { name: 'bamboo_large_leaves', sss: 0.8, cutout: true },
+  ...['bamboo_block_side', 'bamboo_block_top', 'stripped_bamboo_block_side', 'stripped_bamboo_block_top', 'bamboo_planks',
+    'bamboo_mosaic'].map((name): TextureDef => ({ name })),
+  { name: 'bamboo_door_top', cutout: true },
+  { name: 'bamboo_door_bottom', cutout: true },
+  { name: 'bamboo_trapdoor', cutout: true },
+  ...['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak', 'cherry', 'mangrove', 'pale_oak'].flatMap((k): TextureDef[] => [
+    { name: `stripped_${k}_log_side` },
+    { name: `stripped_${k}_log_top` },
+  ]),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

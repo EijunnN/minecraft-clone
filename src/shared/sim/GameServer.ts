@@ -24,6 +24,7 @@ import { TICK_RATE, DT, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type 
 import { BlockRules, fallsThrough } from './server/blockRules';
 import { Nature } from './server/nature';
 import { TurtleEggs } from './server/turtleEggs'; // Fase 6 (acuáticos)
+import { BambooGrowth } from './server/bamboo'; // Fase 6.5 (maderas)
 import { Spawners } from './server/spawners';
 import { Storms } from './server/storms';
 import { Farming } from './server/farming';
@@ -87,6 +88,8 @@ export class GameServer {
   private rules: BlockRules;
   private nature: Nature;
   private turtleEggs: TurtleEggs;
+  /** Fase 6.5 (maderas): crecimiento del bambú. */
+  readonly bamboo: BambooGrowth;
   private spawners: Spawners;
   private storms: Storms;
   private farming: Farming;
@@ -150,6 +153,7 @@ export class GameServer {
     this.nature = new Nature(this.ctx);
     this.farming = new Farming(this.ctx, this.nature);
     this.turtleEggs = new TurtleEggs(this.ctx, this.nature); // Fase 6 (acuáticos)
+    this.bamboo = new BambooGrowth(this.ctx, this.nature); // Fase 6.5 (maderas)
     this.beds = new Beds(this.ctx);
     this.containers = new ContainerSystem(this.ctx, store);
     this.world.onLoot = (chests) => this.containers.fillLoot(chests);

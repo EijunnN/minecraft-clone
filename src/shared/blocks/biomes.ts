@@ -195,3 +195,32 @@ export const PINK_PETALS = family('pink_petals', 'Pétalos rosas', [], () => {
   };
 });
 
+
+// ------------------------------------------------------------------ Fase 6.5 (maderas)
+// Maderas registradas al final (mangle y roble pálido: ids nuevos, no mueven nada) y bloques que
+// cuentan como tronco o tablón de una madera (troncos sin corteza, leños, tablones de bambú).
+
+/** Registra una madera nueva completa y la añade a WOOD_TYPES y a las listas de troncos, hojas… */
+export function addWoodType(key: string, name: string): WoodType {
+  const w = newWood(key, name);
+  (WOOD_TYPES as WoodType[]).push(w);
+  (ALL_LOGS as number[]).push(w.log);
+  (ALL_PLANKS as number[]).push(w.planks);
+  (ALL_LEAVES as number[]).push(w.leaves);
+  (ALL_SAPLINGS as number[]).push(w.sapling);
+  LOG_SET.add(w.log);
+  LEAF_SET.add(w.leaves);
+  SAPLING_SET.add(w.sapling);
+  return w;
+}
+
+/** Un bloque que es objeto y cuenta como tronco de su madera (combustible, carbón vegetal, fogatas…). */
+export function addWoodLog(id: number, wood: WoodType): void {
+  (ALL_LOGS as number[]).push(id);
+  addLogVariant(id, wood);
+}
+
+/** Tablones que no son de una madera con árbol (bambú): valen para palos, mesas, cofres… */
+export function addPlanks(id: number): void {
+  (ALL_PLANKS as number[]).push(id);
+}

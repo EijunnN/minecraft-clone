@@ -14,6 +14,7 @@ import {
   HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
 import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
+import { BAMBOO, BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_MOSAIC } from './blocks'; // Fase 6.5 (maderas)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -298,8 +299,8 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   donkey: [GOLDEN_APPLE, WHEAT],
   llama: [HAY_BALE],
   camel: [CACTUS],
-  // Fase 6 (fauna): los pandas comen caña (no hay bambú) y los armadillos, ojos de araña.
-  panda: [SUGAR_CANE],
+  // Fase 6 (fauna): los armadillos comen ojos de araña. Fase 6.5 (maderas): los pandas, bambú.
+  panda: [BAMBOO],
   armadillo: [SPIDER_EYE],
 };
 
@@ -421,3 +422,13 @@ export const CREATIVE_ITEMS: readonly number[] = [
 export const PLACEABLE_BLOCKS: ReadonlySet<number> = new Set(
   ITEMS.filter((i) => i && i.block !== undefined && !i.tool).map((i) => i.block!),
 );
+
+// ------------------------------------------------------------------ Fase 6.5 (maderas)
+// Combustible del bambú (como en Minecraft: el tallo arde poco; los bloques y las formas, como la
+// madera). Los troncos sin corteza, leños y tablones nuevos ya arden por ALL_LOGS y ALL_PLANKS.
+fuel(BAMBOO, 2.5);
+for (const id of [BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_MOSAIC, STAIRS.bamboo_mosaic]) fuel(id, 15);
+fuel(SLABS.bamboo_mosaic, 7.5);
+for (const id of [FENCES.bamboo, FENCE_GATES.bamboo, STAIRS.bamboo, TRAPDOORS.bamboo]) fuel(id, 15);
+fuel(SLABS.bamboo, 7.5);
+fuel(DOORS.bamboo, 10);

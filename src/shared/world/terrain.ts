@@ -21,6 +21,7 @@ import { VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { placeInfested } from './infested'; // Fase 6 (monstruos)
 import { placeBeeNest } from './beeNests'; // Fase 6 (fauna)
+import { placeWoodTree, growWoodTree, placeBamboo } from './woodTrees'; // Fase 6.5 (maderas)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -673,6 +674,9 @@ export class TerrainGenerator {
       }
     }
 
+    // Fase 6.5 (maderas): rodales de bambú en las junglas.
+    placeBamboo(seed, blocks, tops, (lx, lz) => infos[lz * 16 + lx].biome, x0, z0);
+
     // --- 7b. Calabazas (llanuras, bosques, taigas) y sandías (sabanas y llanuras): grupos raros ---
     const patch = hashToFloat(hash2(cx, cz, seed ^ 0x6a7c));
     if (patch < 0.05) {
@@ -706,6 +710,7 @@ export class TerrainGenerator {
       }
     };
     const tmpInfo: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
+    const groundInfo: ColumnInfo = { ...tmpInfo }; // Fase 6.5 (maderas)
     // Dentro de una aldea no crecen árboles (ni sus copas invaden calles y casas).
     const village = locateStructure(this, 'village', x0 + 8, z0 + 8, 1);
     const villageR = VILLAGE_RADIUS + 8;
@@ -739,7 +744,10 @@ export class TerrainGenerator {
           this.iceSpike(tx, sy + 1, tz, tr, set);
           continue;
         }
-        if (biome === BIOME_TAIGA || biome === BIOME_SNOWY || biome === BIOME_MOUNTAINS) {
+        // Fase 6.5 (maderas): mangles en algunos pantanos y algún roble pálido en los bosques oscuros.
+        if (placeWoodTree(seed, biome, tx, sy + 1, tz, tr, set, (gx, gz) => this.surfaceAt(gx, gz, this.columnInfo(gx, gz, groundInfo)))) {
+          // (puesto)
+        } else if (biome === BIOME_TAIGA || biome === BIOME_SNOWY || biome === BIOME_MOUNTAINS) {
           this.spruce(tx, sy + 1, tz, tr, set);
         } else if (biome === BIOME_BIRCH_FOREST) {
           if (tr < 0.85) this.oak(tx, sy + 1, tz, tr, BIRCH_LOG, BIRCH_LEAVES, set);
@@ -836,11 +844,12 @@ export class TerrainGenerator {
   // ---------------------------------------------------------------- árboles
   /**
    * Hace crecer un árbol desde un brote (kind: posición de su madera en WOOD_TYPES: 0 roble,
-   * 1 abedul, 2 abeto, 3 jungla, 4 acacia, 5 roble oscuro, 6 cerezo). `mega`: desde 2×2 brotes, con
+   * 1 abedul, 2 abeto, 3 jungla, 4 acacia, 5 roble oscuro, 6 cerezo; 7 mangle y 8 roble pálido). `mega`: desde 2×2 brotes, con
    * (x, z) en la esquina noroeste. `set` recibe los bloques con `force` = true para el tronco (puede
    * sustituir plantas y hojas) y false para las hojas.
    */
   growTree(kind: number, x: number, y: number, z: number, r: number, set: SetBlock, mega = false): void {
+    if (growWoodTree(this.seed, kind, x, y, z, r, set)) return; // Fase 6.5 (maderas): mangle y roble pálido
     switch (kind) {
       case 1: return this.oak(x, y, z, r, BIRCH_LOG, BIRCH_LEAVES, set);
       case 2: return this.spruce(x, y, z, r, set);

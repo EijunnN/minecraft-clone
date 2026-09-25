@@ -1,6 +1,7 @@
 // Efectos de la fauna de la fase 6 que llegan del servidor: abejas que entran en el nido o se
 // cargan de polen, cosecha de miel, pandas comiendo, armadillos que se enroscan y escamas.
-import { SUGAR_CANE, HONEY_BLOCK } from '../../shared/blocks';
+import { HONEY_BLOCK } from '../../shared/blocks';
+import { BAMBOO } from '../../shared/blocks'; // Fase 6.5 (maderas): los pandas comen bambú
 import type { Game } from './Game';
 
 export function faunaFx(g: Game, kind: string, p: [number, number, number], a?: number): void {
@@ -20,7 +21,7 @@ export function faunaFx(g: Game, kind: string, p: [number, number, number], a?: 
       break;
     case 'panda_eat':
       g.audio.playBreak('grass', p);
-      fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2]), SUGAR_CANE, 0xf0);
+      fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2]), BAMBOO, 0xf0);
       break;
     case 'armadillo_roll':
       // a = 1 al enroscarse, 0 al desenroscarse.

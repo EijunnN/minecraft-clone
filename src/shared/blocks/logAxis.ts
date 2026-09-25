@@ -3,7 +3,7 @@
 // tronco contra la cara lateral de un bloque (como en Minecraft) y los usan las ramas de los árboles.
 // Sueltan el tronco normal y no son objeto propio. Se registran los últimos: no mueven ningún id.
 import { family, type BlockDef } from './registry';
-import { WOOD_TYPES, addLogVariant } from './biomes';
+import { WOOD_TYPES, addLogVariant, type WoodType } from './biomes';
 
 /** Estado del tronco tumbado: 0 a lo largo de X, 1 a lo largo de Z. */
 export const AXIS_X = 0;
@@ -43,4 +43,23 @@ export function horizontalLog(log: number, axis: number): number {
 /** Tronco de pie de un tronco tumbado (0 si no lo es). */
 export function uprightLog(id: number): number {
   return LOG_OF.get(id) ?? 0;
+}
+
+// Fase 6.5 (maderas): troncos tumbados de los troncos que se registran después (maderas nuevas,
+// troncos sin corteza, bloques de bambú). Registra la familia `${key}_log_axis` y devuelve su base.
+export function addAxisLogs(key: string, name: string, log: number, top: string, side: string, wood?: WoodType): number {
+  const base = family(`${key}_log_axis`, name, [['axis', 2]], (st) => {
+    const alongX = st.axis === AXIS_X;
+    const tex: BlockDef['tex'] = alongX ? [top, top, side, side, side, side] : [side, side, side, side, top, top];
+    return {
+      tex, texRot: alongX ? UP | DN | PZ | NZ : PX | NX, sound: 'wood', hardness: 2, tool: 'axe', category: null, base: log,
+    };
+  });
+  LOG_AXIS[key] = base;
+  for (const a of [AXIS_X, AXIS_Z]) {
+    LOG_OF.set(base + a, log);
+    if (wood) addLogVariant(base + a, wood);
+  }
+  AXIS_OF_LOG.set(log, base);
+  return base;
 }

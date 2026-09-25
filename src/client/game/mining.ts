@@ -1,6 +1,7 @@
 // Tiempo de minado de un bloque según la herramienta (fórmula de Minecraft).
 import { BLOCKS, ALL_LEAVES, isVine, COBWEB } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
+import { isBamboo } from '../../shared/blocks'; // Fase 6.5 (maderas)
 
 const LEAVES = new Set(ALL_LEAVES);
 
@@ -24,6 +25,7 @@ export function toolSpeed(block: number, toolId: number): number {
     if (b.sound === 'wool') return 5;
     return 1;
   }
+  if (t.kind === 'sword' && isBamboo(block)) return 60; // Fase 6.5 (maderas): la espada corta el bambú al momento
   if (t.kind === 'sword') return block === COBWEB ? 15 : LEAVES.has(block) ? 1.5 : 1;
   return b.tool === t.kind ? t.speed : 1;
 }

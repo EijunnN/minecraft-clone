@@ -20,6 +20,7 @@ import type { ServerContext, Session } from './context';
 // Fase 6 (fauna): cosechar nidos y colmenas.
 import { isBeeHome } from '../../blocks';
 import { harvestBeeHome } from '../entities/bees';
+import { strippedOf } from '../../blocks'; // Fase 6.5 (maderas)
 
 export class BlockEdits {
   constructor(
@@ -145,6 +146,11 @@ export class BlockEdits {
         const kind = ITEMS[item]?.tool?.kind;
         if (kind === 'hoe') return this.farming.till(x, y, z);
         if (kind === 'shears') return this.farming.carve(x, y, z, yaw);
+        if (kind === 'axe') { // Fase 6.5 (maderas): descortezar
+          const stripped = strippedOf(ctx.world.getBlock(x, y, z));
+          if (stripped) ctx.world.setBlock(x, y, z, stripped);
+          return stripped > 0;
+        }
         if (item === BONE_MEAL) return this.farming.fertilize(x, y, z);
         return false;
       });

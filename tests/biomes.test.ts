@@ -20,7 +20,7 @@ import { blockIndex, CHUNK_VOLUME } from '../src/shared/constants';
 import { makeServer } from './harness';
 
 test('maderas nuevas: recetas, combustible y familia completa', () => {
-  assert.equal(WOOD_TYPES.length, 7);
+  assert.equal(WOOD_TYPES.length, 9); // Fase 6.5 (maderas): mangle y roble pálido
   assert.deepEqual(matchRecipe([JUNGLE_LOG, 0, 0, 0], 2)?.out, { id: JUNGLE_PLANKS, count: 4 });
   const C = CHERRY_PLANKS;
   assert.equal(matchRecipe([C, 0, C, 0], 2)?.out.id, STICK, 'palos con tablones de cerezo');

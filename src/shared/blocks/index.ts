@@ -122,3 +122,9 @@ export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
 // Troncos tumbados (se registran los últimos: ids guardados).
 export * from './logAxis';
+// Fase 6.5 (maderas): mangle, roble pálido y bambú; troncos sin corteza y leños de todas las maderas
+// (registrados los últimos: ids nuevos). Las maderas con árbol, sus formas y carteles ya entran solos
+// en el inventario creativo; el resto, aquí.
+import { WOODS2_INVENTORY } from './woods2';
+export * from './woods2';
+(INVENTORY_ORDER as number[]).push(...WOODS2_INVENTORY);

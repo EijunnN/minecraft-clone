@@ -25,6 +25,7 @@ import {
 } from '../src/shared/mobs';
 
 const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate'];
+NEW_WOODS.push('mangrove', 'pale_oak', 'bamboo', 'bamboo_mosaic'); // Fase 6.5 (maderas): ids nuevos, sin fijar
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).

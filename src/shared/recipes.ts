@@ -218,6 +218,20 @@ shape(['CC', 'CC'], { C: HONEYCOMB }, HONEYCOMB_BLOCK);
 shape(['F', 'C', 'S'], { F: FEATHER, C: COPPER_INGOT, S: STICK }, BRUSH);
 shape(['HH', 'HH'], { H: RABBIT_HIDE }, LEATHER);
 
+// --- Fase 6.5 (maderas): sin corteza, leños y bambú ---
+import { WOOD_EXTRAS, BAMBOO, BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_PLANKS, BAMBOO_MOSAIC } from './blocks';
+for (const { wood, strippedLog, woodBlock, strippedWood } of WOOD_EXTRAS) {
+  for (const id of [strippedLog, woodBlock, strippedWood]) mix([id], wood.planks, 4);
+  shape(['LL', 'LL'], { L: wood.log }, woodBlock, 3);
+  shape(['LL', 'LL'], { L: strippedLog }, strippedWood, 3);
+}
+shape(['BBB', 'BBB', 'BBB'], { B: BAMBOO }, BAMBOO_BLOCK);
+mix([BAMBOO_BLOCK], BAMBOO_PLANKS, 2);
+mix([STRIPPED_BAMBOO_BLOCK], BAMBOO_PLANKS, 2);
+shape(['B', 'B'], { B: BAMBOO }, STICK);
+shape(['S', 'S'], { S: SLABS.bamboo }, BAMBOO_MOSAIC);
+shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
+
 export interface RecipeMatch {
   out: ItemStack;
 }
