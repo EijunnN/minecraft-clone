@@ -4,6 +4,9 @@
 // - Correa sobre un animal: queda atado al jugador y lo sigue; con clic derecho en una valla, los que
 //   lleva quedan atados a ella. Si se aleja más de 10 bloques la correa se rompe y cae.
 // El nombre y la atadura se envían con las entidades (campo `ex` de 'ents') y se guardan con los animales.
+// Fase 7 (remate): las barcas también se atan (como en Minecraft): con la correa en la mano se atan al
+// jugador y siguen a las vallas igual; sin correa, clic derecho sube (lo hace Transport). De ellas tira
+// Transport (mueve su cuerpo), con el punto que deja aquí en leashTo; la valla se guarda con la barca.
 import { isFence } from '../../blocks';
 import { ITEMS, NAME_TAG, LEAD } from '../../items';
 import { MOBS } from '../../mobs';
@@ -11,6 +14,7 @@ import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import type { Entity, InteractResult } from '../entities';
 import type { ServerContext, Session } from './context';
 import { cleanName } from '../../nameTags';
+import { isBoatType } from '../../vehicles'; // Fase 7 (remate)
 
 /** Largo de la correa: a partir de aquí tira de la criatura; más allá de BREAK se rompe. */
 const SLACK = 4;
@@ -28,6 +32,7 @@ export class Leashes {
   /** Etiqueta o correa sobre una criatura. null si no le toca a este sistema. */
   onInteract(s: Session, e: Entity, msg: Extract<ClientMsg, { t: 'interact' }>): InteractResult | null {
     const item = Number(msg.item);
+    if (isBoatType(e.type)) return this.onBoat(s, e, item); // Fase 7 (remate)
     if (e.dead || !e.ai) return null;
     if (item === NAME_TAG) {
       const name = cleanName(msg.n);
@@ -56,6 +61,29 @@ export class Leashes {
     return null;
   }
 
+  /**
+   * Fase 7 (remate): correa y barca. Atada a este jugador: se suelta (la correa cae). Con la correa en la
+   * mano: se ata al jugador (si estaba en una valla, pasa a su mano sin gastar otra). null: no es cosa de
+   * correas (clic derecho para subirse).
+   */
+  private onBoat(s: Session, e: Entity, item: number): InteractResult | null {
+    if (e.dead) return null;
+    if (e.leash === s.id) {
+      this.release(e, true);
+      return { ok: true };
+    }
+    if (item !== LEAD) return null;
+    if (Array.isArray(e.leash)) {
+      e.leash = s.id;
+      this.ctx.fx('leash', e.x, e.y + 0.5, e.z);
+      return { ok: true };
+    }
+    if (e.leash) return null;
+    e.leash = s.id;
+    this.ctx.fx('leash', e.x, e.y + 0.5, e.z);
+    return { ok: true, take: 1 };
+  }
+
   /** Clic derecho en una valla: las criaturas que lleva el jugador quedan atadas a ella. */
   onFence(s: Session, msg: Extract<ClientMsg, { t: 'leash' }>): void {
     const ctx = this.ctx;
@@ -72,7 +100,7 @@ export class Leashes {
   }
 
   /** Suelta una criatura (si `drop`, la correa cae a su lado). */
-  private release(e: Entity, drop: boolean): void {
+  release(e: Entity, drop: boolean): void {
     e.leash = undefined;
     e.leashTo = undefined;
     if (drop && ITEMS[LEAD]) this.ctx.entities.dropStacks([{ id: LEAD, count: 1 }], e.x, e.y + 0.5, e.z);
@@ -114,6 +142,7 @@ export class Leashes {
         continue;
       }
       e.leashTo = h;
+      if (isBoatType(e.type)) continue; // Fase 7 (remate): de la barca tira Transport
       if (d > SLACK + 2) {
         // Muy estirada: además de caminar hacia allí, la correa tira de ella (más cuanto más estirada).
         const k = Math.min(1, (d - SLACK - 2) / (BREAK - SLACK - 2)) * 18 * dt;

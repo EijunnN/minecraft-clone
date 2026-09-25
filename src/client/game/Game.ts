@@ -36,8 +36,8 @@ import { fishingLines } from './fishingLines';
 import { useLook } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { equipmentFrame } from './equipmentLife';
 // Fase 7 (pociones): física de los efectos, remolinos, nubes, invisibles y nombres de las pociones.
-import { potionPhysics, potionPosState, potionFrame } from './potionClient';
-import { stackName, EF_INVISIBLE, STATE_INVISIBLE } from '../../shared/potions';
+import { potionPhysics, potionPosState, potionFrame, handPotionTypes } from './potionClient';
+import { stackName, STATE_INVISIBLE } from '../../shared/potions';
 import type { Use } from './gameTypes';
 import { leashLines } from './leashLines'; // Fase 6.5 (remate)
 import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
@@ -628,9 +628,13 @@ export class Game {
     const armor = this.inv.armorIds();
     const off = this.inv.offhand?.id ?? 0;
     const g = this.enchant.glintBits(); // Fase 7 (encantamientos): qué brilla
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${ec},${g}`;
+    const { hp, op } = handPotionTypes(this); // Fase 7 (remate): el color de la poción en cada mano
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${ec},${g},${hp},${op}`;
     if (!force && key === this.lastSentKey) return;
-    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor, ...(ec ? { ec } : {}), ...(g ? { g } : {}) });
+    this.net?.send({
+      t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor, ...(ec ? { ec } : {}), ...(g ? { g } : {}),
+      ...(hp ? { hp } : {}), ...(op ? { op } : {}),
+    });
     this.lastSentKey = key;
   }
 
@@ -765,6 +769,7 @@ export class Game {
     };
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
     // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
+    this.vehicles.collidePlayer(dt); // Fase 7 (remate): barcas sólidas y vagonetas que apartan
     if (!this.riding.update(dt, controls, active) && !this.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
     this.mechanisms.update(); // Fase 7 (mecanismos): los bloques que empujan los pistones apartan al jugador
     const moved = this.riding.active || this.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
@@ -845,8 +850,9 @@ export class Game {
       rp.update(dt);
       this.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
       this.vehicles.placeRemote(rp.id, rp.view); // Fase 7 (transporte): en su barca o vagoneta
-      if (rp.state & (STATE_DEAD | STATE_INVISIBLE)) continue; // Fase 7 (pociones): los invisibles no se dibujan
+      if (rp.state & STATE_DEAD) continue;
       const v = rp.view;
+      v.invisible = (rp.state & STATE_INVISIBLE) !== 0; // Fase 7 (remate): del invisible sólo se ve lo que lleva puesto
       const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
       v.light = [(l >> 4) / 15, (l & 15) / 15];
       views.push(v);
@@ -964,14 +970,16 @@ export class Game {
         yaw += Math.PI;
         pitch = -pitch;
       }
-      if (!this.statusEffects.invisible) views.push({ // Fase 7 (pociones): invisible, tampoco en tercera persona
+      views.push({
         id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
         bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
         swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
+        heldDmg: handPotionTypes(this).hp, offhandDmg: handPotionTypes(this).op, // Fase 7 (remate)
         use: ((k) => (k === 'none' ? null : k))(useLook(this.interaction.use).kind), light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
         riding: this.riding.active || this.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
         glint: this.enchant.glintBits(), // Fase 7 (encantamientos)
+        invisible: this.statusEffects.invisible, // Fase 7 (remate): sin cuerpo, pero con la armadura y lo de las manos
       });
     }
 
@@ -1012,10 +1020,10 @@ export class Game {
     const mobs: ClientEntity[] = [];
     const drops: ClientEntity[] = [];
     for (const e of this.ents.list.values()) {
-      // Fase 7: barcas y vagonetas van con los modelos de cajas; las criaturas invisibles no se dibujan.
-      if (MOBS[e.type] || isVehicleType(e.type)) {
-        if (!(e.flags & EF_INVISIBLE)) mobs.push(e);
-      } else drops.push(e);
+      // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
+      // lo que llevan (lo decide MobRenderer).
+      if (MOBS[e.type] || isVehicleType(e.type)) mobs.push(e);
+      else drops.push(e);
     }
     const m = this.interaction.mining;
     let crack: FrameState['crack'] = null;

@@ -30,6 +30,9 @@ export interface Session {
   a: number[];
   /** Fase 7 (encantamientos): brillo de lo que lleva (bits de PlayerInfo.g). */
   g?: number;
+  /** Fase 7 (remate): tipo de poción de lo que lleva en cada mano (PlayerInfo.hp y .op). */
+  hp?: number;
+  op?: number;
   mode: GameMode;
   lookAt: number;
   lookUntil: number;

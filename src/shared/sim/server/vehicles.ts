@@ -9,11 +9,14 @@
 // por encima una vagoneta. Las de cofre abren su inventario como un cofre (ver ContainerSystem.virtual)
 // y la de horno se alimenta con carbón y empuja.
 //
+// Fase 7 (remate): las barcas se pueden atar con la correa (Leashes, por el gancho `leash`); de la atada
+// tira aquí la correa (como en Minecraft, pasados 6 bloques) y la valla a la que está atada se guarda con ella.
+//
 // Tipos nuevos de vagoneta (con tolva, con TNT): registrarlos en vehicleItems.ts (addCartKind) y darles
 // comportamiento en CART_BEHAVIORS (usar, cada tick, raíl activador, guardado).
 import { STATE_DEAD, stackToWire, stackFromWire, type ClientMsg, type ServerMsg } from '../../protocol';
 import { MOBS, MOB_IRON_GOLEM } from '../../mobs';
-import { COAL, CHARCOAL, type ItemStack } from '../../items';
+import { COAL, CHARCOAL, LEAD, type ItemStack } from '../../items';
 import { RAIL_KIND, RAIL_SHAPE, RAIL_DETECTOR, RAIL_ACTIVATOR, isRail, railIsPowered } from '../../blocks';
 import { newContainer, sanitizeStack, type ContainerState } from '../../containers';
 import { attackDamage } from '../../combat';
@@ -39,6 +42,8 @@ const MAX_VEHICLES = 1000;
 const REACH = 6;
 /** Si el pasajero se separa más que esto, se baja. */
 const MAX_GAP = 6;
+/** Fase 7 (remate): a partir de aquí la correa tira de la barca (Minecraft: 6 bloques) y tope de lo que corre así. */
+const LEASH_SLACK = 6, LEASH_MAX_SPEED = 0.6;
 /** Combustible de la vagoneta con horno: ticks por carbón y máximo (Minecraft). */
 const FUEL_PER_COAL = 3600, FUEL_MAX = 32000;
 
@@ -62,6 +67,8 @@ export interface Vehicle {
   paddles: number;
   /** Datos propios de otros tipos de vagoneta (tolva, TNT…). */
   extra?: Record<string, unknown>;
+  /** Fase 7 (remate): valla a la que estaba atada en el último tick ('' si a ninguna), para guardarla al cambiar. */
+  tied?: string;
 }
 
 /** Comportamiento de un tipo de vagoneta (para las que vengan: tolva, TNT…). */
@@ -93,6 +100,8 @@ export class Transport {
   private dirty = false;
   /** Criaturas guardadas en asientos, por volver a sentar tras cargar el mundo: [vehículo, plaza, tipo]. */
   private pendingMobs: [Vehicle, number, number][] = [];
+  /** Fase 7 (remate): la correa sobre una barca (atar, soltar, pasar de la valla a la mano; lo hace Leashes). */
+  leash: ((s: Session, e: Entity, msg: Extract<ClientMsg, { t: 'interact' }>) => InteractResult | null) | null = null;
 
   constructor(private ctx: ServerContext, store: ServerStore, private riding: Riding) {
     this.rails = new Rails(ctx);
@@ -151,6 +160,7 @@ export class Transport {
       if (withItem) out.push({ id: itemForVehicle(e.type, e.variant ?? 0), count: 1 });
       if (v.inv) for (const s of v.inv.slots) if (s) out.push(s);
       out.push(...(CART_BEHAVIORS[e.type]?.drops?.(v) ?? []));
+      if (e.leash) out.push({ id: LEAD, count: 1 }); // Fase 7 (remate): la correa cae con ella
       this.ctx.entities.dropStacks(out, e.x, e.y + 0.3, e.z);
     }
     if (v.inv) {
@@ -368,6 +378,9 @@ export class Transport {
     if (!v) return null;
     if (s.s & STATE_DEAD) return { ok: false };
     const item = Number(msg.item);
+    // Fase 7 (remate): la correa sobre la barca.
+    const leash = v.boat ? this.leash?.(s, e, msg) : null;
+    if (leash) return leash;
     const behavior = CART_BEHAVIORS[e.type]?.use?.(this, v, s, item);
     if (behavior) return behavior;
     if (v.cart?.furnace) {
@@ -490,12 +503,18 @@ export class Transport {
           }
         }
       }
+      const tied = Array.isArray(e.leash) ? e.leash.join() : ''; // Fase 7 (remate)
+      if (tied !== (v.tied ?? '')) {
+        v.tied = tied;
+        this.dirty = true;
+      }
       if (v.damage > 0) v.damage--;
       if (v.hurt > 0) v.hurt--;
       const ox = e.x, oy = e.y, oz = e.z;
       if (v.boat) {
         boats.push(v);
         if (!v.driver) {
+          this.pullLeash(v); // Fase 7 (remate)
           boatStep(v.boat, w, null);
           v.paddles = 0;
           if (v.boat.underTicks >= 60) for (let i = 0; i < v.seats.length; i++) this.unseat(v, i);
@@ -526,6 +545,25 @@ export class Transport {
       e.flags = f;
     }
     this.collide(carts, boats);
+  }
+
+  /**
+   * Fase 7 (remate): la barca atada, más allá de 6 bloques de quien la lleva (o de la valla), va hacia allí
+   * (Minecraft: 0,4·n² bloques/tick en cada eje por tick, con n la dirección). Leashes deja el punto en leashTo.
+   */
+  private pullLeash(v: Vehicle): void {
+    const e = v.e, b = v.boat!, h = e.leash ? e.leashTo : undefined;
+    if (!h) return;
+    const dx = h[0] - b.x, dz = h[2] - b.z, d = Math.hypot(dx, h[1] - b.y, dz);
+    if (d <= LEASH_SLACK) return;
+    const nx = dx / d, nz = dz / d;
+    b.vx += Math.sign(nx) * nx * nx * 0.4;
+    b.vz += Math.sign(nz) * nz * nz * 0.4;
+    const sp = Math.hypot(b.vx, b.vz);
+    if (sp > LEASH_MAX_SPEED) {
+      b.vx *= LEASH_MAX_SPEED / sp;
+      b.vz *= LEASH_MAX_SPEED / sp;
+    }
   }
 
   /** Raíl bajo una vagoneta que mueve su jugador (para detectores y activadores). */
@@ -636,7 +674,7 @@ export class Transport {
 
   private load(r: unknown): void {
     if (!r || typeof r !== 'object') return;
-    const o = r as { t?: unknown; v?: unknown; p?: unknown; r?: unknown; m?: unknown; c?: unknown; f?: unknown; s?: unknown; x?: unknown };
+    const o = r as { t?: unknown; v?: unknown; p?: unknown; r?: unknown; m?: unknown; c?: unknown; f?: unknown; s?: unknown; x?: unknown; l?: unknown };
     const type = Number(o.t);
     const p = Array.isArray(o.p) ? o.p.map(Number) : [];
     if (!isVehicleType(type) || p.length !== 3 || !p.every(Number.isFinite)) return;
@@ -661,6 +699,9 @@ export class Transport {
       }
     }
     if (o.x !== undefined) CART_BEHAVIORS[type]?.load?.(v, o.x);
+    // Fase 7 (remate): la valla a la que está atada (la correa en la mano de un jugador no se guarda).
+    const l = Array.isArray(o.l) ? o.l.map(Number) : [];
+    if (v.boat && l.length === 3 && l.every(Number.isInteger)) v.e.leash = [l[0], l[1], l[2]];
   }
 
   /** Tras cargar: cada criatura guardada en un asiento vuelve a él (la del mismo tipo más cercana). */
@@ -702,6 +743,7 @@ export class Transport {
       if (mobs.length) row.s = mobs;
       const x = CART_BEHAVIORS[v.e.type]?.save?.(v);
       if (x !== undefined) row.x = x;
+      if (Array.isArray(v.e.leash)) row.l = v.e.leash; // Fase 7 (remate)
       return row;
     });
     store.setMeta('vehicles', JSON.stringify(rows));

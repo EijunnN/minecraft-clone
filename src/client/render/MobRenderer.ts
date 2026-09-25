@@ -17,6 +17,7 @@ import { EF_CHARGED } from '../../shared/collections'; // Fase 6.5 (colecciones)
 import { chargedAuraTexture, AURA_FRAMES } from '../textures/collectionTextures'; // Fase 6.5 (colecciones)
 import { gearTexture, GEAR_INFLATE } from '../textures/gearTextures'; // Fase 6.5 (equipo)
 import { MOB_DROWNED } from '../../shared/mobs';
+import { EF_INVISIBLE } from '../../shared/potions'; // Fase 7 (remate)
 import { vehicleModel, vehicleSkinVariant, animateVehicle, vehicleRoot } from './vehicleModels'; // Fase 7 (transporte)
 
 export interface MobTexture {
@@ -335,8 +336,11 @@ export class MobRenderer {
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
         .f1('uFlash', flash);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
-      gl.bindVertexArray(mesh.vao);
-      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+      // Fase 7 (remate): de la criatura invisible sólo se ve lo que lleva encima (armadura, aura).
+      if (!(e.flags & EF_INVISIBLE)) {
+        gl.bindVertexArray(mesh.vao);
+        gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+      }
       // Fase 6.5 (colecciones): creeper cargado: franjas de energía azul (emisivas) que envuelven el cuerpo.
       if (def.id === MOB_CREEPER && e.flags & EF_CHARGED && e.deathT < 0) {
         const aura = this.mesh(def, 1.2);
@@ -402,7 +406,7 @@ export class MobRenderer {
     const bonesLoc = p.loc('uBones');
     for (const e of list) {
       const def = MOBS[e.type] ?? vehicleModel(e)?.def; // Fase 7 (transporte)
-      if (!def) continue;
+      if (!def || e.flags & EF_INVISIBLE) continue; // Fase 7 (remate): la invisible no hace sombra
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);

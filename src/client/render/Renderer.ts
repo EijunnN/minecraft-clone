@@ -968,8 +968,8 @@ export class Renderer {
     const list: ItemDraw[] = [];
     for (const p of s.players) {
       if (p.sleeping) continue;
-      for (const [id, left] of [[p.held ?? 0, false], [p.offhand ?? 0, true]] as const) {
-        const model = id > 0 ? this.items.model(id) : null;
+      for (const [id, left, dmg] of [[p.held ?? 0, false, p.heldDmg], [p.offhand ?? 0, true, p.offhandDmg]] as const) {
+        const model = id > 0 ? this.items.model(id, dmg) : null; // Fase 7 (remate): con el color de su poción
         if (!model) continue;
         const glint = ((p.glint ?? 0) & (left ? 2 : 1)) !== 0; // Fase 7 (encantamientos)
         const m = this.entities.handMatrix(p, s.camX, s.camY, s.camZ, left);

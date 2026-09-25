@@ -42,6 +42,11 @@ function itemFrom(v: unknown): number {
   return Number.isInteger(v) && (v as number) > 0 ? (v as number) : 0;
 }
 
+/** Fase 7 (remate): tipo de poción que llega de la red (0 = agua; el dibujo ignora los que no conoce). */
+function potionFrom(v: unknown): number {
+  return Number.isInteger(v) && (v as number) > 0 ? (v as number) : 0;
+}
+
 export class RemotePlayer {
   readonly id: string;
   name: string;
@@ -66,14 +71,20 @@ export class RemotePlayer {
       bodyYaw: info.r[0], headYaw: info.r[0], pitch: info.r[1], walkPhase: 0, walkAmount: 0, swing: 0,
       sneaking: false, light: [1, 0], armor: armorFrom(info.a), held: itemFrom(info.h), offhand: itemFrom(info.o),
       glint: (Number(info.g) | 0) & 0x3f, // Fase 7 (encantamientos)
+      heldDmg: potionFrom(info.hp), offhandDmg: potionFrom(info.op), // Fase 7 (remate)
     };
     this.lastX = info.p[0];
     this.lastZ = info.p[2];
   }
 
-  push(p: [number, number, number], r: [number, number], s: number, a?: number[], h?: number, o?: number, g?: number): void {
+  push(
+    p: [number, number, number], r: [number, number], s: number, a?: number[], h?: number, o?: number, g?: number, hp?: number, op?: number,
+  ): void {
     if (!Array.isArray(p) || !Array.isArray(r) || ![p[0], p[1], p[2], r[0], r[1]].every(Number.isFinite)) return;
     this.view.glint = (Number(g) | 0) & 0x3f; // Fase 7 (encantamientos): cada 'pos' trae el brillo (sin él, nada)
+    // Fase 7 (remate): y el tipo de poción de cada mano (sin él, agua).
+    this.view.heldDmg = potionFrom(hp);
+    this.view.offhandDmg = potionFrom(op);
     // La armadura y lo que lleva en las manos se cambian al instante (no se interpolan).
     if (a !== undefined) this.view.armor = armorFrom(a);
     if (h !== undefined) this.view.held = itemFrom(h);
