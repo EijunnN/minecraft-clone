@@ -17,7 +17,7 @@ import { redstoneFx } from './redstoneClient'; // Fase 7 (redstone)
 import { potionFx } from './potionClient'; // Fase 7 (pociones)
 import { enchantFx } from './enchantFx'; // Fase 7 (encantamientos)
 import { mechanismFx } from './mechanismsClient'; // Fase 7 (mecanismos)
-import { allayFx } from './allayClient'; // Fase 7.5 (mansión)
+import { allayFx } from './allayFx'; // Fase 7.5 (mansión)
 
 export class Effects {
   constructor(private g: Game) {}
