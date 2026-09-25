@@ -141,7 +141,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Tortuga, ajolote, delfín y peces en la playa](docs/screenshots/aquatic.png) | ![Panda, oso polar, zorro, abeja y armadillo](docs/screenshots/fauna.png) |
 | ![Capitán de una patrulla con el estandarte ominoso](docs/screenshots/pillagers.png) | ![Evocador y, detrás, una patrulla de saqueadores](docs/screenshots/evoker.png) |
 | ![Puesto de saqueadores en la taiga](docs/screenshots/outpost.png) | ![Barra de un asalto sobre la aldea](docs/screenshots/raid.png) |
-| ![Pétalos cayendo bajo las ramas de un cerezo](docs/screenshots/cherry_petals.png) | |
+| ![Pétalos cayendo bajo las ramas de un cerezo](docs/screenshots/cherry_petals.png) | ![Asistente de comandos del chat con sugerencias e iconos](docs/screenshots/chat.png) |
 
 ## Controles
 
@@ -162,7 +162,7 @@ pulsación). Estas son las de por defecto:
 | F | Pasar lo que llevas a la mano secundaria (escudo, antorcha, comida…); el clic derecho la usa si la principal no hace nada |
 | Ctrl corriendo bajo el agua | Bucear en postura horizontal; en huecos de un bloque se gatea |
 | E | Inventario (en creativo, selector de bloques y objetos) |
-| T, Enter, / | Chat y comandos (flechas: lo enviado antes · Tab: completar comandos y nombres) |
+| T, Enter, / | Chat y comandos: al escribir «/» se abre una ventanita con los comandos y sus argumentos (objetos con icono, criaturas, efectos, estructuras, jugadores…); ↑↓ eligen, Tab o → completan, Enter acepta lo elegido y Esc la cierra. Sin la ventanita, ↑↓ recorren lo enviado antes |
 | Tab | Lista de jugadores |
 | F1 · F2 · F3 · F5 | Ocultar HUD · captura de pantalla · información de depuración · tercera persona |
 | Esc | Pausa / ajustes |

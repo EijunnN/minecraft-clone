@@ -36,6 +36,8 @@ function escapeHtml(s: string): string {
 
 export class UI {
   icons: Map<number, string> = new Map();
+  /** Asistente del chat (sugerencias de comandos). */
+  private chatAssist: ChatCompletion | null = null;
   hudIcons: HudIcons | null = null;
   onRespawn: (() => void) | null = null;
   onPlay: (() => void) | null = null;
@@ -136,7 +138,8 @@ export class UI {
       });
     }
     const chatInput = $<HTMLInputElement>('chatinput');
-    const completion = new ChatCompletion(chatInput, () => this.playerNames());
+    const completion = new ChatCompletion(chatInput, () => this.playerNames(), () => this.icons);
+    this.chatAssist = completion;
     chatInput.addEventListener('keydown', (e) => {
       if (completion.onKey(e)) {
         e.preventDefault();
@@ -458,7 +461,10 @@ export class UI {
     $('chat').classList.add('open');
     const input = $<HTMLInputElement>('chatinput');
     input.value = prefill;
-    setTimeout(() => input.focus(), 0);
+    setTimeout(() => {
+      input.focus();
+      this.chatAssist?.refresh();
+    }, 0);
   }
 
   closeChat(): void {
