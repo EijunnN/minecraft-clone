@@ -45,7 +45,7 @@ export interface WorkPanel {
   click(target: HTMLElement, grid: (ItemStack | null)[]): boolean;
 }
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
 // ------------------------------------------------------------------ mesa de encantamientos
 
@@ -68,9 +68,10 @@ export class EnchantPanel implements WorkPanel {
       '</div></div>';
   }
 
+  /** El lapislázuli en su hueco; en el otro, cualquier cosa de una en una (sin ofertas si no se encanta). */
   accepts(i: number, s: ItemStack): number {
     if (i === TABLE_LAPIS) return s.id === LAPIS ? 64 : 0;
-    return canEnchantAtTable({ ...s, count: 1 }) ? 1 : 0;
+    return 1;
   }
 
   result(): ItemStack | null {
@@ -117,11 +118,13 @@ export class EnchantPanel implements WorkPanel {
       const key = `${on}|${ok}|${o?.cost}|${o?.ench}|${o?.level}|${this.words[i]}|${lapis >= i + 1}|${levels >= (o?.cost ?? 0)}`;
       if (b.dataset.key === key) return;
       b.dataset.key = key;
-      b.disabled = !ok;
+      // Sin `disabled`: así se ve la pista al pasar el ratón aunque no se pueda coger.
+      b.classList.toggle('off', !ok);
+      b.setAttribute('aria-disabled', String(!ok));
       b.classList.toggle('empty', !on);
       if (!on) {
         b.innerHTML = '';
-        b.removeAttribute('title');
+        delete b.dataset.tip;
         return;
       }
       const clue = o.ench >= 0 ? `${enchantName(o.ench, o.level)}…?` : '…?';
@@ -134,8 +137,31 @@ export class EnchantPanel implements WorkPanel {
         if (lapis < i + 1) need.push(`Hace falta${i ? 'n' : ''} ${i + 1} lapislázuli${i ? 's' : ''}`);
         if (levels < o.cost) need.push(`Nivel de experiencia necesario: ${o.cost}`);
       }
-      b.title = [clue, `${i + 1} lapislázuli${i ? 's' : ''} · ${i + 1} nivel${i ? 'es' : ''} de experiencia`, ...need].join('\n');
+      b.dataset.tip = `<b class="tt-ench">${esc(clue)}</b>` +
+        `<span class="tt-dim">${i + 1} lapislázuli${i ? 's' : ''} · ${i + 1} nivel${i ? 'es' : ''} de experiencia</span>` +
+        need.map((n) => `<span class="tt-bad">${esc(n)}</span>`).join('');
     });
+    this.bindTip(panel);
+  }
+
+  /** Vista previa al pasar el ratón por una oferta (la descripción flotante de siempre). */
+  private bindTip(panel: HTMLElement): void {
+    const list = panel.querySelector('.ench-offers') as HTMLElement | null;
+    if (!list || list.dataset.bound) return;
+    list.dataset.bound = '1';
+    const tip = document.createElement('div');
+    tip.className = 'tooltip hidden';
+    list.appendChild(tip);
+    list.addEventListener('mousemove', (e) => {
+      const b = (e.target as HTMLElement).closest('.ench-offer') as HTMLElement | null;
+      const html = b?.dataset.tip;
+      tip.classList.toggle('hidden', !html);
+      if (!html) return;
+      if (tip.innerHTML !== html) tip.innerHTML = html;
+      tip.style.left = `${e.clientX + 14}px`;
+      tip.style.top = `${e.clientY + 14}px`;
+    });
+    list.addEventListener('mouseleave', () => tip.classList.add('hidden'));
   }
 
   click(target: HTMLElement, grid: (ItemStack | null)[]): boolean {

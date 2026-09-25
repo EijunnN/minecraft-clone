@@ -120,7 +120,7 @@ function anvilTop(cracks: number): Generator {
     forged(t, 1);
     const r = t.rng('grietas');
     for (let i = 0; i < N; i++) {
-      const x = i & 15, y = i >> 4;
+      const x = i & 15;
       // La tabla va de x 3 a 12 (se ve de canto en el modelo): el centro, más brillante y liso.
       if (x >= 5 && x <= 10) {
         t.setI(i, scale(t.getI(i), 1.22));

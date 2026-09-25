@@ -11,12 +11,11 @@ import { ITEMS, type ItemStack } from '../../shared/items';
 import {
   RESPIRATION, AQUA_AFFINITY, DEPTH_STRIDER, FROST_WALKER, EFFICIENCY, MENDING, BINDING_CURSE, VANISHING_CURSE,
   FIRE_PROTECTION, BLAST_PROTECTION, SHARPNESS, SMITE, BANE_OF_ARTHROPODS, IMPALING, enchantsOf, enchLevel, hasGlint, canApply,
-  sanitizeEnchList, withEnchants, ENCHANTS, MAX_ENCHANT_LEVEL, type EnchList,
+  sanitizeEnchList, withEnchants, maxDurability, ENCHANTS, MAX_ENCHANT_LEVEL, type EnchList,
 } from '../../shared/enchantments';
 import { protectionPoints, applyProtection, airDrainFactor, depthStriderFactor, blastKnockbackFactor, burnTimeFactor, MENDING_PER_XP } from '../../shared/enchantEffects';
 import { countBookshelves, newEnchantSeed, BOOKSHELF_OFFSETS, bookshelfCounts } from '../../shared/enchanting';
 import { totalForLevel, xpToNext } from '../../shared/experience';
-import { maxDurability } from '../../shared/enchantments';
 import type { PlayerSave, ServerMsg } from '../../shared/protocol';
 import type { WorkHost } from '../ui/enchantScreens';
 import type { RayHit } from './raycast';

@@ -127,12 +127,12 @@
   overflow: hidden;
 }
 
-.ench-offer:not(:disabled):hover {
+.ench-offer:not(.off):hover {
   background: linear-gradient(180deg, rgba(160, 100, 214, 0.5), rgba(96, 52, 138, 0.5));
   border-color: rgba(230, 200, 255, 0.7);
 }
 
-.ench-offer:disabled {
+.ench-offer.off {
   cursor: default;
   background: rgba(0, 0, 0, 0.28);
   border-color: rgba(255, 255, 255, 0.08);
@@ -182,7 +182,7 @@
   text-shadow: 1px 1px 0 #000;
 }
 
-.ench-offer:disabled .ench-lapis {
+.ench-offer.off .ench-lapis {
   filter: grayscale(0.8) brightness(0.7);
 }
 

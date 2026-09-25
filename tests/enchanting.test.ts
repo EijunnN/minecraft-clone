@@ -19,7 +19,7 @@ import { sanitizeStack, cloneStack } from '../src/shared/containers';
 import {
   ENCHANTS, ENCHANT_IDS, SHARPNESS, SMITE, EFFICIENCY, SILK_TOUCH, FORTUNE, UNBREAKING, PROTECTION, FIRE_PROTECTION,
   FEATHER_FALLING, LOOTING, MENDING, INFINITY, BINDING_CURSE, VANISHING_CURSE, THORNS, FROST_WALKER, DEPTH_STRIDER, LOYALTY,
-  RIPTIDE, CHANNELING, MULTISHOT, PIERCING, POWER, canApply, compatible, enchantability, enchantsOf, storedOf, enchLevel,
+  RIPTIDE, CHANNELING, MULTISHOT, PIERCING, canApply, compatible, enchantability, enchantsOf, storedOf, enchLevel,
   enchantName, enchantByName, hasGlint, withEnchants, enchantedBook, isEnchantable,
 } from '../src/shared/enchantments';
 import {
@@ -33,7 +33,7 @@ import { anvilResult, grindstoneResult, grindstoneXp, repairCost, nextRepairCost
 import { stackName } from '../src/shared/itemData';
 import { enchantedBlockDrops, oreMultiplier } from '../src/shared/sim/enchantDrops';
 import { blockDrops } from '../src/shared/sim/drops';
-import { MOBS, MOB_ZOMBIE, MOB_SPIDER, MOB_COW, ENT_ITEM, ENT_XP, ENT_THROWN, ENT_FALLING } from '../src/shared/mobs';
+import { MOB_ZOMBIE, MOB_SPIDER, MOB_COW, ENT_XP, ENT_THROWN, ENT_FALLING } from '../src/shared/mobs';
 import { offersFor, PROF_LIBRARIAN } from '../src/shared/villagers';
 import { TEXTURE_DEFS } from '../src/shared/textureDefs';
 import { makeServer, type Client, type Harness } from './harness';
@@ -418,6 +418,4 @@ test('servidor: Espinas devuelve el golpe y la botella con experiencia suelta or
   // Lo que quede en orbes más lo que ya recogió el jugador.
   const xp = ents(h, ENT_XP).reduce((a, e) => a + (e.xp ?? 0), 0) + c.conn.take('xp').reduce((a, m) => a + m.n, 0);
   assert.ok(xp >= 3 && xp <= 11, `orbes: ${xp}`);
-  void ENT_ITEM;
-  void MOBS;
 });
