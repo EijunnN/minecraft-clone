@@ -28,11 +28,18 @@ Objects). Pensado para PC (teclado y ratón).
 - **Inventario y fabricación**: inventario de 36 ranuras con fabricación 2×2, mesa de trabajo 3×3,
   cofres y hornos compartidos entre jugadores. Clic, clic derecho, mayúsculas + clic, teclas 1–9 y Q
   funcionan como en Minecraft.
-- **Criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: cerdo, vaca, oveja,
-  gallina, calamar, zombi, zombi momificado (desiertos), esqueleto, esqueleto errante (zonas
-  heladas), creeper (explota y rompe bloques), araña (neutral de día, trepa paredes) y enderman
-  (se enfada si le miras y se teletransporta). Los monstruos aparecen en la oscuridad y los no
-  muertos arden al sol.
+- **47 criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: animales de
+  granja y salvajes (zorros, cabras, osos polares, conejos, lobos, pandas, loros, armadillos y abejas
+  con sus nidos y su miel), criaturas acuáticas (peces, delfines, tortugas, ajolotes, ranas y calamar
+  brillante) y monstruos (zombis, esqueletos, creepers, arañas, endermen, ahogados, brujas, slimes,
+  fantasmas, lepismas y aldeanos zombi). Los monstruos aparecen en la oscuridad y los no muertos
+  arden al sol.
+- **Aldeas y comercio**: aldeanos con 12 profesiones según su bloque de trabajo, que pasean de día y
+  vuelven a casa de noche; clic derecho abre el comercio en esmeraldas, con 5 niveles. Vendedor
+  ambulante y gólem de hierro protector.
+- **Domesticar y montar**: lobos y gatos se domestican (se sientan, siguen y defienden a su dueño);
+  gólems de hierro y de nieve se construyen con calabazas. Caballos, burros, mulas y camellos se doman
+  y se montan con silla (salto cargado); las llamas escupen.
 - **Agua y lava que fluyen** como en Minecraft: el agua avanza 7 bloques y la lava 3, caen, buscan
   el hueco más cercano, se secan al quitar la fuente, dos fuentes de agua crean una tercera y el
   contacto agua–lava forma obsidiana, roca o piedra. Las corrientes arrastran al jugador y la
@@ -120,6 +127,9 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Templo del desierto](docs/screenshots/desert_temple.png) | ![Mazmorra con generador de monstruos y cofre](docs/screenshots/dungeon.png) |
 | ![Naufragio en el fondo del mar](docs/screenshots/shipwreck.png) | ![Templo de la jungla entre cerezos](docs/screenshots/jungle_temple.png) |
 | ![Mapa de la zona en la mano](docs/screenshots/map.png) | ![Rayo de tormenta sobre la costa, con la brújula](docs/screenshots/lightning.png) |
+| ![Comercio con un cantero de la aldea](docs/screenshots/trade.png) | ![Gólems de hierro y de nieve, aldeanos, gato y lobo](docs/screenshots/golems.png) |
+| ![Caballo, burro, mula, llama y camello](docs/screenshots/mounts.png) | ![Slime, bruja y otros monstruos nuevos; un fantasma al fondo](docs/screenshots/monsters.png) |
+| ![Tortuga, ajolote, delfín y peces en la playa](docs/screenshots/aquatic.png) | ![Panda, oso polar, zorro, abeja y armadillo](docs/screenshots/fauna.png) |
 
 ## Controles
 
@@ -130,10 +140,10 @@ pulsación). Estas son las de por defecto:
 | --- | --- |
 | WASD | Moverse |
 | Espacio | Saltar · en creativo, doble pulsación para volar |
-| Shift | Agacharse (no caes por los bordes; permite colocar bloques sobre cofres, mesas y puertas; quieto en una escalera de mano; levantarse de la cama) |
+| Shift | Agacharse (no caes por los bordes; permite colocar bloques sobre cofres, mesas y puertas; quieto en una escalera de mano; levantarse de la cama; bajarse de la montura) |
 | Ctrl o doble W | Correr (en supervivencia hace falta tener algo de hambre saciada). En una ventana normal, Ctrl + W es el atajo de cerrar la pestaña: el juego pide confirmación antes de cerrar, y en **Pantalla completa** (botón de la pausa) Ctrl + W ya no cierra nada |
 | Clic izquierdo | Romper bloque (mantener) · atacar criaturas (cada arma tiene su ritmo: la barra bajo la mira indica cuándo el golpe hace todo su daño) |
-| Clic derecho | Colocar · abrir cofres, hornos, mesas, puertas, trampillas y portillos · dormir · comer o beber (mantener) · tensar el arco · usar cubos · labrar con la azada · polvo de hueso · dar de comer, esquilar u ordeñar animales |
+| Clic derecho | Colocar · abrir cofres, hornos, mesas, puertas, trampillas y portillos · dormir · comer o beber (mantener) · tensar el arco · usar cubos · labrar con la azada · polvo de hueso · dar de comer, esquilar u ordeñar animales · domesticar, sentar y montar · comerciar con aldeanos |
 | Clic central | Coger el bloque apuntado: lo selecciona en la barra, lo trae de la mochila o, en creativo, lo crea |
 | 1–9, rueda | Elegir ranura |
 | Q · Ctrl + Q | Tirar un objeto · tirar la pila |
@@ -249,8 +259,8 @@ preocupaciones.
 
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
-- 12 tipos de criatura (no las ~80 de Minecraft): sin aldeanos, lobos, caballos, brujas, slimes,
-  jefes, etc.
+- 47 tipos de criatura (no las ~80 de Minecraft): sin saqueadores ni asaltos, criaturas del Nether
+  y el End, ni jefes.
 - Sin redstone, encantamientos (la experiencia todavía no se gasta en nada), pociones, estructuras
   generadas, barcas ni vagonetas, ni Nether o End.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los

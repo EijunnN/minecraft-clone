@@ -10,11 +10,18 @@ import {
   VINE, LILY_PAD, MYCELIUM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, DEEPSLATE, COPPER_ORE, DEEPSLATE_ORE,
   COAL_ORE, EMERALD_BLOCK, MOSS_BLOCK, CAVE_VINES, POINTED_DRIPSTONE, AMETHYST_BUD, TINTED_GLASS, MOB_SPAWNER, COBWEB,
   NETHERRACK, CRYING_OBSIDIAN, SNOW_LAYER,
+  TURTLE_EGG, LECTERN, CAULDRON, INFESTED_STONE, INFESTED_STONE_BRICKS, BEE_NEST, BEEHIVE, HONEY_BLOCK, HONEYCOMB_BLOCK,
 } from '../src/shared/blocks';
 import {
   STICK, BREAD, BUCKET, SHEARS, TOOLS, WHEAT_SEEDS, SUGAR, ARMOR, GOLDEN_APPLE, SPIDER_EYE, SHIELD, PUMPKIN_SEEDS, FISHING_ROD,
   PUFFERFISH, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, COMPASS, EMPTY_MAP, FILLED_MAP, SNOWBALL,
+  SADDLE, SLIME_BALL, SPLASH_POISON, COD_BUCKET, TADPOLE_BUCKET, GLASS_BOTTLE, HONEY_BOTTLE, RAW_RABBIT, RABBIT_HIDE, BRUSH,
 } from '../src/shared/items';
+import {
+  MOB_FOX, MOB_WOLF, MOB_VILLAGER, MOB_WANDERING_TRADER, MOB_IRON_GOLEM, MOB_SNOW_GOLEM, MOB_CAT, MOB_HORSE, MOB_CAMEL,
+  MOB_COD, MOB_GLOW_SQUID, MOB_DROWNED, MOB_SLIME, MOB_ZOMBIE_VILLAGER, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL,
+  MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO,
+} from '../src/shared/mobs';
 
 const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate'];
 
@@ -47,6 +54,9 @@ test('los ids de bloques guardados no cambian', () => {
   assert.deepEqual([MOB_SPAWNER, COBWEB, NETHERRACK, CRYING_OBSIDIAN], [1892, 1893, 1898, 1899]);
   // Clima (fase 5).
   assert.equal(SNOW_LAYER, 1900);
+  // Fase 6: huevo de tortuga, bloques de trabajo, bloques infestados y colmenas.
+  assert.deepEqual([TURTLE_EGG, LECTERN, CAULDRON, INFESTED_STONE, INFESTED_STONE_BRICKS], [1908, 1920, 1927, 1928, 1930]);
+  assert.deepEqual([BEE_NEST, BEEHIVE, HONEY_BLOCK, HONEYCOMB_BLOCK], [1931, 1955, 1979, 1980]);
 });
 
 test('los ids de objetos guardados no cambian', () => {
@@ -65,4 +75,15 @@ test('los ids de objetos guardados no cambian', () => {
   assert.deepEqual([COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES], [358, 359, 360, 361]);
   // Mapas, brújula y nieve (fase 5).
   assert.deepEqual([COMPASS, EMPTY_MAP, FILLED_MAP, SNOWBALL], [362, 363, 364, 365]);
+  // Fase 6: silla, botín de monstruos, cubos con criatura y fauna.
+  assert.deepEqual([SADDLE, SLIME_BALL, SPLASH_POISON, COD_BUCKET, TADPOLE_BUCKET], [366, 367, 371, 372, 377]);
+  assert.deepEqual([GLASS_BOTTLE, HONEY_BOTTLE, RAW_RABBIT, RABBIT_HIDE, BRUSH], [378, 379, 381, 383, 385]);
+});
+
+test('los ids de criatura guardados no cambian', () => {
+  assert.deepEqual([MOB_FOX, MOB_WOLF, MOB_VILLAGER, MOB_WANDERING_TRADER], [13, 17, 18, 19]);
+  assert.deepEqual([MOB_IRON_GOLEM, MOB_SNOW_GOLEM, MOB_CAT, MOB_HORSE, MOB_CAMEL], [20, 21, 22, 25, 29]);
+  assert.deepEqual([MOB_COD, MOB_GLOW_SQUID], [30, 39]);
+  assert.deepEqual([MOB_DROWNED, MOB_SLIME, MOB_ZOMBIE_VILLAGER, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL], [40, 42, 46, 47, 48]);
+  assert.deepEqual([MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO], [50, 51, 52, 53]);
 });

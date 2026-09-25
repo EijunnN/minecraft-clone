@@ -11,12 +11,12 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | Dimensiones | 3 (Mundo normal, Nether, End) | 1 |
 | Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
 | Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 6 (y 3 elementos decorativos) |
-| Criaturas | más de 80, incluidos 2 jefes | 12 |
+| Criaturas | más de 80, incluidos 2 jefes | 47 |
 | Bloques | ~1.100 contando colores y variantes | ~70 |
 | Objetos | ~1.500 | 56 objetos + bloques |
 | Recetas | más de 1.000 | ~50 |
 | Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319) |
-| Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | supervivencia básica, fluidos, criaturas, cofres y hornos |
+| Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | supervivencia, fluidos, criaturas, cofres y hornos, clima, comercio, domesticar y montar |
 
 Lo que ya tenemos cubre el bucle básico (talar, fabricar, minar, fundir, comer, sobrevivir a la
 noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **contenido** y
@@ -59,15 +59,15 @@ del desierto. Todas con cofres de botín (tablas propias) y localizables con `/l
 
 | Tipo | Minecraft | En VoxelCraft |
 | --- | --- | --- |
-| Pasivas | alay, armadillo, ajolote, murciélago, camello, gato, pollo, bacalao, gólem de cobre, vaca, burro, rana, calamar brillante, ghast feliz, caballo, champiñaca, mula, ocelote, loro, cerdo, conejo, salmón, oveja, sniffer, gólem de nieve, calamar, strider, cubo de azufre (26.2), renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante, caballo esqueleto, caballo zombi | cerdo, vaca, oveja, gallina, calamar |
-| Neutrales | abeja, araña de cueva, delfín, enderman, zorro, cabra, gólem de hierro, llama, nautilo, panda, piglin, oso polar, pez globo, araña, llama de comerciante, lobo, piglin zombificado | araña, enderman |
-| Hostiles | blaze, bogged, breeze, creaking, creeper, ahogado, guardián y guardián anciano, endermita, evocador, ghast, hoglin, zombi momificado (husk), cubo de magma, parched (1.21.11), fantasma, piglin bruto, saqueador, devastador, shulker, lepisma, esqueleto, slime, esqueleto errante (stray), vex, vindicador, warden, bruja, esqueleto del Wither, zoglin, zombi, aldeano zombi; monturas de monstruos: nautilo zombi y camello momificado (1.21.11) | zombi, zombi momificado, esqueleto, esqueleto errante, creeper |
+| Pasivas | alay, armadillo, ajolote, murciélago, camello, gato, pollo, bacalao, gólem de cobre, vaca, burro, rana, calamar brillante, ghast feliz, caballo, champiñaca, mula, ocelote, loro, cerdo, conejo, salmón, oveja, sniffer, gólem de nieve, calamar, strider, cubo de azufre (26.2), renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante, caballo esqueleto, caballo zombi | cerdo, vaca, oveja, gallina, calamar, armadillo, ajolote, camello, gato, bacalao, burro, rana, calamar brillante, caballo, mula, loro, conejo, salmón, gólem de nieve, renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante |
+| Neutrales | abeja, araña de cueva, delfín, enderman, zorro, cabra, gólem de hierro, llama, nautilo, panda, piglin, oso polar, pez globo, araña, llama de comerciante, lobo, piglin zombificado | araña, enderman, abeja, araña de cueva, delfín, zorro, cabra, gólem de hierro, llama, panda, oso polar, pez globo, lobo |
+| Hostiles | blaze, bogged, breeze, creaking, creeper, ahogado, guardián y guardián anciano, endermita, evocador, ghast, hoglin, zombi momificado (husk), cubo de magma, parched (1.21.11), fantasma, piglin bruto, saqueador, devastador, shulker, lepisma, esqueleto, slime, esqueleto errante (stray), vex, vindicador, warden, bruja, esqueleto del Wither, zoglin, zombi, aldeano zombi; monturas de monstruos: nautilo zombi y camello momificado (1.21.11) | zombi, zombi momificado, esqueleto, esqueleto errante, creeper, ahogado, fantasma, lepisma, slime, bruja, aldeano zombi |
 | Jefes | dragón del End, Wither | — |
 
-Mecánicas de criaturas que faltan: crías (con los modelos nuevos de 26.1), reproducción con comida,
-domesticar (lobo, gato, loro, caballo, llama, nautilo), montar (silla, arnés del ghast feliz),
-correas, esquilar ovejas, ordeñar vacas, huevos, variantes por bioma (cerdo, vaca y pollo de clima
-frío y cálido), criaturas con armadura y objetos en la mano, generadores de monstruos.
+Mecánicas de criaturas que faltan: domesticar loros y llamas, arnés del ghast feliz, correas,
+variantes por bioma (cerdo, vaca y pollo de clima frío y cálido), criaturas con armadura y objetos en
+la mano. Ya hay crías, cría con comida, domesticar lobos, gatos y caballos, montar con silla,
+esquilar, ordeñar, huevos y generadores de monstruos.
 
 ### 2.4 Supervivencia y combate
 
@@ -113,13 +113,15 @@ frío y cálido), criaturas con armadura y objetos en la mano, generadores de mo
 | Azada, tierra de cultivo e hidratación | ✅ |
 | Polvo de hueso, compostador | ✅ |
 | Pan, tarta, galletas, sopas | 🟡 (pan, tarta y patata asada) |
-| Reproducción de animales, crías, pesca, apicultura (miel) | 🟡 (criar, crías, esquilar, ordeñar, huevos que se lanzan y pesca; falta la apicultura) |
+| Reproducción de animales, crías, pesca, apicultura (miel) | ✅ |
 
 ### 2.7 Aldeanos, comercio y asaltos
 
 Aldeas, 13 profesiones con bloques de trabajo, comercio con esmeraldas y niveles, gólem de hierro
 protector, vendedor ambulante, curar aldeanos zombi, asaltos con saqueadores, vindicadores,
-evocadores y devastadores, y la bandera de mal presagio. **VoxelCraft: nada** ❌.
+evocadores y devastadores, y la bandera de mal presagio. **VoxelCraft: 🟡** aldeas con aldeanos,
+12 profesiones con sus bloques de trabajo, comercio con esmeraldas en 5 niveles, gólem de hierro,
+vendedor ambulante y aldeanos zombi (sin curarlos todavía); faltan los asaltos.
 
 ### 2.8 Redstone
 
@@ -325,8 +327,7 @@ acumulación de nieve.
   obsidiana llorosa, rocanegra y oro), iglús (con sótano y cofre la mitad de las veces) y pozos del
   desierto. El generador de monstruos invoca zombis, esqueletos o arañas con un jugador cerca (una
   antorcha al lado lo apaga) y las telarañas frenan. `/localizar <estructura>` dice dónde está la más
-  cercana. Faltan las trampas (necesitan redstone y TNT, fase 7), los raíles de las minas (fase 7) y
-  las aldeas (fase 6).
+  cercana. Faltan las trampas (necesitan redstone y TNT, fase 7) y los raíles de las minas (fase 7).
 - ✅ **Clima, mapas y brújula.** Tormentas eléctricas (una de cada tres lluvias): los rayos caen en
   lo más alto cerca de los jugadores, hacen 5 de daño y prenden a lo que haya a 3 bloques, con
   destello, trueno que llega con retraso según la distancia y rayos quebrados que brillan. En las
@@ -335,11 +336,36 @@ acumulación de nieve.
   que apunta al punto de aparición y mapas de 128×128 bloques (con un mapa vacío en la mano), que se
   ven al llevarlos con la posición propia y la de los demás jugadores.
 
-### Fase 6 — Criaturas (XL)
+### Fase 6 — Criaturas (XL) · 🟡 casi hecha (faltan saqueadores y asaltos)
 Aldeas con aldeanos, profesiones y comercio con esmeraldas, gólems de hierro y de nieve; lobos y
 gatos domesticables, caballos y burros montables, conejos, zorros, abejas y miel, tortugas, peces,
 delfines, loros, cabras, llamas, pandas, osos polares, ranas, ajolotes, armadillos, camellos;
 monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadores y asaltos.
+
+- ✅ **Aldeas y animales salvajes.** Aldeas de 5 estilos (pozo, calles, casas, granjas, farolas y
+  cofres) localizables con `/localizar aldea`. Zorros, cabras, osos polares, conejos y lobos.
+- ✅ **Aldeanos y comercio.** 12 profesiones que el aldeano toma del bloque de trabajo libre más
+  cercano (atril, mesa de cartografía, de flechas y de herrería, barril, telar, afiladora, caldero y
+  los que ya había). Pasean de día, vuelven a casa de noche abriendo puertas y huyen de los zombis.
+  Pantalla de comercio con 3 a 6 ofertas en esmeraldas, 5 niveles (de Novato a Maestro) y usos que
+  se reponen. Vendedor ambulante de vez en cuando.
+- ✅ **Gólems y domesticar.** Gólem de hierro (4 bloques de hierro en T y una calabaza) que defiende
+  de los monstruos y gólem de nieve que les lanza bolas de nieve. Lobos (con huesos) y gatos (con
+  pescado crudo) domesticables: collar, sentarse, seguir al dueño y defenderlo; los creepers huyen de
+  los gatos. Las aldeas traen su gólem y sus gatos.
+- ✅ **Monturas.** Caballos (35 pelajes), burros, mulas (de caballo y burro), llamas que escupen y
+  camellos. Se doman montándolos hasta que se dejan; con silla se guían con W/A/S/D y el ratón, y el
+  caballo carga el salto. Los demás jugadores ven al jinete encima.
+- ✅ **Criaturas acuáticas.** Bacalao, salmón, pez tropical y pez globo en bancos según el océano,
+  delfines, tortugas que ponen huevos en su playa, ajolotes en las cuevas frondosas, ranas y
+  renacuajos en los pantanos y calamar brillante en las profundidades. Cubos con pez.
+- ✅ **Monstruos nuevos.** Ahogados (los zombis que se ahogan se convierten), brujas que lanzan
+  pociones, slimes que se dividen (en pantanos y en chunks de slime), fantasmas para quien lleva 3
+  días sin dormir, lepismas en la piedra infestada de las montañas, arañas de cueva venenosas en las
+  minas y aldeanos zombi.
+- ✅ **Abejas y más fauna.** Nidos en robles y abedules de praderas, colmenas, miel (quita el veneno)
+  y panal; con una fogata debajo las abejas no se enfadan. Pandas, loros de 5 colores y armadillos
+  que se enroscan (escamas con el cepillo). Carne y piel de conejo, y voces para todos los animales.
 
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,
