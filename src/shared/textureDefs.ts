@@ -256,6 +256,44 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6 (fauna): nido de abejas, colmena, bloque de miel y bloque de panal.
   ...['bee_nest_top', 'bee_nest_bottom', 'bee_nest_side', 'bee_nest_front', 'bee_nest_front_honey', 'beehive_end', 'beehive_side',
     'beehive_front', 'beehive_front_honey', 'honey_block', 'honeycomb_block'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (océano y plantas): corales (vivos y muertos), algas, plantas marinas, pepinos de mar,
+  // prismarina y esponjas; flores altas, hierba alta, bayas dulces, azaleas, plantaformas, liquen,
+  // raíces colgantes y flor de esporas.
+  ...['tube', 'brain', 'bubble', 'fire', 'horn'].flatMap((c): TextureDef[] => ['', 'dead_'].flatMap((d): TextureDef[] => [
+    { name: `${d}${c}_coral_block` },
+    { name: `${d}${c}_coral`, wave: 2, sss: 0.4, cutout: true },
+    { name: `${d}${c}_coral_fan`, wave: 2, sss: 0.4, cutout: true },
+  ])),
+  { name: 'kelp', wave: 2, sss: 0.6, cutout: true },
+  { name: 'kelp_plant', sss: 0.6, cutout: true },
+  { name: 'dried_kelp_top' },
+  { name: 'dried_kelp_side' },
+  { name: 'seagrass', wave: 2, sss: 0.7, cutout: true },
+  { name: 'tall_seagrass_bottom', sss: 0.7, cutout: true },
+  { name: 'tall_seagrass_top', wave: 2, sss: 0.7, cutout: true },
+  { name: 'sea_pickle', sss: 0.5 },
+  { name: 'prismarine' },
+  { name: 'prismarine_bricks' },
+  { name: 'dark_prismarine' },
+  { name: 'sponge' },
+  { name: 'wet_sponge' },
+  ...['sunflower', 'lilac', 'rose_bush', 'peony', 'pitcher_plant', 'small_dripleaf'].flatMap((k): TextureDef[] => [
+    { name: `${k}_bottom`, sss: 0.7, cutout: true },
+    { name: `${k}_top`, wave: 2, sss: 0.7, cutout: true },
+  ]),
+  ...['tall_grass', 'large_fern'].flatMap((k): TextureDef[] => [
+    { name: `${k}_bottom`, tint: 1, sss: 0.8, cutout: true },
+    { name: `${k}_top`, tint: 1, wave: 2, sss: 0.8, cutout: true },
+  ]),
+  { name: 'torchflower', wave: 2, sss: 0.7, cutout: true },
+  ...[0, 1, 2, 3].map((s): TextureDef => ({ name: `sweet_berry_bush_stage${s}`, wave: 2, sss: 0.7, cutout: true })),
+  { name: 'azalea_leaves', wave: 1, sss: 0.8, cutout: true },
+  { name: 'flowering_azalea_leaves', wave: 1, sss: 0.8, cutout: true },
+  { name: 'big_dripleaf_top', sss: 0.6, cutout: true },
+  { name: 'big_dripleaf_stem', sss: 0.6, cutout: true },
+  { name: 'glow_lichen', sss: 0.4, cutout: true },
+  { name: 'hanging_roots', sss: 0.5, cutout: true },
+  { name: 'spore_blossom', sss: 0.6, cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

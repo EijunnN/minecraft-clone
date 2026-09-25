@@ -91,8 +91,11 @@ export class Farming {
       ctx.fx('bonemeal', x + 0.5, y + 1.2, z + 0.5);
       return true;
     }
-    return false;
+    return this.extraFertilize?.(x, y, z) ?? false; // Fase 6.5 (océano y plantas)
   }
+
+  /** Fase 6.5 (océano y plantas): polvo de hueso sobre plantas marinas, bayas, flores altas y azaleas. */
+  extraFertilize: ((x: number, y: number, z: number) => boolean) | null = null;
 
   /** Tijeras sobre una calabaza: se talla la cara que mira al jugador y suelta 4 semillas. */
   carve(x: number, y: number, z: number, yaw: number): boolean {

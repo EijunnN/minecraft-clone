@@ -2,6 +2,7 @@
 // 1 en 1, y ladrillos de piedra de la piedra lisa).
 import { STONE, COBBLESTONE, STONE_BRICKS, BRICKS, SANDSTONE, SLABS, STAIRS, WALLS, WALL_SOURCE } from './blocks';
 import type { ItemStack } from './items';
+import { PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE } from './blocks'; // Fase 6.5 (océano y plantas)
 
 const table = new Map<number, ItemStack[]>();
 const add = (input: number, id: number, count = 1) => {
@@ -23,6 +24,12 @@ add(STONE, STAIRS.stone_brick);
 // Muros de su piedra (y el de ladrillos de piedra desde la piedra lisa).
 for (const [wall, src] of Object.entries(WALL_SOURCE)) add(src, Number(wall));
 add(STONE, WALLS.stone_brick);
+
+// Fase 6.5 (océano y plantas): losas y escaleras de las tres prismarinas.
+for (const [block, key] of [[PRISMARINE, 'prismarine'], [PRISMARINE_BRICKS, 'prismarine_brick'], [DARK_PRISMARINE, 'dark_prismarine']] as const) {
+  add(block, SLABS[key], 2);
+  add(block, STAIRS[key]);
+}
 
 /** Lo que se puede cortar de una piedra (vacío si no sirve). */
 export function stonecutterOptions(input: number): readonly ItemStack[] {

@@ -14,6 +14,7 @@ import { DIR_X, DIR_Z } from '../../shared/blockModels';
 import { TerrainGenerator } from '../../shared/world/terrain';
 import { BIOME_MUSHROOM_FIELDS } from '../../shared/world/biomeIds';
 import type { Game } from './Game';
+import { plantParticles } from './plantParticles'; // Fase 6.5 (océano y plantas)
 
 type P3 = [number, number, number];
 
@@ -75,6 +76,7 @@ export class AmbientParticles {
       const z = pz + Math.floor((Math.random() * 2 - 1) * SCAN_R);
       const b = world.getBlock(x, y, z);
       if (b <= 0) continue;
+      if (plantParticles(fx, b, x, y, z)) continue; // Fase 6.5 (océano y plantas): flor de esporas, pepinos de mar
       if (isLeaves(b)) {
         const below = world.getBlock(x, y - 1, z);
         if (below !== 0) continue;

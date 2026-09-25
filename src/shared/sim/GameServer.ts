@@ -42,6 +42,7 @@ import { Trading } from './server/trading'; // Fase 6 (aldeanos)
 import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 import { Raids } from './server/raids'; // Fase 6 (asaltos)
+import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -109,6 +110,8 @@ export class GameServer {
   readonly golems: Golems;
   /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
   readonly raids: Raids;
+  /** Fase 6.5 (océano y plantas): corales, algas, esponjas, bayas dulces y plantaformas. */
+  readonly oceanLife: OceanLife;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -170,6 +173,10 @@ export class GameServer {
     this.monsters = new Monsters(this.ctx, store);
     this.golems = new Golems(this.ctx, store); // Fase 6 (gólems/domesticar)
     this.raids = new Raids(this.ctx, store); // Fase 6 (asaltos)
+    // Fase 6.5 (océano y plantas).
+    this.oceanLife = new OceanLife(this.ctx, this.nature, this.rules);
+    this.farming.extraFertilize = (x, y, z) => this.oceanLife.fertilize(x, y, z);
+    this.edits.extraUse = (s, x, y, z, id) => this.oceanLife.useBlock(s, x, y, z, id);
     this.trading.heroOf = (name) => this.raids.isHero(name);
     this.commands.raids = this.raids;
   }
@@ -741,6 +748,7 @@ export class GameServer {
     this.rules.onBlockChanged(x, y, z, id);
     this.monsters.onBlockChanged(x, y, z, old, id);
     this.golems.onBlockChanged(x, y, z, id); // Fase 6 (gólems/domesticar)
+    this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -763,6 +771,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
+    this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

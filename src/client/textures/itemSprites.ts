@@ -14,6 +14,7 @@ import { MONSTER_SPRITES } from './monsterSprites'; // Fase 6 (monstruos)
 import { AQUATIC_SPRITES } from './aquaticSprites'; // Fase 6 (acuáticos)
 import { FAUNA_SPRITES } from './faunaSprites'; // Fase 6 (fauna)
 import { ILLAGER_SPRITES } from './illagerSprites'; // Fase 6 (asaltos)
+import { OCEAN_SPRITES } from './oceanSprites'; // Fase 6.5 (océano y plantas)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -414,6 +415,7 @@ const SPRITES: Record<string, SpriteDef> = {
   // Fase 6 (fauna): frascos, miel, panal, conejo, escama de armadillo y cepillo.
   ...FAUNA_SPRITES,
   ...ILLAGER_SPRITES, // Fase 6 (asaltos)
+  ...OCEAN_SPRITES, // Fase 6.5 (océano y plantas)
 
   compass: {
     rows: [

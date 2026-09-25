@@ -13,6 +13,8 @@ import {
 import { DIR_X, DIR_Z } from './blockModels';
 import { isBeeHome } from './blocks'; // Fase 6 (fauna)
 import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
+import { isRipeBerryBush } from './blocks'; // Fase 6.5 (océano y plantas)
+import { planPlant65, canFertilize65 } from './plantPlacement'; // Fase 6.5 (océano y plantas)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -93,6 +95,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   if (y <= MIN_Y || y >= MAX_Y) return null;
   const cur = get(x, y, z);
   if (cur < 0) return null;
+  // Fase 6.5 (océano y plantas): plantas marinas, corales, pepinos de mar y plantas de dos bloques.
+  const plant65 = planPlant65(get, hit, x, y, z, base);
+  if (plant65 !== undefined) return plant65;
   if (isSlab(base) && familyBase(cur) === base && stateProps(cur)!.type !== 2) return [[x, y, z, stateOf(base, { type: 2 })]];
   if (!replaceable(cur)) return null;
 
@@ -222,12 +227,14 @@ export function partnerOf(x: number, y: number, z: number, id: number): [number,
 
 /** ¿Hace algo el clic derecho sobre este bloque? (puertas, trampillas, portillos, camas, tartas, compostadores, carteles). */
 export function isUsable(id: number): boolean {
-  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id);
+  return isDoor(id) || isTrapdoor(id) || isFenceGate(id) || isBed(id) || isCake(id) || familyBase(id) === COMPOSTER || isSign(id) ||
+    isRipeBerryBush(id); // Fase 6.5 (océano y plantas): cosechar las bayas dulces
 }
 
 /** ¿Tendría efecto el polvo de hueso aquí? (lo usa el cliente para gastarlo). */
 export function canFertilize(get: GetBlock, x: number, y: number, z: number, saplings: ReadonlySet<number>, grass: number): boolean {
   const id = get(x, y, z);
+  if (canFertilize65(get, x, y, z)) return true; // Fase 6.5 (océano y plantas)
   if (isCrop(id)) return !isMatureCrop(id);
   if (saplings.has(id)) return true;
   return id === grass && get(x, y + 1, z) === 0;

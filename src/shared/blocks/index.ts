@@ -122,3 +122,11 @@ export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
 // Troncos tumbados (se registran los últimos: ids guardados).
 export * from './logAxis';
+// Fase 6.5 (océano y plantas): corales, algas, plantas marinas, pepinos de mar, prismarina y esponjas;
+// flores altas, bayas dulces, azaleas, plantaformas, liquen, raíces y flor de esporas (registrados los
+// últimos para no mover ids) y su sitio en el inventario creativo.
+import { OCEAN_INVENTORY } from './ocean';
+import { WILD_PLANT_INVENTORY } from './wildPlants';
+export * from './ocean';
+export * from './wildPlants';
+(INVENTORY_ORDER as number[]).push(...OCEAN_INVENTORY, ...WILD_PLANT_INVENTORY);

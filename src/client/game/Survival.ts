@@ -53,6 +53,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'lava': return 'intentó nadar en lava';
     case 'fire': return 'ardió hasta morir';
     case 'campfire': return 'se quemó en una fogata';
+    case 'sweet_berry_bush': return 'murió pinchado por un arbusto de bayas dulces'; // Fase 6.5
     case 'drown': return 'se ahogó';
     case 'starve': return 'murió de hambre';
     case 'void': return 'cayó al vacío';

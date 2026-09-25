@@ -24,7 +24,8 @@ import {
   MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO, MOB_PILLAGER, MOB_EVOKER_FANGS,
 } from '../src/shared/mobs';
 
-const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate'];
+const NEW_WOODS = ['jungle', 'acacia', 'dark_oak', 'cherry', 'cobbled_deepslate',
+  'prismarine', 'prismarine_brick', 'dark_prismarine']; // Fase 6.5 (océano y plantas): formas nuevas, sin fijar
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).

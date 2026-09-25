@@ -19,6 +19,12 @@ import {
 // Fase 6 (fauna).
 import { BEEHIVE, HONEY_BLOCK, HONEYCOMB_BLOCK } from './blocks';
 import { GLASS_BOTTLE, HONEY_BOTTLE, HONEYCOMB, BRUSH, RABBIT_HIDE } from './items';
+// Fase 6.5 (océano y plantas).
+import {
+  DRIED_KELP_BLOCK, PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE, SEA_LANTERN, SUNFLOWER, LILAC, ROSE_BUSH, PEONY, TORCHFLOWER,
+  PITCHER_PLANT,
+} from './blocks';
+import { ITEMS, DRIED_KELP, PRISMARINE_SHARD, PRISMARINE_CRYSTALS } from './items';
 
 type Cell = readonly number[] | null;
 
@@ -217,6 +223,27 @@ mix([HONEY_BOTTLE], SUGAR, 3);
 shape(['CC', 'CC'], { C: HONEYCOMB }, HONEYCOMB_BLOCK);
 shape(['F', 'C', 'S'], { F: FEATHER, C: COPPER_INGOT, S: STICK }, BRUSH);
 shape(['HH', 'HH'], { H: RABBIT_HIDE }, LEATHER);
+
+// --- Fase 6.5 (océano y plantas): algas secas, prismarina, linterna marina y tintes de las flores nuevas ---
+{
+  shape(['KKK', 'KKK', 'KKK'], { K: DRIED_KELP }, DRIED_KELP_BLOCK);
+  mix([DRIED_KELP_BLOCK], DRIED_KELP, 9);
+  shape(['SS', 'SS'], { S: PRISMARINE_SHARD }, PRISMARINE);
+  shape(['SSS', 'SSS', 'SSS'], { S: PRISMARINE_SHARD }, PRISMARINE_BRICKS);
+  shape(['SCS', 'CCC', 'SCS'], { S: PRISMARINE_SHARD, C: PRISMARINE_CRYSTALS }, SEA_LANTERN);
+  // Los tintes los define otro módulo: se buscan por clave y, si aún no existen, se saltan.
+  const dye = (color: string): number | undefined => ITEMS.find((i) => i?.key === `${color}_dye`)?.id;
+  const black = dye('black');
+  if (black !== undefined) shape(['SSS', 'SDS', 'SSS'], { S: PRISMARINE_SHARD, D: black }, DARK_PRISMARINE);
+  const FLOWER_DYES: [number, string, number][] = [
+    [SUNFLOWER, 'yellow', 2], [LILAC, 'magenta', 2], [ROSE_BUSH, 'red', 2], [PEONY, 'pink', 2], [TORCHFLOWER, 'orange', 1],
+    [PITCHER_PLANT, 'cyan', 2],
+  ];
+  for (const [flower, color, n] of FLOWER_DYES) {
+    const id = dye(color);
+    if (id !== undefined) mix([flower], id, n);
+  }
+}
 
 export interface RecipeMatch {
   out: ItemStack;

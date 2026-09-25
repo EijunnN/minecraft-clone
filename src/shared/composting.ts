@@ -9,6 +9,13 @@ import {
   BAKED_POTATO, BREAD, PUMPKIN_PIE,
 } from './items';
 
+// Fase 6.5 (océano y plantas).
+import {
+  KELP, SEAGRASS, SEA_PICKLE, DRIED_KELP_BLOCK, HANGING_ROOTS, SMALL_DRIPLEAF, AZALEA_LEAVES, FLOWERING_AZALEA_LEAVES, TALL_GRASS,
+  GLOW_LICHEN, LARGE_FERN, SUNFLOWER, LILAC, ROSE_BUSH, PEONY, TORCHFLOWER, BIG_DRIPLEAF, SPORE_BLOSSOM, PITCHER_PLANT,
+} from './blocks';
+import { DRIED_KELP, SWEET_BERRIES } from './items';
+
 /** Nivel con el compostador lleno (espera un segundo) y nivel listo para dar polvo de hueso. */
 export const COMPOSTER_FULL = 7;
 export const COMPOSTER_READY = 8;
@@ -43,3 +50,9 @@ export function canCompost(level: number, item: number): boolean {
 export function compostRises(level: number, item: number, r: number): boolean {
   return level === 0 || r < (COMPOST_CHANCE[item] ?? 0);
 }
+
+// Fase 6.5 (océano y plantas): plantas marinas y plantas nuevas.
+set(0.3, [KELP, SEAGRASS, DRIED_KELP, SWEET_BERRIES, HANGING_ROOTS, SMALL_DRIPLEAF, AZALEA_LEAVES, FLOWERING_AZALEA_LEAVES]);
+set(0.5, [TALL_GRASS, GLOW_LICHEN, DRIED_KELP_BLOCK]);
+set(0.65, [SEA_PICKLE, LARGE_FERN, SUNFLOWER, LILAC, ROSE_BUSH, PEONY, TORCHFLOWER, BIG_DRIPLEAF, SPORE_BLOSSOM]);
+set(0.85, [PITCHER_PLANT]);

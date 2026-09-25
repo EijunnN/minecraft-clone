@@ -27,6 +27,7 @@ import { MOB_BUCKETS, mobInBucket } from '../../shared/aquaticMobs';
 import { companionUse } from '../../shared/companions'; // Fase 6 (gólems/domesticar)
 import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteraction'; // Fase 6 (fauna)
 import { afterDrinkOminous } from './raidClient'; // Fase 6 (asaltos)
+import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -170,6 +171,8 @@ export class Interaction {
     if (def.block !== undefined && hit && isCrop(def.block) && this.placeBlock(hit, def.block)) return;
     // Bayas luminosas bajo un techo: se plantan; si no, se comen.
     if (def.block === CAVE_VINES && hit && pressed && this.placeBlock(hit, CAVE_VINES)) return;
+    // Fase 6.5 (océano y plantas): bayas dulces en la hierba: se plantan; si no, se comen.
+    if (def.block === SWEET_BERRY_BUSH && hit && pressed && this.placeBlock(hit, SWEET_BERRY_BUSH)) return;
     if (held.id === SHEARS && hit?.id === PUMPKIN) {
       if (pressed) this.carve(hit);
       return;
@@ -398,7 +401,7 @@ export class Interaction {
     const { x, y, z, id } = hit;
     this.g.swing(false);
     if (id === BEDROCK || BLOCK_HARDNESS[id] < 0) return;
-    world.setBlock(x, y, z, AIR);
+    world.setBlock(x, y, z, emptyAfterBreak(id)); // Fase 6.5: una planta anegada deja el agua
     // La otra mitad de una puerta o de una cama cae con ella (el servidor lo confirma).
     const pp = partnerOf(x, y, z, id);
     if (pp && familyBase(world.getBlock(pp[0], pp[1], pp[2])) === familyBase(id)) world.setBlock(pp[0], pp[1], pp[2], AIR);
@@ -497,7 +500,7 @@ export class Interaction {
     const world = this.g.world!;
     const p = this.g.player;
     const hit = raycast(p.x, p.eyeY, p.z, dir[0], dir[1], dir[2], this.g.creative ? REACH_CREATIVE : REACH_SURVIVAL, (x, y, z) => world.getBlock(x, y, z), true);
-    if (!hit || !BLOCK_FLUID[hit.id] || BLOCK_FLUID_LEVEL[hit.id] !== 0) return;
+    if (!hit || !BLOCK_FLUID[hit.id] || BLOCK_FLUID_LEVEL[hit.id] !== 0 || isWaterlogged(hit.id)) return;
     const filled = BLOCK_FLUID[hit.id] === 1 ? WATER_BUCKET : LAVA_BUCKET;
     world.setBlock(hit.x, hit.y, hit.z, AIR);
     this.g.net?.sendSet(hit.x, hit.y, hit.z, AIR, BUCKET);
