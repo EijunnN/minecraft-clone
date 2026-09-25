@@ -19,6 +19,7 @@ import { COPPER_SPRITES, COPPER_TOOL_INKS, COPPER_ARMOR_ACCENT } from './copperS
 import { DECOR_SPRITES } from './decorSprites'; // Fase 6.5 (decoración)
 import { OCEAN_SPRITES } from './oceanSprites'; // Fase 6.5 (océano y plantas)
 import { FINISHING_SPRITES } from './finishingSprites'; // Fase 6.5 (remate)
+import { EQUIPMENT_SPRITES } from './equipmentSprites'; // Fase 6.5 (equipo)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2266,6 +2267,8 @@ Object.assign(SPRITES, MONSTER_SPRITES);
 Object.assign(SPRITES, COLOR_SPRITES);
 // Fase 6.5 (decoración): comida, pepitas, catalejo, reloj, cuadro, marco y huevos generadores.
 Object.assign(SPRITES, DECOR_SPRITES);
+// Fase 6.5 (equipo): mechero, cota de malla, ballesta, tridente, tortuga, armaduras de caballo y lobo…
+Object.assign(SPRITES, EQUIPMENT_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

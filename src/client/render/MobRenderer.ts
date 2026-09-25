@@ -13,6 +13,8 @@ import { animateAquatic, hiddenAquaticPart, aquaticRoot } from './aquaticPose'; 
 // Fase 6 (gólems/domesticar): pieles, collar, poses de sentado y de los gólems.
 import { mobSkinKey, hiddenPart, sitRoot, companionPart } from './companionPose';
 import { mobVariant, faunaAnimate, faunaPartScale, faunaRoot } from './faunaPose'; // Fase 6 (fauna)
+import { gearTexture, GEAR_INFLATE } from '../textures/gearTextures'; // Fase 6.5 (equipo)
+import { MOB_DROWNED } from '../../shared/mobs';
 
 export interface MobTexture {
   width: number;
@@ -41,6 +43,9 @@ export class MobRenderer {
   private prog: Program;
   private shadowProg: Program;
   private meshes = new Map<number, MobMesh>();
+  /** Fase 6.5 (equipo): mallas algo más grandes para las armaduras de los animales y sus texturas. */
+  private gearMeshes = new Map<number, MobMesh>();
+  private gearSkins = new Map<string, WebGLTexture | null>();
   private skins = new Map<number, WebGLTexture>();
   /** Fase 6: variant = pelaje (monturas) o profesión (aldeanos); una textura por especie y variante. */
   private texSource: (id: number, variant?: number) => MobTexture | null;
@@ -56,8 +61,10 @@ export class MobRenderer {
 
   // ---------------------------------------------------------------- recursos
 
-  private mesh(def: MobDef): MobMesh {
-    let m = this.meshes.get(def.id);
+  /** `inflate`: píxeles que crece cada caja por cada lado (Fase 6.5, armaduras de animales; la UV no cambia). */
+  private mesh(def: MobDef, inflate = 0): MobMesh {
+    const cache = inflate ? this.gearMeshes : this.meshes;
+    let m = cache.get(def.id);
     if (m) return m;
     const gl = this.gl;
     const [aw, ah] = def.atlas;
@@ -65,9 +72,9 @@ export class MobRenderer {
     const names = def.parts.map((p) => p.name);
     const parents = def.parts.map((p) => (p.parent ? names.indexOf(p.parent) : -1));
     def.parts.forEach((part, bi) => {
-      const [x0, y0, z0] = part.from.map((v) => v * P);
+      const [x0, y0, z0] = part.from.map((v) => (v - inflate) * P);
       const [w, h, d] = part.size;
-      const x1 = x0 + w * P, y1 = y0 + h * P, z1 = z0 + d * P;
+      const x1 = x0 + (w + 2 * inflate) * P, y1 = y0 + (h + 2 * inflate) * P, z1 = z0 + (d + 2 * inflate) * P;
       const faces = boxFaces(part.uv[0], part.uv[1], w, h, d);
       const corners: number[][][] = [
         [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]],
@@ -109,7 +116,7 @@ export class MobRenderer {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
     gl.bindVertexArray(null);
     m = { vao, count: idx.length, parents, names };
-    this.meshes.set(def.id, m);
+    cache.set(def.id, m);
     return m;
   }
 
@@ -318,8 +325,37 @@ export class MobRenderer {
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+      // Fase 6.5 (equipo): la armadura del caballo o del lobo, encima y con la misma pose.
+      const gear = e.gear ? this.gearSkin(def, e.gear) : null;
+      if (gear) {
+        const gm = this.mesh(def, GEAR_INFLATE);
+        p.tex2D('uSkin', gear);
+        gl.bindVertexArray(gm.vao);
+        gl.drawElements(gl.TRIANGLES, gm.count, gl.UNSIGNED_SHORT, 0);
+      }
     }
     gl.bindVertexArray(null);
+  }
+
+  /** Fase 6.5 (equipo): textura de la armadura `gear` de una criatura (null si no le va). */
+  private gearSkin(def: MobDef, gear: number): WebGLTexture | null {
+    const key = `${def.id}:${gear}`;
+    if (this.gearSkins.has(key)) return this.gearSkins.get(key)!;
+    const src = gearTexture(def, gear);
+    let t: WebGLTexture | null = null;
+    if (src) {
+      const gl = this.gl;
+      t = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, src.width, src.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, src.rgba);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    this.gearSkins.set(key, t);
+    return t;
   }
 
   drawShadow(list: ClientEntity[], camX: number, camY: number, camZ: number, time: number): void {
@@ -344,7 +380,8 @@ export class MobRenderer {
   /** Matriz (relativa a la cámara) de la mano derecha de un esqueleto, para dibujar su arco. */
   handMatrix(e: ClientEntity, camX: number, camY: number, camZ: number, time: number): mat4 | null {
     const def = MOBS[e.type];
-    if (!def || (def.id !== MOB_SKELETON && def.id !== MOB_STRAY)) return null;
+    // (Fase 6.5, equipo: también el ahogado que lleva un tridente o una concha.)
+    if (!def || (def.id !== MOB_SKELETON && def.id !== MOB_STRAY && !(def.id === MOB_DROWNED && e.gear))) return null;
     const mesh = this.mesh(def);
     this.pose(def, mesh, e, time);
     const i = mesh.names.indexOf('armR');

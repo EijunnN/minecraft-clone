@@ -56,6 +56,8 @@ export interface ClientEntity {
   leash?: string | [number, number, number] | 0;
   /** Fase 6.5 (remate): soporte para armadura: ids de [cabeza, pecho, piernas, pies]. */
   armor?: number[];
+  /** Fase 6.5 (equipo): armadura puesta (caballo, lobo) u objeto en la mano (tridente del ahogado). */
+  gear?: number;
 }
 
 const DELAY = 0.11;
@@ -103,9 +105,10 @@ export class ClientEntities {
       else if (MOBS[e.type] && u.length > 8) e.variant = u[8]; // Fase 6 (aldeanos)
     }
     // Fase 6.5 (remate): nombre y correa.
-    for (const [id, name, leash] of msg.ex ?? []) {
+    for (const [id, name, leash, gear] of msg.ex ?? []) {
       const e = this.list.get(id);
       if (!e) continue;
+      e.gear = Number.isInteger(gear) ? gear : 0; // Fase 6.5 (equipo)
       e.name = typeof name === 'string' ? name.slice(0, 32) : '';
       e.leash = typeof leash === 'string' || (Array.isArray(leash) && leash.length === 3) ? leash : 0;
     }

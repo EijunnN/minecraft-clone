@@ -31,6 +31,7 @@ export class AnimalLife {
         e.height = def.height;
         // Al crecer puede quedar dentro de un bloque bajo: subirla un poco.
         if (boxCollides(this.m.w, e.x - e.width / 2, e.y, e.z - e.width / 2, e.x + e.width / 2, e.y + e.height, e.z + e.width / 2)) e.y += 0.5;
+        this.m.gear.onGrown(e); // Fase 6.5 (equipo): la tortuga suelta su escama al crecer
       }
     }
     if ((e.love ?? 0) > 0) e.love! -= dt;

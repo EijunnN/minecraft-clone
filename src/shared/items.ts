@@ -23,11 +23,17 @@ import { // Fase 6.5 (piedras)
 } from './blocks';
 import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
+// Fase 6.5 (equipo)
+import { CHAINMAIL_ARMOR, TURTLE_ARMOR } from './armor';
+import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
+import { WOLF_ARMOR_DURABILITY } from './equipment';
 import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
-  | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
+  | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
+  // Fase 6.5 (equipo): ballesta, tridente, mechero, caña con zanahoria y armadura para lobo (se desgastan).
+  | 'crossbow' | 'trident' | 'lighter' | 'carrot_stick' | 'body_armor';
 
 export interface ToolInfo {
   kind: ToolType;
@@ -403,6 +409,62 @@ for (const c of DYE_COLORS) DYED_BUNDLES[c] = item(`${c}_bundle`, `Saco ${COLOR_
 /** Soporte para armadura: se pone sobre un bloque y se le viste con clic derecho. */
 export const ARMOR_STAND = item('armor_stand', 'Soporte para armadura', { stack: 16 });
 
+// ------------------------------------------------------------------ Fase 6.5 (equipo)
+/** Mechero: enciende fuego en la cara tocada, velas y fogatas (64 usos). */
+export const FLINT_AND_STEEL = item('flint_and_steel', 'Mechero', {
+  stack: 1, tool: { kind: 'lighter', tier: 0, speed: 1, durability: 64, damage: 1 },
+});
+// Armadura de cota de malla: no se fabrica (botín y comercio con el armero).
+ARMOR[CHAINMAIL_ARMOR] = {};
+ARMOR_PIECES.forEach((piece, slot) => {
+  const st = ARMOR_STATS[CHAINMAIL_ARMOR];
+  ARMOR[CHAINMAIL_ARMOR][piece] = item(`chainmail_${piece}`, `${PIECE_NAMES[slot]} de cota de malla`, {
+    stack: 1,
+    armor: { slot: slot as ArmorSlot, material: CHAINMAIL_ARMOR, points: st.points[slot], toughness: st.toughness, durability: st.durability[slot] },
+  });
+});
+/** Ballesta y ballesta cargada (la misma, con un virote puesto: se cambia al cargarla y al disparar). */
+export const CROSSBOW = item('crossbow', 'Ballesta', { stack: 1, tool: { kind: 'crossbow', tier: 0, speed: 1, durability: 465, damage: 1 } });
+export const CROSSBOW_CHARGED = item('crossbow_charged', 'Ballesta', { stack: 1, tool: { kind: 'crossbow', tier: 0, speed: 1, durability: 465, damage: 1 } });
+/** Tridente: 9 de daño cuerpo a cuerpo; con el clic derecho mantenido se lanza. */
+export const TRIDENT = item('trident', 'Tridente', { stack: 1, tool: { kind: 'trident', tier: 0, speed: 1, durability: 250, damage: 9, attackSpeed: 1.1 } });
+export const TURTLE_SCUTE = item('turtle_scute', 'Escama de tortuga');
+/** Caparazón de tortuga: casco que da respiración acuática al sacar la cabeza del agua. */
+export const TURTLE_HELMET = item('turtle_helmet', 'Caparazón de tortuga', {
+  stack: 1, armor: { slot: 0, material: TURTLE_ARMOR, points: 2, toughness: 0, durability: ARMOR_STATS[TURTLE_ARMOR].durability[0] },
+});
+/** Armaduras para caballo por material (leather, iron, golden, diamond). */
+export const HORSE_ARMOR: Record<string, number> = {};
+for (const [mat, name] of [['leather', 'de cuero'], ['iron', 'de hierro'], ['golden', 'de oro'], ['diamond', 'de diamante']] as const) {
+  HORSE_ARMOR[mat] = item(`${mat}_horse_armor`, `Armadura ${name} para caballo`, { stack: 1 });
+}
+/** Armadura para lobo: absorbe el daño del lobo domesticado y se desgasta. */
+export const WOLF_ARMOR = item('wolf_armor', 'Armadura para lobo', {
+  stack: 1, tool: { kind: 'body_armor', tier: 0, speed: 1, durability: WOLF_ARMOR_DURABILITY, damage: 1 },
+});
+/** Caña con zanahoria: guía al cerdo ensillado que se monta (y le da un acelerón). */
+export const CARROT_ON_A_STICK = item('carrot_on_a_stick', 'Caña con zanahoria', {
+  stack: 1, tool: { kind: 'carrot_stick', tier: 0, speed: 1, durability: 25, damage: 1 },
+});
+/** Cuerno de cabra: la tonada va en el desgaste de la pila (1..8). */
+export const GOAT_HORN = item('goat_horn', 'Cuerno de cabra', { stack: 1 });
+export const RABBIT_FOOT = item('rabbit_foot', 'Pata de conejo');
+export const POISONOUS_POTATO = item('poisonous_potato', 'Patata venenosa', {
+  food: { hunger: 2, saturation: 1.2, effects: [[EFFECT_POISON, 5, 0, 0.6]] },
+});
+/** Manzana de oro encantada: sólo en el botín de las estructuras. */
+export const ENCHANTED_GOLDEN_APPLE = item('enchanted_golden_apple', 'Manzana de oro encantada', {
+  food: {
+    hunger: 4, saturation: 9.6, always: true,
+    effects: [[EFFECT_REGENERATION, 20, 1, 1], [EFFECT_ABSORPTION, 120, 3, 1], [EFFECT_RESISTANCE, 300, 0, 1], [EFFECT_FIRE_RESISTANCE, 300, 0, 1]],
+  },
+});
+export const HEART_OF_THE_SEA = item('heart_of_the_sea', 'Corazón del mar');
+export const NAUTILUS_SHELL = item('nautilus_shell', 'Concha de nautilo');
+/** Cohete y estrella de fuegos artificiales (su vuelo y sus colores van en el desgaste; ver equipment.ts). */
+export const FIREWORK_ROCKET = item('firework_rocket', 'Cohete de fuegos artificiales');
+export const FIREWORK_STAR = item('firework_star', 'Estrella de fuegos artificiales');
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -528,6 +590,11 @@ export const CREATIVE_ITEMS: readonly number[] = [
   DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
   INK_SAC, NAME_TAG, LEAD, BUNDLE, ...DYE_COLORS.map((c) => DYED_BUNDLES[c]), ARMOR_STAND,
 ];
+// Fase 6.5 (equipo): la cota de malla ya entra con ARMOR; la ballesta cargada no está en el creativo.
+(CREATIVE_ITEMS as number[]).push(
+  FLINT_AND_STEEL, CROSSBOW, TRIDENT, TURTLE_SCUTE, TURTLE_HELMET, ...Object.values(HORSE_ARMOR), WOLF_ARMOR, CARROT_ON_A_STICK,
+  GOAT_HORN, RABBIT_FOOT, POISONOUS_POTATO, ENCHANTED_GOLDEN_APPLE, HEART_OF_THE_SEA, NAUTILUS_SHELL, FIREWORK_ROCKET, FIREWORK_STAR,
+);
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */
 export const PLACEABLE_BLOCKS: ReadonlySet<number> = new Set(

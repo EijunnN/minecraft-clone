@@ -33,10 +33,13 @@ import { canAddCandle } from '../../shared/blocks'; // Fase 6.5 (colores)
 import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 import { decorUse, decorAfterEat } from './decorInteraction'; // Fase 6.5 (decoración)
 import { leashUse } from './leashInteraction'; // Fase 6.5 (remate)
+import { equipmentUse, equipmentHold, equipmentRelease, EQUIPMENT_WEARLESS } from './equipmentInteraction'; // Fase 6.5 (equipo)
+import { ENT_TRIDENT } from '../../shared/equipment';
+import { TRIDENT } from '../../shared/items';
 import { SWEET_BERRY_BUSH, isWaterlogged, emptyAfterBreak } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
-const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
+const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
 
 export class Interaction {
   constructor(private g: Game) {}
@@ -116,9 +119,11 @@ export class Interaction {
       const stillHeld = (u.slot === OFFHAND || this.g.selected === u.slot) && this.g.inv.get(u.slot)?.id === u.item;
       if (!input.mouseDown[2] || !stillHeld) {
         if (u.kind === 'bow') this.releaseBow(dir);
+        equipmentRelease(this.g, u, dir, stillHeld); // Fase 6.5 (equipo): lanzar el tridente
         this.use = null;
       } else {
         u.t += dt;
+        equipmentHold(this.g, this, u); // Fase 6.5 (equipo): la ballesta se carga
         if (u.kind === 'eat') {
           u.soundT -= dt;
           if (u.soundT <= 0) {
@@ -137,6 +142,8 @@ export class Interaction {
     if (decorUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6.5 (remate): etiquetas y correas.
     if (leashUse(this.g, this, pressed, hit, target, held)) return;
+    // Fase 6.5 (equipo): mechero, ballesta, tridente, cuerno, cohetes, caña con zanahoria y armaduras de animales.
+    if (equipmentUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6 (aldeanos): clic derecho sobre un aldeano abre el comercio.
     if (pressed && target && this.g.trading.canTrade(target)) {
       this.g.trading.open(target);
@@ -740,7 +747,7 @@ export class Interaction {
     if (msg.take && !this.g.creative) this.g.inv.consume(slot, msg.take);
     if (msg.wear && !this.g.creative && this.g.inv.wear(slot, msg.wear)) this.g.ui.toast('¡Se rompió la herramienta!');
     if (msg.give && isValidItem(msg.give.id)) {
-      const give = { id: msg.give.id, count: Math.max(1, msg.give.count | 0) };
+      const give = { id: msg.give.id, count: Math.max(1, msg.give.count | 0), ...(msg.give.dmg ? { dmg: msg.give.dmg } : {}) }; // Fase 6.5: con su desgaste
       if (!this.g.inv.slots[slot]) this.g.inv.set(slot, give);
       else {
         const rest = this.g.inv.add(give);
@@ -765,9 +772,10 @@ export class Interaction {
     if (this.g.survival.dead || !this.g.net) return;
     const p = this.g.player;
     for (const e of this.g.ents.list.values()) {
-      if ((e.type !== ENT_ITEM && e.type !== ENT_ARROW) || !(e.flags & EF_PICKABLE) || e.gone) continue;
+      // Fase 6.5 (equipo): también los tridentes clavados.
+      if ((e.type !== ENT_ITEM && e.type !== ENT_ARROW && e.type !== ENT_TRIDENT) || !(e.flags & EF_PICKABLE) || e.gone) continue;
       if (Math.abs(e.x - p.x) > 1.3 || Math.abs(e.z - p.z) > 1.3 || e.y < p.y - 0.8 || e.y > p.y + 2.3) continue;
-      const id = e.type === ENT_ARROW ? ARROW : e.item;
+      const id = e.type === ENT_ARROW ? ARROW : e.type === ENT_TRIDENT ? TRIDENT : e.item;
       if (this.g.inv.room({ id, count: 1 }) <= 0) continue;
       const last = this.pickupAsk.get(e.id) ?? 0;
       if (now - last < 0.5) continue;

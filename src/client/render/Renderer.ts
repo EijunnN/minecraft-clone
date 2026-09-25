@@ -36,6 +36,7 @@ import { isHangingType } from '../../shared/paintings';
 import { pushHangingDraws } from './hangingDraws';
 import { pushStandDraws, standArmorView } from './standDraws'; // Fase 6.5 (remate)
 import { ENT_ARMOR_STAND } from '../../shared/armorStands';
+import { pushEquipmentDraws } from './equipmentDraws'; // Fase 6.5 (equipo)
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { LightningRenderer, type Bolt } from './LightningRenderer';
 import type { FishLine } from '../game/fishingLines';
@@ -883,7 +884,7 @@ export class Renderer {
         pushStandDraws(out, e, this.items, rx, ry, rz, lightOf);
         const v = standArmorView(e, lightOf(e.x, e.y + 1, e.z));
         if (v) this.standViews.push(v);
-      }
+      } else pushEquipmentDraws(out, e, this.items, rx, ry, rz, lightOf); // Fase 6.5 (equipo): tridentes y cohetes
     }
     for (const l of s.fishLines ?? []) this.pushFishLine(out, s, l, lightOf);
     // Fase 6.5 (remate): correas, más gruesas y de cuero, y el nudo de cada valla.
@@ -973,7 +974,10 @@ export class Renderer {
       mat4.rotateY(m, m, Math.PI / 2);
       mat4.rotateZ(m, m, Math.PI / 4);
       mat4.scale(m, m, [0.7, 0.7, 0.7]);
-      list.push({ model: bow, m, light: lightOf(e.x, e.y + 1, e.z) });
+      // Fase 6.5 (equipo): el ahogado lleva su tridente (o su concha) en vez de un arco.
+      const gear = e.gear ? this.items.model(e.gear) : null;
+      if (gear) mat4.scale(m, m, [1.3, 1.3, 1.3]);
+      list.push({ model: gear ?? bow, m, light: lightOf(e.x, e.y + 1, e.z) });
     }
     this.items.drawWorld(list, this.viewProj, s.grassTint, bindLighting);
   }

@@ -9,6 +9,7 @@ import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
 import { useTotem } from './raidClient'; // Fase 6 (asaltos)
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { equipmentSurvival, playerInFire } from './equipmentLife'; // Fase 6.5 (equipo)
 
 /** Destino de los efectos en creativo: nada hace daño ni cura. */
 const CREATIVE_TARGET: EffectTarget = { health: 20, absorption: 0, heal: () => {}, damage: () => 0, addExhaustion: () => {} };
@@ -177,6 +178,7 @@ export class LifeCycle {
       } else this.suffocateTimer = 0;
       const hpBefore = surv.health;
       const fx = g.statusEffects;
+      equipmentSurvival(g); // Fase 6.5 (equipo): Resistencia y caparazón de tortuga
       fx.tick(dt, surv);
       const exposed = g.world!.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) >> 4 >= 15;
       const feet = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y + 0.05), Math.floor(p.z));
@@ -184,6 +186,7 @@ export class LifeCycle {
         eyeInWater: p.eyeInWater, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
         onCampfire: familyBase(feet) === CAMPFIRE && stateProps(feet)!.lit === 1,
+        inFire: playerInFire(g), // Fase 6.5 (equipo)
       });
       // Fase 6.5 (océano y plantas): el arbusto de bayas dulces pincha al moverse dentro.
       if (isPricklyBush(feet) && Math.hypot(p.vx, p.vz) > 0.5) surv.damage(1, 'sweet_berry_bush');

@@ -173,6 +173,22 @@ export interface Entity extends Body {
   standArmor?: number[];
   /** Punto del que tira su correa ahora mismo (lo pone el sistema de correas cada tick). */
   leashTo?: [number, number, number];
+  // Fase 6.5 (equipo)
+  /** Armadura puesta (caballo, lobo) u objeto en la mano (tridente o concha de un ahogado). */
+  gear?: number;
+  /** Desgaste de la armadura para lobo. */
+  gearDmg?: number;
+  /** Velocidad con la que el jinete guía al cerdo con la caña con zanahoria (junto con leashTo). */
+  steerSpeed?: number;
+  /** Cabra: fase de la embestida (s; > 0 en curso), dirección, cuernos que le quedan y espera. */
+  ramT?: number;
+  ramDir?: [number, number];
+  horns?: number;
+  ramCd?: number;
+  /** Ahogado con tridente: espera hasta el próximo lanzamiento. */
+  throwCd?: number;
+  /** Cohete: segundos de vuelo que le quedan. */
+  fuse?: number;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

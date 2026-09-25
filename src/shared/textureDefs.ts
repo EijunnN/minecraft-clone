@@ -18,7 +18,7 @@ export interface TextureDef {
   tint?: 0 | 1 | 2 | 3;
   wave?: 0 | 1 | 2;
   sss?: number;
-  special?: 0 | 1 | 2 | 3 | 4;
+  special?: 0 | 1 | 2 | 3 | 4 | 5; // Fase 6.5 (equipo): 5 = fuego (llamas que suben y ondulan)
   cutout?: boolean;
 }
 
@@ -371,6 +371,10 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'chiseled_bookshelf_occupied' },
   { name: 'chiseled_bookshelf_top' },
   { name: 'chiseled_bookshelf_side' },
+  // Fase 6.5 (equipo): fuego (animado) y conducto.
+  { name: 'fire', special: 5, cutout: true },
+  { name: 'conduit_closed' },
+  { name: 'conduit_open' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

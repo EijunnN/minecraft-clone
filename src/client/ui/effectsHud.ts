@@ -6,6 +6,7 @@ import {
   EFFECTS, EFFECT_SPEED, EFFECT_SLOWNESS, EFFECT_STRENGTH, EFFECT_WEAKNESS, EFFECT_REGENERATION, EFFECT_POISON,
   EFFECT_HUNGER, EFFECT_FIRE_RESISTANCE, EFFECT_NIGHT_VISION, EFFECT_WATER_BREATHING, EFFECT_ABSORPTION, effectLevel,
   EFFECT_BAD_OMEN, EFFECT_HERO,
+  EFFECT_RESISTANCE, EFFECT_CONDUIT_POWER, // Fase 6.5 (equipo)
 } from '../../shared/effects';
 import type { StatusEffects } from '../game/statusEffects';
 
@@ -50,6 +51,13 @@ const GLYPHS: Record<number, string[]> = {
   ],
   [EFFECT_HERO]: [
     '...KKK...', '..KbbaK..', '.KbbaaaK.', 'KbbaaaacK', 'KbaaaaacK', 'KaaaaaccK', '.KaaaccK.', '..KaccK..', '...KKK...',
+  ],
+  // Fase 6.5 (equipo): el escudo de la resistencia y el ojo del conducto.
+  [EFFECT_RESISTANCE]: [
+    'KKKKKKKKK', 'KbbbabaaK', 'KbwbaaacK', 'KbbaaaacK', 'KbaaaaacK', '.KaaaaacK', '.KaaaaccK', '..KaaccK.', '...KKKK..',
+  ],
+  [EFFECT_CONDUIT_POWER]: [
+    '..KKKKK..', '.KbbbbaK.', 'KbKKKKKaK', 'KbKwwwKaK', 'KbKwKwKcK', 'KbKwwwKcK', 'KaKKKKKcK', '.KaaaccK.', '..KKKKK..',
   ],
 };
 

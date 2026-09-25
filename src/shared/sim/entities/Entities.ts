@@ -26,6 +26,10 @@ import { isWaterAmbient } from '../../aquaticMobs';
 import { Companions } from './companions';
 import { ENT_ARMOR_STAND } from '../../armorStands'; // Fase 6.5 (remate)
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
+// Fase 6.5 (equipo): armaduras y equipo de las criaturas; tridentes y cohetes.
+import { MobGear } from './mobGear';
+import { GearShots } from './gearShots';
+import { ENT_TRIDENT, ENT_FIREWORK } from '../../equipment';
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -52,6 +56,10 @@ export class Entities {
   readonly raidCenters = new Map<number, [number, number, number]>();
   /** Fase 6 (asaltos): zonas en alerta [x, z, radio]: los aldeanos se refugian en casa. */
   alarms: [number, number, number][] = [];
+  /** Fase 6.5 (equipo): armaduras de caballo y lobo, tridentes de los ahogados, botín raro y cabras. */
+  readonly gear = new MobGear(this);
+  /** Fase 6.5 (equipo): tridentes lanzados y cohetes. */
+  readonly gearShots = new GearShots(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -89,6 +97,7 @@ export class Entities {
       fuse: 0, angry: 0, panic: 0, panicFrom: [x, z], stuck: 0, lastX: x, lastZ: z, swimDir: [0, 0, 0], lookYaw: e.yaw,
       teleportCd: 0, goalDir: [0, 0, 0, 0], lookAt: null,
     };
+    this.gear.onSpawn(e); // Fase 6.5 (equipo)
     this.list.set(e.id, e);
     return e;
   }
@@ -214,6 +223,7 @@ export class Entities {
   damage(e: Entity, amount: number, fromX: number, fromZ: number, attacker: string | number | null, knock = 1): boolean {
     if (e.dead || !e.ai || MOBS[e.type].inert) return false;
     if (e.invuln > 0) return false;
+    amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
     e.health -= amount;
     e.invuln = 0.5;
     e.hurt = 0;
@@ -273,6 +283,7 @@ export class Entities {
     if (drops) this.xp.onMobKilled(e);
     if (drops) this.mobs.monsters.onKilled(e); // Fase 6 (monstruos): los slimes se dividen
     if (drops) this.mobs.illagers.onKilled(e); // Fase 6 (asaltos): botella ominosa del capitán
+    if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -360,6 +371,7 @@ export class Entities {
       else if (e.type === ENT_THROWN) this.projectiles.thrownTick(e, dt, players);
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
       else if (e.type === ENT_DISPLAY || isHangingType(e.type) || e.type === ENT_ARMOR_STAND) e.flags = 0; // Fase 6.5: cuadros, marcos y soportes
+      else if (e.type === ENT_TRIDENT || e.type === ENT_FIREWORK) this.gearShots.tick(e, dt, players); // Fase 6.5 (equipo)
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));
@@ -409,6 +421,9 @@ export class Entities {
       if (extra) (row as unknown[]).push(extra);
       // Fase 6.5 (remate): nombre y valla a la que está atada (la correa en la mano de un jugador no se guarda).
       if (e.customName || Array.isArray(e.leash)) (row as unknown[]).push({ tag: e.customName ?? '', fence: Array.isArray(e.leash) ? e.leash : 0 });
+      // Fase 6.5 (equipo): armadura de caballo o de lobo.
+      const gear = this.gear.save(e);
+      if (gear) (row as unknown[]).push(gear);
       out.push(row);
     }
     return JSON.stringify(out);
@@ -438,6 +453,7 @@ export class Entities {
           const f = tag.fence;
           if (Array.isArray(f) && f.length === 3 && f.every(Number.isInteger)) e.leash = [f[0], f[1], f[2]];
         }
+        if (Array.isArray(row)) this.gear.restore(e, row as unknown[]); // Fase 6.5 (equipo)
       }
     } catch {
       /* ignorar */
@@ -453,6 +469,8 @@ export class Entities {
   // ------------------------------------------------------------------ fachada para el servidor
 
   tryPickup(id: number, p: PlayerView): ItemStack | null {
+    const trident = this.gearShots.tryPickup(id, p); // Fase 6.5 (equipo)
+    if (trident !== undefined) return trident;
     return this.items.tryPickup(id, p);
   }
 

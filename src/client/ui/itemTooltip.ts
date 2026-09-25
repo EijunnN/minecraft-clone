@@ -9,6 +9,7 @@ import { EFFECTS, effectLevel } from '../../shared/effects';
 import { attackDamage, attackSpeed } from '../../shared/combat';
 import { SUSPICIOUS_STEW, SPYGLASS, CLOCK } from '../../shared/items'; // Fase 6.5 (decoración)
 import { stewEffectText } from '../../shared/decorFood'; // Fase 6.5 (decoración)
+import { equipmentTooltip } from './equipmentTooltip'; // Fase 6.5 (equipo)
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -61,6 +62,7 @@ export function itemTooltipHtml(s: ItemStack): string {
     if ((s.bag?.length ?? 0) > 6) lines.push(`<span class="tt-dim">y ${s.bag!.length - 6} más…</span>`);
     lines.push(`<span class="tt-dim">${bagWeight(s.bag)} / ${BUNDLE_CAPACITY} · clic derecho: meter o sacar</span>`);
   }
+  lines.push(...equipmentTooltip(s)); // Fase 6.5 (equipo)
   const max = tool?.durability ?? armor?.durability;
   if (max) lines.push(`<span class="tt-dim">Durabilidad: ${max - (s.dmg ?? 0)} / ${max}</span>`);
   return lines.join('');

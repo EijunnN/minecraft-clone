@@ -231,6 +231,18 @@ void main() {
     else if (vNormal != 2 && vNormal != 3) uv.y -= uCamPos.w * 0.25;
     else uv += vec2(sin(uCamPos.w * 0.15 + vWorld.z * 0.1) * 0.05, uCamPos.w * 0.035);
   }
+  // Fase 6.5 (equipo): fuego: las llamas suben, ondulan y su borde de arriba parpadea.
+  bool fireCut = false;
+  if (special == 5) {
+    float ft = uCamPos.w;
+    float up = 1.0 - vUV.y;
+    float col = floor(vUV.x * 8.0);
+    float seed = dot(floor(vWorld + 0.001), vec3(1.7, 2.3, 3.1));
+    uv.x += sin(vUV.y * 9.0 + ft * 7.0 + seed) * 0.04 * up;
+    uv.y += ft * 1.3;
+    float env = 0.62 + 0.3 * sin(ft * 6.3 + col * 1.9 + seed) * sin(ft * 3.1 + col * 0.7 + seed * 1.3);
+    fireCut = up > env;
+  }
   vec2 gdx = dFdx(uv), gdy = dFdy(uv);
   vec2 fw = max(fwidth(uv * 16.0), vec2(1e-4));
   vec3 N, T, B;
@@ -265,7 +277,7 @@ void main() {
   vec3 tuv = vec3(pixelArtUVw(uv, 16.0, fw), float(vLayer));
   vec4 alb = textureGrad(uAlbedo, tuv, gdx, gdy);
 #ifdef CUTOUT
-  if (alb.a < 0.5) discard;
+  if (alb.a < 0.5 || fireCut) discard;
 #endif
   vec3 albedo = alb.rgb;
   int tintMode = int(vProps.r + 0.5);

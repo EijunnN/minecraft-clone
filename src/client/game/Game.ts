@@ -33,6 +33,9 @@ import { Interaction } from './interaction';
 import { Experience } from './experience';
 import { StatusEffects } from './statusEffects';
 import { fishingLines } from './fishingLines';
+import { useLook } from './equipmentInteraction'; // Fase 6.5 (equipo)
+import { equipmentFrame } from './equipmentLife';
+import type { Use } from './gameTypes';
 import { leashLines } from './leashLines'; // Fase 6.5 (remate)
 import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
 import { MAX_NAME } from '../../shared/nameTags';
@@ -77,9 +80,9 @@ function srgbToLin(v: number): number {
 }
 
 /** Bits de estado del objeto que se está usando (para animarlo en los demás jugadores). */
-function useState(use: { kind: string } | null): number {
-  if (!use) return 0;
-  return use.kind === 'eat' ? STATE_EAT : use.kind === 'bow' ? STATE_BOW : use.kind === 'block' ? STATE_BLOCK : 0;
+function useState(use: Use | null): number {
+  const kind = useLook(use).kind; // Fase 6.5 (equipo): la ballesta y el tridente, como el arco
+  return kind === 'eat' ? STATE_EAT : kind === 'bow' ? STATE_BOW : kind === 'block' ? STATE_BLOCK : 0;
 }
 
 export class Game {
@@ -824,6 +827,7 @@ export class Game {
     };
     ps.update(dt);
     this.ambient.update(dt);
+    equipmentFrame(this, dt); // Fase 6.5 (equipo): estela de los cohetes
 
     // --- Red: posición a ~8 Hz y sólo si cambia (ahorra peticiones) ---
     this.lastSent += dt;
@@ -923,7 +927,7 @@ export class Game {
         id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
         bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
         swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
-        use: (this.interaction.use?.kind as 'eat' | 'bow' | 'block' | undefined) ?? null, light: [skyAtEye, (le & 15) / 15],
+        use: ((k) => (k === 'none' ? null : k))(useLook(this.interaction.use).kind), light: [skyAtEye, (le & 15) / 15],
         armor: this.inv.armorIds(),
         riding: this.riding.active, // Fase 6 (monturas): sentado
       });
@@ -1001,8 +1005,8 @@ export class Game {
       mist,
       selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
       heldItem: surv.dead ? 0 : this.heldId,
-      handUse: mainUse ? (mainUse.kind === 'bow' ? Math.min(1, mainUse.t) : mainUse.kind === 'block' ? mainUse.t : mainUse.t / 1.6) : 0,
-      handUseKind: mainUse && mainUse.kind !== 'spyglass' ? mainUse.kind : 'none',
+      handUse: useLook(mainUse).amount, // Fase 6.5 (equipo): con la ballesta y el tridente
+      handUseKind: useLook(mainUse).kind,
       offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
       offhandUseKind: offUse ? (offUse.kind === 'block' ? 'block' : 'eat') : 'none',
       offhandUse: offUse ? (offUse.kind === 'block' ? offUse.t : offUse.t / 1.6) : 0,

@@ -50,6 +50,10 @@ import { Shelves } from './server/shelves'; // Fase 6.5 (remate)
 import { Leashes } from './server/leashes'; // Fase 6.5 (remate)
 import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
+// Fase 6.5 (equipo): fuego, conductos y el equipo de los jugadores.
+import { Fire } from './server/fire';
+import { Conduits } from './server/conduits';
+import { Equipment } from './server/equipment';
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -133,6 +137,10 @@ export class GameServer {
   private stands: ArmorStands;
   /** Fase 6.5 (océano y plantas): corales, algas, esponjas, bayas dulces y plantaformas. */
   readonly oceanLife: OceanLife;
+  /** Fase 6.5 (equipo): fuego, conductos y el equipo de los jugadores (mechero, tridente, cohetes…). */
+  readonly fire: Fire;
+  readonly conduits: Conduits;
+  private equipment: Equipment;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -211,6 +219,17 @@ export class GameServer {
     this.leashes = new Leashes(this.ctx); // Fase 6.5 (remate)
     this.stands = new ArmorStands(this.ctx, store); // Fase 6.5 (remate)
     this.farming.extraInteract = (s, e, msg) => this.stands.onInteract(s, e, msg) ?? this.leashes.onInteract(s, e, msg);
+    // Fase 6.5 (equipo): fuego (los rayos también lo encienden), conductos y equipo.
+    this.fire = new Fire(this.ctx, this.nature);
+    this.conduits = new Conduits(this.ctx, this.nature);
+    this.equipment = new Equipment(this.ctx, this.fire, this.riding);
+    const strike = this.storms.onStrike;
+    this.storms.onStrike = (x, y, z) => {
+      strike?.(x, y, z);
+      this.fire.lightning(x, y, z);
+    };
+    const interact = this.farming.extraInteract;
+    this.farming.extraInteract = (s, e, msg) => this.equipment.onInteract(s, e, msg) ?? interact?.(s, e, msg) ?? null;
   }
 
   get seed(): number {
@@ -508,7 +527,8 @@ export class GameServer {
         if (this.allow(s, 3)) this.actions.onShoot(s, msg);
         break;
       case 'throw':
-        if (this.allow(s, 1)) this.actions.onThrow(s, msg);
+        // Fase 6.5 (equipo): el tridente y los cohetes los lanza su sistema.
+        if (this.allow(s, 1) && !this.equipment.onThrow(s, msg)) this.actions.onThrow(s, msg);
         break;
       case 'fish':
         if (this.allow(s, 1)) this.fishing.onFish(s, msg);
@@ -591,6 +611,15 @@ export class GameServer {
         break;
       case 'shelf': // Fase 6.5 (remate)
         if (this.allow(s, 1)) this.shelves.onShelf(s, msg);
+        break;
+      case 'ignite': // Fase 6.5 (equipo)
+        if (this.allow(s, 1)) this.equipment.onIgnite(s, msg);
+        break;
+      case 'horn':
+        if (this.allow(s, 1)) this.equipment.onHorn(s, msg);
+        break;
+      case 'boost':
+        if (this.allow(s, 1)) this.equipment.onBoost(s, msg);
         break;
     }
   }
@@ -803,6 +832,8 @@ export class GameServer {
     this.shelves?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (remate)
     this.stands?.onBlockChanged(x, y, z); // Fase 6.5 (remate)
     this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
+    this.fire?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (equipo)
+    this.conduits?.onBlockChanged(x, y, z, old, id);
   }
 
   // ------------------------------------------------------------------ bucle
@@ -827,6 +858,9 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
+    this.fire.tick(); // Fase 6.5 (equipo)
+    this.conduits.tick();
+    this.equipment.tick();
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

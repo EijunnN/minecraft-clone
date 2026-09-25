@@ -16,6 +16,7 @@ import { BIOME_MUSHROOM_FIELDS } from '../../shared/world/biomeIds';
 import type { Game } from './Game';
 import { COPPER_TORCH, COPPER_WALL_TORCH } from '../../shared/blocks'; // Fase 6.5 (cobre)
 import { plantParticles } from './plantParticles'; // Fase 6.5 (océano y plantas)
+import { isFire } from '../../shared/blocks'; // Fase 6.5 (equipo)
 
 type P3 = [number, number, number];
 
@@ -32,6 +33,8 @@ export class AmbientParticles {
   private furnaces: [number, number, number, number][] = [];
   private fires: P3[] = [];
   private lava: P3[] = [];
+  /** Fase 6.5 (equipo): bloques de fuego (llamas, humo y chisporroteo). */
+  private blazes: P3[] = [];
   private scanT = 0;
   private tint = [0, 0, 0];
 
@@ -65,6 +68,11 @@ export class AmbientParticles {
       if (Math.random() < dt * 3) fx.campfireSmoke(x + 0.5, y + 0.6, z + 0.5);
       if (Math.random() < dt * 0.8) fx.ember(x + 0.5, y + 0.4, z + 0.5);
       if (Math.random() < dt * 2) fx.flame(x + 0.5 + (Math.random() - 0.5) * 0.5, y + 0.3, z + 0.5 + (Math.random() - 0.5) * 0.5, 0.8);
+    }
+    for (const [x, y, z] of this.blazes) {
+      if (Math.random() < dt * 4) fx.flame(x + 0.2 + Math.random() * 0.6, y + 0.1 + Math.random() * 0.5, z + 0.2 + Math.random() * 0.6, 1.1);
+      if (Math.random() < dt * 1.5) fx.smoke(x + 0.5, y + 0.9, z + 0.5, 1, 0.3, 0.2, 0.2, 1.3);
+      if (Math.random() < dt * 0.5) g.audio.playEquipSfx('fire_crackle', [x + 0.5, y + 0.5, z + 0.5]);
     }
     for (const [x, y, z] of this.lava) {
       if (Math.random() < dt * 0.12) {
@@ -125,6 +133,7 @@ export class AmbientParticles {
     const world = this.g.world!;
     const torches: P3[] = [], furnaces: [number, number, number, number][] = [], fires: P3[] = [], lava: P3[] = [];
     const copperTorches: P3[] = []; // Fase 6.5 (cobre)
+    const blazes: P3[] = []; // Fase 6.5 (equipo)
     for (let dy = -SCAN_H; dy <= SCAN_H; dy++) {
       for (let dz = -SCAN_R; dz <= SCAN_R; dz++) {
         for (let dx = -SCAN_R; dx <= SCAN_R; dx++) {
@@ -147,6 +156,7 @@ export class AmbientParticles {
           } else if (familyBase(b) === CAMPFIRE) {
             if (stateProps(b)?.lit === 1 && fires.length < 12) fires.push([x, y, z]);
           } else if (BLOCK_FLUID[b] === 2 && lava.length < 32 && world.getBlock(x, y + 1, z) === 0) lava.push([x, y, z]);
+          else if (isFire(b) && blazes.length < 32) blazes.push([x, y, z]); // Fase 6.5 (equipo)
         }
       }
     }
@@ -155,6 +165,7 @@ export class AmbientParticles {
     this.furnaces = furnaces;
     this.fires = fires;
     this.lava = lava;
+    this.blazes = blazes;
   }
 
   /** Color de las hojas que caen: fijo para abedul y abeto; del bioma para el resto. */

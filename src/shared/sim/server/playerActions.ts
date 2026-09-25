@@ -5,6 +5,7 @@ import { ITEMS, EGG, SNOWBALL } from '../../items';
 import { attackCooldown, attackDamage, chargeFactor } from '../../combat';
 import { sanitizeStack } from '../../containers';
 import type { PlayerView } from '../entities';
+import { CROSSBOW_SPEED, CROSSBOW_ARROW_DAMAGE } from '../../equipment'; // Fase 6.5 (equipo)
 import type { ServerContext, Session } from './context';
 
 export class PlayerActions {
@@ -76,9 +77,12 @@ export class PlayerActions {
     if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite) || f < 0.1) return;
     if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
     const len = Math.hypot(d[0], d[1], d[2]) || 1;
-    const speed = 55 * f;
-    ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, 2);
-    ctx.fx('bow', p[0], p[1], p[2], f);
+    // Fase 6.5 (equipo): el virote de la ballesta sale siempre a tope y pega más fuerte.
+    const crossbow = msg.c === 1;
+    const speed = crossbow ? CROSSBOW_SPEED : 55 * f;
+    ctx.entities.spawnArrow(p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id, crossbow ? CROSSBOW_ARROW_DAMAGE : 2);
+    if (crossbow) ctx.fx('crossbow_shoot', p[0], p[1], p[2]);
+    else ctx.fx('bow', p[0], p[1], p[2], f);
   }
 
   /** Lanzar un huevo (el cliente ya lo quitó del inventario). */

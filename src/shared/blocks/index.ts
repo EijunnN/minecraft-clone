@@ -164,3 +164,7 @@ export * from './hangingSigns';
 import { CHISELED_BOOKSHELF } from './chiseledBookshelf';
 export * from './chiseledBookshelf';
 (INVENTORY_ORDER as number[]).push(CHISELED_BOOKSHELF);
+// Fase 6.5 (equipo): fuego y conducto (registrados los últimos: ids nuevos).
+import { EQUIPMENT_INVENTORY } from './equipmentBlocks';
+export * from './equipmentBlocks';
+(INVENTORY_ORDER as number[]).push(...EQUIPMENT_INVENTORY);

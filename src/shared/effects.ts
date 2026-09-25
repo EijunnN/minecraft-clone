@@ -16,6 +16,10 @@ export const EFFECT_ABSORPTION = 11;
 // asalto) y Héroe de la aldea (tras ganar un asalto: los aldeanos rebajan sus precios).
 export const EFFECT_BAD_OMEN = 12;
 export const EFFECT_HERO = 13;
+// Fase 6.5 (equipo): Resistencia (manzana de oro encantada: −20 % de daño por nivel) y Poder del
+// conducto (respiración acuática y visión bajo el agua cerca de un conducto activo).
+export const EFFECT_RESISTANCE = 14;
+export const EFFECT_CONDUIT_POWER = 15;
 
 export interface EffectDef {
   id: number;
@@ -42,7 +46,15 @@ export const EFFECTS: Readonly<Record<number, EffectDef>> = {
   [EFFECT_ABSORPTION]: { id: EFFECT_ABSORPTION, key: 'absorption', name: 'Absorción', color: [37, 82, 165], good: true },
   [EFFECT_BAD_OMEN]: { id: EFFECT_BAD_OMEN, key: 'bad_omen', name: 'Mal presagio', color: [11, 97, 56], good: false },
   [EFFECT_HERO]: { id: EFFECT_HERO, key: 'hero_of_the_village', name: 'Héroe de la aldea', color: [68, 255, 68], good: true },
+  // Fase 6.5 (equipo)
+  [EFFECT_RESISTANCE]: { id: EFFECT_RESISTANCE, key: 'resistance', name: 'Resistencia', color: [145, 70, 70], good: true },
+  [EFFECT_CONDUIT_POWER]: { id: EFFECT_CONDUIT_POWER, key: 'conduit_power', name: 'Poder del conducto', color: [29, 194, 209], good: true },
 };
+
+/** Fase 6.5 (equipo): multiplicador del daño con Resistencia (−20 % por nivel; −1 = sin el efecto). */
+export function resistanceFactor(amp: number): number {
+  return amp < 0 ? 1 : Math.max(0, 1 - 0.2 * (amp + 1));
+}
 
 /** Segundos de Mal presagio al beber la botella ominosa y de Héroe de la aldea tras ganar un asalto. */
 export const BAD_OMEN_SECONDS = 3600;

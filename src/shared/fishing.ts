@@ -4,6 +4,7 @@ import {
   COD, SALMON, PUFFERFISH, TROPICAL_FISH, ARMOR, LEATHER, BONE, ROTTEN_FLESH, STRING, STICK, FISHING_ROD, BOW,
   ITEMS, type ItemStack,
 } from './items';
+import { NAUTILUS_SHELL } from './items'; // Fase 6.5 (equipo)
 
 /** Segundos hasta que pica un pez (con lluvia, un 20 % menos). */
 export const FISH_WAIT: readonly [number, number] = [5, 30];
@@ -18,7 +19,7 @@ const JUNK: Entry[] = [
   [ARMOR.leather.boots, 10, true], [LEATHER, 10], [BONE, 10], [ROTTEN_FLESH, 10], [STRING, 5], [STICK, 5],
   [FISHING_ROD, 2, true],
 ];
-const TREASURE: Entry[] = [[BOW, 1, true], [FISHING_ROD, 1, true]];
+const TREASURE: Entry[] = [[BOW, 1, true], [FISHING_ROD, 1, true], [NAUTILUS_SHELL, 1]]; // Fase 6.5 (equipo): concha de nautilo
 
 function pick(table: Entry[], rand: () => number): ItemStack {
   const total = table.reduce((n, e) => n + e[1], 0);

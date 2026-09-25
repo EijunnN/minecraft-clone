@@ -11,6 +11,7 @@ import {
   PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, PUMPKIN_PIE, FISHING_ROD, SHEARS, BONE_MEAL, EGG, SUGAR, WHEAT_SEEDS, STICK,
   STRING, COD, SALMON, PUFFERFISH, TROPICAL_FISH, ITEMS,
 } from '../src/shared/items';
+import { NAUTILUS_SHELL } from '../src/shared/items'; // Fase 6.5 (equipo)
 import { MOB_CHICKEN, ENT_ITEM, ENT_BOBBER, ENT_XP } from '../src/shared/mobs';
 import { matchRecipe } from '../src/shared/recipes';
 import { blockDrops } from '../src/shared/sim/drops';
@@ -261,7 +262,7 @@ test('pesca: reparto del botín', () => {
     const s = fishingLoot(rand);
     assert.ok(s.count === 1 && ITEMS[s.id], 'un objeto válido');
     if (fish.has(s.id)) counts.fish++;
-    else if (s.id === FISHING_ROD || ITEMS[s.id].tool?.kind === 'bow') counts.treasure++;
+    else if (s.id === FISHING_ROD || ITEMS[s.id].tool?.kind === 'bow' || s.id === NAUTILUS_SHELL) counts.treasure++; // Fase 6.5 (equipo): concha
     else counts.junk++;
     if (s.dmg !== undefined) assert.ok(s.dmg > 0 && s.dmg < (ITEMS[s.id].tool?.durability ?? ITEMS[s.id].armor!.durability));
   }

@@ -6,6 +6,7 @@ import {
   EFFECT_HUNGER, EFFECT_FIRE_RESISTANCE, EFFECT_NIGHT_VISION, EFFECT_WATER_BREATHING, EFFECT_ABSORPTION,
   MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, speedMultiplier, meleeBonus, regenInterval, poisonInterval, hungerExhaustion,
 } from '../../shared/effects';
+import { EFFECT_CONDUIT_POWER } from '../../shared/effects'; // Fase 6.5 (equipo)
 
 export interface ActiveEffect {
   /** Nivel (0 = I). */
@@ -87,13 +88,13 @@ export class StatusEffects {
   }
 
   get waterBreathing(): boolean {
-    return this.has(EFFECT_WATER_BREATHING);
+    return this.has(EFFECT_WATER_BREATHING) || this.has(EFFECT_CONDUIT_POWER); // Fase 6.5 (equipo): conducto
   }
 
   /** Visión nocturna (0..1; parpadea los últimos 10 s como en Minecraft). */
   get nightVision(): number {
     const e = this.list.get(EFFECT_NIGHT_VISION);
-    if (!e) return 0;
+    if (!e) return this.has(EFFECT_CONDUIT_POWER) ? 1 : 0; // Fase 6.5 (equipo): el conducto (sólo se da en el agua)
     if (e.time > 10) return 1;
     return 0.7 + 0.3 * Math.sin(e.time * 20 * Math.PI * 0.2);
   }
