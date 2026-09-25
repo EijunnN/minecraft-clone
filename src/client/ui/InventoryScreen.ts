@@ -212,7 +212,7 @@ export class InventoryScreen {
       }
     } else if (kind === 'chest') {
       const n = this.chestSlots;
-      top = `<h3>${n > 27 ? 'Cofre grande' : 'Cofre'}</h3><div class="grid g9">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
+      top = `<h3>${n > 27 ? 'Cofre grande' : this.title || 'Cofre'}</h3><div class="grid g9">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
     } else if (kind === 'stonecutter') {
       top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
         `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;

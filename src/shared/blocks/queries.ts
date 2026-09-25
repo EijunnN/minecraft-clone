@@ -174,7 +174,9 @@ export function furnaceWithLit(id: number, lit: boolean): number {
 }
 
 export function isChest(id: number): boolean {
-  return (id >= CHEST && id < CHEST + 4) || familyBase(id) === CHEST_DOUBLE;
+  return (id >= CHEST && id < CHEST + 4) || familyBase(id) === CHEST_DOUBLE ||
+    // Fase 6 (aldeanos): el barril guarda cosas como un cofre sencillo.
+    defs[id]?.key === 'barrel';
 }
 
 export function isContainer(id: number): boolean {

@@ -4,6 +4,7 @@ import { TerrainGenerator } from '../world/terrain';
 import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../constants';
 import { AIR, BLOCK_EMISSION, BLOCK_LIGHT_OPACITY, BLOCK_SOLID, MOB_SPAWNER, isChest } from '../blocks';
 import type { StructureChest } from '../world/structures';
+import type { VillagerSpawn } from '../world/villages'; // Fase 6 (aldeanos)
 import { decodeChunkEdits, encodeChunkEdits, type ServerStore } from './store';
 
 export interface SimChunk {
@@ -36,6 +37,8 @@ export class WorldSim {
   onChange: ChangeListener | null = null;
   /** Cofres de estructuras de un chunk recién generado por primera vez (para llenarlos de botín). */
   onLoot: ((chests: StructureChest[]) => void) | null = null;
+  /** Fase 6 (aldeanos): aldeanos de una aldea recién generada (una sola vez por chunk). */
+  onVillagers: ((villagers: VillagerSpawn[]) => void) | null = null;
   generatedCount = 0;
 
   constructor(seed: number, store: ServerStore) {
@@ -126,6 +129,11 @@ export class WorldSim {
     if (r.chests.length > 0 && this.onLoot && !this.store.getMeta(`loot:${key}`)) {
       this.store.setMeta(`loot:${key}`, '1');
       this.onLoot(r.chests.filter((ch) => isChest(blocks[blockIndex(ch.x - cx * CHUNK_SIZE, ch.y, ch.z - cz * CHUNK_SIZE)])));
+    }
+    // Fase 6 (aldeanos): los aldeanos del pozo aparecen una sola vez por chunk.
+    if (r.villagers.length > 0 && this.onVillagers && !this.store.getMeta(`villagers:${key}`)) {
+      this.store.setMeta(`villagers:${key}`, '1');
+      this.onVillagers(r.villagers);
     }
     this.chunks.set(key, c);
     this.generatedCount++;

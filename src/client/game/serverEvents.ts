@@ -2,7 +2,7 @@
 // modo de juego, camas y respuestas a las interacciones.
 import { RemotePlayer } from './RemotePlayers';
 import type { Welcome } from '../net/Net';
-import { AIR, BLOCKS, BLOCK_FLUID, isValidBlockId, BLOCK_COLLIDE, furnaceVariant } from '../../shared/blocks';
+import { AIR, BLOCKS, BLOCK_FLUID, isValidBlockId, BLOCK_COLLIDE, furnaceVariant, isBarrel } from '../../shared/blocks';
 import { containerFromWire } from '../../shared/containers';
 import { ITEMS } from '../../shared/items';
 import type { PlayerInfo, ServerMsg, GameMode } from '../../shared/protocol';
@@ -62,7 +62,9 @@ export class ServerEvents {
         if (same(this.g.interaction.pendingOpen)) {
           this.g.interaction.pendingOpen = null;
           const variant = furnaceVariant(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
-          this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]);
+          // Fase 6 (aldeanos): el barril se abre como un cofre con su propio título.
+          const barrel = isBarrel(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
+          this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, barrel ? 'Barril' : c.kind === 'chest' ? '' : ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]);
           this.g.audio.playUi('open');
         }
         if (this.g.screen.isOpen() && same(this.g.screen.containerPos)) this.g.screen.setContainer(c);
@@ -72,6 +74,12 @@ export class ServerEvents {
       case 'cclose':
         this.g.screen.onServer(msg);
         if (msg.t === 'cclose' && !this.g.screen.isOpen()) this.g.afterScreenClosed();
+        break;
+      // Fase 6 (aldeanos): comercio.
+      case 'trades':
+      case 'tres':
+      case 'tclose':
+        this.g.trading.onServer(msg);
         break;
       case 'gm':
         this.setMode(msg.m);

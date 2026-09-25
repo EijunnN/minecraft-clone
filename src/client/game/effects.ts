@@ -85,6 +85,19 @@ export class Effects {
       case 'leaves':
         if (a !== undefined && isValidBlockId(a)) fx.spawnBreak(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2]), a, 0xf0);
         break;
+      // Fase 6 (aldeanos): oficio nuevo, subida de nivel, trato hecho o «no».
+      case 'villager_job':
+      case 'villager_levelup':
+        fx.spawnSparkles(p[0], p[1], p[2], kind === 'villager_levelup' ? 24 : 12, 0.5);
+        this.g.audio.playMob('villager', 'idle', p);
+        break;
+      case 'villager_yes':
+        fx.spawnSparkles(p[0], p[1], p[2], 4, 0.3);
+        this.g.audio.playMob('villager', 'attack', p);
+        break;
+      case 'villager_no':
+        this.g.audio.playMob('villager', 'fuse', p);
+        break;
       case 'feed':
         this.g.audio.playEat();
         fx.spawnHearts(p[0], p[1], p[2], 3, 0.3);

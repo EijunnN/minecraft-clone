@@ -32,6 +32,8 @@ import { WORKSTATION_GENERATORS } from './genWorkstations';
 import { BIOME_GENERATORS } from './genBiomes';
 import { UNDERGROUND_GENERATORS } from './genUnderground';
 import { STRUCTURE_GENERATORS } from './genStructures';
+// Fase 6 (aldeanos): bloques de trabajo de los aldeanos.
+import { VILLAGE_GENERATORS } from './genVillage';
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -58,6 +60,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...BIOME_GENERATORS,
   ...UNDERGROUND_GENERATORS,
   ...STRUCTURE_GENERATORS,
+  ...VILLAGE_GENERATORS, // Fase 6 (aldeanos)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

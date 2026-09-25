@@ -15,7 +15,9 @@
 import {
   MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
+  isVillagerType, // Fase 6 (aldeanos)
 } from '../../shared/mobs';
+import { villagerPainter } from './villagerTextures'; // Fase 6 (aldeanos)
 
 export interface MobTexture {
   width: number;
@@ -1295,10 +1297,16 @@ const PAINTERS: Record<number, Painter> = {
   [MOB_WOLF]: wolf,
 };
 
-/** Genera el atlas de una criatura (tamaño MOBS[id].atlas). */
-export function generateMobTexture(mobId: number): MobTexture {
+/** Genera el atlas de una criatura (tamaño MOBS[id].atlas); `variant` elige la ropa del aldeano. */
+export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   const mob = MOBS[mobId];
+  // Fase 6 (aldeanos): el aldeano y el comerciante se pintan según su profesión (villagerTextures.ts).
+  if (mob && isVillagerType(mobId)) return paintMob(mobId, villagerPainter(mobId, variant));
   const painter = PAINTERS[mobId];
   if (!mob || !painter) throw new Error('Criatura sin textura: ' + mobId);
   return paintMob(mobId, painter);
 }
+
+// Fase 6 (aldeanos): utilidades para las texturas por variante (las usa villagerTextures.ts).
+export { paintMob, mapAt, vnoise, rnd, scale as scaleRGB, PX, NX, TOP, BOTTOM, FRONT, BACK };
+export type { Texel, Paint, Painter, RGB as MobRGB };

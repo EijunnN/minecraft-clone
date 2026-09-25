@@ -19,6 +19,7 @@ import {
   BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN,
 } from './biomeIds';
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
+import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -35,6 +36,8 @@ class Canvas {
     readonly x0: number,
     readonly z0: number,
     readonly chests: StructureChest[],
+    /** Fase 6 (aldeanos): aldeanos que aparecen con el chunk. */
+    readonly villagers: VillagerSpawn[] = [],
   ) {}
 
   inside(x: number, y: number, z: number): boolean {
@@ -60,6 +63,11 @@ class Canvas {
         for (let x = x0; x <= x1; x++) this.set(x, y, z, typeof id === 'number' ? id : id(x, y, z));
       }
     }
+  }
+
+  /** Fase 6 (aldeanos): aldeano que aparecerá al generarse este chunk por primera vez. */
+  villager(v: VillagerSpawn): void {
+    this.villagers.push(v);
   }
 
   chest(x: number, y: number, z: number, facing: number, table: string): void {
@@ -221,10 +229,13 @@ function gridStart(gen: TerrainGenerator, t: GridType, rx: number, rz: number): 
 // ------------------------------------------------------------------ colocación en un chunk
 
 /** Dibuja en el chunk (cx, cz) todas las estructuras que lo tocan y devuelve sus cofres. */
-export function placeStructures(gen: TerrainGenerator, blocks: Uint16Array, cx: number, cz: number, tops: Int16Array): StructureChest[] {
+export function placeStructures(
+  gen: TerrainGenerator, blocks: Uint16Array, cx: number, cz: number, tops: Int16Array,
+  villagers: VillagerSpawn[] = [], // Fase 6 (aldeanos)
+): StructureChest[] {
   const chests: StructureChest[] = [];
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
-  const c = new Canvas(blocks, x0, z0, chests);
+  const c = new Canvas(blocks, x0, z0, chests, villagers);
   placeDungeon(gen, c, cx, cz, tops);
   for (const m of mineshaftsNear(gen, cx, cz)) buildMineshaft(c, m, tops);
   for (const t of GRID) {

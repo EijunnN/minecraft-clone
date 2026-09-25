@@ -173,6 +173,7 @@ export class Spawner {
     let total = 0;
     for (const e of this.m.list.values()) {
       if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
+      if (e.villager) continue; // Fase 6 (aldeanos): los aldeanos no se reciclan ni cuentan
       total++;
       const d = this.m.nearestPlayer2D(e, players);
       if (d > ACTIVE_RANGE) far.push([d, e]);

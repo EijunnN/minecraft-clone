@@ -17,6 +17,7 @@ import { AnimalLife } from './animalLife';
 import { Spawner } from './spawner';
 import { XpOrbs } from './xpOrbs';
 import { Projectiles } from './projectiles';
+import { VillagerLife } from './villagerLife'; // Fase 6 (aldeanos)
 
 export class Entities {
   readonly list = new Map<number, Entity>();
@@ -31,6 +32,8 @@ export class Entities {
   readonly spawner = new Spawner(this);
   readonly xp = new XpOrbs(this);
   readonly projectiles = new Projectiles(this);
+  /** Fase 6 (aldeanos): profesión, paseo y casa de los aldeanos. */
+  readonly villagers = new VillagerLife(this);
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -360,10 +363,14 @@ export class Entities {
     const out: number[][] = [];
     for (const e of this.list.values()) {
       if (!e.ai || e.dead || MOBS[e.type].hostile || e.type === MOB_SQUID) continue;
-      out.push([
+      const row = [
         e.type, Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10, Math.round(e.z * 10) / 10, Math.round(e.health),
         Math.round(e.growAge ?? 0), e.sheared ? 1 : 0,
-      ]);
+      ];
+      // Fase 6 (aldeanos): profesión, nivel y casa, como un objeto al final de la fila.
+      const vil = this.villagers.save(e);
+      if (vil) (row as unknown[]).push(vil);
+      out.push(row);
     }
     return JSON.stringify(out);
   }
@@ -372,13 +379,16 @@ export class Entities {
     if (!json) return;
     try {
       const arr = JSON.parse(json) as number[][];
-      for (const [type, x, y, z, hp, grow, sheared] of arr) {
+      for (const row of arr) {
+        const [type, x, y, z, hp, grow, sheared] = row;
         if (!MOBS[type] || ![x, y, z].every(Number.isFinite)) continue;
         const e = this.spawnMob(type, x, y, z);
         if (!e) continue;
         if (Number.isFinite(hp)) e.health = Math.max(1, Math.min(e.maxHealth, hp));
         if (Number.isFinite(grow) && grow > 0) this.animals.setBaby(e, Math.min(GROW_SECONDS, grow));
         if (sheared === 1) e.sheared = true;
+        // Fase 6 (aldeanos): datos del aldeano (objeto con clave 'vil' en cualquier posición de la fila).
+        if (Array.isArray(row)) this.villagers.restore(e, (row as unknown[]).find((c) => !!c && typeof c === 'object' && 'vil' in (c as object)));
       }
     } catch {
       /* ignorar */

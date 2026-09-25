@@ -3,6 +3,7 @@ import type { ItemStack } from '../../items';
 import type { Body } from '../physics';
 import type { PathNode } from '../pathfind';
 import type { WorldSim } from '../WorldSim';
+import type { VillagerData } from './villagerLife'; // Fase 6 (aldeanos)
 
 export interface PlayerView {
   id: string;
@@ -125,6 +126,10 @@ export interface Entity extends Body {
   /** Gallinas: segundos hasta el próximo huevo. */
   eggTimer?: number;
   ai?: AI;
+  // Fase 6 (aldeanos): profesión, comercio y hogar (aldeanos y comerciante ambulante).
+  villager?: VillagerData;
+  /** Variante visual para los clientes (profesión del aldeano). */
+  variant?: number;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

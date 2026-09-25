@@ -41,7 +41,10 @@ export type MobSoundKind =
   | 'creeper'
   | 'spider'
   | 'enderman'
-  | 'squid';
+  | 'squid'
+  // Fase 6 (aldeanos)
+  | 'villager'
+  | 'wandering_trader';
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
  * (p. ej. el creeper no tiene voz de `idle`); los combos no aplicables caen a un sonido genérico

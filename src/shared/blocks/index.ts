@@ -97,8 +97,14 @@ export const INVENTORY_ORDER: readonly number[] = [
   // Fase 5: estructuras.
   MOB_SPAWNER, COBWEB, CHISELED_SANDSTONE, CUT_SANDSTONE, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, NETHERRACK, CRYING_OBSIDIAN,
   SNOW_LAYER,
+  // Fase 6 (aldeanos): bloques de trabajo.
+  ...VILLAGER_BLOCKS,
 ];
 
 export const DEFAULT_HOTBAR: readonly number[] = [
   GRASS, STONE, OAK_PLANKS, OAK_LOG, GLASS, TORCH, BRICKS, WATER, GLOWSTONE,
 ];
+
+// Fase 6 (aldeanos): bloques de trabajo de los aldeanos (se registran los últimos).
+import { VILLAGER_BLOCKS } from './villagerBlocks';
+export * from './villagerBlocks';

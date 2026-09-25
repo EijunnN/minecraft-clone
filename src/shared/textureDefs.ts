@@ -243,6 +243,12 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'cracked_stone_bricks' },
   { name: 'netherrack' },
   { name: 'crying_obsidian' },
+  // Fase 6 (aldeanos): bloques de trabajo de los aldeanos.
+  ...['lectern_top', 'lectern_side', 'lectern_front', 'cartography_table_top', 'cartography_table_side1',
+    'cartography_table_side2', 'fletching_table_top', 'fletching_table_side', 'fletching_table_front', 'barrel_top',
+    'barrel_side', 'barrel_bottom', 'loom_top', 'loom_side', 'loom_front', 'grindstone_side', 'grindstone_round',
+    'smithing_table_top', 'smithing_table_side', 'smithing_table_front', 'cauldron_side', 'cauldron_top', 'cauldron_inner',
+    'cauldron_bottom'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

@@ -121,6 +121,11 @@ export class Interaction {
     const pressed = input.mousePressed[2];
     if (!pressed && !(input.mouseDown[2] && this.placeCooldown <= 0)) return;
     this.placeCooldown = 0.2;
+    // Fase 6 (aldeanos): clic derecho sobre un aldeano abre el comercio.
+    if (pressed && target && this.g.trading.canTrade(target)) {
+      this.g.trading.open(target);
+      return;
+    }
     // Criatura delante: dar de comer, esquilar u ordeñar.
     if (pressed && target && held && this.canInteract(target, held.id)) {
       this.interactEntity(target, held.id);

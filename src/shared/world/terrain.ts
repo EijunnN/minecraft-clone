@@ -17,6 +17,7 @@ import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, h
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
 import { DIR_X, DIR_Z } from '../blockModels';
 import { placeStructures, type StructureChest } from './structures';
+import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -70,6 +71,8 @@ export interface GenResult {
   heights: Int16Array;
   /** Cofres de estructuras de este chunk (el servidor los llena con su botín). */
   chests: StructureChest[];
+  /** Fase 6 (aldeanos): aldeanos de una aldea cuyo pozo cae en este chunk (el servidor los hace aparecer). */
+  villagers: VillagerSpawn[];
 }
 
 const CAVE_GRID = 4;
@@ -769,7 +772,8 @@ export class TerrainGenerator {
     }
 
     // --- 8b. Estructuras (mazmorras, minas, templos, naufragios…) ---
-    const chests = placeStructures(this, blocks, cx, cz, tops);
+    const villagers: VillagerSpawn[] = []; // Fase 6 (aldeanos)
+    const chests = placeStructures(this, blocks, cx, cz, tops, villagers);
 
     // --- 8c. Nieve sobre todo lo que queda a la intemperie en las zonas frías ---
     for (let lz = 0; lz < 16; lz++) {
@@ -815,7 +819,7 @@ export class TerrainGenerator {
         tint[o + 3] = Math.round(clamp01(inf.temp * 0.6 + 0.5) * 255);
       }
     }
-    return { blocks, tint, heights, chests };
+    return { blocks, tint, heights, chests, villagers };
   }
 
   // ---------------------------------------------------------------- árboles

@@ -47,6 +47,8 @@ export interface ClientEntity {
   seed: number;
   lastX: number;
   lastZ: number;
+  /** Fase 6 (aldeanos): variante visual (profesión del aldeano). */
+  variant: number;
 }
 
 const DELAY = 0.11;
@@ -81,6 +83,7 @@ export class ClientEntities {
         walkPhase: 0, walkAmount: 0, age: 0, hurtT: flags & EF_HURT ? 0 : 99, deathT: flags & EF_DEAD ? 0 : -1,
         actionT: flags & EF_ACTION ? 0 : -1,
         collector: null, collectT: 0, gone: false, seed: (id * 2654435761) % 1000 / 1000, lastX: x, lastZ: z,
+        variant: MOBS[type] ? e2 ?? 0 : 0, // Fase 6 (aldeanos)
       };
       this.list.set(id, e);
     }
@@ -89,6 +92,7 @@ export class ClientEntities {
       if (!e || e.gone) continue;
       this.push(e, now, u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
       if ((e.type === ENT_ITEM || e.type === ENT_XP) && u.length > 8) e.count = u[8];
+      else if (MOBS[e.type] && u.length > 8) e.variant = u[8]; // Fase 6 (aldeanos)
     }
     for (const r of msg.rm ?? []) {
       const id = Array.isArray(r) ? r[0] : r;

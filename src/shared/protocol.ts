@@ -1,8 +1,9 @@
 // Protocolo cliente ↔ servidor (JSON por WebSocket; las ediciones iniciales van en binario).
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
+import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7; // Fase 6 (aldeanos): comercio
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -131,7 +132,12 @@ export type ClientMsg =
   | { t: 'ctake'; x: number; y: number; z: number; slot: number; max: number; q: number }
   | { t: 'look'; e: number }
   | { t: 'state'; d: PlayerSave }
-  | { t: 'died'; m: string };
+  | { t: 'died'; m: string }
+  // Fase 6 (aldeanos): comercio. Abrir la pantalla con un aldeano, hacer el trato i (pay: lo que el cliente
+  // sacó de su inventario para pagar) y cerrarla.
+  | { t: 'topen'; e: number }
+  | { t: 'trade'; e: number; i: number; q: number; pay: ItemStack[] }
+  | { t: 'tclose' };
 
 export type ServerMsg =
   | {
@@ -177,7 +183,13 @@ export type ServerMsg =
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
   | { t: 'ires'; q: number; ok: boolean; take?: number; give?: ItemStack; wear?: number }
   /** Punto de reaparición del jugador (cama); null = el del mundo. */
-  | { t: 'spawn'; p: [number, number, number] | null };
+  | { t: 'spawn'; p: [number, number, number] | null }
+  // Fase 6 (aldeanos): ofertas de un aldeano (p profesión, lvl nivel, xp experiencia; o ofertas
+  // [pide, n, pide2, n2, da, n, usos, máximo]), resultado de un trato (give lo que recibe, back lo que
+  // se le devuelve si no salió) y cierre de la pantalla.
+  | { t: 'trades'; e: number; p: number; lvl: number; xp: number; tr: boolean; o: TradeWire[] }
+  | { t: 'tres'; q: number; ok: boolean; give?: ItemStack | null; back?: ItemStack[]; m?: string }
+  | { t: 'tclose' };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;

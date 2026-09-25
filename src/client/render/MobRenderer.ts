@@ -28,11 +28,11 @@ export class MobRenderer {
   private shadowProg: Program;
   private meshes = new Map<number, MobMesh>();
   private skins = new Map<number, WebGLTexture>();
-  private texSource: (id: number) => MobTexture | null;
+  private texSource: (id: number, variant?: number) => MobTexture | null; // Fase 6 (aldeanos): + variante
   private bones = new Float32Array(MAX_BONES * 16);
   private model = mat4.create();
 
-  constructor(gl: GL, texSource: (id: number) => MobTexture | null) {
+  constructor(gl: GL, texSource: (id: number, variant?: number) => MobTexture | null) {
     this.gl = gl;
     this.texSource = texSource;
     this.prog = new Program(gl, { name: 'mob', vs: MOB_VS, fs: MOB_FS });
@@ -98,11 +98,13 @@ export class MobRenderer {
     return m;
   }
 
-  private skin(def: MobDef): WebGLTexture {
-    let t = this.skins.get(def.id);
+  // Fase 6 (aldeanos): una textura por variante (profesión del aldeano); clave = id + variante · 256.
+  private skin(def: MobDef, variant = 0): WebGLTexture {
+    const key = def.id + variant * 256;
+    let t = this.skins.get(key);
     if (t) return t;
     const gl = this.gl;
-    const src = this.texSource(def.id) ?? placeholderTexture(def);
+    const src = this.texSource(def.id, variant) ?? placeholderTexture(def);
     t = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, t);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -111,12 +113,12 @@ export class MobRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.skins.set(def.id, t);
+    this.skins.set(key, t);
     return t;
   }
 
   /** Sustituye las texturas (cuando llega el arte definitivo). */
-  setTextureSource(src: (id: number) => MobTexture | null): void {
+  setTextureSource(src: (id: number, variant?: number) => MobTexture | null): void {
     this.texSource = src;
     for (const t of this.skins.values()) this.gl.deleteTexture(t);
     this.skins.clear();
@@ -183,6 +185,18 @@ export class MobRenderer {
         } else if (name === 'head') {
           out[1] = headYaw;
           out[0] = e.pitch * 0.5;
+        }
+        break;
+      case 'villager':
+        // Fase 6 (aldeanos): piernas al andar, brazos cruzados quietos (con un leve vaivén) y cabeza que mira.
+        if (name === 'legR') out[0] = swing * 0.8;
+        else if (name === 'legL') out[0] = -swing * 0.8;
+        else if (name === 'arms') out[0] = Math.sin(time * 1.2 + e.seed * 5) * 0.03;
+        else if (name === 'head') {
+          out[1] = headYaw;
+          out[0] = e.pitch;
+          // Al quedarse quieto, a veces menea la cabeza.
+          if (e.walkAmount < 0.1) out[2] = Math.sin(time * 0.7 + e.seed * 11) * 0.06;
         }
         break;
       case 'squid':
@@ -263,7 +277,7 @@ export class MobRenderer {
       const light = lightAt(e);
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def))
+      p.tex2D('uSkin', this.skin(def, e.variant))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
@@ -286,7 +300,7 @@ export class MobRenderer {
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ);
-      p.tex2D('uSkin', this.skin(def)).m4('uModel', root as Float32Array);
+      p.tex2D('uSkin', this.skin(def, e.variant)).m4('uModel', root as Float32Array);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
