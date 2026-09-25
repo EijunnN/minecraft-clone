@@ -431,8 +431,8 @@ export class AquaticLife {
       [dx, dy, dz] = [tx / l, ty / l, tz / l];
       speed = def.run * 0.8;
     }
-    // Fase 7 (efectos): a quien bucea cerca le da Gracia del delfín (se renueva a menudo mientras nada con él).
-    if (near && near.swimming && best <= DOLPHIN_GRACE_RANGE && this.m.rand() < dt * 2) {
+    // Fase 7 (efectos): a quien bucea cerca le da Gracia del delfín (se renueva cada segundo mientras nada con él).
+    if (near && near.swimming && best <= DOLPHIN_GRACE_RANGE && Math.floor(e.age) !== Math.floor(e.age - dt)) {
       this.m.host.effectPlayer?.(near.id, EFFECT_DOLPHINS_GRACE, DOLPHIN_GRACE_SECONDS, 0, true);
     }
     if (near && best <= 3) {
