@@ -7,6 +7,10 @@ import { fishingLoot, FISH_XP } from '../../fishing';
 import type { Entity } from '../entities';
 import type { ServerContext, Session } from './context';
 import { playerLuck } from './potionPlayers'; // Fase 7 (pociones)
+// Fase 7 (encantamientos): Suerte marina y Atracción de la caña.
+import { FISHING_ROD } from '../../items';
+import { LUCK_OF_THE_SEA, LURE } from '../../enchantments';
+import { sanitizeHeldEnchants, levelIn } from '../../enchantEffects';
 
 /** Velocidad del lanzamiento (bloques/s). */
 const CAST_SPEED = 16;
@@ -39,6 +43,9 @@ export class Fishing {
     const len = Math.hypot(d[0], d[1], d[2]) || 1;
     const v = d.map((c) => (c / len) * CAST_SPEED);
     const e = ctx.entities.spawnBobber(p[0] + v[0] * 0.02, p[1], p[2] + v[2] * 0.02, v[0], v[1] + 3, v[2], s.id);
+    const en = sanitizeHeldEnchants(FISHING_ROD, msg.en);
+    e.luck = levelIn(en, LUCK_OF_THE_SEA);
+    e.lure = levelIn(en, LURE);
     this.bobbers.set(s.id, e.id);
     ctx.broadcast({ t: 'rod', p: s.id, e: e.id });
     ctx.fx('rod_cast', p[0], p[1], p[2]);
@@ -48,7 +55,7 @@ export class Fishing {
   private reel(s: Session, e: Entity): number {
     const ctx = this.ctx;
     if ((e.fishBite ?? 0) > 0) {
-      const stack = fishingLoot(ctx.rand, playerLuck(s)); // Fase 7 (pociones): Suerte y Mala suerte
+      const stack = fishingLoot(ctx.rand, (e.luck ?? 0) + playerLuck(s)); // Fase 7: Suerte marina (caña) y Suerte/Mala suerte (pociones)
       // Tiro hacia el jugador teniendo en cuenta el rozamiento y la gravedad de los objetos.
       const reach = (1 - Math.exp(-ITEM_DRAG * PULL_TIME)) / ITEM_DRAG;
       const tx = s.p[0] - e.x, ty = s.p[1] + 1 - e.y, tz = s.p[2] - e.z;

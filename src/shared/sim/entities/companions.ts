@@ -170,7 +170,7 @@ export class Companions {
       const died = this.m.damage(foe.entity, damage, e.x, e.z, e.id, 1);
       if (!died && launch > 0) foe.entity.vy = launch;
     } else if (foe.player) {
-      this.m.host.hurtPlayer(foe.player.id, damage * this.m.difficultyScale(), (dx / d) * 5, launch > 0 ? launch : 4, (dz / d) * 5, MOBS[e.type].key);
+      this.m.host.hurtPlayer(foe.player.id, damage * this.m.difficultyScale(), (dx / d) * 5, launch > 0 ? launch : 4, (dz / d) * 5, MOBS[e.type].key, e); // Fase 7: e (Espinas)
     }
     this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
   }

@@ -22,6 +22,7 @@ import {
 import { moveBody, lineOfSight } from '../physics';
 import { GRAVITY, angleTo, lerpAngle, type PlayerView, type InteractResult, type Entity } from './types';
 import type { Entities } from './Entities';
+import { enchantWithLevels, rndFrom, TABLE_POOL } from '../../enchanting'; // Fase 7 (encantamientos)
 
 /** Material de cada armadura para caballo (id → leather, iron…). */
 const HORSE_ARMOR_OF = new Map<number, string>(Object.entries(HORSE_ARMOR).map(([m, id]) => [id, m]));
@@ -162,10 +163,16 @@ export class MobGear {
     if (out.length) this.m.dropStacks(out, e.x, e.y + 0.3, e.z);
   }
 
-  /** Arma soltada por una criatura: gastada entre el 10 y el 90 %. */
+  /**
+   * Arma soltada por una criatura: gastada entre el 10 y el 90 %. Fase 7 (encantamientos): a veces
+   * encantada (más cuanto más difícil, con 5 a 22 niveles, como el equipo de las criaturas de Minecraft).
+   */
   private worn(id: number): ItemStack {
     const max = ITEMS[id]?.tool?.durability ?? 0;
-    return max ? { id, count: 1, dmg: Math.floor(max * (0.1 + 0.8 * this.m.rand())) } : { id, count: 1 };
+    const s: ItemStack = max ? { id, count: 1, dmg: Math.floor(max * (0.1 + 0.8 * this.m.rand())) } : { id, count: 1 };
+    const chance = [0, 0.1, 0.2, 0.35][this.m.host.difficulty()] ?? 0.2;
+    if (this.m.rand() >= chance) return s;
+    return enchantWithLevels(s, 5 + Math.floor(this.m.rand() * 18), rndFrom(() => this.m.rand()), TABLE_POOL);
   }
 
   // ------------------------------------------------------------------ guardado

@@ -9,7 +9,6 @@ import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { ITEMS, BONE_MEAL, PLACEABLE_BLOCKS } from '../../items';
 import { planPlacement, toggleEdits, isUsable, type Edit } from '../../placement';
-import { blockDrops } from '../drops';
 import { oreXp } from '../../experience';
 import type { BlockRules } from './blockRules';
 import type { Farming } from './farming';
@@ -27,6 +26,9 @@ import { partnerOf } from '../../placement';
 import type { Copper } from './copper';
 import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
 import { isWaterlogged, emptyAfterBreak } from '../../blocks'; // Fase 6.5 (océano y plantas)
+// Fase 7 (encantamientos): Toque de seda y Fortuna.
+import { enchantedBlockDrops } from '../enchantDrops';
+import { sanitizeHeldEnchants } from '../../enchantEffects';
 
 export class BlockEdits {
   /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
@@ -79,8 +81,10 @@ export class BlockEdits {
           ctx.reject(s, x, y, z);
           return;
         }
-        const drops = !creative && (!BLOCK_FLUID[cur] || wet) ? blockDrops(cur, Number.isInteger(tool) ? tool : 0, () => ctx.rand()) : [];
-        ctx.world.setBlock(x, y, z, wet ? emptyAfterBreak(cur) : AIR);
+        const toolId = Number.isInteger(tool) && tool > 0 ? tool : 0;
+        const en = toolId ? sanitizeHeldEnchants(toolId, msg.en) : []; // Fase 7 (encantamientos)
+        const drops = !creative && (!BLOCK_FLUID[cur] || wet) ? enchantedBlockDrops(cur, toolId, en, () => ctx.rand()) : [];
+        ctx.world.setBlock(x, y, z, emptyAfterBreak(cur)); // Fase 7: también el hielo escarchado deja agua
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
         // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
         const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand());

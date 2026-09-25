@@ -14,6 +14,7 @@ import { collectionFx } from './collectionInteraction'; // Fase 6.5 (colecciones
 import { transportFx } from './vehicleFx'; // Fase 7 (transporte)
 import { equipmentFx } from './equipmentFx'; // Fase 6.5 (equipo)
 import { potionFx } from './potionClient'; // Fase 7 (pociones)
+import { enchantFx } from './enchantFx'; // Fase 7 (encantamientos)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -239,6 +240,7 @@ export class Effects {
         if (mk && Math.random() < 0.5) this.g.audio.playMob(mk, 'step', p);
         break;
       default:
+        if (enchantFx(this.g, kind, p, a)) break; // Fase 7 (encantamientos)
         // Fase 6 (acuáticos, fauna)
         // Fase 6.5 (equipo): mechero, fuego, ballesta, tridente, cuerno, cohetes, armaduras de animales y conducto.
         if (!potionFx(this.g, kind, p, a, b) && !transportFx(this.g, kind, p, a) && !aquaticFx(this.g, kind, p) && !illagerFx(this.g, kind, p, a) && !copperFx(this.g, kind, p) && !collectionFx(this.g, kind, p, a, b) && !equipmentFx(this.g, kind, p, a, b)) faunaFx(this.g, kind, p, a); // Fase 6 (asaltos), 6.5 (cobre, colecciones)

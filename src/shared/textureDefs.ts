@@ -400,6 +400,18 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 7 (transporte): raíles (recortes).
   ...['rail', 'rail_corner', 'powered_rail', 'powered_rail_on', 'detector_rail', 'detector_rail_on', 'activator_rail',
     'activator_rail_on'].map((name): TextureDef => ({ name, cutout: true })),
+  // Fase 7 (encantamientos): mesa de encantamientos, yunques y hielo escarchado.
+  { name: 'enchanting_table_top' },
+  { name: 'enchanting_table_side' },
+  { name: 'enchanting_table_bottom' },
+  { name: 'anvil' },
+  { name: 'anvil_top' },
+  { name: 'chipped_anvil_top' },
+  { name: 'damaged_anvil_top' },
+  ...[0, 1, 2, 3].map((a): TextureDef => ({ name: `frosted_ice_${a}`, special: 3 })),
+  // Fase 7 (encantamientos): el libro que flota sobre la mesa (tapas y hojas).
+  { name: 'enchanting_book_cover' },
+  { name: 'enchanting_book_pages' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

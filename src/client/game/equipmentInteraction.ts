@@ -19,6 +19,8 @@ import { MOB_HORSE, MOB_WOLF, MOB_PIG } from '../../shared/mobs';
 import { EF_TAMED, EF_BABY } from '../../shared/protocol';
 import { CROSSBOW_CHARGE, TRIDENT_MIN_CHARGE, GOAT_HORN_COOLDOWN } from '../../shared/equipment';
 import { hasArrows, takeArrow, LOADED_TIPPED } from './potionClient'; // Fase 7 (pociones)
+import { RIPTIDE, QUICK_CHARGE, enchLevel, enchantsOf } from '../../shared/enchantments'; // Fase 7 (encantamientos)
+import { riptideSpeed, crossbowChargeTime } from '../../shared/enchantEffects';
 
 const HORSE_ARMORS = new Set(Object.values(HORSE_ARMOR));
 /** Momento (ms) en que se podrá volver a tocar el cuerno. */
@@ -71,7 +73,7 @@ export function equipmentUse(
       return true;
     case CROSSBOW:
       if (g.creative || hasArrows(g)) { // Fase 7 (pociones): también flechas con efecto
-        ia.use = { kind: 'crossbow', t: 0, slot: g.selected, item: heldId, soundT: 0 };
+        ia.use = { kind: 'crossbow', t: 0, slot: g.selected, item: heldId, soundT: 0, charge: chargeTime(held) }; // Fase 7
         g.audio.playEquipSfx('crossbow_loading', [g.player.x, g.player.eyeY, g.player.z]);
       }
       return true;
@@ -79,6 +81,8 @@ export function equipmentUse(
       fireCrossbow(g, ia, held);
       return true;
     case TRIDENT:
+      // Fase 7 (encantamientos): con Propulsión acuática sólo se usa mojado (en el agua o bajo la lluvia).
+      if (enchLevel(held, RIPTIDE) > 0 && !wet(g)) return true;
       ia.use = { kind: 'trident', t: 0, slot: g.selected, item: heldId, soundT: 0 };
       return true;
     case GOAT_HORN: {
@@ -115,9 +119,12 @@ function fireCrossbow(g: Game, ia: Interaction, held: ItemStack): void {
   const p = g.player;
   const cp = Math.cos(p.pitch);
   const d = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
-  const ap = LOADED_TIPPED.get(held); // Fase 7 (pociones): cargada con una flecha con efecto
-  g.net?.send({ t: 'shoot', p: [p.x + d[0] * 0.3, p.eyeY - 0.1, p.z + d[2] * 0.3], d: [d[0], d[1], d[2]], f: 1, c: 1, ...(ap !== undefined ? { ap } : {}) });
-  g.inv.set(g.selected, { id: CROSSBOW, count: 1, ...(held.dmg ? { dmg: held.dmg } : {}) });
+  // Fase 7: la flecha con efecto cargada (pociones) y Multidisparo y Perforación (encantamientos, los aplica
+  // el servidor); la ballesta conserva sus datos.
+  const ap = LOADED_TIPPED.get(held);
+  const en = enchantsOf(held);
+  g.net?.send({ t: 'shoot', p: [p.x + d[0] * 0.3, p.eyeY - 0.1, p.z + d[2] * 0.3], d: [d[0], d[1], d[2]], f: 1, c: 1, ...(ap !== undefined ? { ap } : {}), ...(en.length ? { en } : {}) });
+  g.inv.set(g.selected, { ...held, id: CROSSBOW, count: 1 });
   ia.wearHeld(1);
   g.swing(false);
   g.shake = Math.max(g.shake, 0.15);
@@ -125,14 +132,15 @@ function fireCrossbow(g: Game, ia: Interaction, held: ItemStack): void {
 
 /** Mientras se mantiene el clic: la ballesta termina de cargarse (gasta una flecha). */
 export function equipmentHold(g: Game, ia: Interaction, u: Use): void {
-  if (u.kind !== 'crossbow' || u.t < CROSSBOW_CHARGE) return;
+  if (u.kind !== 'crossbow' || u.t < chargeTime(g.inv.get(u.slot))) return; // Fase 7: Carga rápida
   const s = g.inv.get(u.slot);
   ia.use = null;
   if (!s || s.id !== CROSSBOW) return;
-  // Fase 7 (pociones): la primera flecha que haya; si es con efecto, la ballesta la recuerda.
+  // Fase 7 (pociones): la primera flecha que haya; si es con efecto, la ballesta la recuerda. Conserva sus
+  // encantamientos.
   const ap = takeArrow(g);
   if (ap === null) return;
-  const charged: ItemStack = { id: CROSSBOW_CHARGED, count: 1, ...(s.dmg ? { dmg: s.dmg } : {}) };
+  const charged: ItemStack = { ...s, id: CROSSBOW_CHARGED, count: 1 };
   if (ap >= 0) LOADED_TIPPED.set(charged, ap);
   g.inv.set(u.slot, charged);
   g.audio.playEquipSfx('crossbow_load', [g.player.x, g.player.eyeY, g.player.z]);
@@ -144,7 +152,28 @@ export function equipmentRelease(g: Game, u: Use, dir: number[], stillHeld: bool
   const s = g.inv.get(u.slot);
   if (!s || s.id !== TRIDENT) return;
   const p = g.player;
-  g.net?.send({ t: 'throw', item: TRIDENT, p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], ...(s.dmg ? { w: s.dmg } : {}) });
+  // Fase 7 (encantamientos): Propulsión acuática lanza al jugador en vez del tridente.
+  const riptide = enchLevel(s, RIPTIDE);
+  if (riptide > 0) {
+    if (!wet(g)) return;
+    const k = riptideSpeed(riptide) * 0.55;
+    p.vx = dir[0] * k;
+    p.vy = dir[1] * k;
+    p.vz = dir[2] * k;
+    p.kx += dir[0] * k * 0.5;
+    p.kz += dir[2] * k * 0.5;
+    p.onGround = false;
+    p.fallDistance = 0;
+    g.interaction.wearSlot(u.slot, 1);
+    g.audio.playEquipSfx('trident_throw', [p.x, p.eyeY, p.z]);
+    g.renderer.entities.pfx.bubbles(p.x, p.y + 1, p.z, 10, 0.5);
+    g.swing(false);
+    return;
+  }
+  g.net?.send({
+    t: 'throw', item: TRIDENT, p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], ...(s.dmg ? { w: s.dmg } : {}),
+    st: s, // Fase 7 (encantamientos): el tridente entero (Lealtad, Empalamiento, Conductividad…)
+  });
   if (!g.creative) g.inv.set(u.slot, null);
   g.swing(false);
 }
@@ -152,7 +181,7 @@ export function equipmentRelease(g: Game, u: Use, dir: number[], stillHeld: bool
 /** Cómo se ve en la mano y en el cuerpo lo que se está usando (la ballesta y el tridente, como el arco). */
 export function useLook(u: Use | null): { kind: 'eat' | 'bow' | 'block' | 'none'; amount: number } {
   if (!u || u.kind === 'spyglass') return { kind: 'none', amount: 0 };
-  if (u.kind === 'crossbow') return { kind: 'bow', amount: Math.min(1, u.t / CROSSBOW_CHARGE) };
+  if (u.kind === 'crossbow') return { kind: 'bow', amount: Math.min(1, u.t / (u.charge ?? CROSSBOW_CHARGE)) }; // Fase 7: Carga rápida
   if (u.kind === 'trident') return { kind: 'bow', amount: Math.min(1, u.t / TRIDENT_MIN_CHARGE) };
   if (u.kind === 'bow') return { kind: 'bow', amount: Math.min(1, u.t) };
   if (u.kind === 'block') return { kind: 'block', amount: u.t };
@@ -166,4 +195,20 @@ export const EQUIPMENT_WEARLESS = ['crossbow', 'lighter', 'carrot_stick', 'body_
 export function equipmentUses(id: number): boolean {
   return id === FLINT_AND_STEEL || id === CROSSBOW || id === CROSSBOW_CHARGED || id === TRIDENT || id === GOAT_HORN ||
     id === FIREWORK_ROCKET || id === CARROT_ON_A_STICK || ITEMS[id]?.tool?.kind === 'body_armor';
+}
+
+// ------------------------------------------------------------------ Fase 7 (encantamientos)
+
+/** Segundos para cargar la ballesta (Carga rápida los acorta). */
+function chargeTime(s: ItemStack | null): number {
+  const q = enchLevel(s, QUICK_CHARGE);
+  return q > 0 ? crossbowChargeTime(q) : CROSSBOW_CHARGE;
+}
+
+/** ¿Está mojado el jugador? (en el agua o bajo la lluvia a cielo abierto): Propulsión acuática. */
+function wet(g: Game): boolean {
+  const p = g.player;
+  if (p.inWater) return true;
+  const exposed = (g.world?.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) ?? 0) >> 4 >= 15;
+  return g.rainNow > 0.2 && exposed;
 }

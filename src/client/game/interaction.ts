@@ -43,6 +43,8 @@ import { collectionUse } from './collectionInteraction'; // Fase 6.5 (coleccione
 import { potionUse, drinkPotion, hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
 import { TIPPED_ARROW } from '../../shared/items';
 import { isVehicleType } from '../../shared/vehicles'; // Fase 7 (transporte)
+import { EXPERIENCE_BOTTLE } from '../../shared/items'; // Fase 7 (encantamientos)
+import { INFINITY, enchLevel } from '../../shared/enchantments';
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
@@ -73,6 +75,7 @@ export class Interaction {
       }
       return broken;
     },
+    protect: (damage, cause) => this.g.enchant.protect(damage, cause), // Fase 7 (encantamientos)
   };
   onPicked(s: ItemStack): void {
     if (!s || !isValidItem(s.id)) return;
@@ -157,6 +160,8 @@ export class Interaction {
     if (leashUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6.5 (libros y estandartes): telar, atril y libros en la mano.
     if (this.g.books.use(pressed, hit, target, held)) return;
+    // Fase 7 (encantamientos): mesa de encantamientos, yunque y afiladora.
+    if (!target && this.g.enchant.use(pressed, hit)) return;
     // Fase 6.5 (equipo): mechero, ballesta, tridente, cuerno, cohetes, caña con zanahoria y armaduras de animales.
     if (equipmentUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6 (aldeanos): clic derecho sobre un aldeano abre el comercio.
@@ -227,7 +232,7 @@ export class Interaction {
       if (pressed && hit) this.till(hit);
       return;
     }
-    if (held.id === EGG || held.id === SNOWBALL) {
+    if (held.id === EGG || held.id === SNOWBALL || held.id === EXPERIENCE_BOTTLE) { // Fase 7: botella con experiencia
       if (pressed) this.throwEgg(dir, held.id);
       return;
     }
@@ -338,7 +343,8 @@ export class Interaction {
     const kind = def.tool?.kind;
     if (kind === 'hoe' || kind === 'shield' || kind === 'bow' || kind === 'fishing_rod') return true;
     if (held.id === SHEARS) return hit?.id === PUMPKIN;
-    return held.id === EGG || held.id === SNOWBALL || held.id === EMPTY_MAP || held.id === BONE_MEAL || held.id === BUCKET;
+    return held.id === EGG || held.id === SNOWBALL || held.id === EMPTY_MAP || held.id === BONE_MEAL || held.id === BUCKET ||
+      held.id === EXPERIENCE_BOTTLE; // Fase 7 (encantamientos)
   }
 
   /** Mano secundaria: cubrirse con el escudo, comer o colocar un bloque (antorchas…). */
@@ -386,6 +392,7 @@ export class Interaction {
     const held = this.g.heldStack;
     const def = held ? ITEMS[held.id]?.armor : undefined;
     if (!held || !def) return;
+    if (this.g.enchant.bound(def.slot)) return; // Fase 7 (encantamientos): Maldición de ligamiento
     if (this.g.creative) this.g.inv.equip(held);
     else this.g.inv.equipFromSlot(this.g.selected, true);
     const p = this.g.player;
@@ -429,7 +436,8 @@ export class Interaction {
     }
     const cur = this.mining!;
     const p = this.g.player;
-    const t = breakTime(hit.id, this.g.heldId, p.eyeInWater, p.onGround || p.inWater);
+    const mb = this.g.enchant.miningBonus(); // Fase 7 (encantamientos): Eficiencia y Afinidad acuática
+    const t = breakTime(hit.id, this.g.heldId, p.eyeInWater && !mb.aqua, p.onGround || p.inWater, mb.efficiency);
     if (this.g.swingT < 0) this.g.swingT = 0;
     if (t === Infinity) return;
     if (t === 0) {
@@ -462,7 +470,7 @@ export class Interaction {
     // La otra mitad de una puerta o de una cama cae con ella (el servidor lo confirma).
     const pp = partnerOf(x, y, z, id);
     if (pp && familyBase(world.getBlock(pp[0], pp[1], pp[2])) === familyBase(id)) world.setBlock(pp[0], pp[1], pp[2], AIR);
-    this.g.net?.sendSet(x, y, z, AIR, this.g.heldId);
+    this.g.net?.sendSet(x, y, z, AIR, this.g.heldId, this.g.enchant.held()); // Fase 7: Toque de seda y Fortuna
     this.g.audio.playBreak(BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     this.g.renderer.entities.spawnBreak(x, y, z, id, world.getLight(x, y + 1, z));
     if (!this.g.creative) {
@@ -498,13 +506,17 @@ export class Interaction {
   attack(e: ClientEntity): void {
     const p = this.g.player;
     // Crítico: cayendo y con la barra casi llena (el servidor lo vuelve a comprobar).
-    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying && this.attackCharge() > 0.9;
+    const charged = this.attackCharge() > 0.9;
+    const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying && charged;
+    // Fase 7 (encantamientos): la espada barre con el golpe cargado, en el suelo, sin correr ni crítico.
+    const sw = charged && !crit && p.onGround && !p.sprinting && ITEMS[this.g.heldId]?.tool?.kind === 'sword' ? 1 : 0;
     this.resetAttack();
     const b = this.g.statusEffects.melee;
-    this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}) });
+    this.g.net?.send({ t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}), ...this.g.enchant.heldField(), ...(sw ? { sw } : {}) });
     this.g.swing(false);
     this.g.net?.send({ t: 'swing' });
     if (crit) this.g.renderer.entities.spawnCrit(e.x, e.y + 1, e.z, 10);
+    if (this.g.enchant.magicHit()) this.g.renderer.entities.pfx.magic(e.x, e.y + 1, e.z, 8, 0.3); // Fase 7
     if (!this.g.creative) {
       this.g.survival.addExhaustion(0.1);
       const tool = ITEMS[this.g.heldId]?.tool;
@@ -547,12 +559,14 @@ export class Interaction {
     const t = Math.min(1, u.t);
     const f = Math.min(1, (t * t + 2 * t) / 3);
     if (f < 0.1) return;
-    // Fase 7 (pociones): la primera flecha que haya (normal o con efecto).
-    const ap = takeArrow(this.g);
+    // Fase 7: la primera flecha que haya (normal o con efecto; con Infinidad las normales no se gastan) y
+    // Poder, Retroceso, Fuego e Infinidad del arco.
+    const en = this.g.enchant.heldField();
+    const ap = takeArrow(this.g, enchLevel(this.g.heldStack, INFINITY) > 0);
     if (ap === null) return;
     this.wearHeld(1);
     const p = this.g.player;
-    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f, ...(ap >= 0 ? { ap } : {}) });
+    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f, ...en, ...(ap >= 0 ? { ap } : {}) });
     this.g.swing(false);
   }
 
@@ -713,7 +727,7 @@ export class Interaction {
   /** Caña de pescar: lanza el flotador o lo recoge (el servidor responde con 'rod' y el desgaste). */
   castRod(dir: number[]): void {
     const p = this.g.player;
-    this.g.net?.send({ t: 'fish', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]] });
+    this.g.net?.send({ t: 'fish', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], ...this.g.enchant.heldField() }); // Fase 7: Suerte marina y Atracción
     this.g.swing(false);
   }
 

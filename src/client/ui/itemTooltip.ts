@@ -19,6 +19,10 @@ import { equipmentTooltip } from './equipmentTooltip'; // Fase 6.5 (equipo)
 import { potionTooltip } from './potionTooltip'; // Fase 7 (pociones)
 import { POTION } from '../../shared/items';
 import { stackName } from '../../shared/potions';
+// Fase 7 (encantamientos): nombre puesto en el yunque, encantamientos (las maldiciones en rojo) y los
+// guardados en los libros encantados.
+import { ENCHANTS, enchantName, enchantsOf, storedOf, sortedForTooltip, hasGlint } from '../../shared/enchantments';
+import { ENCHANTED_BOOK, EXPERIENCE_BOTTLE } from '../../shared/items';
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -29,7 +33,14 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60))
 /** HTML de la descripción de una pila (para un elemento con la clase `tooltip`). */
 export function itemTooltipHtml(s: ItemStack): string {
   const def = ITEMS[s.id];
-  const lines: string[] = [`<b>${esc(stackName(s))}</b>`]; // Fase 7 (pociones): con el nombre de su tipo
+  // Fase 7 (encantamientos): el nombre del yunque va en cursiva; lo encantado, en turquesa (el libro, en amarillo).
+  const cls = s.id === ENCHANTED_BOOK || s.id === EXPERIENCE_BOTTLE ? 'tt-rare' : hasGlint(s) ? 'tt-ench' : '';
+  const name = s.data?.name ? `<i>${esc(s.data.name)}</i>` : esc(s.id === WRITTEN_BOOK ? itemName(s.id) : stackName(s));
+  const lines: string[] = [`<b${cls ? ` class="${cls}"` : ''}>${name}</b>`];
+  for (const [id, lvl] of sortedForTooltip([...enchantsOf(s), ...storedOf(s)])) {
+    lines.push(`<span class="${ENCHANTS[id]?.curse ? 'tt-bad' : 'tt-dim'}">${esc(enchantName(id, lvl))}</span>`);
+  }
+  if (s.id === EXPERIENCE_BOTTLE) lines.push('<span class="tt-dim">Clic derecho: lanzarla (suelta experiencia)</span>');
   const tool = def?.tool;
   if (tool && WEAPONS.has(tool.kind)) {
     lines.push('<span class="tt-gap"></span>', '<span class="tt-dim">En la mano principal:</span>',

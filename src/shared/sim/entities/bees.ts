@@ -333,7 +333,7 @@ export function beeTick(m: Entities, e: Entity, dt: number, players: PlayerView[
       if (d < 1.4 && ai.attackCd <= 0) {
         ai.attackCd = 1;
         const dx = p.x - e.x, dz = p.z - e.z, dl = Math.hypot(dx, dz) || 1;
-        m.host.hurtPlayer(p.id, def.damage * m.difficultyScale(), (dx / dl) * 3, 3, (dz / dl) * 3, BEE_STING_CAUSE);
+        m.host.hurtPlayer(p.id, def.damage * m.difficultyScale(), (dx / dl) * 3, 3, (dz / dl) * 3, BEE_STING_CAUSE, e); // Fase 7: e (Espinas)
         m.host.fx('mob_attack', e.x, e.y + 0.3, e.z, MOB_BEE);
         s.stung = true;
         s.dieIn = STING_DEATH[0] + m.rand() * (STING_DEATH[1] - STING_DEATH[0]);

@@ -646,3 +646,8 @@ shape(['G G', 'GSG', 'GRG'], { G: RAIL_GOLD, S: STICK, R: REDSTONE }, POWERED_RA
   if (plate > 0) shape(['I I', 'IPI', 'IRI'], { I: IRON_INGOT, P: plate, R: REDSTONE }, DETECTOR_RAIL, 6);
   if (torch > 0) shape(['ISI', 'ITI', 'ISI'], { I: IRON_INGOT, S: STICK, T: torch }, ACTIVATOR_RAIL, 6);
 }
+// Fase 7 (encantamientos): mesa de encantamientos (libro, dos diamantes y cuatro de obsidiana) y yunque
+// (tres bloques de hierro y cuatro lingotes), como en Minecraft.
+import { ENCHANTING_TABLE, ANVIL, OBSIDIAN } from './blocks';
+shape([' B ', 'DOD', 'OOO'], { B: BOOK, D: DIAMOND, O: OBSIDIAN }, ENCHANTING_TABLE);
+shape(['BBB', ' I ', 'III'], { B: IRON_BLOCK, I: IRON_INGOT }, ANVIL);

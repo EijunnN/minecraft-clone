@@ -11,6 +11,7 @@ import { stackToWire, stackFromWire } from '../../protocol';
 import type { ServerStore } from '../store';
 import type { Entity, InteractResult } from '../entities';
 import type { ServerContext, Session } from './context';
+import { hasGlint } from '../../enchantments'; // Fase 7 (encantamientos)
 
 const MAX_STANDS = 2000;
 
@@ -58,6 +59,7 @@ export class ArmorStands {
     e.yaw = st.yaw;
     e.bodyYaw = st.yaw;
     e.standArmor = st.armor.map((a) => a?.id ?? 0);
+    e.standGlint = st.armor.reduce((m, a, i) => (hasGlint(a) ? m | (1 << i) : m), 0); // Fase 7 (encantamientos)
     st.ent = e.id;
     this.byEnt.set(e.id, st);
     const k = `${Math.floor(st.x)},${Math.floor(st.z)}`;

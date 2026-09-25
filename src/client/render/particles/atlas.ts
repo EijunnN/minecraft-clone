@@ -27,6 +27,7 @@ export const SPRITE = {
   note: 25,
   cloud: 26, // nube de enfado (aldeano que dice que no)
   spark: 27,
+  glyph: 40, // 40..47: Fase 7 (encantamientos), runas que vuelan de las librerías a la mesa
 } as const;
 
 type RGBA = [number, number, number, number];
@@ -258,6 +259,36 @@ const SHADERS: [number, Shader][] = [
   [SPRITE.snow, snow], [SPRITE.splash, splash], [SPRITE.ring, ring], [SPRITE.dust, dust], [SPRITE.streak, streak],
   [SPRITE.note, note], [SPRITE.cloud, cloud], [SPRITE.spark, spark],
 ];
+
+// Fase 7 (encantamientos): ocho runas (trazos de 5×7 celdas con los bordes suaves y un halo).
+const GLYPH_BITS: readonly (readonly number[])[] = [
+  [0b11111, 0b00100, 0b00100, 0b01110, 0b00100, 0b00100, 0b00100],
+  [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+  [0b01110, 0b10000, 0b10000, 0b11110, 0b00001, 0b00001, 0b11110],
+  [0b10101, 0b10101, 0b10101, 0b01110, 0b00100, 0b00100, 0b00100],
+  [0b00100, 0b01010, 0b10001, 0b00000, 0b10001, 0b01010, 0b00100],
+  [0b11100, 0b00100, 0b00100, 0b00111, 0b00100, 0b00100, 0b11100],
+  [0b10000, 0b10000, 0b11111, 0b00001, 0b00001, 0b00001, 0b00001],
+  [0b00001, 0b00010, 0b00100, 0b11111, 0b00100, 0b01000, 0b10000],
+];
+
+function glyph(bits: readonly number[]): Shader {
+  return (u, v) => {
+    // La runa ocupa el centro (5×7 celdas en [-0.62, 0.62] × [-0.86, 0.86]).
+    const gx = (u + 0.62) / 0.248, gy = (0.86 - v) / 0.2457;
+    let a = 0;
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 5; x++) {
+        if (!(bits[y] & (1 << (4 - x)))) continue;
+        const dx = Math.max(0, Math.abs(gx - (x + 0.5)) - 0.38), dy = Math.max(0, Math.abs(gy - (y + 0.5)) - 0.38);
+        a = Math.max(a, smooth(0.35, 0, Math.hypot(dx, dy)), 0.35 * smooth(1.4, 0, Math.hypot(dx, dy)));
+      }
+    }
+    return [1, 1, 1, a];
+  };
+}
+
+GLYPH_BITS.forEach((bits, i) => SHADERS.push([SPRITE.glyph + i, glyph(bits)]));
 
 /** RGBA de 512×512 con alfa premultiplicado. */
 export function generateParticleAtlas(): Uint8Array {

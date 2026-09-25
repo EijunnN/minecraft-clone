@@ -5,6 +5,7 @@ import type { ItemDraw, ItemRenderer } from './ItemRenderer';
 import type { ClientEntity } from '../game/ClientEntities';
 import type { RemotePlayerView } from './EntityRenderer';
 import { OAK_PLANKS, SMOOTH_STONE } from '../../shared/blocks';
+import { EF_GLINT_ARMOR_SHIFT } from '../../shared/protocol'; // Fase 7 (encantamientos)
 
 /** Cajas del soporte en píxeles (x, z centrados; y desde el suelo) y si son de piedra. */
 const PARTS: [x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, stone: boolean][] = [
@@ -38,5 +39,6 @@ export function standArmorView(e: ClientEntity, light: [number, number]): Remote
   return {
     id: `stand${e.id}`, name: '', shirt: '', x: e.x, y: e.y, z: e.z, bodyYaw: e.yaw, headYaw: e.yaw, pitch: 0,
     walkPhase: 0, walkAmount: 0, swing: 0, sneaking: false, light, armor: e.armor,
+    glint: ((e.flags >> EF_GLINT_ARMOR_SHIFT) & 15) << 2, // Fase 7 (encantamientos)
   };
 }

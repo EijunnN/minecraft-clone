@@ -265,16 +265,16 @@ export function hasArrows(g: Game): boolean {
 
 /**
  * Coge la flecha que toca disparar (como en Minecraft: mano secundaria, mano principal y luego el
- * inventario en orden) y la gasta (en creativo no). Devuelve el tipo de poción que lleva (−1 normal) o
- * null si no hay ninguna.
+ * inventario en orden) y la gasta (en creativo no; con `infinity`, tampoco las normales). Devuelve el tipo
+ * de poción que lleva (−1 normal) o null si no hay ninguna.
  */
-export function takeArrow(g: Game): number | null {
+export function takeArrow(g: Game, infinity = false): number | null {
   const order = [OFFHAND, g.selected, ...Array.from({ length: INV_SIZE }, (_, i) => i)];
   for (const i of order) {
     const s = g.inv.get(i);
     if (!s || (s.id !== ARROW && s.id !== TIPPED_ARROW)) continue;
     const type = s.id === TIPPED_ARROW ? potionType(s) : -1;
-    if (!g.creative) g.inv.consume(i, 1);
+    if (!g.creative && !(infinity && s.id === ARROW)) g.inv.consume(i, 1);
     return type;
   }
   return g.creative ? -1 : null;

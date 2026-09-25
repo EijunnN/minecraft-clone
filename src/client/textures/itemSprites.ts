@@ -25,6 +25,7 @@ import { COLLECTION_SPRITES } from './collectionSprites'; // Fase 6.5 (coleccion
 import { EQUIPMENT_SPRITES } from './equipmentSprites'; // Fase 6.5 (equipo)
 import { POTION_SPRITES, POTION_VARIANTS } from './potionSprites'; // Fase 7 (pociones)
 import { TRANSPORT_SPRITES } from './transportSprites'; // Fase 7 (transporte)
+import { ENCHANT_SPRITES } from './enchantSprites'; // Fase 7 (encantamientos)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2281,6 +2282,8 @@ Object.assign(SPRITES, EQUIPMENT_SPRITES);
 Object.assign(SPRITES, POTION_SPRITES);
 // Fase 7 (transporte): barcas, balsas y vagonetas.
 Object.assign(SPRITES, TRANSPORT_SPRITES);
+// Fase 7 (encantamientos): libro encantado y botella con experiencia.
+Object.assign(SPRITES, ENCHANT_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

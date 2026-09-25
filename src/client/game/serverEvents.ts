@@ -9,6 +9,7 @@ import type { PlayerInfo, ServerMsg, GameMode } from '../../shared/protocol';
 import { lighten } from './gameTypes';
 import type { Game } from './Game';
 import { EFFECT_INSTANT_DAMAGE } from '../../shared/effects'; // Fase 7 (pociones)
+import { totalForLevel, xpToNext } from '../../shared/experience'; // Fase 7 (encantamientos)
 
 export class ServerEvents {
   constructor(private g: Game) {}
@@ -17,6 +18,7 @@ export class ServerEvents {
     if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
     if (this.g.vehicles.onMessage(msg)) return; // Fase 7 (transporte): 'vpass' y 'vfix'
     if (this.g.books.onMessage(msg)) return; // Fase 6.5 (libros y estandartes): 'banner' y 'lbook'
+    if (this.g.enchant.onServer(msg)) return; // Fase 7 (encantamientos): /encantar
     switch (msg.t) {
       case 'join':
         this.addRemote(msg.p, true);
@@ -26,7 +28,7 @@ export class ServerEvents {
         break;
       case 'pos': {
         const rp = this.g.remote.get(msg.id);
-        rp?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o);
+        rp?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o, msg.g); // Fase 7 (encantamientos): g, el brillo
         if (rp) rp.effectColor = Number.isInteger(msg.ec) ? msg.ec! & 0xffffff : 0; // Fase 7 (pociones)
         break;
       }
@@ -54,6 +56,7 @@ export class ServerEvents {
         break;
       case 'hurt':
         this.g.life.onHurt(msg.a, msg.k, msg.c);
+        if (msg.th) this.g.enchant.onThorns(msg.th); // Fase 7 (encantamientos): Espinas
         break;
       case 'picked':
         this.g.interaction.onPicked(msg.s);
@@ -135,10 +138,19 @@ export class ServerEvents {
         break;
       }
       case 'xp': {
+        // Fase 7 (encantamientos): /experiencia en niveles (l) y Reparación, que se come parte de los orbes.
+        const l = Number(msg.l);
+        if (Number.isInteger(l) && l > 0) {
+          const xp = this.g.xp;
+          xp.total = totalForLevel(xp.level + Math.min(l, 10000)) + Math.floor(xp.progress * xpToNext(xp.level + l));
+          this.g.audio.playLevelUp();
+          break;
+        }
         const n = Number(msg.n);
         if (!Number.isInteger(n) || n <= 0) break;
         this.g.audio.playXpOrb();
-        if (this.g.xp.add(n)) this.g.audio.playLevelUp();
+        const rest = this.g.enchant.mend(n);
+        if (rest > 0 && this.g.xp.add(rest)) this.g.audio.playLevelUp();
         break;
       }
     }

@@ -4,6 +4,8 @@ import { ITEMS, maxStack, sameKind, isValidItem, type ItemStack } from '../../sh
 import { stackToWire, stackFromWire, type WireStack } from '../../shared/protocol';
 import { cloneStack } from '../../shared/containers';
 import { ARMOR_SLOTS } from '../../shared/armor';
+import { UNBREAKING, BINDING_CURSE, enchLevel } from '../../shared/enchantments'; // Fase 7 (encantamientos)
+import { unbreakingSaves } from '../../shared/enchantEffects';
 
 export const INV_SIZE = 36;
 export const HOTBAR = 9;
@@ -171,6 +173,15 @@ export class Inventory {
   private wearStack(s: ItemStack, amount: number): boolean {
     const dur = durabilityOf(s.id);
     if (dur <= 0) return false;
+    // Fase 7 (encantamientos): Irrompibilidad se libra de cada punto de desgaste con su probabilidad.
+    const unb = enchLevel(s, UNBREAKING);
+    if (unb > 0) {
+      const armor = !!ITEMS[s.id]?.armor;
+      let n = 0;
+      for (let k = 0; k < amount; k++) if (!unbreakingSaves(unb, armor, Math.random)) n++;
+      amount = n;
+      if (amount <= 0) return false;
+    }
     s.dmg = (s.dmg ?? 0) + amount;
     this.changed();
     return s.dmg >= dur;
@@ -251,6 +262,11 @@ export class Inventory {
     else if (prev) this.add(prev);
     this.changed();
     return true;
+  }
+
+  /** Fase 7 (encantamientos): ¿lleva la pieza de la ranura k la Maldición de ligamiento? (no se quita). */
+  armorBound(k: number): boolean {
+    return enchLevel(this.armor[k], BINDING_CURSE) > 0;
   }
 
   /** Quita la pieza de la ranura k y la guarda en el inventario (si cabe). */

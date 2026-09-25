@@ -7,6 +7,11 @@ import { EF_ACTION } from '../../protocol';
 import { FISH_WAIT, FISH_BITE } from '../../fishing';
 import { moveBody } from '../physics';
 import { isSplashPotion } from './potions'; // Fase 6 (monstruos)
+import { lureReduction } from '../../enchantEffects'; // Fase 7 (encantamientos)
+import { EXPERIENCE_BOTTLE } from '../../items';
+
+/** Fase 7 (encantamientos): gravedad de la botella con experiencia (Minecraft: 0,07 por tick). */
+const XP_BOTTLE_GRAVITY = 28;
 import type { PlayerView, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -25,7 +30,7 @@ export class Projectiles {
       this.m.remove(e.id);
       return;
     }
-    e.vy -= THROWN_GRAVITY * dt;
+    e.vy -= (e.stack?.id === EXPERIENCE_BOTTLE ? XP_BOTTLE_GRAVITY : THROWN_GRAVITY) * dt; // Fase 7: la botella cae más
     const drag = Math.pow(e.inWater ? 0.8 : 0.99, dt * 20);
     e.vx *= drag;
     e.vy *= drag;
@@ -72,6 +77,13 @@ export class Projectiles {
       m.remove(e.id);
       return;
     }
+    // Fase 7 (encantamientos): la botella con experiencia se rompe y suelta de 3 a 11 puntos en orbes.
+    if (e.stack?.id === EXPERIENCE_BOTTLE) {
+      m.host.fx('xp_bottle', e.x, e.y, e.z);
+      m.xp.spawn(3 + Math.floor(m.rand() * 5) + Math.floor(m.rand() * 5), e.x, e.y, e.z);
+      m.remove(e.id);
+      return;
+    }
     if (mob) m.damage(mob, 0, e.x - e.vx, e.z - e.vz, typeof e.shooter === 'string' ? e.shooter : null, 0.4);
     m.host.fx(e.stack?.id === SNOWBALL ? 'snowball_break' : 'egg_break', e.x, e.y, e.z);
     if (e.stack?.id === EGG && m.rand() < 1 / 8) {
@@ -101,14 +113,14 @@ export class Projectiles {
       const surface = above > 0 && BLOCK_FLUID[above] === 1 ? by + 1.1 : by + fluidHeight(cell);
       if (e.fishWait === undefined) {
         m.host.fx('fish_splash', e.x, surface, e.z);
-        e.fishWait = this.waitTime();
+        e.fishWait = this.waitTime(e.lure ?? 0);
         e.fishBite = 0;
       }
       if (e.fishBite! > 0) {
         e.fishBite! -= dt;
         if (e.fishBite! <= 0) {
           e.fishBite = 0;
-          e.fishWait = this.waitTime();
+          e.fishWait = this.waitTime(e.lure ?? 0);
         }
       } else {
         // Sin cielo encima pica la mitad de rápido; con lluvia, algo más rápido.
@@ -141,7 +153,8 @@ export class Projectiles {
     e.flags = e.fishBite! > 0 ? EF_ACTION : 0;
   }
 
-  private waitTime(): number {
-    return FISH_WAIT[0] + this.m.rand() * (FISH_WAIT[1] - FISH_WAIT[0]);
+  /** Fase 7 (encantamientos): Atracción quita 5 s de espera por nivel. */
+  private waitTime(lure = 0): number {
+    return Math.max(1, FISH_WAIT[0] + this.m.rand() * (FISH_WAIT[1] - FISH_WAIT[0]) - lureReduction(lure));
   }
 }

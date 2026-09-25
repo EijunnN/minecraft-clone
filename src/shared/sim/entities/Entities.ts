@@ -79,6 +79,11 @@ export class Entities {
    * transporte (devuelve true y la criatura ni piensa ni se mueve sola).
    */
   seated: ((e: Entity) => boolean) | null = null;
+  // Fase 7 (encantamientos)
+  /** Un bloque que caía toca el suelo (antes de ponerse): el yunque hiere y se deteriora. */
+  fallingLanded: ((e: Entity) => boolean) | null = null;
+  /** Nivel de Saqueo del golpe que se está resolviendo (lo pone quien ataca). */
+  looting = 0;
 
   constructor(host: EntityHost) {
     this.host = host;
@@ -211,6 +216,7 @@ export class Entities {
   spawnFalling(block: number, x: number, y: number, z: number): Entity {
     const e = this.base(ENT_FALLING, x, y, z, 0.98, 0.98, 1);
     e.block = block;
+    e.fallFrom = y; // Fase 7 (encantamientos)
     e.yaw = 0;
     this.list.set(e.id, e);
     return e;
@@ -294,7 +300,8 @@ export class Entities {
       const stacks: ItemStack[] = [];
       for (const [id, min, max] of def.drops) {
         if (id === WHITE_WOOL && e.sheared) continue;
-        const n = min + Math.floor(this.rand() * (max - min + 1));
+        // Fase 7 (encantamientos): Saqueo suma de 0 a su nivel a cada botín.
+        const n = min + Math.floor(this.rand() * (max - min + 1)) + (this.looting > 0 ? Math.floor(this.rand() * (this.looting + 1)) : 0);
         if (n > 0) stacks.push({ id, count: n });
       }
       // Los animales que mueren ardiendo sueltan la carne cocinada.

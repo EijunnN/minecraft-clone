@@ -10,8 +10,10 @@ import {
 } from './items';
 import { DARK_OAK_LOG, BIRCH_LOG } from './blocks'; // Fase 6 (asaltos)
 
-/** Entrada: [objeto, peso, mínimo, máximo]. */
-type Entry = [number, number, number, number];
+/** Entrada: [objeto, peso, mínimo, máximo] y, Fase 7 (encantamientos), lo que se le hace (encantarlo). */
+type Entry = [number, number, number, number] | [number, number, number, number, LootFn];
+/** Fase 7 (encantamientos): función de botín sobre la pila que sale (encantar al azar, con niveles…). */
+export type LootFn = (s: ItemStack, rand: () => number) => ItemStack;
 
 export interface LootTable {
   rolls: [number, number];
@@ -89,10 +91,11 @@ export function rollLoot(table: LootTable, rand: () => number): ItemStack[] {
   const out: ItemStack[] = [];
   for (let r = 0; r < rolls; r++) {
     let pick = rand() * total;
-    for (const [id, w, min, max] of table.entries) {
+    for (const [id, w, min, max, fn] of table.entries) {
       pick -= w;
       if (pick > 0) continue;
-      out.push({ id, count: min + Math.floor(rand() * (max - min + 1)) });
+      const s: ItemStack = { id, count: min + Math.floor(rand() * (max - min + 1)) };
+      out.push(fn ? fn(s, rand) : s);
       break;
     }
   }
@@ -148,4 +151,28 @@ import { NETHER_WART, BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, GHAST_TEAR, GLOWSTON
   add('dungeon', [NETHER_WART, 6, 1, 3], [BLAZE_ROD, 3, 1, 1], [GLASS_BOTTLE, 8, 1, 3]);
   add('desert_pyramid', [GHAST_TEAR, 3, 1, 1], [BLAZE_ROD, 3, 1, 2]);
   add('jungle_temple', [NETHER_WART, 4, 1, 3], [GLOWSTONE_DUST, 5, 1, 4]);
+}
+
+// ------------------------------------------------------------------ Fase 7 (encantamientos)
+// Libros encantados (al azar; en el templo de la jungla, con 30 niveles), el equipo de oro de los portales
+// en ruinas y la armadura de cuero de los naufragios encantados al azar, y botellas con experiencia en
+// los puestos de saqueadores (como en Minecraft).
+import { enchantRandomly, enchantWithLevels, rndFrom } from './enchanting';
+import { EXPERIENCE_BOTTLE } from './items';
+{
+  const randomly: LootFn = (s, rand) => enchantRandomly(s, rndFrom(rand));
+  const levels30: LootFn = (s, rand) => enchantWithLevels(s, 30, rndFrom(rand));
+  const add = (table: string, ...entries: Entry[]) => LOOT_TABLES[table].entries.push(...entries);
+  add('dungeon', [BOOK, 10, 1, 1, randomly]);
+  add('mineshaft', [BOOK, 10, 1, 1, randomly]);
+  add('pillager_outpost', [EXPERIENCE_BOTTLE, 7, 1, 2]);
+  const enchantAll = (table: string, ids: readonly number[], fn: LootFn) => {
+    for (const e of LOOT_TABLES[table].entries) if (ids.includes(e[0]) && e.length === 4) (e as unknown[]).push(fn);
+  };
+  // Los libros que ya había en estos cofres eran los encantados de Minecraft.
+  enchantAll('desert_pyramid', [BOOK], randomly);
+  enchantAll('pillager_outpost', [BOOK], randomly);
+  enchantAll('jungle_temple', [BOOK], levels30);
+  enchantAll('ruined_portal', [ARMOR.golden.helmet, ARMOR.golden.boots, TOOLS.golden.sword, TOOLS.golden.pickaxe], randomly);
+  enchantAll('shipwreck_supply', [ARMOR.leather.helmet, ARMOR.leather.boots], randomly);
 }
