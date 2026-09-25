@@ -13,7 +13,7 @@ import {
 } from '../../blocks';
 import { stackFromWire, STATE_DEAD, type ClientMsg } from '../../protocol';
 import { sanitizeStack } from '../../containers';
-import { THORNS, enchLevel } from '../../enchantments';
+import { THORNS, MAX_ENCHANT_LEVEL, enchLevel } from '../../enchantments';
 import { frostWalkerRadius, thornsChance, thornsDamage } from '../../enchantEffects';
 import { ANVIL_BREAK_CHANCE } from '../../anvil';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
@@ -108,7 +108,7 @@ export class EnchantWork {
   /** El jugador, en el suelo, con Paso helado de nivel `l`: hielo escarchado en el agua de alrededor. */
   onFrost(s: Session, msg: Extract<ClientMsg, { t: 'frost' }>): void {
     const l = Number(msg.l);
-    if (!Number.isInteger(l) || l < 1 || l > 2 || s.s & STATE_DEAD) return;
+    if (!Number.isInteger(l) || l < 1 || l > MAX_ENCHANT_LEVEL || s.s & STATE_DEAD) return;
     const w = this.ctx.world;
     const r = frostWalkerRadius(l);
     const px = s.p[0], pz = s.p[2], y = Math.floor(s.p[1] + 0.01) - 1;

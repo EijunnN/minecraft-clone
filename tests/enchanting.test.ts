@@ -167,7 +167,7 @@ test('efectos: filo, castigo, eficiencia, irrompibilidad, protección y caída d
   assert.equal(protectionPoints([[], [], [], [[FEATHER_FALLING, 4]]], 'zombie'), 0);
   assert.equal(protectionPoints(four, 'void'), 0, 'el vacío no se reduce');
   // Los encantamientos que manda el cliente se validan con el objeto.
-  assert.deepEqual(sanitizeHeldEnchants(TOOLS.iron.sword, [[SHARPNESS, 9], [EFFICIENCY, 5], [999, 1], 'x']), [[SHARPNESS, 5]]);
+  assert.deepEqual(sanitizeHeldEnchants(TOOLS.iron.sword, [[SHARPNESS, 99], [EFFICIENCY, 5], [999, 1], 'x']), [[SHARPNESS, 10]]);
   // Suerte marina: menos basura y más tesoros.
   const w = fishingWeights(3);
   assert.deepEqual(w, { junk: 4, treasure: 11, fish: 82 });

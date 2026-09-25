@@ -17,6 +17,7 @@ import { addMaterialShapes } from './building';
 import { addWall } from './decoration';
 import { MAX_BLOCK_ID } from '../constants';
 import { mbox, rotateBoxes, rotateFlat, DIR_X, DIR_Z, type ModelBox } from '../blockModels';
+import { isFrostedIce } from './enchantBlocks'; // Fase 7 (encantamientos)
 
 // ------------------------------------------------------------------ bloques anegados
 
@@ -29,7 +30,7 @@ export function isWaterlogged(id: number): boolean {
 
 /** Lo que queda en la celda al quitar el bloque: agua si estaba anegado, aire si no. */
 export function emptyAfterBreak(id: number): number {
-  return isWaterlogged(id) ? WATER : AIR;
+  return isWaterlogged(id) || isFrostedIce(id) ? WATER : AIR; // Fase 7 (encantamientos): el hielo escarchado deja agua
 }
 
 /** Marca como anegados los estados de una familia que son fluido (después de registrarla). */

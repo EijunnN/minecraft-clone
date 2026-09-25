@@ -123,7 +123,7 @@ export class EnchantClient {
       const cell = `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
       if (cell !== this.frostCell) {
         this.frostCell = cell;
-        g.net?.send({ t: 'frost', l: Math.min(2, frost) });
+        g.net?.send({ t: 'frost', l: frost });
       }
     } else this.frostCell = '';
     this.tableGlyphs(dt);

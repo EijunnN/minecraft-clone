@@ -4,7 +4,7 @@
 import { MOBS } from './mobs';
 import {
   PROTECTION, FIRE_PROTECTION, BLAST_PROTECTION, PROJECTILE_PROTECTION, FEATHER_FALLING, SHARPNESS, SMITE,
-  BANE_OF_ARTHROPODS, IMPALING, ENCHANTS, sanitizeEnchList, canApply, type EnchList,
+  BANE_OF_ARTHROPODS, IMPALING, sanitizeEnchList, canApply, type EnchList,
 } from './enchantments';
 
 /** Nivel de un encantamiento en una lista (0 si no está). */
@@ -16,11 +16,10 @@ export function levelIn(list: readonly (readonly [number, number])[] | null | un
 
 /**
  * Encantamientos que manda el cliente con una acción (golpe, disparo, bloque roto…): sólo los que se
- * pueden aplicar a ese objeto, con los niveles acotados al máximo de cada uno.
+ * pueden aplicar a ese objeto, con los niveles acotados (hasta 10, lo que permite /encantar).
  */
 export function sanitizeHeldEnchants(item: number, raw: unknown): EnchList {
-  const list = sanitizeEnchList(raw) ?? [];
-  return list.filter(([id]) => canApply(id, item)).map(([id, lvl]): [number, number] => [id, Math.min(lvl, ENCHANTS[id].max)]);
+  return (sanitizeEnchList(raw) ?? []).filter(([id]) => canApply(id, item));
 }
 
 // ------------------------------------------------------------------ criaturas sensibles
