@@ -371,6 +371,8 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'chiseled_bookshelf_occupied' },
   { name: 'chiseled_bookshelf_top' },
   { name: 'chiseled_bookshelf_side' },
+  // Fase 6.5 (libros y estandartes): libro abierto sobre el atril.
+  { name: 'lectern_book' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

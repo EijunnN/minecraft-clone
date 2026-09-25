@@ -19,6 +19,7 @@ import { COPPER_SPRITES, COPPER_TOOL_INKS, COPPER_ARMOR_ACCENT } from './copperS
 import { DECOR_SPRITES } from './decorSprites'; // Fase 6.5 (decoración)
 import { OCEAN_SPRITES } from './oceanSprites'; // Fase 6.5 (océano y plantas)
 import { FINISHING_SPRITES } from './finishingSprites'; // Fase 6.5 (remate)
+import { BOOK_SPRITES } from './bookSprites'; // Fase 6.5 (libros y estandartes)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -433,6 +434,7 @@ const SPRITES: Record<string, SpriteDef> = {
   ...COPPER_SPRITES, // Fase 6.5 (cobre)
   ...OCEAN_SPRITES, // Fase 6.5 (océano y plantas)
   ...FINISHING_SPRITES, // Fase 6.5 (remate)
+  ...BOOK_SPRITES, // Fase 6.5 (libros y estandartes)
 
   compass: {
     rows: [

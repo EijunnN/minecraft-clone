@@ -1,7 +1,7 @@
 // Física de lo que no son criaturas: objetos tirados (se fusionan, se recogen, arden en lava),
 // flechas (vuelan, se clavan, hieren) y bloques que caen (arena y grava).
 import { MOBS, ENT_ITEM, ENT_ARROW, isRaider } from '../../mobs';
-import { ITEMS, ARROW, maxStack, type ItemStack } from '../../items';
+import { ITEMS, ARROW, maxStack, sameKind, type ItemStack } from '../../items';
 import { AIR, BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
 import { EF_PICKABLE } from '../../protocol';
 import { moveBody, boxCollides } from '../physics';
@@ -75,7 +75,7 @@ export class ItemPhysics {
       }
       for (const o of near) {
         if (o === e || o.type !== ENT_ITEM || o.dead || !o.stack || !e.stack || !this.m.list.has(o.id)) continue;
-        if (o.stack.id !== e.stack.id || (o.stack.dmg ?? 0) !== (e.stack.dmg ?? 0) || ITEMS[e.stack.id]?.tool || o.stack.bag || e.stack.bag) continue;
+        if (!sameKind(o.stack, e.stack)) continue; // Fase 6.5 (libros y estandartes): también con los mismos datos
         if (Math.abs(o.x - e.x) > 0.6 || Math.abs(o.y - e.y) > 0.6 || Math.abs(o.z - e.z) > 0.6) continue;
         const room = maxStack(e.stack.id) - e.stack.count;
         if (room <= 0) continue;

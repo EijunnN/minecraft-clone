@@ -50,12 +50,19 @@ import { Shelves } from './server/shelves'; // Fase 6.5 (remate)
 import { Leashes } from './server/leashes'; // Fase 6.5 (remate)
 import { ArmorStands } from './server/armorStands'; // Fase 6.5 (remate)
 import { OceanLife } from './server/oceanLife'; // Fase 6.5 (océano y plantas)
+import { Lecterns } from './server/lecterns'; // Fase 6.5 (libros y estandartes)
+import { Banners } from './server/banners'; // Fase 6.5 (libros y estandartes)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
 
 /** Chunks generados como máximo por tick (la generación es lo más caro). */
 const GEN_PER_TICK = 2;
+/**
+ * Tamaño máximo de un mensaje. Fase 6.5 (libros y estandartes): los libros escritos viajan con el
+ * inventario, así que el estado del jugador puede pasar de 16 KB (1 MB es el límite de Cloudflare).
+ */
+const MAX_MESSAGE = 1 << 20;
 const STALE_MS = 40_000;
 
 export interface GameServerOptions {
@@ -133,6 +140,9 @@ export class GameServer {
   private stands: ArmorStands;
   /** Fase 6.5 (océano y plantas): corales, algas, esponjas, bayas dulces y plantaformas. */
   readonly oceanLife: OceanLife;
+  /** Fase 6.5 (libros y estandartes): libros de los atriles y capas de los estandartes. */
+  readonly lecterns: Lecterns;
+  readonly banners: Banners;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -211,6 +221,13 @@ export class GameServer {
     this.leashes = new Leashes(this.ctx); // Fase 6.5 (remate)
     this.stands = new ArmorStands(this.ctx, store); // Fase 6.5 (remate)
     this.farming.extraInteract = (s, e, msg) => this.stands.onInteract(s, e, msg) ?? this.leashes.onInteract(s, e, msg);
+    // Fase 6.5 (libros y estandartes): atriles y estandartes con dibujos. El estandarte roto suelta su
+    // objeto con las capas (lo suelte quien lo suelte: el jugador, la falta de apoyo, una explosión…).
+    this.lecterns = new Lecterns(this.ctx, store);
+    this.banners = new Banners(this.ctx, store);
+    this.edits.placed = (s, msg, edits) => this.banners.onPlaced(s, msg, edits);
+    const drop = this.entities.dropStacks.bind(this.entities);
+    this.entities.dropStacks = (stacks, x, y, z) => drop(this.banners.decorateDrops(stacks, x, y, z), x, y, z);
   }
 
   get seed(): number {
@@ -425,7 +442,7 @@ export class GameServer {
 
   message(conn: Conn, data: string | ArrayBuffer): void {
     const s = this.sessions.get(conn);
-    if (!s || typeof data !== 'string' || data.length > 16384) return;
+    if (!s || typeof data !== 'string' || data.length > MAX_MESSAGE) return;
     let msg: ClientMsg;
     try {
       const parsed: unknown = JSON.parse(data);
@@ -592,6 +609,9 @@ export class GameServer {
       case 'shelf': // Fase 6.5 (remate)
         if (this.allow(s, 1)) this.shelves.onShelf(s, msg);
         break;
+      case 'lectern': // Fase 6.5 (libros y estandartes)
+        if (this.allow(s, 1)) this.lecterns.onLectern(s, msg);
+        break;
     }
   }
 
@@ -648,6 +668,7 @@ export class GameServer {
       t: 'welcome', id: s.id, seed: this.seed, time: this.time, now: this.now(), players, editCount: edits.length,
       mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawnPoint, bed: s.bed, rods: this.fishing.active(),
       signs: this.signs.all(),
+      banners: this.banners.all(), // Fase 6.5 (libros y estandartes)
     });
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: this.info(s) }, s);
@@ -803,6 +824,8 @@ export class GameServer {
     this.shelves?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (remate)
     this.stands?.onBlockChanged(x, y, z); // Fase 6.5 (remate)
     this.oceanLife.onBlockChanged(x, y, z, old, id); // Fase 6.5 (océano y plantas)
+    this.lecterns?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (libros y estandartes)
+    this.banners?.onBlockChanged(x, y, z, old, id);
   }
 
   // ------------------------------------------------------------------ bucle
@@ -827,6 +850,7 @@ export class GameServer {
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
+    this.banners.endTick(); // Fase 6.5 (libros y estandartes)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {
@@ -902,6 +926,8 @@ export class GameServer {
     this.hangings.flush(this.store); // Fase 6.5 (decoración)
     this.shelves.flush(this.store); // Fase 6.5 (remate)
     this.stands.flush(this.store); // Fase 6.5 (remate)
+    this.lecterns.flush(this.store); // Fase 6.5 (libros y estandartes)
+    this.banners.flush(this.store);
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

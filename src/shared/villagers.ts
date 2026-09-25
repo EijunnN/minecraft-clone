@@ -13,7 +13,7 @@ import {
   SMITHING_TABLE, CAULDRON, PUMPKIN, MELON, CAKE, STONE, BRICKS, STONE_BRICKS, GRANITE, ANDESITE, DIORITE, TERRACOTTA,
   QUARTZ_BLOCK, BOOKSHELF, GLASS, GLASS_PANE, GRAVEL, CAMPFIRE, WHITE_WOOL, BLACK_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL,
   LIME_WOOL, BEDS, ALL_SAPLINGS, FLOWERS, LILY_PAD, VINE, SUGAR_CANE, CACTUS, PACKED_ICE, RED_SAND, MOSS_BLOCK, POPPY,
-  DANDELION, CORNFLOWER, BROWN_MUSHROOM, RED_MUSHROOM, familyBase,
+  DANDELION, CORNFLOWER, BROWN_MUSHROOM, RED_MUSHROOM, baseBlock,
 } from './blocks';
 
 /** Una oferta: lo que pide (una o dos pilas) y lo que da; `max` usos antes de reponer; `xp` que gana el aldeano. */
@@ -196,7 +196,7 @@ export function levelForXp(xp: number): number {
 /** Profesión que da un bloque de trabajo (PROF_NONE si no es un bloque de trabajo). */
 export function professionForBlock(block: number): number {
   if (block <= 0) return PROF_NONE;
-  const base = familyBase(block);
+  const base = baseBlock(block); // Fase 6.5 (libros y estandartes): el atril con libro sigue siendo un atril
   for (const p of PROFESSIONS) if (p.block && p.block === base) return p.id;
   return PROF_NONE;
 }

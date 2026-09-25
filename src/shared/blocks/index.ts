@@ -164,3 +164,5 @@ export * from './hangingSigns';
 import { CHISELED_BOOKSHELF } from './chiseledBookshelf';
 export * from './chiseledBookshelf';
 (INVENTORY_ORDER as number[]).push(CHISELED_BOOKSHELF);
+// Fase 6.5 (libros y estandartes): atril con un libro puesto.
+export * from './lecternBook';

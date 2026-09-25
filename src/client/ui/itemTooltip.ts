@@ -9,6 +9,10 @@ import { EFFECTS, effectLevel } from '../../shared/effects';
 import { attackDamage, attackSpeed } from '../../shared/combat';
 import { SUSPICIOUS_STEW, SPYGLASS, CLOCK } from '../../shared/items'; // Fase 6.5 (decoración)
 import { stewEffectText } from '../../shared/decorFood'; // Fase 6.5 (decoración)
+// Fase 6.5 (libros y estandartes).
+import { WRITABLE_BOOK, WRITTEN_BOOK } from '../../shared/items';
+import { BOOK_GENERATIONS } from '../../shared/books';
+import { bannerLayers, layerName, isBannerPatternItem } from '../../shared/bannerPatterns';
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -61,6 +65,17 @@ export function itemTooltipHtml(s: ItemStack): string {
     if ((s.bag?.length ?? 0) > 6) lines.push(`<span class="tt-dim">y ${s.bag!.length - 6} más…</span>`);
     lines.push(`<span class="tt-dim">${bagWeight(s.bag)} / ${BUNDLE_CAPACITY} · clic derecho: meter o sacar</span>`);
   }
+  // Fase 6.5 (libros y estandartes): título, autor y generación del libro; capas del estandarte.
+  if (s.id === WRITTEN_BOOK && s.data) {
+    lines.push(`<span class="tt-good">${esc(s.data.title ?? '')}</span>`, `<span class="tt-dim">de ${esc(s.data.author ?? '?')}</span>`,
+      `<span class="tt-dim">${BOOK_GENERATIONS[s.data.gen ?? 0] ?? ''} · clic derecho: leer</span>`);
+  }
+  if (s.id === WRITABLE_BOOK) {
+    const n = s.data?.pages?.length ?? 0;
+    lines.push(`<span class="tt-dim">${n ? `${n} página${n === 1 ? '' : 's'} escrita${n === 1 ? '' : 's'}` : 'En blanco'} · clic derecho: escribir</span>`);
+  }
+  for (const l of bannerLayers(s)) lines.push(`<span class="tt-dim">${esc(layerName(l))}</span>`);
+  if (isBannerPatternItem(s.id)) lines.push('<span class="tt-dim">Para el telar (no se gasta)</span>');
   const max = tool?.durability ?? armor?.durability;
   if (max) lines.push(`<span class="tt-dim">Durabilidad: ${max - (s.dmg ?? 0)} / ${max}</span>`);
   return lines.join('');

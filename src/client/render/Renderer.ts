@@ -37,6 +37,7 @@ import { pushHangingDraws } from './hangingDraws';
 import { pushStandDraws, standArmorView } from './standDraws'; // Fase 6.5 (remate)
 import { ENT_ARMOR_STAND } from '../../shared/armorStands';
 import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
+import { BannerRenderer, type BannerDraw } from './BannerRenderer'; // Fase 6.5 (libros y estandartes)
 import { LightningRenderer, type Bolt } from './LightningRenderer';
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
@@ -139,6 +140,8 @@ export interface FrameState {
   leashes?: { lines: FishLine[]; knots: [number, number, number][] };
   /** Carteles con texto cercanos. */
   signs?: SignDraw[];
+  /** Fase 6.5 (libros y estandartes): estandartes con dibujos cercanos. */
+  banners?: BannerDraw[];
   /** Rayos de tormenta en pantalla. */
   bolts?: Bolt[];
 }
@@ -173,6 +176,8 @@ export class Renderer {
   readonly mobs: MobRenderer;
   readonly xpOrbs: XpOrbRenderer;
   readonly signText: SignTextRenderer;
+  /** Fase 6.5 (libros y estandartes): tela de los estandartes con dibujos. */
+  readonly bannerCloth: BannerRenderer;
   readonly lightning: LightningRenderer;
   settings: RenderSettings;
 
@@ -261,6 +266,7 @@ export class Renderer {
     this.mobs = new MobRenderer(gl, mobTextures);
     this.xpOrbs = new XpOrbRenderer(gl);
     this.signText = new SignTextRenderer(gl);
+    this.bannerCloth = new BannerRenderer(gl);
     this.lightning = new LightningRenderer(gl);
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
@@ -608,6 +614,7 @@ export class Renderer {
     this.drawPlayerHeldItems(s, bindLighting);
     this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
     this.signText.draw(s.signs ?? [], s.camX, s.camY, s.camZ);
+    this.bannerCloth.draw(s.banners ?? [], s.camX, s.camY, s.camZ, lightOf, bindLighting);
     gl.disable(gl.CULL_FACE);
     this.xpOrbs.draw(s.drops, s.camX, s.camY, s.camZ);
     this.atmosphere.drawSky();

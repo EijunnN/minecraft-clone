@@ -14,6 +14,7 @@ export class ServerEvents {
 
   onServerMessage(msg: ServerMsg): void {
     if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
+    if (this.g.books.onMessage(msg)) return; // Fase 6.5 (libros y estandartes): 'banner' y 'lbook'
     switch (msg.t) {
       case 'join':
         this.addRemote(msg.p, true);

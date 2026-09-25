@@ -2,6 +2,8 @@
 import type { ItemStack } from './items';
 import type { ContainerWire } from './containers';
 import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
+import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
+import type { BannerLayer } from './bannerPatterns';
 
 export const PROTOCOL_VERSION = 10;
 export const MAX_PLAYERS = 16;
@@ -80,7 +82,9 @@ export interface PlayerInfo {
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
 /** [id, cantidad, desgaste?, contenido del saco?] (Fase 6.5: el saco lleva sus pilas en el cuarto campo). */
-export type WireStack = [number, number] | [number, number, number] | [number, number, number, WireStack[]];
+/** Fase 6.5 (libros y estandartes): quinto campo, los datos de la pila (páginas, capas…). */
+export type WireStack = [number, number] | [number, number, number] | [number, number, number, WireStack[]]
+  | [number, number, number, WireStack[], ItemData];
 
 /** Estado del jugador que guarda el servidor (el inventario lo gestiona el cliente). */
 export interface PlayerSave {
@@ -118,7 +122,11 @@ export type ClientMsg =
   | { t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[] }
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number }
   /** Colocar el bloque `item` sobre la cara (n) de la celda golpeada en el punto p con el yaw dado. */
-  | { t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number }
+  | {
+    t: 'place'; x: number; y: number; z: number; n: [number, number, number]; p: [number, number, number]; item: number; yaw: number;
+    /** Fase 6.5 (libros y estandartes): capas del estandarte que se coloca. */
+    l?: BannerLayer[];
+  }
   /** Clic derecho sobre un bloque (abrir puertas, dormir, labrar con la azada, polvo de hueso). */
   | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number }
   /** Al morir: soltar orbes con esta experiencia en la posición p. */
@@ -172,9 +180,12 @@ export type ClientMsg =
   | { t: 'frame'; e: number; item: number; q: number }
   // Fase 6.5 (remate): clic derecho en el hueco `slot` de una estantería cincelada con `item` en la mano
   // (sacar el libro o meter el de la mano). Respuesta: 'ires' con q (take 1 al meterlo, give al sacarlo).
-  | { t: 'shelf'; x: number; y: number; z: number; slot: number; item: number; q: number }
+  | { t: 'shelf'; x: number; y: number; z: number; slot: number; item: number; q: number; st?: ItemStack }
   // Fase 6.5 (remate): poner un soporte para armadura sobre el bloque (x, y, z), mirando a `yaw`.
-  | { t: 'stand'; x: number; y: number; z: number; yaw: number; q: number };
+  | { t: 'stand'; x: number; y: number; z: number; yaw: number; q: number }
+  // Fase 6.5 (libros y estandartes): atril. 'put' pone el libro de la mano (respuesta 'ires' con take 1),
+  // 'take' lo saca (sólo quien lo puso; 'ires' con give) y 'read' pide el libro para leerlo ('lbook').
+  | { t: 'lectern'; x: number; y: number; z: number; a: 'put' | 'take' | 'read'; q: number; book?: ItemStack };
 
 export type ServerMsg =
   | {
@@ -186,6 +197,8 @@ export type ServerMsg =
     rods?: [string, number][];
     /** Carteles con texto: [x, y, z, líneas]. */
     signs?: [number, number, number, string[]][];
+    /** Fase 6.5 (libros y estandartes): estandartes con dibujos: [x, y, z, capas]. */
+    banners?: [number, number, number, BannerLayer[]][];
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
@@ -239,7 +252,11 @@ export type ServerMsg =
   // Fase 6 (asaltos): barra del asalto cercano. s: 0 ninguno, 1 en curso, 2 victoria, 3 derrota;
   // w oleada actual (1..n), n oleadas, h vida que les queda a los asaltantes (0..1; en la espera, lo
   // que falta para la siguiente oleada), r asaltantes vivos.
-  | { t: 'raid'; s: number; w: number; n: number; h: number; r: number };
+  | { t: 'raid'; s: number; w: number; n: number; h: number; r: number }
+  // Fase 6.5 (libros y estandartes): capas del estandarte de (x, y, z) (lista vacía: liso) y el libro de un
+  // atril para leerlo (b null: no tiene; own: lo puso quien lo pide y lo puede sacar).
+  | { t: 'banner'; x: number; y: number; z: number; l: BannerLayer[] }
+  | { t: 'lbook'; x: number; y: number; z: number; b: ItemStack | null; own: boolean };
 
 /** Mensaje binario de ediciones: [u8 tipo=2][u32 n] + n × ([i32 x][i16 y][i32 z][u16 b]). */
 export const BIN_EDITS = 2;
@@ -295,7 +312,9 @@ export function worldTimeAt(t: WorldTime, serverNow: number): number {
 
 export function stackToWire(s: ItemStack | null): WireStack | null {
   if (!s || s.count <= 0) return null;
-  if (s.bag?.length) return [s.id, s.count, s.dmg ?? 0, s.bag.map((b) => stackToWire(b)).filter((b): b is WireStack => !!b)];
+  const bag = s.bag?.length ? s.bag.map((b) => stackToWire(b)).filter((b): b is WireStack => !!b) : [];
+  if (s.data) return [s.id, s.count, s.dmg ?? 0, bag, s.data]; // Fase 6.5 (libros y estandartes)
+  if (bag.length) return [s.id, s.count, s.dmg ?? 0, bag];
   return s.dmg ? [s.id, s.count, s.dmg] : [s.id, s.count];
 }
 
@@ -308,5 +327,8 @@ export function stackFromWire(w: unknown, depth = 0): ItemStack | null {
     const bag = (w[3] as unknown[]).slice(0, 64).map((b) => stackFromWire(b, 1)).filter((b): b is ItemStack => !!b);
     if (bag.length) s.bag = bag;
   }
+  // Fase 6.5 (libros y estandartes): datos de la pila (los valida sanitizeStack).
+  const d = w[4];
+  if (d && typeof d === 'object' && !Array.isArray(d)) s.data = d as ItemData;
   return s;
 }

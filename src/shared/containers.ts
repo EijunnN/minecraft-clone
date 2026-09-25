@@ -5,6 +5,7 @@ import { isBundle, fitsInBundle, bundleInsert } from './bundles'; // Fase 6.5 (r
 import { stackToWire, stackFromWire, type WireStack } from './protocol';
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
 import { IRON_ORE, GOLD_ORE } from './blocks';
+import { sanitizeItemData, cloneItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 
 export const CHEST_SLOTS = 27;
 export const FURNACE_IN = 0;
@@ -51,13 +52,14 @@ export function cloneStack(s: ItemStack | null | undefined): ItemStack | null {
   const c: ItemStack = { id: s.id, count: s.count };
   if (s.dmg) c.dmg = s.dmg;
   if (s.bag?.length) c.bag = s.bag.map((b) => cloneStack(b)).filter((b): b is ItemStack => !!b); // Fase 6.5 (remate)
+  if (s.data) c.data = cloneItemData(s.data); // Fase 6.5 (libros y estandartes)
   return c;
 }
 
 /** Valida una pila recibida por la red. */
 export function sanitizeStack(raw: unknown, inBag = false): ItemStack | null {
   if (!raw || typeof raw !== 'object') return null;
-  const r = raw as { id?: unknown; count?: unknown; dmg?: unknown; bag?: unknown };
+  const r = raw as { id?: unknown; count?: unknown; dmg?: unknown; bag?: unknown; data?: unknown };
   const id = Number(r.id), count = Number(r.count), dmg = r.dmg === undefined ? 0 : Number(r.dmg);
   if (!Number.isInteger(id) || !isValidItem(id)) return null;
   if (!Number.isInteger(count) || count < 1 || count > maxStack(id)) return null;
@@ -74,6 +76,9 @@ export function sanitizeStack(raw: unknown, inBag = false): ItemStack | null {
     }
     if (holder.bag?.length) s.bag = holder.bag;
   } else if (inBag && isBundle(id)) return null;
+  // Fase 6.5 (libros y estandartes): páginas y capas, validadas y acotadas.
+  const data = sanitizeItemData(id, r.data);
+  if (data) s.data = data;
   return s;
 }
 

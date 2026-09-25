@@ -35,6 +35,7 @@ import { StatusEffects } from './statusEffects';
 import { fishingLines } from './fishingLines';
 import { leashLines } from './leashLines'; // Fase 6.5 (remate)
 import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
+import { BooksClient } from './booksClient'; // Fase 6.5 (libros y estandartes)
 import { MAX_NAME } from '../../shared/nameTags';
 import { SignTexts } from './signs';
 import { SignEditor } from '../ui/SignEditor';
@@ -129,6 +130,8 @@ export class Game {
   });
   /** Fase 6.5 (remate): nombre de la etiqueta. */
   readonly namePrompt = new NamePrompt(MAX_NAME);
+  /** Fase 6.5 (libros y estandartes): libros, atriles, telar y estandartes con dibujos. */
+  readonly books = new BooksClient(this);
   selected = 0;
   time: WorldTime = { base: 0.08, at: Date.now(), rate: 1 / DAY_LENGTH_SECONDS };
   private running = false;
@@ -257,6 +260,7 @@ export class Game {
     for (const r of Array.isArray(w.rods) ? w.rods : []) if (Array.isArray(r) && typeof r[0] === 'string' && Number.isInteger(r[1])) this.bobbers.set(r[0], r[1]);
     this.signs.clear();
     for (const sg of Array.isArray(w.signs) ? w.signs : []) if (Array.isArray(sg) && sg.slice(0, 3).every(Number.isInteger)) this.signs.set(sg[0], sg[1], sg[2], sg[3]);
+    this.books.onWelcome(w.banners); // Fase 6.5 (libros y estandartes)
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)));
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
@@ -365,10 +369,11 @@ export class Game {
 
   private anyScreenOpen(): boolean {
     return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen() ||
-      this.signEditor.isOpen() || this.trading.isOpen() || this.namePrompt.isOpen(); // Fase 6 (aldeanos): + comercio
+      this.signEditor.isOpen() || this.trading.isOpen() || this.namePrompt.isOpen() || this.books.isOpen(); // Fase 6 (aldeanos): + comercio
   }
 
   stop(): void {
+    this.books.screen.close(false); // Fase 6.5 (libros y estandartes): lo escrito, antes de guardar
     this.sendState(true);
     this.screen.close();
     this.trading.screen.close(); // Fase 6 (aldeanos)
@@ -630,7 +635,7 @@ export class Game {
       input.movement = new Set([k.forward, k.back, k.left, k.right]);
     }
     if (!ui.isChatOpen() && !surv.dead) {
-      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen() && !this.namePrompt.isOpen()) this.toggleInventory();
+      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen() && !this.namePrompt.isOpen() && !this.books.isOpen()) this.toggleInventory();
       else if (input.wasPressed('Escape') && (ui.isInventoryOpen() || this.screen.isOpen())) this.toggleInventory();
       if (input.locked && !this.anyScreenOpen()) {
         if (input.wasPressed(k.chat) || input.wasPressed('Enter')) this.openChat('');
@@ -1017,6 +1022,7 @@ export class Game {
       grassTint: [srgbToLin(this.tmpGrass[0]), srgbToLin(this.tmpGrass[1]), srgbToLin(this.tmpGrass[2])],
       players: views,
       signs: this.signs.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ),
+      banners: this.books.banners.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ), // Fase 6.5 (libros y estandartes)
       bolts: this.bolts,
       fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, localRod, views),
       leashes: leashLines(this.ents.list, this.net?.id ?? null, localRod, views), // Fase 6.5 (remate)

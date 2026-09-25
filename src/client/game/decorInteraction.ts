@@ -40,7 +40,10 @@ export function decorUse(
   // Marco o cuadro delante: el marco recibe el objeto (o lo gira); el cuadro no hace nada.
   if (target && isHangingType(target.type)) {
     if (target.type === ENT_FRAME) {
-      askServer(ia, g, heldId, (q) => g.net?.send({ t: 'frame', e: target.id, item: heldId, q }));
+      // Fase 6.5 (libros y estandartes): el marco sólo guarda el objeto, así que lo que lleva datos (un libro
+      // escrito, un estandarte con dibujos) no se pone: se usa como la mano vacía (gira el que tenga).
+      const item = held?.data ? 0 : heldId;
+      askServer(ia, g, item, (q) => g.net?.send({ t: 'frame', e: target.id, item, q }));
       g.swing(true);
     }
     return true;
@@ -86,7 +89,8 @@ export function decorUse(
       const slot = shelfSlotAt(hit.id, hit.x, hit.y, hit.z, hit.px, hit.py, hit.pz, hit.nx, hit.nz);
       const full = slot >= 0 && (stateProps(hit.id)!.books & (1 << slot)) !== 0;
       if (slot >= 0 && (full || SHELF_BOOK_KEYS.has(ITEMS[heldId]?.key ?? ''))) {
-        askServer(ia, g, heldId, (q) => g.net?.send({ t: 'shelf', x: hit.x, y: hit.y, z: hit.z, slot, item: heldId, q }));
+        // Fase 6.5 (libros y estandartes): la pila entera, para que un libro escrito conserve su texto.
+        askServer(ia, g, heldId, (q) => g.net?.send({ t: 'shelf', x: hit.x, y: hit.y, z: hit.z, slot, item: heldId, q, ...(held?.data ? { st: held } : {}) }));
         g.swing(true);
         return true;
       }

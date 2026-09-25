@@ -9,6 +9,7 @@ import { mobTextureSource } from './textures/mobTextureSource';
 import { Renderer } from './render/Renderer';
 import { UI, randomRoom, sanitizeRoomInput } from './ui/UI';
 import { buildIcons } from './ui/icons';
+import { prepareBannerIcons } from './ui/bannerIcons'; // Fase 6.5 (libros y estandartes)
 import { setMapPalette } from './game/maps';
 import { MenuBackground } from './ui/menuBackground';
 import { AudioEngine } from './audio/AudioEngine';
@@ -69,6 +70,7 @@ async function boot(): Promise<void> {
   setMapPalette(textures);
   const sprites = generateItemSprites();
   ui.icons = buildItemIcons(buildIcons(textures), sprites);
+  prepareBannerIcons(ui.icons); // Fase 6.5 (libros y estandartes)
   ui.hudIcons = buildHudIcons();
 
   // Renderizador (compila shaders mientras el jugador está en el menú).

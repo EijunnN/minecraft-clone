@@ -67,7 +67,10 @@ export class Interaction {
   };
   onPicked(s: ItemStack): void {
     if (!s || !isValidItem(s.id)) return;
-    const rest = this.g.inv.add({ id: s.id, count: Math.max(1, Math.min(64, s.count | 0)), dmg: s.dmg, ...(s.bag ? { bag: s.bag } : {}) });
+    const rest = this.g.inv.add({
+      id: s.id, count: Math.max(1, Math.min(64, s.count | 0)), dmg: s.dmg, ...(s.bag ? { bag: s.bag } : {}),
+      ...(s.data ? { data: s.data } : {}), // Fase 6.5 (libros y estandartes)
+    });
     if (rest) this.throwStack(rest, false);
     this.g.audio.playPickup();
   }
@@ -137,6 +140,8 @@ export class Interaction {
     if (decorUse(this.g, this, pressed, hit, target, held)) return;
     // Fase 6.5 (remate): etiquetas y correas.
     if (leashUse(this.g, this, pressed, hit, target, held)) return;
+    // Fase 6.5 (libros y estandartes): telar, atril y libros en la mano.
+    if (this.g.books.use(pressed, hit, target, held)) return;
     // Fase 6 (aldeanos): clic derecho sobre un aldeano abre el comercio.
     if (pressed && target && this.g.trading.canTrade(target)) {
       this.g.trading.open(target);
@@ -609,6 +614,7 @@ export class Interaction {
     this.g.net?.send({
       t: 'place', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], p: [hit.px, hit.py, hit.pz], item: base,
       yaw: this.g.player.yaw,
+      ...this.g.books.placeExtras(this.g.inv.get(slot), edits), // Fase 6.5 (libros y estandartes): capas del estandarte
     });
     this.g.swing(false);
     const [x, y, z, id] = edits[0];
@@ -740,7 +746,7 @@ export class Interaction {
     if (msg.take && !this.g.creative) this.g.inv.consume(slot, msg.take);
     if (msg.wear && !this.g.creative && this.g.inv.wear(slot, msg.wear)) this.g.ui.toast('¡Se rompió la herramienta!');
     if (msg.give && isValidItem(msg.give.id)) {
-      const give = { id: msg.give.id, count: Math.max(1, msg.give.count | 0) };
+      const give = { id: msg.give.id, count: Math.max(1, msg.give.count | 0), ...(msg.give.data ? { data: msg.give.data } : {}) };
       if (!this.g.inv.slots[slot]) this.g.inv.set(slot, give);
       else {
         const rest = this.g.inv.add(give);

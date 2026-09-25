@@ -520,3 +520,18 @@ export function matchRecipe(grid: readonly number[], size: number): RecipeMatch 
 
 /** Número de recetas (para pruebas). */
 export const RECIPE_COUNT = shaped.length + shapeless.length;
+
+// Fase 6.5 (libros y estandartes): libro y pluma (libro, saco de tinta y pluma) y diseños de estandarte
+// (papel y un objeto). Los objetos que aquí no existen se cambian por otros del tema: cabeza de creeper →
+// pólvora, cráneo de wither → hueso, manzana de oro encantada → manzana dorada; el globo, que en
+// Minecraft se compra al cartógrafo, sale del mapa vacío. La copia de libros escritos va aparte
+// (books.ts: lleva datos y el original se queda).
+import { WRITABLE_BOOK, BANNER_PATTERN_ITEMS, GUNPOWDER } from './items';
+mix([BOOK, INK_SAC, FEATHER], WRITABLE_BOOK);
+mix([PAPER, FLOWERS.oxeye_daisy], BANNER_PATTERN_ITEMS.flower);
+mix([PAPER, GUNPOWDER], BANNER_PATTERN_ITEMS.creeper);
+mix([PAPER, BONE], BANNER_PATTERN_ITEMS.skull);
+mix([PAPER, GOLDEN_APPLE], BANNER_PATTERN_ITEMS.thing);
+mix([PAPER, EMPTY_MAP], BANNER_PATTERN_ITEMS.globe);
+mix([PAPER, VINE], BANNER_PATTERN_ITEMS.curly_border);
+mix([PAPER, BRICKS], BANNER_PATTERN_ITEMS.bricks);

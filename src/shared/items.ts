@@ -25,6 +25,7 @@ import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
+import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -402,6 +403,21 @@ export const DYED_BUNDLES = {} as Record<DyeColor, number>;
 for (const c of DYE_COLORS) DYED_BUNDLES[c] = item(`${c}_bundle`, `Saco ${COLOR_NAMES[c][0]}`, { stack: 1 });
 /** Soporte para armadura: se pone sobre un bloque y se le viste con clic derecho. */
 export const ARMOR_STAND = item('armor_stand', 'Soporte para armadura', { stack: 16 });
+// ------------------------------------------------------------------ Fase 6.5 (libros y estandartes)
+/** Libro y pluma: se escribe (sus páginas van en los datos de la pila) y se firma. */
+export const WRITABLE_BOOK = item('writable_book', 'Libro y pluma', { stack: 1 });
+/** Libro escrito: firmado (título, autor y generación); se lee y se copia. */
+export const WRITTEN_BOOK = item('written_book', 'Libro escrito', { stack: 16 });
+/** Diseños de estandarte: dibujos del telar que necesitan su diseño (no se gastan). */
+export const BANNER_PATTERN_ITEMS = {
+  flower: item('flower_banner_pattern', 'Diseño de estandarte (Flor)', { stack: 1 }),
+  creeper: item('creeper_banner_pattern', 'Diseño de estandarte (Creeper)', { stack: 1 }),
+  skull: item('skull_banner_pattern', 'Diseño de estandarte (Calavera)', { stack: 1 }),
+  thing: item('thing_banner_pattern', 'Diseño de estandarte (Cosa)', { stack: 1 }),
+  globe: item('globe_banner_pattern', 'Diseño de estandarte (Globo)', { stack: 1 }),
+  curly_border: item('bordure_indented_banner_pattern', 'Diseño de estandarte (Bordura dentada)', { stack: 1 }),
+  bricks: item('field_masoned_banner_pattern', 'Diseño de estandarte (Campo de ladrillos)', { stack: 1 }),
+} as const;
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -494,10 +510,18 @@ export interface ItemStack {
   dmg?: number;
   /** Fase 6.5 (remate): lo que lleva dentro un saco (el primero es el último que entró). */
   bag?: ItemStack[];
+  /** Fase 6.5 (libros y estandartes): páginas de un libro o capas de un estandarte (ver itemData.ts). */
+  data?: ItemData;
 }
 
 export function sameKind(a: ItemStack | null, b: ItemStack | null): boolean {
-  return !!a && !!b && a.id === b.id && (a.dmg ?? 0) === (b.dmg ?? 0) && !ITEMS[a.id]?.tool && !a.bag && !b.bag;
+  return !!a && !!b && a.id === b.id && (a.dmg ?? 0) === (b.dmg ?? 0) && !ITEMS[a.id]?.tool && !a.bag && !b.bag && sameData(a, b);
+}
+
+/** Fase 6.5 (libros y estandartes): ¿llevan las dos pilas los mismos datos? (no se apilan si no). */
+function sameData(a: ItemStack, b: ItemStack): boolean {
+  if (a.data === b.data) return true;
+  return !!a.data && !!b.data && JSON.stringify(a.data) === JSON.stringify(b.data);
 }
 
 /** Objetos del inventario creativo que no son bloques. */
@@ -527,6 +551,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, ...Object.values(SPAWN_EGGS),
   DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
   INK_SAC, NAME_TAG, LEAD, BUNDLE, ...DYE_COLORS.map((c) => DYED_BUNDLES[c]), ARMOR_STAND,
+  WRITABLE_BOOK, ...Object.values(BANNER_PATTERN_ITEMS), // Fase 6.5 (libros y estandartes)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

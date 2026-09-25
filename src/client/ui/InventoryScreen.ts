@@ -16,8 +16,12 @@ import { stonecutterOptions } from '../../shared/stonecutting';
 import './workstations.css';
 import { keyLabel, type Keybinds } from '../game/keybinds';
 import { itemTooltipHtml } from './itemTooltip';
+// Fase 6.5 (libros y estandartes): telar, copia de libros escritos e iconos de estandartes con dibujos.
+import { LoomPanel, LOOM_HTML } from './loomScreen';
+import { bookCopy } from '../../shared/books';
+import { stackIconUrl } from './bannerIcons';
 
-export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter';
+export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom';
 
 export interface ScreenHost {
   icons: Map<number, string>;
@@ -51,6 +55,8 @@ export class InventoryScreen {
   /** Cortapiedras: opción elegida y la piedra para la que se eligió. */
   private cut = -1;
   private cutInput = 0;
+  /** Fase 6.5 (libros y estandartes): telar (dibujo elegido). */
+  private loom = new LoomPanel();
   private root: HTMLElement;
   private panel: HTMLElement;
   private cursorEl: HTMLElement;
@@ -105,6 +111,14 @@ export class InventoryScreen {
       this.host.sound('click');
       this.render();
     });
+    // Fase 6.5 (libros y estandartes): telar, elegir el dibujo.
+    this.panel.addEventListener('mousedown', (e) => {
+      const b = (e.target as HTMLElement).closest('[data-loom]') as HTMLElement | null;
+      if (!b || this.kind !== 'loom') return;
+      e.preventDefault();
+      if (this.loom.pick(Number(b.dataset.loom), this.grid)) this.host.sound('click');
+      this.render();
+    });
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {
       this.mouse = [e.clientX, e.clientY];
@@ -125,6 +139,7 @@ export class InventoryScreen {
     this.title = title;
     this.chestSlots = 27;
     this.cut = -1;
+    this.loom.reset();
     this.gridSize = kind === 'table' ? 3 : kind === 'stonecutter' ? 1 : 2;
     this.grid = new Array(this.gridSize * this.gridSize).fill(null);
     this.busy = 0;
@@ -214,6 +229,8 @@ export class InventoryScreen {
     } else if (kind === 'chest') {
       const n = this.chestSlots;
       top = `<h3>${n > 27 ? 'Cofre grande' : this.title || 'Cofre'}</h3><div class="grid g9">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
+    } else if (kind === 'loom') {
+      top = LOOM_HTML;
     } else if (kind === 'stonecutter') {
       top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
         `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
@@ -292,9 +309,10 @@ export class InventoryScreen {
       const opt = this.cutOptions()[this.cut];
       return opt ? { ...opt } : null;
     }
+    if (this.kind === 'loom') return this.loom.result(this.grid);
     if (this.kind !== 'player' && this.kind !== 'table') return null;
     const m = matchRecipe(this.grid.map((s) => (s ? s.id : 0)), this.gridSize);
-    return m ? m.out : null;
+    return m ? m.out : bookCopy(this.grid)?.out ?? null; // Fase 6.5: copias de un libro escrito
   }
 
   // ---------------------------------------------------------------- clics
@@ -410,7 +428,7 @@ export class InventoryScreen {
         const r = this.result();
         if (!r || this.inv.room(r) < r.count) break;
         this.inv.add(r);
-        this.consumeGrid();
+        this.consumeCraft();
       }
       this.host.sound('craft');
       return;
@@ -424,8 +442,23 @@ export class InventoryScreen {
     if (!cur) this.inv.cursor = { ...res };
     else if (sameKind(cur, res) && cur.count + res.count <= maxStack(res.id)) cur.count += res.count;
     else return;
-    this.consumeGrid();
+    this.consumeCraft();
     this.host.sound('craft');
+  }
+
+  /**
+   * Fase 6.5 (libros y estandartes): gasta lo usado al coger la salida. El telar gasta el estandarte y el
+   * tinte (no el diseño); la copia de un libro escrito deja el original en su hueco.
+   */
+  private consumeCraft(): void {
+    if (this.kind === 'loom') {
+      this.loom.consume(this.grid);
+      return;
+    }
+    const copy = matchRecipe(this.grid.map((s) => (s ? s.id : 0)), this.gridSize) ? null : bookCopy(this.grid);
+    const original = copy ? cloneStack(this.grid[copy.original]) : null;
+    this.consumeGrid();
+    if (copy && original) this.grid[copy.original] = original;
   }
 
   private consumeGrid(): void {
@@ -602,6 +635,7 @@ export class InventoryScreen {
       if (prog) prog.style.width = `${c ? Math.round((c.cook / COOK_TIME) * 100) : 0}%`;
     }
     if (this.kind === 'stonecutter') this.renderCuts();
+    if (this.kind === 'loom') this.loom.render(this.panel, this.grid);
     const out = this.slotEls.get('out');
     if (out) out.classList.toggle('ready', !!this.result());
     this.placeCursor();
@@ -637,7 +671,7 @@ export class InventoryScreen {
     const ico = el.firstElementChild as HTMLElement;
     const cnt = el.children[1] as HTMLElement;
     const dur = el.children[2] as HTMLElement;
-    const url = s ? this.host.icons.get(s.id) : undefined;
+    const url = stackIconUrl(s, this.host.icons); // Fase 6.5: estandartes con dibujos
     ico.style.backgroundImage = url ? `url(${url})` : '';
     cnt.textContent = s && s.count > 1 ? String(s.count) : '';
     const max = s ? ITEMS[s.id]?.tool?.durability ?? ITEMS[s.id]?.armor?.durability : undefined;
@@ -665,7 +699,7 @@ export class InventoryScreen {
       return;
     }
     el.classList.remove('hidden');
-    const url = this.host.icons.get(c.id);
+    const url = stackIconUrl(c, this.host.icons);
     (el.firstElementChild as HTMLElement).style.backgroundImage = url ? `url(${url})` : '';
     (el.children[1] as HTMLElement).textContent = c.count > 1 ? String(c.count) : '';
     el.style.left = `${this.mouse[0]}px`;

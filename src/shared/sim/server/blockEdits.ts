@@ -8,7 +8,7 @@ import {
 import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { ITEMS, BONE_MEAL, PLACEABLE_BLOCKS } from '../../items';
-import { planPlacement, toggleEdits, isUsable } from '../../placement';
+import { planPlacement, toggleEdits, isUsable, type Edit } from '../../placement';
 import { blockDrops } from '../drops';
 import { oreXp } from '../../experience';
 import type { BlockRules } from './blockRules';
@@ -33,6 +33,8 @@ export class BlockEdits {
   copper: Copper | null = null;
   /** Fase 6.5 (océano y plantas): clic derecho que atiende otro sistema (cosechar bayas dulces). */
   extraUse: ((s: Session, x: number, y: number, z: number, id: number) => boolean) | null = null;
+  /** Fase 6.5 (libros y estandartes): aviso tras colocar (las capas del estandarte colocado). */
+  placed: ((s: Session, msg: Extract<ClientMsg, { t: 'place' }>, edits: readonly Edit[]) => void) | null = null;
 
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
@@ -126,6 +128,7 @@ export class BlockEdits {
       return;
     }
     ctx.asActor(s.id, () => this.rules.applyEdits(edits));
+    this.placed?.(s, msg, edits);
   }
 
   /** Clic derecho sobre un bloque: objetos (azada, polvo de hueso, tijeras), puertas, tartas, camas y compostadores. */

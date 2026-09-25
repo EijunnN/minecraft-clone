@@ -18,12 +18,14 @@ export class Shelves {
   constructor(private ctx: ServerContext, store: ServerStore) {
     for (const [key, data] of store.loadContainers()) {
       try {
-        const w = JSON.parse(data) as { k?: string; s?: unknown[] };
+        const w = JSON.parse(data) as { k?: string; s?: unknown[]; d?: unknown[] };
         if (w.k !== 'cb' || !Array.isArray(w.s)) continue;
         const slots: Slots = [];
         for (let i = 0; i < SHELF_SLOTS; i++) {
           const s = w.s[i];
-          slots.push(Array.isArray(s) ? sanitizeStack({ id: Number(s[0]), count: 1, dmg: s[1] === undefined ? undefined : Number(s[1]) }) : null);
+          // Fase 6.5 (libros y estandartes): `d` lleva el texto de los libros escritos (0 si no tienen).
+          const data = Array.isArray(w.d) ? w.d[i] || undefined : undefined;
+          slots.push(Array.isArray(s) ? sanitizeStack({ id: Number(s[0]), count: 1, dmg: s[1] === undefined ? undefined : Number(s[1]), data }) : null);
         }
         this.books.set(key, slots);
       } catch {
@@ -56,7 +58,9 @@ export class Shelves {
       return reply(true, 0, book);
     }
     if (!(Number.isInteger(item) && item > 0 && SHELF_BOOK_KEYS.has(ITEMS[item]?.key ?? ''))) return reply(false);
-    slots[slot] = { id: item, count: 1 };
+    // Fase 6.5 (libros y estandartes): con su texto si lo tiene (la pila entera llega en `st`).
+    const st = msg.st && Number(msg.st.id) === item ? sanitizeStack({ ...msg.st, count: 1 }) : null;
+    slots[slot] = st ?? { id: item, count: 1 };
     this.store(k, slots);
     ctx.asActor(s.id, () => ctx.world.setBlock(x, y, z, shelfWithBooks(id, mask | bit)));
     ctx.fx('shelf_put', x + 0.5, y + 0.5, z + 0.5);
@@ -87,7 +91,8 @@ export class Shelves {
   flush(store: ServerStore): void {
     for (const k of this.dirty) {
       const slots = this.books.get(k);
-      store.saveContainer(k, slots ? JSON.stringify({ k: 'cb', s: slots.map((st) => (st ? (st.dmg ? [st.id, st.dmg] : [st.id]) : 0)) }) : null);
+      const d = slots?.some((st) => st?.data) ? slots.map((st) => st?.data ?? 0) : undefined; // Fase 6.5 (libros y estandartes)
+      store.saveContainer(k, slots ? JSON.stringify({ k: 'cb', s: slots.map((st) => (st ? (st.dmg ? [st.id, st.dmg] : [st.id]) : 0)), d }) : null);
     }
     this.dirty.clear();
   }

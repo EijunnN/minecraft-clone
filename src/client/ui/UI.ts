@@ -10,6 +10,7 @@ import type { GameMode } from '../../shared/protocol';
 import { applyPreset, saveSettings, type Settings } from '../game/settings';
 import type { PresetName } from '../render/Renderer';
 import type { HudIcons } from './hudIcons';
+import { stackIconUrl } from './bannerIcons'; // Fase 6.5 (libros y estandartes)
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -789,7 +790,7 @@ export function paintSlot(el: HTMLElement, s: ItemStack | null, icons: Map<numbe
   const ico = el.querySelector('.ico') as HTMLElement;
   const cnt = el.querySelector('.cnt') as HTMLElement | null;
   const dur = el.querySelector('.dur') as HTMLElement | null;
-  const url = s ? icons.get(s.id) : undefined;
+  const url = stackIconUrl(s, icons); // Fase 6.5 (libros y estandartes): estandartes con dibujos
   ico.style.backgroundImage = url ? `url(${url})` : '';
   if (cnt) cnt.textContent = s && s.count > 1 ? String(s.count) : '';
   if (dur) {

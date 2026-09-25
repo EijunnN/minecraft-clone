@@ -1,7 +1,7 @@
 // Fase 6.5 (remate): el saco. Guarda pilas de objetos distintos hasta 64 de peso: cada objeto pesa
 // 64 / (lo que se apila), así que caben 64 piedras, 16 perlas de ender o una sola herramienta. No se
 // meten sacos dentro de sacos. El último que entra es el primero que sale.
-import { ITEMS, BUNDLE, DYED_BUNDLES, maxStack, type ItemStack } from './items';
+import { ITEMS, BUNDLE, DYED_BUNDLES, maxStack, sameKind, type ItemStack } from './items';
 
 export const BUNDLE_CAPACITY = 64;
 const BUNDLE_IDS = new Set<number>([BUNDLE, ...Object.values(DYED_BUNDLES)]);
@@ -38,10 +38,11 @@ export function bundleInsert(bundle: ItemStack, s: ItemStack | null): ItemStack 
   if (n <= 0) return s;
   const bag = bundle.bag ?? [];
   const top = bag[0];
-  if (top && top.id === s!.id && (top.dmg ?? 0) === (s!.dmg ?? 0) && !ITEMS[s!.id]?.tool && top.count + n <= maxStack(s!.id)) top.count += n;
+  if (top && sameKind(top, s) && top.count + n <= maxStack(s!.id)) top.count += n;
   else {
     const put: ItemStack = { id: s!.id, count: n };
     if (s!.dmg) put.dmg = s!.dmg;
+    if (s!.data) put.data = s!.data; // Fase 6.5 (libros y estandartes)
     bag.unshift(put);
   }
   bundle.bag = bag;

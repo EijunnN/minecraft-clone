@@ -74,11 +74,7 @@ function band(t: Tex, y0: number, y1: number, c: RGB = [118, 120, 126]): void {
 function lecternTop(t: Tex): void {
   oak(t);
   frame(t, 0.7);
-  // Libro abierto en el centro: páginas claras y lomo oscuro.
-  rect(t, 3, 4, 12, 11, (x, y) => (x === 7 || x === 8 ? [96, 60, 34] : mix([236, 226, 196], [210, 198, 166], ((x + y) & 1) * 0.4)), 1, 70);
-  for (let y = 5; y <= 10; y += 2) {
-    for (let x = 4; x <= 11; x++) if (x !== 7 && x !== 8 && (x * 7 + y) % 4 !== 0) t.set(x, y, [120, 112, 100]);
-  }
+  // Fase 6.5 (libros y estandartes): el tablero va vacío; el libro puesto es el del atril con libro.
 }
 
 function lecternSide(t: Tex): void {

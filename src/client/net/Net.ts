@@ -20,6 +20,8 @@ export interface Welcome {
   rods?: [string, number][];
   /** Carteles con texto: [x, y, z, líneas]. */
   signs?: [number, number, number, string[]][];
+  /** Fase 6.5 (libros y estandartes): estandartes con dibujos: [x, y, z, capas]. */
+  banners?: unknown[];
 }
 
 /** Lo mínimo de un WebSocket que usamos (el servidor local imita esta interfaz). */
@@ -197,6 +199,7 @@ export class Net {
           diff: Number.isInteger(msg.diff) ? msg.diff : 2, save: msg.save ?? null, spawn: msg.spawn,
           bed: msg.bed ?? null, rods: Array.isArray(msg.rods) ? msg.rods : [],
           signs: Array.isArray(msg.signs) ? msg.signs : [],
+          banners: Array.isArray(msg.banners) ? msg.banners : [], // Fase 6.5 (libros y estandartes)
         };
         return;
       case 'time':
