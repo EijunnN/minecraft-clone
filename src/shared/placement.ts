@@ -22,6 +22,7 @@ import { isRipeBerryBush } from './blocks'; // Fase 6.5 (océano y plantas)
 import { planPlant65, canFertilize65 } from './plantPlacement'; // Fase 6.5 (océano y plantas)
 import { planMaterial } from './materialPlacement'; // Fase 6.5 (materiales)
 import { isCandleCake } from './blocks'; // Fase 6.5 (materiales)
+import { skullPlacement } from './blocks'; // Fase 6.5 (colecciones)
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -123,6 +124,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 6.5 (decoración): faroles, campanas, cadenas y andamios.
   const deco = planDecor(get, hit, base, x, y, z, face, facing);
   if (deco !== undefined) return deco;
+  // Fase 6.5 (colecciones): cabezas en el suelo (16 orientaciones, mirando al jugador) o en la pared.
+  const skull = skullPlacement(base, face, hit.nx, hit.nz, yaw);
+  if (skull >= 0) return skull && blockSupported(skull, rel(get, x, y, z)) ? one(skull) : null;
 
   // Semillas, zanahorias y patatas: sólo sobre tierra de cultivo.
   if (isCrop(base)) return isFarmland(get(x, y - 1, z)) ? one(base) : null;

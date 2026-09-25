@@ -13,6 +13,7 @@ import { MIN_Y, VOID_Y } from '../../constants';
 import { MonsterAI, isSpiderLike } from './monsterAi';
 import { faunaMobTick, faunaFlags } from './wildlife'; // Fase 6 (fauna)
 import { IllagerAI } from './illagers'; // Fase 6 (asaltos)
+import { CHARGED_POWER, EF_CHARGED, skullDisguises } from '../../collections'; // Fase 6.5 (colecciones)
 
 export class MobBrain {
   /** Fase 6 (monstruos). */
@@ -33,6 +34,8 @@ export class MobBrain {
       const dx = p.x - e.x, dy = p.y - e.y, dz = p.z - e.z;
       const d2 = dx * dx + dy * dy * 2 + dz * dz;
       if (d2 >= bd) continue;
+      // Fase 6.5 (colecciones): con la cabeza de su especie puesta, lo ven a la mitad de distancia.
+      if (p.head && skullDisguises(p.head, e.type) && d2 * 4 >= max * max) continue;
       if (needLos && d2 > 36 && !lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, p.x, p.y + 1.5, p.z)) continue;
       bd = d2;
       best = p;
@@ -210,7 +213,8 @@ export class MobBrain {
           speed = 0;
           if (ai.fuse >= 1.5) {
             this.m.remove(e.id);
-            this.m.explode(e.x, e.y + 0.5, e.z, 3);
+            // Fase 6.5 (colecciones): el creeper cargado explota el doble de fuerte.
+            this.m.explode(e.x, e.y + 0.5, e.z, e.charged ? CHARGED_POWER : 3, !!e.charged);
             return;
           }
         } else {
@@ -405,6 +409,7 @@ export class MobBrain {
     f |= this.m.mounts.flags(e); // Fase 6 (monturas): silla, domada, con jinete, encabritada
     f |= this.m.companions.flags(e); // Fase 6 (gólems/domesticar)
     f |= faunaFlags(e); // Fase 6 (fauna)
+    if (e.charged) f |= EF_CHARGED; // Fase 6.5 (colecciones)
     e.flags = f;
   }
 

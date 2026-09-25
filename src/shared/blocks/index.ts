@@ -172,3 +172,8 @@ export * from './lecternBook';
 import { MATERIAL_INVENTORY } from './materialBlocks';
 export * from './materialBlocks';
 (INVENTORY_ORDER as number[]).push(...MATERIAL_INVENTORY);
+// Fase 6.5 (colecciones): cabezas de criaturas, tocadiscos y el modelo del marco brillante (registrados
+// los últimos: ids nuevos) y su sitio en el inventario creativo.
+import { COLLECTION_INVENTORY } from './collections';
+export * from './collections';
+(INVENTORY_ORDER as number[]).push(...COLLECTION_INVENTORY);

@@ -461,6 +461,11 @@ shape(['SSS', ' S ', 'SLS'], { S: STICK, L: SLABS.smooth_stone }, ARMOR_STAND);
 // Estantería cincelada: 6 tablones y 3 losas de madera (de cualquier madera).
 import { CHISELED_BOOKSHELF } from './blocks';
 shape(['PPP', 'SSS', 'PPP'], { P: PLANKS, S: WOODS.map((w) => SLABS[w.key]).filter((id) => id !== undefined) }, CHISELED_BOOKSHELF);
+// Fase 6.5 (colecciones): tocadiscos (8 tablones y un diamante) y marco brillante (marco y saco de tinta brillante).
+import { JUKEBOX } from './blocks';
+import { GLOW_INK_SAC, GLOW_ITEM_FRAME } from './items';
+shape(['PPP', 'PDP', 'PPP'], { P: PLANKS, D: DIAMOND }, JUKEBOX);
+mix([ITEM_FRAME, GLOW_INK_SAC], GLOW_ITEM_FRAME);
 
 // --- Fase 6.5 (materiales): bloques de almacenamiento (9 ↔ 1), hielo compacto y azul, tierra gruesa ---
 import {
@@ -544,14 +549,14 @@ export function matchRecipe(grid: readonly number[], size: number): RecipeMatch 
 export const RECIPE_COUNT = shaped.length + shapeless.length;
 
 // Fase 6.5 (libros y estandartes): libro y pluma (libro, saco de tinta y pluma) y diseños de estandarte
-// (papel y un objeto). Los objetos que aquí no existen se cambian por otros del tema: cabeza de creeper →
-// pólvora, cráneo de wither → hueso, manzana de oro encantada → manzana dorada; el globo, que en
+// (papel y un objeto). Los objetos que aquí no existen se cambian por otros del tema: cráneo de wither → hueso, manzana de oro encantada → manzana dorada; el globo, que en
 // Minecraft se compra al cartógrafo, sale del mapa vacío. La copia de libros escritos va aparte
 // (books.ts: lleva datos y el original se queda).
-import { WRITABLE_BOOK, BANNER_PATTERN_ITEMS, GUNPOWDER } from './items';
+import { WRITABLE_BOOK, BANNER_PATTERN_ITEMS } from './items';
+import { SKULLS } from './blocks';
 mix([BOOK, INK_SAC, FEATHER], WRITABLE_BOOK);
 mix([PAPER, FLOWERS.oxeye_daisy], BANNER_PATTERN_ITEMS.flower);
-mix([PAPER, GUNPOWDER], BANNER_PATTERN_ITEMS.creeper);
+mix([PAPER, SKULLS.creeper], BANNER_PATTERN_ITEMS.creeper); // Fase 6.5: ya hay cabeza de creeper
 mix([PAPER, BONE], BANNER_PATTERN_ITEMS.skull);
 mix([PAPER, GOLDEN_APPLE], BANNER_PATTERN_ITEMS.thing);
 mix([PAPER, EMPTY_MAP], BANNER_PATTERN_ITEMS.globe);

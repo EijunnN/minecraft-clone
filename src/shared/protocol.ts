@@ -185,7 +185,10 @@ export type ClientMsg =
   | { t: 'stand'; x: number; y: number; z: number; yaw: number; q: number }
   // Fase 6.5 (libros y estandartes): atril. 'put' pone el libro de la mano (respuesta 'ires' con take 1),
   // 'take' lo saca (sólo quien lo puso; 'ires' con give) y 'read' pide el libro para leerlo ('lbook').
-  | { t: 'lectern'; x: number; y: number; z: number; a: 'put' | 'take' | 'read'; q: number; book?: ItemStack };
+  | { t: 'lectern'; x: number; y: number; z: number; a: 'put' | 'take' | 'read'; q: number; book?: ItemStack }
+  // Fase 6.5 (colecciones): clic derecho en un tocadiscos con `item` en la mano: meter el disco (take 1)
+  // o sacar el que tiene (cae encima). Respuesta: 'ires' con q.
+  | { t: 'jukebox'; x: number; y: number; z: number; item: number; q: number };
 
 export type ServerMsg =
   | {

@@ -46,6 +46,7 @@ import { OCEAN_GENERATORS } from './genOcean'; // Fase 6.5 (océano y plantas)
 import { FINISHING_GENERATORS } from './genFinishing'; // Fase 6.5 (remate)
 import { BOOK_GENERATORS } from './genBooks'; // Fase 6.5 (libros y estandartes)
 import { MATERIAL_GENERATORS } from './genMaterials'; // Fase 6.5 (materiales)
+import { COLLECTION_GENERATORS } from './genCollections'; // Fase 6.5 (colecciones)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -84,6 +85,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...FINISHING_GENERATORS, // Fase 6.5 (remate)
   ...BOOK_GENERATORS, // Fase 6.5 (libros y estandartes)
   ...MATERIAL_GENERATORS, // Fase 6.5 (materiales)
+  ...COLLECTION_GENERATORS, // Fase 6.5 (colecciones)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

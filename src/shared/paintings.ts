@@ -9,8 +9,16 @@ export const ENT_PAINTING = 107;
 /** Entidad de marco (extra: id del objeto que muestra; el giro va en pitch, de 45° en 45°). */
 export const ENT_FRAME = 108;
 
+/** Fase 6.5 (colecciones): marco brillante (como el marco, con el objeto a plena luz). */
+export const ENT_GLOW_FRAME = 120;
+
 export function isHangingType(type: number): boolean {
-  return type === ENT_PAINTING || type === ENT_FRAME;
+  return type === ENT_PAINTING || type === ENT_FRAME || type === ENT_GLOW_FRAME;
+}
+
+/** ¿Marco (normal o brillante)? */
+export function isFrameType(type: number): boolean {
+  return type === ENT_FRAME || type === ENT_GLOW_FRAME;
 }
 
 export interface PaintingVariant {

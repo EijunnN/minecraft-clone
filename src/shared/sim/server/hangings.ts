@@ -2,13 +2,16 @@
 // (se dibujan en el cliente) que este sistema crea, guarda (en los metadatos del mundo) y retira:
 // se cuelgan con 'hang', el marco recibe o gira su objeto con 'frame', un golpe los descuelga (o saca el
 // objeto del marco) y se caen si desaparece la pared o se pone un bloque en su sitio.
+// Fase 6.5 (colecciones): también el marco brillante (clase 2; el objeto se dibuja a plena luz).
 import { BLOCK_SOLID, BLOCK_RENDER, BLOCK_COLLIDE, R_CROSS } from '../../blocks';
 import { ITEMS, PAINTING, ITEM_FRAME, isValidItem, type ItemStack } from '../../items';
+import { GLOW_ITEM_FRAME } from '../../items'; // Fase 6.5 (colecciones)
 import { DIR_X, DIR_Z } from '../../blockModels';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import {
   ENT_PAINTING, ENT_FRAME, PAINTINGS, isHangingType, hangingCells, hangingCenter, hangingYaw, rightOf,
 } from '../../paintings';
+import { ENT_GLOW_FRAME } from '../../paintings'; // Fase 6.5 (colecciones)
 import type { ServerStore } from '../store';
 import { posKey } from '../posKey';
 import type { Entity } from '../entities';
@@ -17,8 +20,12 @@ import type { ServerContext, Session } from './context';
 /** Cuadros y marcos que se guardan como mucho. */
 const MAX_HANGINGS = 5000;
 
+/** Entidad y objeto de cada clase: 0 cuadro, 1 marco y (Fase 6.5, colecciones) 2 marco brillante. */
+const KIND_ENTITY = [ENT_PAINTING, ENT_FRAME, ENT_GLOW_FRAME];
+const KIND_ITEM = [PAINTING, ITEM_FRAME, GLOW_ITEM_FRAME];
+
 interface Hanging {
-  /** 0 cuadro, 1 marco. */
+  /** 0 cuadro, 1 marco, 2 marco brillante. */
   kind: number;
   /** Celda de aire de abajo a la izquierda (vista de frente) y dirección hacia la que da. */
   x: number;
@@ -48,9 +55,9 @@ export class Hangings {
         for (const r of rows.slice(0, MAX_HANGINGS)) {
           if (!Array.isArray(r) || r.length < 7 || !r.every(Number.isFinite)) continue;
           const [kind, x, y, z, f, v, rot] = (r as number[]).map((n) => Math.trunc(n));
-          if ((kind !== 0 && kind !== 1) || f < 0 || f > 3) continue;
+          if (!KIND_ENTITY[kind] || f < 0 || f > 3) continue;
           if (kind === 0 && !PAINTINGS[v]) continue;
-          if (kind === 1 && v !== 0 && !isValidItem(v)) continue;
+          if (kind >= 1 && v !== 0 && !isValidItem(v)) continue;
           this.add({ kind, x, y, z, f, v, rot: rot & 7, ent: 0 });
         }
       }
@@ -74,11 +81,11 @@ export class Hangings {
     this.byEnt.delete(h.ent);
     const [w, hh] = this.size(h);
     const [cx, cy, cz] = hangingCenter(h.x, h.y, h.z, h.f, w, hh);
-    const e = this.ctx.entities.spawnBare(h.kind === 0 ? ENT_PAINTING : ENT_FRAME, cx, cy - hh / 2, cz, Math.max(w, 1 / 16), hh);
+    const e = this.ctx.entities.spawnBare(KIND_ENTITY[h.kind], cx, cy - hh / 2, cz, Math.max(w, 1 / 16), hh);
     e.y = cy;
     e.yaw = hangingYaw(h.f);
     e.bodyYaw = e.yaw;
-    e.pitch = h.kind === 1 ? (h.rot * Math.PI) / 4 : 0;
+    e.pitch = h.kind >= 1 ? (h.rot * Math.PI) / 4 : 0;
     e.variant = h.v;
     h.ent = e.id;
     this.byEnt.set(e.id, h);
@@ -125,8 +132,8 @@ export class Hangings {
     if (creative) return;
     const e = this.ctx.entities.list.get(h.ent);
     const x = e?.x ?? h.x + 0.5, y = e?.y ?? h.y + 0.5, z = e?.z ?? h.z + 0.5;
-    const out: ItemStack[] = [{ id: h.kind === 0 ? PAINTING : ITEM_FRAME, count: 1 }];
-    if (h.kind === 1 && h.v) out.push({ id: h.v, count: 1 });
+    const out: ItemStack[] = [{ id: KIND_ITEM[h.kind], count: 1 }];
+    if (h.kind >= 1 && h.v) out.push({ id: h.v, count: 1 });
     this.ctx.entities.dropStacks(out, x + DIR_X[h.f] * 0.2, y, z + DIR_Z[h.f] * 0.2);
   }
 
@@ -137,12 +144,12 @@ export class Hangings {
     const ctx = this.ctx;
     const x = Number(msg.x), y = Number(msg.y), z = Number(msg.z), f = Number(msg.f), item = Number(msg.item), q = Number(msg.q);
     const reply = (ok: boolean) => ctx.send(s, { t: 'ires', q: Number.isInteger(q) ? q : 0, ok, take: ok ? 1 : 0 });
-    if (![x, y, z, f, item].every(Number.isInteger) || f < 0 || f > 3 || (item !== PAINTING && item !== ITEM_FRAME)) return reply(false);
+    if (![x, y, z, f, item].every(Number.isInteger) || f < 0 || f > 3 || !KIND_ITEM.includes(item)) return reply(false);
     if (s.s & STATE_DEAD || !ctx.reachOk(s, x, y, z, 8) || this.byEnt.size >= MAX_HANGINGS) return reply(false);
     const ax = x + DIR_X[f], az = z + DIR_Z[f];
     let chosen: Hanging | null = null;
-    if (item === ITEM_FRAME) {
-      const h: Hanging = { kind: 1, x: ax, y, z: az, f, v: 0, rot: 0, ent: 0 };
+    if (item !== PAINTING) {
+      const h: Hanging = { kind: KIND_ITEM.indexOf(item), x: ax, y, z: az, f, v: 0, rot: 0, ent: 0 };
       if (this.fits(h)) chosen = h;
     } else {
       // El cuadro más grande que quepa (al azar entre los del mismo tamaño), con la celda del clic dentro.
@@ -177,7 +184,7 @@ export class Hangings {
     const reply = (ok: boolean) => ctx.send(s, { t: 'ires', q: Number.isInteger(q) ? q : 0, ok, take: ok ? 1 : 0 });
     const h = this.byEnt.get(Number(msg.e));
     const e = h ? ctx.entities.list.get(h.ent) : undefined;
-    if (!h || !e || h.kind !== 1 || s.s & STATE_DEAD || !this.near(s, e)) return reply(false);
+    if (!h || !e || h.kind === 0 || s.s & STATE_DEAD || !this.near(s, e)) return reply(false);
     if (!h.v) {
       if (!isValidItem(item) || !ITEMS[item]) return reply(false);
       h.v = item;
@@ -201,7 +208,7 @@ export class Hangings {
     const e = this.ctx.entities.list.get(h.ent);
     if (!e || s.s & STATE_DEAD || !this.near(s, e)) return true;
     const creative = s.mode === 'c';
-    if (h.kind === 1 && h.v) {
+    if (h.kind >= 1 && h.v) {
       // El primer golpe saca el objeto del marco.
       if (!creative) this.ctx.entities.dropStacks([{ id: h.v, count: 1 }], e.x + DIR_X[h.f] * 0.2, e.y, e.z + DIR_Z[h.f] * 0.2);
       h.v = 0;

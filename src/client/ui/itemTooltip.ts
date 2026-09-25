@@ -13,6 +13,8 @@ import { stewEffectText } from '../../shared/decorFood'; // Fase 6.5 (decoració
 import { WRITABLE_BOOK, WRITTEN_BOOK } from '../../shared/items';
 import { BOOK_GENERATIONS } from '../../shared/books';
 import { bannerLayers, layerName, isBannerPatternItem } from '../../shared/bannerPatterns';
+import { discTitle } from '../../shared/collections'; // Fase 6.5 (colecciones)
+import { skullKind } from '../../shared/blocks'; // Fase 6.5 (colecciones)
 
 const WEAPONS = new Set(['sword', 'axe', 'pickaxe', 'shovel', 'hoe']);
 
@@ -34,7 +36,7 @@ export function itemTooltipHtml(s: ItemStack): string {
   } else if (tool?.kind === 'bow') {
     lines.push('<span class="tt-dim">Mantén el clic derecho para tensarlo (usa flechas)</span>');
   }
-  const armor = def?.armor;
+  const armor = skullKind(s.id) ? undefined : def?.armor; // Fase 6.5 (colecciones): las cabezas no protegen
   if (armor) {
     lines.push('<span class="tt-gap"></span>', '<span class="tt-dim">En el cuerpo:</span>', `<span class="tt-armor">+${armor.points} de armadura</span>`);
     if (armor.toughness > 0) lines.push(`<span class="tt-armor">+${num(armor.toughness)} de dureza</span>`);
@@ -58,6 +60,14 @@ export function itemTooltipHtml(s: ItemStack): string {
   if (s.id === FILLED_MAP && s.dmg) {
     const [x0, z0] = mapOrigin(s.dmg);
     lines.push(`<span class="tt-dim">Zona: x ${x0} a ${x0 + MAP_SIZE - 1}, z ${z0} a ${z0 + MAP_SIZE - 1}</span>`);
+  }
+  // Fase 6.5 (colecciones): título del disco y para qué sirve llevar una cabeza.
+  const title = discTitle(s.id);
+  if (title) lines.push(`<span class="tt-dim">${esc(title)}</span>`);
+  const skull = skullKind(s.id);
+  if (skull && skull !== 'player') {
+    const who = { zombie: 'los zombis', skeleton: 'los esqueletos', creeper: 'los creepers' }[skull];
+    lines.push(`<span class="tt-dim">Puesta: ${who} te ven a la mitad de distancia</span>`);
   }
   // Fase 6.5 (remate): lo que lleva el saco.
   if (isBundle(s.id)) {

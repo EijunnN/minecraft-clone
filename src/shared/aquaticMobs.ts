@@ -7,6 +7,7 @@ import {
   COD, SALMON, TROPICAL_FISH, PUFFERFISH, COD_BUCKET, SALMON_BUCKET, TROPICAL_FISH_BUCKET, PUFFERFISH_BUCKET,
   AXOLOTL_BUCKET, TADPOLE_BUCKET,
 } from './items';
+import { GLOW_INK_SAC } from './items'; // Fase 6.5 (colecciones)
 
 export const MOB_COD = 30;
 export const MOB_SALMON = 31;
@@ -244,8 +245,9 @@ export const AQUATIC_MOBS: MobDef[] = [
       { name: 'tail', parent: 'body', pivot: [0, 1, 1], from: [-0.5, -1, 0], size: [1, 2, 5] },
     ],
   ),
+  // Fase 6.5 (colecciones): el calamar brillante suelta sacos de tinta brillante.
   model(
-    { ...common, id: MOB_GLOW_SQUID, key: 'glow_squid', name: 'Calamar brillante', health: 10, walk: 1.2, run: 2.5, width: 0.8, height: 0.8, drops: [], anim: 'squid', scale: 0.8, aquatic: true },
+    { ...common, id: MOB_GLOW_SQUID, key: 'glow_squid', name: 'Calamar brillante', health: 10, walk: 1.2, run: 2.5, width: 0.8, height: 0.8, drops: [[GLOW_INK_SAC, 1, 3]], anim: 'squid', scale: 0.8, aquatic: true },
     64,
     [{ name: 'body', pivot: [0, 18, 0], from: [-6, -8, -6], size: [12, 16, 12] }, ...tentacles()],
   ),

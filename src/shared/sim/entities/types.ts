@@ -17,6 +17,8 @@ export interface PlayerView {
   lookingAt: number;
   /** Objeto en la mano (los animales siguen a quien lleva su comida). */
   held?: number;
+  /** Fase 6.5 (colecciones): lo que lleva en el hueco del casco (las cabezas disimulan). */
+  head?: number;
 }
 
 export interface EntityHost {
@@ -173,6 +175,8 @@ export interface Entity extends Body {
   standArmor?: number[];
   /** Punto del que tira su correa ahora mismo (lo pone el sistema de correas cada tick). */
   leashTo?: [number, number, number];
+  /** Fase 6.5 (colecciones): creeper cargado por un rayo. */
+  charged?: boolean;
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

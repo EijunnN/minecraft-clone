@@ -13,6 +13,8 @@ import { animateAquatic, hiddenAquaticPart, aquaticRoot } from './aquaticPose'; 
 // Fase 6 (gólems/domesticar): pieles, collar, poses de sentado y de los gólems.
 import { mobSkinKey, hiddenPart, sitRoot, companionPart } from './companionPose';
 import { mobVariant, faunaAnimate, faunaPartScale, faunaRoot } from './faunaPose'; // Fase 6 (fauna)
+import { EF_CHARGED } from '../../shared/collections'; // Fase 6.5 (colecciones)
+import { chargedAuraTexture, AURA_FRAMES } from '../textures/collectionTextures'; // Fase 6.5 (colecciones)
 
 export interface MobTexture {
   width: number;
@@ -45,6 +47,8 @@ export class MobRenderer {
   /** Fase 6: variant = pelaje (monturas) o profesión (aldeanos); una textura por especie y variante. */
   private texSource: (id: number, variant?: number) => MobTexture | null;
   private bones = new Float32Array(MAX_BONES * 16);
+  /** Fase 6.5 (colecciones): fotogramas del aura del creeper cargado. */
+  private auraSkins: WebGLTexture[] = [];
   private model = mat4.create();
 
   constructor(gl: GL, texSource: (id: number, variant?: number) => MobTexture | null) {
@@ -56,8 +60,10 @@ export class MobRenderer {
 
   // ---------------------------------------------------------------- recursos
 
-  private mesh(def: MobDef): MobMesh {
-    let m = this.meshes.get(def.id);
+  /** `inflate`: Fase 6.5 (colecciones), cajas agrandadas (en píxeles) para el aura del creeper cargado. */
+  private mesh(def: MobDef, inflate = 0): MobMesh {
+    const key = inflate ? -def.id - 1 : def.id;
+    let m = this.meshes.get(key);
     if (m) return m;
     const gl = this.gl;
     const [aw, ah] = def.atlas;
@@ -65,9 +71,9 @@ export class MobRenderer {
     const names = def.parts.map((p) => p.name);
     const parents = def.parts.map((p) => (p.parent ? names.indexOf(p.parent) : -1));
     def.parts.forEach((part, bi) => {
-      const [x0, y0, z0] = part.from.map((v) => v * P);
+      const [x0, y0, z0] = part.from.map((v) => (v - inflate) * P);
       const [w, h, d] = part.size;
-      const x1 = x0 + w * P, y1 = y0 + h * P, z1 = z0 + d * P;
+      const x1 = x0 + (w + 2 * inflate) * P, y1 = y0 + (h + 2 * inflate) * P, z1 = z0 + (d + 2 * inflate) * P;
       const faces = boxFaces(part.uv[0], part.uv[1], w, h, d);
       const corners: number[][][] = [
         [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]],
@@ -109,7 +115,7 @@ export class MobRenderer {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
     gl.bindVertexArray(null);
     m = { vao, count: idx.length, parents, names };
-    this.meshes.set(def.id, m);
+    this.meshes.set(key, m);
     return m;
   }
 
@@ -318,8 +324,33 @@ export class MobRenderer {
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+      // Fase 6.5 (colecciones): creeper cargado: franjas de energía azul (emisivas) que envuelven el cuerpo.
+      if (def.id === MOB_CREEPER && e.flags & EF_CHARGED && e.deathT < 0) {
+        const aura = this.mesh(def, 1.2);
+        p.tex2D('uSkin', this.auraSkin(def, Math.floor(time * 10) % AURA_FRAMES)).f2('uLightLevel', 1, 1).f3('uTint', 1, 1, 1).f1('uFlash', 0);
+        gl.bindVertexArray(aura.vao);
+        gl.drawElements(gl.TRIANGLES, aura.count, gl.UNSIGNED_SHORT, 0);
+      }
     }
     gl.bindVertexArray(null);
+  }
+
+  /** Fase 6.5 (colecciones): un fotograma de la textura del aura (del tamaño del atlas de la especie). */
+  private auraSkin(def: MobDef, frame: number): WebGLTexture {
+    let t = this.auraSkins[frame];
+    if (t) return t;
+    const gl = this.gl;
+    const src = chargedAuraTexture(def.atlas[0], def.atlas[1], frame);
+    t = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, src.width, src.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, src.rgba);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.auraSkins[frame] = t;
+    return t;
   }
 
   drawShadow(list: ClientEntity[], camX: number, camY: number, camZ: number, time: number): void {

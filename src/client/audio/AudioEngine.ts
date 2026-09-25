@@ -7,6 +7,7 @@ import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
+import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -73,6 +74,9 @@ export class AudioEngine {
   private music: MusicEngine | null = null;
   private fluids: FluidAmbience | null = null;
   private heartbeat: Heartbeat | null = null;
+  /** Fase 6.5 (colecciones): tocadiscos que suenan y los que llegaron antes de arrancar el audio. */
+  private jukeboxes: Jukeboxes | null = null;
+  private pendingDiscs = new Map<string, { disc: number; pos: Vec3; elapsed: number; at: number }>();
   private readonly voices = new VoicePool(MAX_ONE_SHOT_VOICES);
 
   private listenerPos: Vec3 = [0, 0, 0];
@@ -118,6 +122,10 @@ export class AudioEngine {
       this.fluids.setProximity(this.pendingWaterProximity, this.pendingLavaProximity);
       this.heartbeat = new Heartbeat(ctx, this.masterGain);
       this.heartbeat.setLevel(this.pendingHeartbeat);
+      // Fase 6.5 (colecciones)
+      this.jukeboxes = new Jukeboxes(ctx, this.noise, this.sfxBus, this.reverbSend);
+      for (const [key, p] of this.pendingDiscs) this.jukeboxes.play(key, p.disc, p.pos, p.elapsed + (performance.now() - p.at) / 1000);
+      this.pendingDiscs.clear();
       if (ctx.state === 'suspended') await ctx.resume();
     } catch {
       try {
@@ -130,6 +138,7 @@ export class AudioEngine {
       this.music = null;
       this.fluids = null;
       this.heartbeat = null;
+      this.jukeboxes = null; // Fase 6.5 (colecciones)
       this.noise = null;
     }
   }
@@ -402,6 +411,29 @@ export class AudioEngine {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildDecorSfx(ctx, noise, kind, dest, now), kind === 'bell' ? 0.6 : 0.3));
   }
 
+  /**
+   * Fase 6.5 (colecciones): pone a sonar el disco `disc` (índice de DISCS) en el tocadiscos `key`, que ya
+   * lleva `elapsed` segundos sonando.
+   */
+  playDisc(key: string, disc: number, pos: Vec3, elapsed: number): void {
+    if (!this.jukeboxes) {
+      this.pendingDiscs.set(key, { disc, pos, elapsed, at: performance.now() });
+      return;
+    }
+    this.safe(() => this.jukeboxes?.play(key, disc, pos, elapsed));
+  }
+
+  /** Fase 6.5 (colecciones): calla el tocadiscos `key`. */
+  stopDisc(key: string): void {
+    this.pendingDiscs.delete(key);
+    this.safe(() => this.jukeboxes?.stop(key));
+  }
+
+  /** Fase 6.5 (colecciones): tocadiscos sonando ahora mismo. */
+  get discsPlaying(): number {
+    return this.jukeboxes?.count ?? this.pendingDiscs.size;
+  }
+
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */
   playBowShoot(pos: Vec3, charge: number): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildBowTwang(ctx, noise, dest, now, charge)));
@@ -448,6 +480,7 @@ export class AudioEngine {
       this.music?.update(dt);
       this.fluids?.update(dt);
       this.heartbeat?.update(dt);
+      this.jukeboxes?.update(this.listenerPos); // Fase 6.5 (colecciones)
     });
   }
 
@@ -458,6 +491,8 @@ export class AudioEngine {
       this.music?.dispose();
       this.fluids?.dispose();
       this.heartbeat?.dispose();
+      this.jukeboxes?.dispose(); // Fase 6.5 (colecciones)
+      this.jukeboxes = null;
       this.ambience = null;
       this.music = null;
       this.fluids = null;

@@ -27,6 +27,8 @@ import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
+import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
+import { DISCS } from './discs'; // Fase 6.5 (colecciones)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -425,6 +427,15 @@ export const RAW_IRON = item('raw_iron', 'Hierro en bruto');
 export const RAW_GOLD = item('raw_gold', 'Oro en bruto');
 /** Cubo de nieve polvo: un cubo vacío sobre la nieve polvo la recoge; al vaciarlo, la pone y queda el cubo. */
 export const POWDER_SNOW_BUCKET = item('powder_snow_bucket', 'Cubo de nieve polvo', { stack: 1, block: POWDER_SNOW });
+// ------------------------------------------------------------------ Fase 6.5 (colecciones)
+/** Saco de tinta brillante: lo suelta el calamar brillante; con un marco se hace el marco brillante. */
+export const GLOW_INK_SAC = item('glow_ink_sac', 'Saco de tinta brillante');
+/** Marco brillante: como el marco, pero el objeto que muestra se ve a plena luz aunque esté a oscuras. */
+export const GLOW_ITEM_FRAME = item('glow_item_frame', 'Marco brillante');
+/** Discos de música, en el orden de DISCS (discs.ts); el título va en la descripción. */
+export const MUSIC_DISCS: readonly number[] = DISCS.map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
+// Las cabezas se llevan en el hueco del casco (sin puntos de armadura ni desgaste).
+for (const k of SKULL_KINDS) ITEMS[SKULLS[k]].armor = { slot: 0, material: 'leather', points: 0, toughness: 0, durability: 0 };
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -559,6 +570,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
   INK_SAC, NAME_TAG, LEAD, BUNDLE, ...DYE_COLORS.map((c) => DYED_BUNDLES[c]), ARMOR_STAND,
   WRITABLE_BOOK, ...Object.values(BANNER_PATTERN_ITEMS), // Fase 6.5 (libros y estandartes)
+  GLOW_INK_SAC, GLOW_ITEM_FRAME, ...MUSIC_DISCS, // Fase 6.5 (colecciones)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

@@ -54,6 +54,7 @@ import { Lecterns } from './server/lecterns'; // Fase 6.5 (libros y estandartes)
 import { Banners } from './server/banners'; // Fase 6.5 (libros y estandartes)
 import { Materials } from './server/materials'; // Fase 6.5 (materiales)
 import { Frogspawn } from './server/frogspawn'; // Fase 6.5 (materiales)
+import { Collections } from './server/collections'; // Fase 6.5 (colecciones)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -149,6 +150,8 @@ export class GameServer {
   private materials: Materials;
   /** Fase 6.5 (materiales): cría de las ranas y huevos de rana. */
   readonly frogspawn: Frogspawn;
+  /** Fase 6.5 (colecciones): tocadiscos y creepers cargados. */
+  readonly collections: Collections;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -238,6 +241,13 @@ export class GameServer {
     this.materials = new Materials(this.ctx);
     this.edits.materials = (s, x, y, z, id, item, h) => this.materials.useBlock(s, x, y, z, id, item, h);
     this.frogspawn = new Frogspawn(this.ctx, this.nature);
+    // Fase 6.5 (colecciones): tocadiscos; los rayos también cargan a los creepers.
+    this.collections = new Collections(this.ctx, store);
+    this.storms.onStrike = (x, y, z) => {
+      this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z));
+      this.collections.lightning(x, y, z);
+    };
+    this.commands.lightning = (x, y, z) => this.storms.strike(x, y, z);
   }
 
   get seed(): number {
@@ -360,6 +370,7 @@ export class GameServer {
       out.push({
         id: s.id, name: s.name, x: s.p[0], y: s.p[1], z: s.p[2], alive: !(s.s & STATE_DEAD), creative: s.mode === 'c',
         lookingAt: s.lookUntil > now ? s.lookAt : -1, held: s.h,
+        head: s.a[0], // Fase 6.5 (colecciones)
       });
     }
     return out;
@@ -622,6 +633,9 @@ export class GameServer {
       case 'lectern': // Fase 6.5 (libros y estandartes)
         if (this.allow(s, 1)) this.lecterns.onLectern(s, msg);
         break;
+      case 'jukebox': // Fase 6.5 (colecciones)
+        if (this.allow(s, 1)) this.collections.onJukebox(s, msg);
+        break;
     }
   }
 
@@ -683,6 +697,7 @@ export class GameServer {
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: this.info(s) }, s);
     this.riding.onJoin(s); // Fase 6 (monturas): quién va montado
+    this.collections.onJoin(s); // Fase 6.5 (colecciones): los tocadiscos que están sonando
   }
 
   private loadRecord(name: string): PlayerRecord | null {
@@ -837,6 +852,7 @@ export class GameServer {
     this.lecterns?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (libros y estandartes)
     this.banners?.onBlockChanged(x, y, z, old, id);
     this.materials?.onBlockChanged(x, y, z, id); // Fase 6.5 (materiales)
+    this.collections?.onBlockChanged(x, y, z, old, id); // Fase 6.5 (colecciones)
   }
 
   // ------------------------------------------------------------------ bucle
@@ -859,6 +875,7 @@ export class GameServer {
     this.storms.tick(DT);
     if (this.tickCount % TICK_RATE === 0) this.trading.tick(1); // Fase 6 (aldeanos)
     if (this.tickCount % TICK_RATE === 0) this.raids.tick(); // Fase 6 (asaltos)
+    if (this.tickCount % TICK_RATE === 0) this.collections.tick(); // Fase 6.5 (colecciones)
     this.golems.tick(); // Fase 6 (gólems/domesticar)
     this.oceanLife.tick(); // Fase 6.5 (océano y plantas)
     this.banners.endTick(); // Fase 6.5 (libros y estandartes)
@@ -940,6 +957,7 @@ export class GameServer {
     this.stands.flush(this.store); // Fase 6.5 (remate)
     this.lecterns.flush(this.store); // Fase 6.5 (libros y estandartes)
     this.banners.flush(this.store);
+    this.collections.flush(this.store); // Fase 6.5 (colecciones)
     for (const s of this.sessions.values()) if (s.saveDirty) this.savePlayer(s);
     const now = this.now();
     if (all || now - this.lastMobSave > 60_000) {

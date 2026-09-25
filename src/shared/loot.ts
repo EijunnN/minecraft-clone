@@ -111,3 +111,12 @@ export function scatterLoot(stacks: ItemStack[], slots: number, rand: () => numb
   }
   return out;
 }
+
+// Fase 6.5 (colecciones): discos de música en las mazmorras (13, cat y, rara vez, otherside) y en las minas.
+import { MUSIC_DISCS } from './items';
+import { discIndexOfKey } from './discs';
+{
+  const disc = (k: string) => MUSIC_DISCS[discIndexOfKey(k)];
+  LOOT_TABLES.dungeon.entries.push([disc('13'), 8, 1, 1], [disc('cat'), 8, 1, 1], [disc('otherside'), 1, 1, 1]);
+  LOOT_TABLES.mineshaft.entries.push([disc('13'), 2, 1, 1], [disc('cat'), 2, 1, 1]);
+}

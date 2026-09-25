@@ -380,6 +380,14 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'powder_snow', sss: 0.3 },
   { name: 'slime_block', special: 4, sss: 0.3 },
   { name: 'frogspawn', sss: 0.4, cutout: true },
+  // Fase 6.5 (colecciones): caras de las cabezas (como skullTexture en blocks/collections.ts), tocadiscos y
+  // marco brillante.
+  ...['zombie', 'skeleton', 'creeper', 'player'].flatMap((k) =>
+    ['right', 'left', 'top', 'bottom', 'back', 'front'].map((f): TextureDef => ({ name: `${k}_head_${f}` }))),
+  { name: 'jukebox_side' },
+  { name: 'jukebox_top' },
+  { name: 'jukebox_bottom' },
+  { name: 'glow_item_frame' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);
