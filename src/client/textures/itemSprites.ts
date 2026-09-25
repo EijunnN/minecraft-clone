@@ -23,11 +23,12 @@ import { BOOK_SPRITES } from './bookSprites'; // Fase 6.5 (libros y estandartes)
 import { MATERIAL_SPRITES } from './materialSprites'; // Fase 6.5 (materiales)
 import { COLLECTION_SPRITES } from './collectionSprites'; // Fase 6.5 (colecciones)
 import { EQUIPMENT_SPRITES } from './equipmentSprites'; // Fase 6.5 (equipo)
+import { POTION_SPRITES, POTION_VARIANTS } from './potionSprites'; // Fase 7 (pociones)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
   size: number;
-  /** Número de sprites (= ITEM_SPRITES.length). */
+  /** Número de sprites (ITEM_SPRITES y, detrás, los de cada tipo de poción: Fase 7). */
   count: number;
   /** count · 16 · 16 · 4 bytes, sRGB, alpha 0/255. */
   rgba: Uint8Array;
@@ -2275,6 +2276,8 @@ Object.assign(SPRITES, COLOR_SPRITES);
 Object.assign(SPRITES, DECOR_SPRITES);
 // Fase 6.5 (equipo): mechero, cota de malla, ballesta, tridente, tortuga, armaduras de caballo y lobo…
 Object.assign(SPRITES, EQUIPMENT_SPRITES);
+// Fase 7 (pociones): frascos, flecha con efecto, ingredientes y alambique.
+Object.assign(SPRITES, POTION_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado
@@ -2391,12 +2394,14 @@ function drawSprite(name: string, def: SpriteDef, out: Uint8Array, base: number)
 }
 
 export function generateItemSprites(): ItemSprites {
-  const count = ITEM_SPRITES.length;
+  // Fase 7 (pociones): después de los de ITEM_SPRITES, un dibujo por forma y tipo de poción.
+  const count = ITEM_SPRITES.length + POTION_VARIANTS.length;
   const layer = S * S * 4;
   const rgba = new Uint8Array(count * layer);
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < ITEM_SPRITES.length; i++) {
     const name = ITEM_SPRITES[i];
     drawSprite(name, spriteDef(name), rgba, i * layer);
   }
+  POTION_VARIANTS.forEach((v, k) => drawSprite(v.name, v.def, rgba, (ITEM_SPRITES.length + k) * layer));
   return { size: S, count, rgba };
 }

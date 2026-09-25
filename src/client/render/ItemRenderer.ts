@@ -11,6 +11,7 @@ import { ITEMS, itemSpriteIndex } from '../../shared/items';
 import { TEXTURE_DEFS, textureLayer } from '../../shared/textureDefs';
 import type { BlockTextures } from './BlockTextures';
 import type { ItemSprites } from '../textures/itemSprites';
+import { potionSpriteLayer } from '../textures/potionSprites'; // Fase 7 (pociones)
 
 export interface ItemModel {
   vao: WebGLVertexArrayObject;
@@ -150,8 +151,21 @@ export class ItemRenderer {
     return out;
   }
 
-  /** Modelo de un objeto (bloque o sprite). null si no se puede dibujar. */
-  model(id: number): ItemModel | null {
+  /**
+   * Modelo de un objeto (bloque o sprite). null si no se puede dibujar. Fase 7 (pociones): `dmg`, el tipo
+   * de las pociones y las flechas con efecto (cada uno con su color).
+   */
+  model(id: number, dmg = 0): ItemModel | null {
+    const layer = dmg > 0 ? potionSpriteLayer(id, dmg) : -1;
+    if (layer >= 0 && layer !== itemSpriteIndex(id)) {
+      const pk = 'p' + layer;
+      let pm = this.cache.get(pk);
+      if (!pm) {
+        pm = this.upload(this.extrudeData(this.spriteRGBA, layer * 256 * 4, layer), false, true, true);
+        this.cache.set(pk, pm);
+      }
+      return pm;
+    }
     const key = 'i' + id;
     const hit = this.cache.get(key);
     if (hit) return hit;

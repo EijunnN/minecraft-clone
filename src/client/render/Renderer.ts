@@ -31,6 +31,7 @@ import type { GeneratedTextures } from '../textures/generateTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import type { ClientEntity } from '../game/ClientEntities';
 import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY } from '../../shared/mobs';
+import { TIPPED_ARROW } from '../../shared/items'; // Fase 7 (pociones)
 // Fase 6.5 (decoración): cuadros y marcos.
 import { isHangingType } from '../../shared/paintings';
 import { pushHangingDraws } from './hangingDraws';
@@ -116,6 +117,9 @@ export interface FrameState {
   /** Uso del objeto: 0..1 (tensar el arco, comer). */
   handUse: number;
   handUseKind: 'none' | 'bow' | 'eat' | 'block';
+  /** Fase 7 (pociones): tipo de las pociones de cada mano (su color). */
+  heldDmg?: number;
+  offhandDmg?: number;
   /** Mano secundaria: objeto y su uso (comer o cubrirse con el escudo). */
   offhandItem?: number;
   offhandUseKind?: 'none' | 'eat' | 'block';
@@ -824,7 +828,7 @@ export class Renderer {
       const rx = e.x - s.camX, ry = e.y - s.camY, rz = e.z - s.camZ;
       if (rx * rx + ry * ry + rz * rz > 96 * 96) continue;
       if (e.type === ENT_ITEM) {
-        const model = this.items.model(e.item);
+        const model = this.items.model(e.item, e.dmg); // Fase 7 (pociones): con el color de su tipo
         if (!model) continue;
         const copies = e.count <= 1 ? 1 : e.count <= 16 ? 2 : e.count <= 32 ? 3 : 4;
         const bob = Math.sin(e.age * 2.4 + e.seed * 6.28) * 0.05;
@@ -841,7 +845,8 @@ export class Renderer {
           out.push({ model, m, light });
         }
       } else if (e.type === ENT_ARROW) {
-        const model = this.items.model(ARROW);
+        // Fase 7 (pociones): las flechas con efecto llevan la punta de su color.
+        const model = (e.potion ?? -1) >= 0 ? this.items.model(TIPPED_ARROW, e.potion) : this.items.model(ARROW);
         if (!model) continue;
         const m = mat4.create();
         mat4.translate(m, m, [rx, ry, rz]);
@@ -852,8 +857,8 @@ export class Renderer {
         mat4.scale(m, m, [0.7, 0.7, 0.7]);
         out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
       } else if (e.type === ENT_THROWN && e.item > 0) {
-        // Huevo en vuelo: el sprite de cara a la cámara.
-        const model = this.items.model(e.item);
+        // Huevo (o poción: Fase 7) en vuelo: el sprite de cara a la cámara.
+        const model = this.items.model(e.item, e.dmg);
         if (!model) continue;
         const m = mat4.create();
         mat4.translate(m, m, [rx, ry + 0.12, rz]);
@@ -998,16 +1003,16 @@ export class Renderer {
 
   /** Objetos en las manos: la principal a la derecha y la secundaria reflejada a la izquierda. */
   private drawHeld(s: FrameState, aspect: number, bindLighting: (p: Program) => Program): void {
-    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false);
+    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false, s.heldDmg);
     const off = s.offhandItem ?? 0;
-    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true);
+    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true, s.offhandDmg);
   }
 
   private drawHand(
     s: FrameState, aspect: number, bindLighting: (p: Program) => Program, item: number,
-    useKind: FrameState['handUseKind'], handUse: number, handSwing: number, equip: number, left: boolean,
+    useKind: FrameState['handUseKind'], handUse: number, handSwing: number, equip: number, left: boolean, dmg = 0,
   ): void {
-    const model = this.items.model(item);
+    const model = this.items.model(item, dmg); // Fase 7 (pociones): con el color de su tipo
     if (!model) return;
     const proj = mat4.create();
     mat4.perspective(proj, (70 * Math.PI) / 180, aspect, 0.01, 10);

@@ -67,6 +67,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'arrow': return 'fue abatido por una flecha';
     case 'kill': return 'abandonó este mundo';
     case 'llama': return 'murió de un escupitajo de llama'; // Fase 6 (monturas)
+    case 'magic': return 'murió por arte de magia'; // Fase 7 (pociones)
     default: return mobs[cause] ?? 'murió';
   }
 }

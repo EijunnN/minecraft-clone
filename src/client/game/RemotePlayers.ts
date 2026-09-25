@@ -52,6 +52,8 @@ export class RemotePlayer {
   private lastZ = 0;
   swingTime = -1;
   nameTag: HTMLDivElement | null = null;
+  /** Fase 7 (pociones): color de los remolinos de sus efectos (0xRRGGBB; 0 sin efectos). */
+  effectColor = 0;
 
   constructor(info: PlayerInfo) {
     this.id = info.id;

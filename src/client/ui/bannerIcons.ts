@@ -6,6 +6,7 @@
 import { ITEMS, type ItemStack } from '../../shared/items';
 import { bannerColor, bannerLayers, type BannerLayer } from '../../shared/bannerPatterns';
 import { bannerPixels, BANNER_W, BANNER_H } from '../render/bannerArt';
+import { potionIconUrl } from './potionIcons'; // Fase 7 (pociones)
 
 const iconCache = new Map<string, string>();
 const frontCache = new Map<string, string>();
@@ -73,6 +74,8 @@ export function prepareBannerIcons(icons: Map<number, string>): void {
 /** Icono de una pila: el de su objeto o, si es un estandarte con dibujos, el suyo propio. */
 export function stackIconUrl(s: ItemStack | null | undefined, icons: Map<number, string>): string | undefined {
   if (!s) return undefined;
+  const potion = potionIconUrl(s, icons); // Fase 7 (pociones): con el color de su tipo
+  if (potion) return potion;
   const layers = bannerLayers(s);
   const base = layers.length ? bannerColor(s.id) : -1;
   return base >= 0 ? bannerIcon(base, layers) : icons.get(s.id);

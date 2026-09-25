@@ -7,6 +7,12 @@ import {
   MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, speedMultiplier, meleeBonus, regenInterval, poisonInterval, hungerExhaustion,
 } from '../../shared/effects';
 import { EFFECT_CONDUIT_POWER } from '../../shared/effects'; // Fase 6.5 (equipo)
+// Fase 7 (pociones): curación y daño instantáneos, supersalto, caída lenta, invisibilidad y el color de
+// los remolinos.
+import {
+  EFFECT_INSTANT_HEALTH, EFFECT_INSTANT_DAMAGE, EFFECT_JUMP_BOOST, EFFECT_SLOW_FALLING, EFFECT_INVISIBILITY, instantHeal,
+  instantHarm, mixEffectColor,
+} from '../../shared/effects';
 
 export interface ActiveEffect {
   /** Nivel (0 = I). */
@@ -39,6 +45,11 @@ export class StatusEffects {
    * dura más.
    */
   add(id: number, seconds: number, amp: number, target?: EffectTarget): void {
+    // Fase 7 (pociones): los instantáneos se aplican ya (`seconds` es su fuerza, 0..1).
+    if (EFFECTS[id]?.instant) {
+      if (target) this.instant(id, seconds, amp, target);
+      return;
+    }
     if (!EFFECTS[id] || !(seconds > 0)) return;
     amp = Math.max(0, Math.min(MAX_EFFECT_AMP, amp | 0));
     seconds = Math.min(MAX_EFFECT_SECONDS, seconds);
@@ -89,6 +100,36 @@ export class StatusEffects {
 
   get waterBreathing(): boolean {
     return this.has(EFFECT_WATER_BREATHING) || this.has(EFFECT_CONDUIT_POWER); // Fase 6.5 (equipo): conducto
+  }
+
+  /** Fase 7 (pociones): curación o daño instantáneos (4 y 6 de vida, el doble por nivel; el daño es magia). */
+  instant(id: number, strength: number, amp: number, target: EffectTarget): void {
+    const k = Number.isFinite(strength) ? Math.max(0, Math.min(1, strength)) : 1;
+    if (id === EFFECT_INSTANT_HEALTH) {
+      const n = Math.round(instantHeal(Math.max(0, amp | 0)) * k);
+      if (n > 0) target.heal(n);
+    } else if (id === EFFECT_INSTANT_DAMAGE) {
+      const n = Math.round(instantHarm(Math.max(0, amp | 0)) * k);
+      if (n > 0) target.damage(n, 'magic', true);
+    }
+  }
+
+  /** Fase 7 (pociones): nivel de Supersalto (−1 sin él). */
+  get jumpAmp(): number {
+    return this.amp(EFFECT_JUMP_BOOST);
+  }
+
+  get slowFalling(): boolean {
+    return this.has(EFFECT_SLOW_FALLING);
+  }
+
+  get invisible(): boolean {
+    return this.has(EFFECT_INVISIBILITY);
+  }
+
+  /** Fase 7 (pociones): color de los remolinos (mezcla de los efectos; null sin efectos). */
+  get swirlColor(): [number, number, number] | null {
+    return mixEffectColor([...this.list].map(([id, e]) => [id, e.amp] as const));
   }
 
   /** Visión nocturna (0..1; parpadea los últimos 10 s como en Minecraft). */

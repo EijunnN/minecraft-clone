@@ -35,6 +35,9 @@ import { StatusEffects } from './statusEffects';
 import { fishingLines } from './fishingLines';
 import { useLook } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { equipmentFrame } from './equipmentLife';
+// Fase 7 (pociones): física de los efectos, remolinos, nubes, invisibles y nombres de las pociones.
+import { potionPhysics, potionPosState, potionFrame } from './potionClient';
+import { stackName, EF_INVISIBLE, STATE_INVISIBLE } from '../../shared/potions';
 import type { Use } from './gameTypes';
 import { leashLines } from './leashLines'; // Fase 6.5 (remate)
 import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
@@ -601,13 +604,14 @@ export class Game {
     const p = this.player;
     const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
       (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0) | (p.pose !== 'stand' ? STATE_PRONE : 0) |
-      useState(this.interaction.use);
+      useState(this.interaction.use) | potionPosState(this).s; // Fase 7 (pociones): invisible
+    const ec = potionPosState(this).ec;
     const q = (v: number, step: number) => Math.round(v / step);
     const armor = this.inv.armorIds();
     const off = this.inv.offhand?.id ?? 0;
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor}`;
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${ec}`;
     if (!force && key === this.lastSentKey) return;
-    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor });
+    this.net?.send({ t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor, ...(ec ? { ec } : {}) });
     this.lastSentKey = key;
   }
 
@@ -725,6 +729,7 @@ export class Game {
     // Usar un objeto frena mucho; los efectos Velocidad y Lentitud multiplican.
     p.usingItem = !!this.interaction.use;
     p.slow = (this.interaction.use ? 0.25 : 1) * this.statusEffects.speed;
+    potionPhysics(this); // Fase 7 (pociones): Supersalto y Caída lenta
     p.leatherBoots = ITEMS[this.inv.armor[3]?.id ?? 0]?.armor?.material === 'leather'; // Fase 6.5 (materiales): nieve polvo
     world.renderDistance = settings.render.renderDistance;
     const wasInWater = p.inWater;
@@ -814,7 +819,7 @@ export class Game {
     for (const rp of this.remote.values()) {
       rp.update(dt);
       this.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
-      if (rp.state & STATE_DEAD) continue;
+      if (rp.state & (STATE_DEAD | STATE_INVISIBLE)) continue; // Fase 7 (pociones): los invisibles no se dibujan
       const v = rp.view;
       const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
       v.light = [(l >> 4) / 15, (l & 15) / 15];
@@ -836,6 +841,7 @@ export class Game {
     ps.update(dt);
     this.ambient.update(dt);
     equipmentFrame(this, dt); // Fase 6.5 (equipo): estela de los cohetes
+    potionFrame(this, dt); // Fase 7 (pociones): remolinos, nubes y flechas con efecto
 
     // --- Red: posición a ~8 Hz y sólo si cambia (ahorra peticiones) ---
     this.lastSent += dt;
@@ -979,8 +985,9 @@ export class Game {
     const mobs: ClientEntity[] = [];
     const drops: ClientEntity[] = [];
     for (const e of this.ents.list.values()) {
-      if (MOBS[e.type]) mobs.push(e);
-      else drops.push(e);
+      if (MOBS[e.type]) {
+        if (!(e.flags & EF_INVISIBLE)) mobs.push(e); // Fase 7 (pociones): criaturas invisibles
+      } else drops.push(e);
     }
     const m = this.interaction.mining;
     let crack: FrameState['crack'] = null;
@@ -1014,6 +1021,8 @@ export class Game {
       mist,
       selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
       heldItem: surv.dead ? 0 : this.heldId,
+      heldDmg: this.heldStack?.dmg ?? 0, // Fase 7 (pociones): color de la poción
+      offhandDmg: this.inv.offhand?.dmg ?? 0,
       handUse: useLook(mainUse).amount, // Fase 6.5 (equipo): con la ballesta y el tridente
       handUseKind: useLook(mainUse).kind,
       offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
@@ -1060,7 +1069,7 @@ export class Game {
     for (const rp of this.remote.values()) {
       const v = rp.view;
       const d = Math.hypot(v.x - camX, v.y - camY, v.z - camZ);
-      const visible = d < 72 && !this.hudHidden && !(rp.state & STATE_DEAD);
+      const visible = d < 72 && !this.hudHidden && !(rp.state & (STATE_DEAD | STATE_INVISIBLE)); // Fase 7: sin nombre si es invisible
       tags.push({ id: rp.id, name: rp.name, pos: visible ? this.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null });
     }
     // Fase 6.5 (remate): criaturas con nombre (etiqueta), hasta 16 bloques.
@@ -1140,7 +1149,7 @@ export class Game {
     this.interaction.mining = null;
     this.refreshHotbar(true);
     const s = this.heldStack;
-    if (s) this.ui.showBlockName(ITEMS[s.id]?.name ?? '');
+    if (s) this.ui.showBlockName(stackName(s)); // Fase 7 (pociones): con el nombre de su tipo
   }
 
   /** Animación del brazo (y aviso por red si no hubo edición, que ya la anima). */

@@ -8,6 +8,7 @@ import { ITEMS } from '../../shared/items';
 import type { PlayerInfo, ServerMsg, GameMode } from '../../shared/protocol';
 import { lighten } from './gameTypes';
 import type { Game } from './Game';
+import { EFFECT_INSTANT_DAMAGE } from '../../shared/effects'; // Fase 7 (pociones)
 
 export class ServerEvents {
   constructor(private g: Game) {}
@@ -22,9 +23,12 @@ export class ServerEvents {
       case 'leave':
         this.removeRemote(msg.id);
         break;
-      case 'pos':
-        this.g.remote.get(msg.id)?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o);
+      case 'pos': {
+        const rp = this.g.remote.get(msg.id);
+        rp?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o);
+        if (rp) rp.effectColor = Number.isInteger(msg.ec) ? msg.ec! & 0xffffff : 0; // Fase 7 (pociones)
         break;
+      }
       case 'set':
         this.applyRemoteSet(msg.id, msg.x, msg.y, msg.z, msg.b);
         break;
@@ -100,7 +104,9 @@ export class ServerEvents {
         this.g.life.bed = Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isInteger) ? msg.p : null;
         break;
       case 'effect':
-        // Del comando /efecto (id 0 = quitarlos todos).
+        // Del comando /efecto (id 0 = quitarlos todos). Fase 7 (pociones): también de las pociones (en
+        // creativo, sin el daño instantáneo).
+        if (this.g.creative && msg.id === EFFECT_INSTANT_DAMAGE) break;
         if (msg.id === 0) this.g.statusEffects.clear(this.g.survival);
         else if (Number(msg.s) < 0) this.g.statusEffects.remove(Number(msg.id), this.g.survival); // Fase 6: quitar uno
         else this.g.statusEffects.add(Number(msg.id), Number(msg.s), Number(msg.a), this.g.survival);

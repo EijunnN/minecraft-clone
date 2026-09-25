@@ -9,6 +9,7 @@ import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
 import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
 import { buildEquipmentSfx } from './equipmentSounds'; // Fase 6.5 (equipo)
+import { buildPotionSfx } from './potionSounds'; // Fase 7 (pociones)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -452,6 +453,15 @@ export class AudioEngine {
       }
     }
     this.safe(() => this.spawnPositional(p, (ctx, noise, dest, now) => buildEquipmentSfx(ctx, noise, kind, dest, now, a), far ? 0.6 : 0.3));
+  }
+
+  /**
+   * Fase 7 (pociones): beber, llenar o vaciar un frasco, el alambique al terminar, la poción que se rompe
+   * y la nube persistente. Sin posición, suena en la cabeza del jugador (beber).
+   */
+  playPotionSfx(kind: string, pos: Vec3 | null): void {
+    const build = (ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number) => buildPotionSfx(ctx, noise, kind, dest, now);
+    this.safe(() => (pos ? this.spawnPositional(pos, build, 0.3) : this.spawnLocal(0.1, build)));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

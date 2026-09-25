@@ -12,12 +12,13 @@ import type { Interaction } from './interaction';
 import type { Game } from './Game';
 import type { Use } from './gameTypes';
 import {
-  ITEMS, ARROW, SHEARS, FLINT_AND_STEEL, CROSSBOW, CROSSBOW_CHARGED, TRIDENT, GOAT_HORN, FIREWORK_ROCKET, CARROT_ON_A_STICK,
+  ITEMS, SHEARS, FLINT_AND_STEEL, CROSSBOW, CROSSBOW_CHARGED, TRIDENT, GOAT_HORN, FIREWORK_ROCKET, CARROT_ON_A_STICK,
   WOLF_ARMOR, HORSE_ARMOR, type ItemStack,
 } from '../../shared/items';
 import { MOB_HORSE, MOB_WOLF, MOB_PIG } from '../../shared/mobs';
 import { EF_TAMED, EF_BABY } from '../../shared/protocol';
 import { CROSSBOW_CHARGE, TRIDENT_MIN_CHARGE, GOAT_HORN_COOLDOWN } from '../../shared/equipment';
+import { hasArrows, takeArrow, LOADED_TIPPED } from './potionClient'; // Fase 7 (pociones)
 
 const HORSE_ARMORS = new Set(Object.values(HORSE_ARMOR));
 /** Momento (ms) en que se podrá volver a tocar el cuerno. */
@@ -69,7 +70,7 @@ export function equipmentUse(
       g.swing(true);
       return true;
     case CROSSBOW:
-      if (g.creative || g.inv.count(ARROW) > 0) {
+      if (g.creative || hasArrows(g)) { // Fase 7 (pociones): también flechas con efecto
         ia.use = { kind: 'crossbow', t: 0, slot: g.selected, item: heldId, soundT: 0 };
         g.audio.playEquipSfx('crossbow_loading', [g.player.x, g.player.eyeY, g.player.z]);
       }
@@ -114,7 +115,8 @@ function fireCrossbow(g: Game, ia: Interaction, held: ItemStack): void {
   const p = g.player;
   const cp = Math.cos(p.pitch);
   const d = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
-  g.net?.send({ t: 'shoot', p: [p.x + d[0] * 0.3, p.eyeY - 0.1, p.z + d[2] * 0.3], d: [d[0], d[1], d[2]], f: 1, c: 1 });
+  const ap = LOADED_TIPPED.get(held); // Fase 7 (pociones): cargada con una flecha con efecto
+  g.net?.send({ t: 'shoot', p: [p.x + d[0] * 0.3, p.eyeY - 0.1, p.z + d[2] * 0.3], d: [d[0], d[1], d[2]], f: 1, c: 1, ...(ap !== undefined ? { ap } : {}) });
   g.inv.set(g.selected, { id: CROSSBOW, count: 1, ...(held.dmg ? { dmg: held.dmg } : {}) });
   ia.wearHeld(1);
   g.swing(false);
@@ -127,8 +129,12 @@ export function equipmentHold(g: Game, ia: Interaction, u: Use): void {
   const s = g.inv.get(u.slot);
   ia.use = null;
   if (!s || s.id !== CROSSBOW) return;
-  if (!g.creative && g.inv.remove(ARROW, 1) < 1) return;
-  g.inv.set(u.slot, { id: CROSSBOW_CHARGED, count: 1, ...(s.dmg ? { dmg: s.dmg } : {}) });
+  // Fase 7 (pociones): la primera flecha que haya; si es con efecto, la ballesta la recuerda.
+  const ap = takeArrow(g);
+  if (ap === null) return;
+  const charged: ItemStack = { id: CROSSBOW_CHARGED, count: 1, ...(s.dmg ? { dmg: s.dmg } : {}) };
+  if (ap >= 0) LOADED_TIPPED.set(charged, ap);
+  g.inv.set(u.slot, charged);
   g.audio.playEquipSfx('crossbow_load', [g.player.x, g.player.eyeY, g.player.z]);
 }
 
