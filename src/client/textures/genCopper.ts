@@ -37,7 +37,7 @@ function rampAt(p: Pal, lv: number): RGB {
 }
 
 /** Relieve de un dibujo de cobre, independiente de la fase. */
-class Relief {
+export class Relief { // Fase 7 (redstone): también lo usan la bombilla y el pararrayos (genRedstone.ts)
   readonly lv = new Float32Array(N).fill(1);
   readonly h = new Float32Array(N).fill(1);
   /** 0..1: cuánto verdín extra acumula (ranuras, juntas). */
@@ -64,7 +64,7 @@ class Relief {
 }
 
 /** Colorea un relieve con la paleta de una fase (0..3). */
-function paint(t: Tex, d: Relief, stage: number, seed: string): void {
+export function paint(t: Tex, d: Relief, stage: number, seed: string): void {
   const r = new Rng('copper_patina/' + seed);
   const noise = new Noise(r, 4);
   const px = pixelNoise(r);
@@ -102,7 +102,7 @@ function paint(t: Tex, d: Relief, stage: number, seed: string): void {
 // ---------------------------------------------------------------------------
 
 /** Bisel de dos anillos en el recuadro [x0, x1] × [y0, y1]: arriba e izquierda claros, abajo y derecha oscuros. */
-function bevel(d: Relief, x0: number, y0: number, x1: number, y1: number, rings = 2): void {
+export function bevel(d: Relief, x0: number, y0: number, x1: number, y1: number, rings = 2): void {
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const ring = Math.min(x - x0, y - y0, x1 - x, y1 - y);
@@ -116,7 +116,7 @@ function bevel(d: Relief, x0: number, y0: number, x1: number, y1: number, rings 
 }
 
 /** Relleno cepillado con algún arañazo y un reflejo en diagonal (bloque de cobre). */
-function brushed(d: Relief, r: Rng, x0: number, y0: number, x1: number, y1: number, diagonal: boolean): void {
+export function brushed(d: Relief, r: Rng, x0: number, y0: number, x1: number, y1: number, diagonal: boolean): void {
   const brush = new Noise(r, 2, 16);
   const n4 = new Noise(r, 4);
   for (let y = y0; y <= y1; y++) {

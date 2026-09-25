@@ -7,6 +7,7 @@ import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { buildDecorSfx } from './decorSounds'; // Fase 6.5 (decoración)
+import { buildRedstoneSfx } from './redstoneSounds'; // Fase 7 (redstone)
 import { Jukeboxes } from './jukebox'; // Fase 6.5 (colecciones)
 import { buildEquipmentSfx } from './equipmentSounds'; // Fase 6.5 (equipo)
 import { AmbienceController } from './ambience';
@@ -405,6 +406,11 @@ export class AudioEngine {
   /** Fase 6.5 (cobre): encerar o raspar un bloque de cobre en `pos`. */
   playCopperSfx(kind: 'wax' | 'scrape', pos: Vec3): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildCopperSfx(ctx, noise, kind, dest, now)));
+  }
+
+  /** Fase 7 (redstone): chasquidos de los componentes, puertas movidas por la potencia y notas del bloque musical. */
+  playRedstoneSfx(kind: string, pos: Vec3, a = 0, b = 0): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildRedstoneSfx(ctx, noise, kind, a, b, dest, now), kind === 'note' ? 0.45 : 0.25));
   }
 
   /** Fase 6.5 (decoración): campana, colgar/descolgar cuadros y marcos, girar el objeto del marco. */

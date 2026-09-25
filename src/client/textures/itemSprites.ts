@@ -23,6 +23,7 @@ import { BOOK_SPRITES } from './bookSprites'; // Fase 6.5 (libros y estandartes)
 import { MATERIAL_SPRITES } from './materialSprites'; // Fase 6.5 (materiales)
 import { COLLECTION_SPRITES } from './collectionSprites'; // Fase 6.5 (colecciones)
 import { EQUIPMENT_SPRITES } from './equipmentSprites'; // Fase 6.5 (equipo)
+import { REDSTONE_SPRITES } from './redstoneSprites'; // Fase 7 (redstone)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2275,6 +2276,8 @@ Object.assign(SPRITES, COLOR_SPRITES);
 Object.assign(SPRITES, DECOR_SPRITES);
 // Fase 6.5 (equipo): mechero, cota de malla, ballesta, tridente, tortuga, armaduras de caballo y lobo…
 Object.assign(SPRITES, EQUIPMENT_SPRITES);
+// Fase 7 (redstone): puerta de hierro y cuarzo del Nether.
+Object.assign(SPRITES, REDSTONE_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado
