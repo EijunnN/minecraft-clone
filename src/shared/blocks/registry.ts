@@ -91,6 +91,8 @@ export interface BlockDef {
   flatItem?: string;
   /** No se obtiene como objeto (cultivos, tierra de cultivo). */
   noItem?: boolean;
+  /** Caras cuya textura va girada 90° (bit por cara, en el orden de `tex`): troncos tumbados. */
+  texRot?: number;
   /** Apoyo a medida (enredaderas, nenúfares): se rompe cuando deja de cumplirse. */
   support?: (get: NeighborGet) => boolean;
 }
@@ -145,6 +147,7 @@ export function def(id: number, key: string, name: string, o: Opts): void {
     flatItem: o.flatItem,
     noItem: o.noItem,
     support: o.support,
+    texRot: o.texRot,
   };
 }
 
@@ -225,6 +228,8 @@ export const BLOCK_EMISSION = new Uint8Array(MAX_BLOCK_ID);
 export const BLOCK_REPLACEABLE = new Uint8Array(MAX_BLOCK_ID);
 /** Capa de textura para cada cara: índice = id * 6 + cara. */
 export const BLOCK_TEX = new Uint16Array(MAX_BLOCK_ID * 6);
+/** Caras con la textura girada 90° (bit por cara). */
+export const BLOCK_TEXROT = new Uint8Array(MAX_BLOCK_ID);
 /** 0 = no fluido, 1 = agua, 2 = lava. */
 export const BLOCK_FLUID = new Uint8Array(MAX_BLOCK_ID);
 /** 0 fuente, 1..7 fluyendo, 8 cayendo. */
@@ -277,6 +282,7 @@ export function finalizeBlocks(kindOf: ReadonlyMap<number, number>): void {
     BLOCK_EMISSION[b.id] = b.emission;
     BLOCK_REPLACEABLE[b.id] = b.replaceable ? 1 : 0;
     for (let f = 0; f < 6; f++) BLOCK_TEX[b.id * 6 + f] = b.render === R_NONE ? 0 : textureLayer(b.tex[f]);
+    BLOCK_TEXROT[b.id] = b.texRot ?? 0;
     BLOCK_BASE[b.id] = b.base ?? b.id;
     BLOCK_COLLIDE[b.id] = !b.solid ? 0 : b.render === R_MODEL || b.collision ? 2 : 1;
     BLOCK_CLIMB[b.id] = b.climbable ? 1 : 0;

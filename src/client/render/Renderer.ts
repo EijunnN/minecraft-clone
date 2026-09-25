@@ -156,6 +156,8 @@ export class Renderer {
   readonly textures: BlockTextures;
   readonly entities: EntityRenderer;
   readonly weather: Weather;
+  /** Framebuffer con sólo el color del buffer de post (las partículas leen la profundidad aparte). */
+  private particleFbo: WebGLFramebuffer | null = null;
   readonly items: ItemRenderer;
   readonly mobs: MobRenderer;
   readonly xpOrbs: XpOrbRenderer;
@@ -356,6 +358,11 @@ export class Renderer {
     this.history[0].resize(w, h);
     this.history[1].resize(w, h);
     this.post.resize(w, h, this.main.depth);
+    // Partículas: el color del buffer de post sin su profundidad.
+    this.particleFbo ??= gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.post.color, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.ldr.resize(cw, ch);
     this.volRT.resize(Math.ceil(w / 2), Math.ceil(h / 2));
     let bw = Math.ceil(w / 2), bh = Math.ceil(h / 2);
@@ -588,7 +595,6 @@ export class Renderer {
     this.drawPlayerHeldItems(s, bindLighting);
     this.items.drawWorld(dropDraws, this.viewProj, s.grassTint, bindLighting);
     this.signText.draw(s.signs ?? [], s.camX, s.camY, s.camZ);
-    this.entities.drawParticles(s.camX, s.camY, s.camZ, this.atmosphere.irradiance.color);
     gl.disable(gl.CULL_FACE);
     this.xpOrbs.draw(s.drops, s.camX, s.camY, s.camZ);
     this.atmosphere.drawSky();
@@ -676,6 +682,16 @@ export class Renderer {
       gl.depthMask(false);
       this.entities.drawOutline(s.selection, s.camX, s.camY, s.camZ);
       gl.depthMask(true);
+    }
+    // Partículas (después del TAA, como la lluvia, para que no dejen estela): se desvanecen contra la
+    // geometría con una copia de la profundidad de la escena.
+    if (this.entities.particles.n > 0) {
+      // Sólo el color del buffer de post: así se puede leer la profundidad de la escena.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleFbo);
+      gl.viewport(0, 0, W, H);
+      this.entities.particles.draw(s.camX, s.camY, s.camZ, this.textures.albedo, this.atmosphere.irradiance.color, this.main.depth!);
+      this.post.bind();
+      gl.enable(gl.DEPTH_TEST);
     }
     // Lluvia o nieve (después del TAA para que las gotas no dejen estela).
     this.weather.draw(s.camX, s.camY, s.camZ, s.rain, s.snow, s.time, this.atmosphere.irradiance.color);

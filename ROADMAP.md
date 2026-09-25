@@ -379,6 +379,15 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
   a por los aldeanos y en normal o difícil los convierten en aldeanos zombi. `/asalto` y `/patrulla`
   para probarlo.
 
+### Mejoras entre fases
+
+- ✅ **Partículas nuevas.** Sistema propio con atlas procedural, física por partícula (viento,
+  balanceo, rebote, reposo en el suelo) y fundido suave; emisores del ambiente (pétalos de cerezo,
+  hojas, antorchas, hornos, fogatas, goteo, lava, micelio, luciérnagas, lluvia y burbujas).
+- ✅ **Troncos tumbados.** Al poner un tronco contra un lateral queda tumbado; las ramas de los
+  cerezos, la jungla y el roble oscuro los usan (corteza a lo largo, anillos en los extremos).
+- ✅ **Aldeas despejadas.** Ya no crecen árboles dentro de las aldeas.
+
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,
 antorchas, repetidores, comparadores, pistones, observadores, tolvas, dispensadores, TNT, lámparas),

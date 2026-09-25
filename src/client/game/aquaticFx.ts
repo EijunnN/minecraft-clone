@@ -9,11 +9,12 @@ export function aquaticFx(g: Game, kind: string, p: [number, number, number]): b
   switch (kind) {
     case 'splash':
       g.audio.playSplash(p, 0.6);
-      fx.spawnSmoke(p[0], p[1], p[2], 10, 0.4, 0.92, 0.35, 1.6);
+      fx.pfx.splash(p[0], p[1], p[2], 12);
+      fx.pfx.bubbles(p[0], p[1] - 0.4, p[2], 4);
       return true;
     case 'puffer_inflate':
       g.audio.playSplash(p, 0.25);
-      fx.spawnSmoke(p[0], p[1], p[2], 5, 0.3, 0.95, 0.25, 0.6);
+      fx.pfx.bubbles(p[0], p[1], p[2], 8, 0.4);
       return true;
     case 'bucket_fill_fish':
     case 'bucket_empty_fish':

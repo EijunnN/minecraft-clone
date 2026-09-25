@@ -76,10 +76,17 @@ const LOG_SET = new Set(ALL_LOGS);
 const SAPLING_SET = new Set(ALL_SAPLINGS);
 export const isLeaves = (id: number): boolean => LEAF_SET.has(id);
 export const isLog = (id: number): boolean => LOG_SET.has(id);
+/** Madera de las variantes de tronco que se registran después (troncos tumbados). */
+const VARIANT_WOOD = new Map<number, WoodType>();
+/** Registra una variante de tronco (tumbado) como tronco de su madera. */
+export function addLogVariant(id: number, wood: WoodType): void {
+  LOG_SET.add(id);
+  VARIANT_WOOD.set(id, wood);
+}
 export const isSapling = (id: number): boolean => SAPLING_SET.has(id);
 /** Madera de un tronco, unas hojas o un brote. */
 export function woodOf(id: number): WoodType | undefined {
-  return WOOD_TYPES.find((w) => w.log === id || w.leaves === id || w.sapling === id || w.planks === id);
+  return VARIANT_WOOD.get(id) ?? WOOD_TYPES.find((w) => w.log === id || w.leaves === id || w.sapling === id || w.planks === id);
 }
 
 // ------------------------------------------------------------------ enredaderas y nenúfares

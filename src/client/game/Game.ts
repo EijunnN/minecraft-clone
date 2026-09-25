@@ -20,7 +20,8 @@ import { AudioEngine } from '../audio/AudioEngine';
 import { OFFHAND, Inventory, HOTBAR } from './Inventory';
 import { Survival } from './Survival';
 import { ClientEntities, type ClientEntity } from './ClientEntities';
-import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, DEFAULT_HOTBAR, WATER, R_CROSS, DIRT, isFarmland, R_CROP } from '../../shared/blocks';
+import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_FLUID, DEFAULT_HOTBAR, WATER, R_CROSS, DIRT, isFarmland, R_CROP } from '../../shared/blocks';
+import { AmbientParticles } from './ambientParticles';
 import { ITEMS, maxStack, type ItemStack } from '../../shared/items';
 import { MOBS } from '../../shared/mobs';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
@@ -81,6 +82,10 @@ export class Game {
   readonly life = new LifeCycle(this);
   readonly network = new ServerEvents(this);
   readonly environment = new Environment(this);
+  /** Partículas del ambiente (hojas y pétalos que caen, antorchas, goteo, luciérnagas, lluvia). */
+  readonly ambient = new AmbientParticles(this);
+  /** Intensidad de la lluvia ahora mismo (0..1), para las salpicaduras. */
+  rainNow = 0;
   readonly riding = new Riding(this); // Fase 6 (monturas)
   /** Fase 6 (aldeanos): comercio con los aldeanos. */
   readonly trading = new Trading(this);
@@ -724,11 +729,17 @@ export class Game {
       }
     }
     if (p.justLanded && p.landedSpeed < -7) this.audio.playLand(groundMat, [p.x, p.y, p.z], Math.min(1, (-p.landedSpeed - 7) / 15));
-    if (p.inWater && !wasInWater && p.justEnteredWater) this.audio.playSplash([p.x, p.y, p.z], Math.min(1, -p.vy / 10 + 0.3));
+    if (p.inWater && !wasInWater && p.justEnteredWater) {
+      this.audio.playSplash([p.x, p.y, p.z], Math.min(1, -p.vy / 10 + 0.3));
+      // Chapuzón: salpicadura en la superficie y burbujas.
+      this.renderer.entities.pfx.splash(p.x, p.y + 0.4, p.z, Math.min(24, 6 + Math.round(-p.vy * 1.5)));
+      this.renderer.entities.pfx.bubbles(p.x, p.y, p.z, 6, 0.4);
+    }
 
     // --- Supervivencia ---
     const worldTime = worldTimeAt(this.time, Date.now() + (this.net?.serverOffset ?? 0));
     const rain = this.environment.weatherAt(worldTime);
+    this.rainNow = rain;
     this.life.tickSurvival(dt, moved, wasGround, rain);
     this.audio.setHeartbeat(!this.creative && !surv.dead && surv.health <= 6 ? (7 - surv.health) / 6 : 0);
 
@@ -773,10 +784,21 @@ export class Game {
       v.light = [(l >> 4) / 15, (l & 15) / 15];
       views.push(v);
     }
-    this.renderer.entities.updateParticles(dt, (x, y, z) => {
-      const b = world.getBlock(x, y, z);
-      return b < 0 || BLOCK_SOLID[b] === 1;
-    });
+    // Partículas: física contra el mundo y emisores ambientales (hojas, antorchas, goteo…).
+    const ps = this.renderer.entities.particles;
+    ps.world = {
+      solid: (x, y, z) => {
+        const b = world.getBlock(x, y, z);
+        return b < 0 || BLOCK_SOLID[b] === 1;
+      },
+      fluid: (x, y, z) => {
+        const b = world.getBlock(x, y, z);
+        return b > 0 ? BLOCK_FLUID[b] : 0;
+      },
+      light: (x, y, z) => world.getLight(x, y, z),
+    };
+    ps.update(dt);
+    this.ambient.update(dt);
 
     // --- Red: posición a ~8 Hz y sólo si cambia (ahorra peticiones) ---
     this.lastSent += dt;

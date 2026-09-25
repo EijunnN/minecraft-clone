@@ -12,6 +12,7 @@ import {
 } from './blocks';
 import { DIR_X, DIR_Z } from './blockModels';
 import { isBeeHome } from './blocks'; // Fase 6 (fauna)
+import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
 
 export type Edit = [number, number, number, number];
 export type GetBlock = (x: number, y: number, z: number) => number;
@@ -152,6 +153,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     return one(CHEST + f);
   }
   if (base === CAMPFIRE) return one(stateOf(CAMPFIRE, { lit: 1 }));
+  // Tronco contra la cara lateral de un bloque: tumbado en ese eje (como en Minecraft).
+  if (face === 'side' && horizontalLog(base, AXIS_X) !== base) return one(horizontalLog(base, hit.nx !== 0 ? AXIS_X : AXIS_Z));
   if (base === TORCH) {
     if (face === 'down') return null;
     if (face === 'side') {

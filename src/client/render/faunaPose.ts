@@ -66,7 +66,8 @@ export function faunaAnimate(def: MobDef, e: ClientEntity, time: number, name: s
   }
 }
 
-const HIDE: [number, number, number] = [0, 0, 0];
+// Casi cero pero no cero (una matriz singular hace que algunas GPU dibujen líneas sueltas).
+const HIDE: [number, number, number] = [1e-3, 1e-3, 1e-3];
 const BALL: [number, number, number] = [1.05, 1.1, 0.72];
 
 /** Escala de una parte (null = la normal): el armadillo enroscado esconde cabeza, patas y cola. */

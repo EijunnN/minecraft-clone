@@ -7,7 +7,7 @@ import {
   BIRCH_LOG, BIRCH_LEAVES, SPRUCE_LOG, SPRUCE_LEAVES, SHORT_GRASS, FERN, POPPY, DANDELION, CORNFLOWER,
   DEAD_BUSH, SUGAR_CANE, RED_MUSHROOM, BROWN_MUSHROOM, LAVA, BEDROCK, GRANITE, DIORITE, ANDESITE,
   BLOCK_REPLACEABLE, BLOCK_RENDER, R_CROSS, PUMPKIN, MELON, TERRACOTTA, JUNGLE_LOG, JUNGLE_LEAVES, ACACIA_LOG,
-  ACACIA_LEAVES, DARK_OAK_LOG, DARK_OAK_LEAVES, CHERRY_LOG, CHERRY_LEAVES, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK,
+  ACACIA_LEAVES, DARK_OAK_LOG, DARK_OAK_LEAVES, CHERRY_LOG, CHERRY_LEAVES, horizontalLog, AXIS_X, AXIS_Z, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK,
   BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, isLeaves,
   DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE, DEEPSLATE_ORE,
   MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, CAVE_VINES, AMETHYST_BLOCK, BUDDING_AMETHYST, AMETHYST_BUD,
@@ -16,7 +16,8 @@ import {
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
 import { DIR_X, DIR_Z } from '../blockModels';
-import { placeStructures, type StructureChest } from './structures';
+import { placeStructures, locateStructure, type StructureChest } from './structures';
+import { VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
 import { placeInfested } from './infested'; // Fase 6 (monstruos)
 import { placeBeeNest } from './beeNests'; // Fase 6 (fauna)
@@ -705,6 +706,10 @@ export class TerrainGenerator {
       }
     };
     const tmpInfo: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
+    // Dentro de una aldea no crecen árboles (ni sus copas invaden calles y casas).
+    const village = locateStructure(this, 'village', x0 + 8, z0 + 8, 1);
+    const villageR = VILLAGE_RADIUS + 8;
+    const nearVillage = village && Math.hypot(village[0] - (x0 + 8), village[2] - (z0 + 8)) < villageR + 40;
     // Las copas llegan hasta 8 bloques del tronco (cerezos y jungla gigante).
     const cMin = Math.floor((x0 - 8) / 4), cMax = Math.floor((x0 + 23) / 4);
     const kMin = Math.floor((z0 - 8) / 4), kMax = Math.floor((z0 + 23) / 4);
@@ -715,6 +720,7 @@ export class TerrainGenerator {
         const tz = ck * 4 + ((h >>> 2) & 3);
         const r = ((h >>> 8) & 0xffff) / 65536;
         if (tx < x0 - 8 || tx > x0 + 23 || tz < z0 - 8 || tz > z0 + 23) continue;
+        if (nearVillage && Math.hypot(tx - village![0], tz - village![2]) < villageR) continue;
         const inf = this.columnInfo(tx, tz, tmpInfo);
         const density = TREE_DENSITY[inf.biome];
         if (r >= density) continue;
@@ -1069,7 +1075,8 @@ export class TerrainGenerator {
         bx += DIR_X[d];
         bz += DIR_Z[d];
         if (s2 > 1) yy++;
-        set(bx, yy, bz, JUNGLE_LOG, true);
+        // El primer tramo sale en horizontal (tronco tumbado); luego sube.
+        set(bx, yy, bz, s2 === 1 ? horizontalLog(JUNGLE_LOG, DIR_X[d] !== 0 ? AXIS_X : AXIS_Z) : JUNGLE_LOG, true);
       }
       this.leafDisc(bx + 0.5, yy, bz + 0.5, 2, JUNGLE_LEAVES, set);
       this.leafDisc(bx + 0.5, yy + 1, bz + 0.5, 1.2, JUNGLE_LEAVES, set);
@@ -1089,7 +1096,7 @@ export class TerrainGenerator {
     for (let i = 0; i < 2; i++) {
       const d = (Math.floor(r * 131) + i * 2) % 4;
       const bx = x + (DIR_X[d] > 0 ? 1 : 0) + DIR_X[d], bz = z + (DIR_Z[d] > 0 ? 1 : 0) + DIR_Z[d];
-      set(bx, top - 1, bz, DARK_OAK_LOG, true);
+      set(bx, top - 1, bz, horizontalLog(DARK_OAK_LOG, DIR_X[d] !== 0 ? AXIS_X : AXIS_Z), true);
       set(bx + DIR_X[d], top, bz + DIR_Z[d], DARK_OAK_LOG, true);
       this.leafDisc(bx + DIR_X[d] + 0.5, top + 1, bz + DIR_Z[d] + 0.5, 1.8, DARK_OAK_LEAVES, set);
     }
@@ -1097,22 +1104,39 @@ export class TerrainGenerator {
     for (let k = 0; k < 4; k++) this.leafDisc(x + 1, top - 1 + k, z + 1, radii[k], DARK_OAK_LEAVES, set);
   }
 
-  /** Cerezo: tronco corto que se abre en dos o tres ramas con copas rosas que cuelgan. */
+  /**
+   * Cerezo (como en Minecraft): tronco corto del que salen dos o tres ramas; cada una va en
+   * horizontal (troncos tumbados, con la corteza a lo largo) y luego sube hasta su copa rosa, que
+   * cuelga por debajo.
+   */
   private cherry(x: number, y: number, z: number, r: number, set: SetBlock): void {
-    const h = 4 + Math.floor(r * 1000) % 2;
+    const h = 3 + Math.floor(r * 1000) % 2;
     for (let k = 0; k < h; k++) set(x, y + k, z, CHERRY_LOG, true);
     const n = 2 + Math.floor(r * 53) % 2;
-    const a0 = r * Math.PI * 14;
+    const d0 = Math.floor(r * 4000) % 4;
     for (let i = 0; i < n; i++) {
-      const a = a0 + (i * Math.PI * 2) / n;
-      const len = 3 + (Math.floor(r * 91) + i) % 2;
-      let ex = x, ey = y + h - 1, ez = z;
+      // Direcciones distintas; con tres ramas, una se abre en diagonal (un paso de lado a mitad).
+      const d = (d0 + i * (n === 2 ? 2 : 1)) % 4;
+      const dx = DIR_X[d], dz = DIR_Z[d];
+      const sx = DIR_X[(d + 1) & 3], sz = DIR_Z[(d + 1) & 3];
+      const len = 2 + (Math.floor(r * 91) + i) % 3;
+      const jog = n === 3 && i === 2 ? 1 : 0;
+      const by = y + h - 1 - ((Math.floor(r * 29) + i) % 2);
+      let ex = x, ez = z;
+      const across = dx !== 0 ? AXIS_X : AXIS_Z;
       for (let s2 = 1; s2 <= len; s2++) {
-        ex = x + Math.round(Math.cos(a) * s2);
-        ez = z + Math.round(Math.sin(a) * s2);
-        ey = y + h - 1 + Math.floor(s2 * 0.7);
-        set(ex, ey, ez, CHERRY_LOG, true);
+        ex += dx;
+        ez += dz;
+        if (jog && s2 === 2) {
+          ex += sx;
+          ez += sz;
+        }
+        set(ex, by, ez, horizontalLog(CHERRY_LOG, across), true);
       }
+      // Sube hasta la copa.
+      const up = 1 + (Math.floor(r * 67) + i) % 2;
+      let ey = by;
+      for (let k = 1; k <= up; k++) set(ex, ++ey, ez, CHERRY_LOG, true);
       const radii = [3.1, 2.7, 1.7];
       for (let k = 0; k < 3; k++) this.leafDisc(ex + 0.5, ey + k, ez + 0.5, radii[k], CHERRY_LEAVES, set);
       // Hojas que cuelgan bajo la copa.

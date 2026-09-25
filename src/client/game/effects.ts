@@ -37,7 +37,8 @@ export class Effects {
         break;
       }
       case 'snowball_break':
-        fx.spawnSmoke(p[0], p[1], p[2], 8, 0.15, 0.95, 0.35, 0.5);
+        fx.pfx.splash(p[0], p[1], p[2], 8);
+        fx.spawnSmoke(p[0], p[1], p[2], 4, 0.15, 0.95, 0.2, 0.3);
         this.g.audio.playBlockHit('snow', p);
         break;
       case 'mob_hurt':
@@ -72,8 +73,7 @@ export class Effects {
       case 'explode': {
         const power = a ?? 3;
         this.g.audio.playExplosion(p, power);
-        fx.spawnSmoke(p[0], p[1], p[2], 50, power * 0.7, 0.8, 0.9, 2.2);
-        fx.spawnSmoke(p[0], p[1], p[2], 12, power * 0.4, 0.97, 0.7, 3);
+        fx.pfx.explosion(p[0], p[1], p[2], power);
         const d = Math.hypot(p[0] - this.g.player.x, p[1] - this.g.player.y, p[2] - this.g.player.z);
         this.g.shake = Math.max(this.g.shake, Math.max(0, 1 - d / 24));
         break;
@@ -100,6 +100,7 @@ export class Effects {
         break;
       case 'villager_no':
         this.g.audio.playMob('villager', 'fuse', p);
+        fx.pfx.angry(p[0], p[1] + 0.3, p[2]);
         break;
       case 'feed':
         this.g.audio.playEat();
@@ -304,9 +305,8 @@ export class Effects {
     this.g.audio.setFluidProximity(Math.min(1, water / 4), Math.min(1, lava / 3));
     // Chisporroteo de un horno encendido cercano.
     if (furnace && Math.random() < 0.35) this.g.audio.playFurnace(furnace);
-    // Fogatas: columna de humo y chisporroteo.
+    // Fogatas: chisporroteo (el humo lo ponen las partículas del ambiente).
     for (const [x, y, z] of fires) {
-      this.g.renderer.entities.spawnSmoke(x, y + 0.7, z, 4, 0.1, 0.78, 0.2, 1.6);
       if (Math.random() < 0.3) this.g.audio.playFurnace([x, y + 0.5, z]);
     }
   }

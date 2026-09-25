@@ -29,6 +29,13 @@ interface MobMesh {
 
 const P = 1 / 16;
 
+/**
+ * Escala de las partes ocultas (lana esquilada, silla, collar, estandarte…): casi cero pero no cero.
+ * Con una escala exactamente nula la matriz queda singular y algunas GPU dibujan líneas que cruzan
+ * la pantalla.
+ */
+const HIDE: [number, number, number] = [1e-3, 1e-3, 1e-3];
+
 export class MobRenderer {
   private gl: GL;
   private prog: Program;
@@ -246,9 +253,9 @@ export class MobRenderer {
       // Oveja esquilada: la capa de lana no se dibuja. Crías: cabeza grande.
       const faunaScale = faunaPartScale(def, e, part.name); // Fase 6 (fauna): armadillo enroscado
       if (faunaScale) mat4.scale(m, m, faunaScale);
-      else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, [0, 0, 0]);
-      else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, [0, 0, 0]); // Fase 6 (monturas): sin silla
-      else if (hiddenIllagerPart(part.name, e)) mat4.scale(m, m, [1e-3, 1e-3, 1e-3]); // Fase 6 (asaltos): estandarte
+      else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, HIDE);
+      else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, HIDE); // Fase 6 (monturas): sin silla
+      else if (hiddenIllagerPart(part.name, e)) mat4.scale(m, m, HIDE); // Fase 6 (asaltos): estandarte
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
       b.set(m, i * 16);

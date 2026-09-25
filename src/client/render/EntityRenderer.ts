@@ -3,9 +3,11 @@
 import { mat4 } from 'gl-matrix';
 import { Program, type GL } from '../engine/gl';
 import {
-  ENTITY_VS, ENTITY_FS, ENTITY_SHADOW_VS, ENTITY_SHADOW_FS, OUTLINE_VS, OUTLINE_FS, PARTICLE_VS, PARTICLE_FS,
+  ENTITY_VS, ENTITY_FS, ENTITY_SHADOW_VS, ENTITY_SHADOW_FS, OUTLINE_VS, OUTLINE_FS,
 } from './shaders/entity';
 import { ARMOR_FS } from './shaders/armor';
+import { ParticleSystem } from './particles/ParticleSystem';
+import { ParticleFx } from './particles/effects';
 import { buildBox, drawSkin, skinColorsFor, PART_LAYOUT } from './PlayerSkin';
 import type { BlockTextures } from './BlockTextures';
 import { BLOCK_TEX } from '../../shared/blocks';
@@ -55,15 +57,6 @@ interface ArmorMesh {
 }
 
 const PX = 1.8 / 32;
-const MAX_PARTICLES = 1024;
-
-interface Particle {
-  x: number; y: number; z: number;
-  vx: number; vy: number; vz: number;
-  life: number; max: number; size: number;
-  layer: number; u: number; v: number; light: number;
-  smoke?: boolean;
-}
 
 /** ¿Usa la mano principal? (come lo que lleva en ella o se cubre con su escudo). */
 function usesMainHand(p: RemotePlayerView): boolean {
@@ -77,7 +70,6 @@ export class EntityRenderer {
   private pEntity: Program;
   private pEntityShadow: Program;
   private pOutline: Program;
-  private pParticle: Program;
   private pArmor: Program;
   private parts: Record<BodyPart, PartMesh>;
   /** Cajas de armadura de cada parte del cuerpo. */
@@ -85,10 +77,9 @@ export class EntityRenderer {
   private armorTex = new Map<ArmorMaterial, WebGLTexture>();
   private skins = new Map<string, { key: string; tex: WebGLTexture }>();
   private outlineVao: WebGLVertexArrayObject;
-  private particles: Particle[] = [];
-  private particleData = new Float32Array(MAX_PARTICLES * 8);
-  private particleBuf: WebGLBuffer;
-  private particleVao: WebGLVertexArrayObject;
+  /** Partículas (sistema nuevo) y sus efectos con nombre. */
+  readonly particles: ParticleSystem;
+  readonly pfx: ParticleFx;
   private m = mat4.create();
   private tmp = mat4.create();
 
@@ -98,7 +89,8 @@ export class EntityRenderer {
     this.pEntity = new Program(gl, { name: 'entity', vs: ENTITY_VS, fs: ENTITY_FS });
     this.pEntityShadow = new Program(gl, { name: 'entity-shadow', vs: ENTITY_SHADOW_VS, fs: ENTITY_SHADOW_FS });
     this.pOutline = new Program(gl, { name: 'outline', vs: OUTLINE_VS, fs: OUTLINE_FS });
-    this.pParticle = new Program(gl, { name: 'particle', vs: PARTICLE_VS, fs: PARTICLE_FS });
+    this.particles = new ParticleSystem(gl);
+    this.pfx = new ParticleFx(this.particles);
     this.pArmor = new Program(gl, { name: 'armor', vs: ENTITY_VS, fs: ARMOR_FS });
 
     const mk = (min: [number, number, number], max: [number, number, number], layout: { u: number; v: number; w: number; h: number; d: number }) => {
@@ -164,20 +156,6 @@ export class EntityRenderer {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(e), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-    gl.bindVertexArray(null);
-
-    // Partículas instanciadas.
-    this.particleVao = gl.createVertexArray()!;
-    gl.bindVertexArray(this.particleVao);
-    this.particleBuf = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.particleBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, this.particleData.byteLength, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 32, 0);
-    gl.vertexAttribDivisor(0, 1);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 16);
-    gl.vertexAttribDivisor(1, 1);
     gl.bindVertexArray(null);
   }
 
@@ -388,144 +366,35 @@ export class EntityRenderer {
   lightDir: number[] = [0, 1, 0];
 
   // ---------------------------------------------------------------- partículas
+  // (Atajos de siempre; el sistema nuevo está en render/particles.)
 
   spawnBreak(x: number, y: number, z: number, blockId: number, light: number): void {
-    const layer = BLOCK_TEX[blockId * 6];
-    const n = 26;
-    for (let i = 0; i < n; i++) {
-      if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
-      const px = x + 0.15 + Math.random() * 0.7;
-      const py = y + 0.15 + Math.random() * 0.7;
-      const pz = z + 0.15 + Math.random() * 0.7;
-      this.particles.push({
-        x: px, y: py, z: pz,
-        vx: (px - x - 0.5) * 3 + (Math.random() - 0.5) * 0.8,
-        vy: 1.5 + Math.random() * 2.5,
-        vz: (pz - z - 0.5) * 3 + (Math.random() - 0.5) * 0.8,
-        life: 0, max: 0.6 + Math.random() * 0.6,
-        size: 0.08 + Math.random() * 0.07,
-        layer, u: Math.floor(Math.random() * 4) * 0.25, v: Math.floor(Math.random() * 4) * 0.25, light,
-      });
-    }
+    this.pfx.chips(x, y, z, BLOCK_TEX[blockId * 6], light);
   }
 
-  /**
-   * Humo o polvo (explosiones, muerte de criaturas, fuego): partículas grises redondas.
-   * gray: 0 negro .. 1 blanco; up: velocidad de subida.
-   */
-  spawnSmoke(x: number, y: number, z: number, n: number, spread: number, gray: number, size: number, up = 1.2, light = 0xf0): void {
-    for (let i = 0; i < n; i++) {
-      if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
-      const a = Math.random() * Math.PI * 2, r = Math.random() * spread;
-      const g = Math.max(0, Math.min(0.99, gray + (Math.random() - 0.5) * 0.15));
-      this.particles.push({
-        x: x + Math.cos(a) * r, y: y + (Math.random() - 0.5) * spread, z: z + Math.sin(a) * r,
-        vx: Math.cos(a) * r * 1.5, vy: up * (0.5 + Math.random()), vz: Math.sin(a) * r * 1.5,
-        life: 0, max: 0.6 + Math.random() * 0.9, size: size * (0.6 + Math.random() * 0.8),
-        layer: -1 - g, u: 0, v: 0, light, smoke: true,
-      });
-    }
+  /** Humo o polvo (explosiones, muerte de criaturas, fuego). gray: 0 negro .. 1 blanco; up: subida. */
+  spawnSmoke(x: number, y: number, z: number, n: number, spread: number, gray: number, size: number, up = 1.2, light?: number): void {
+    void light;
+    this.pfx.smoke(x, y, z, n, spread, gray, size, up);
   }
 
   /** Llama de una criatura que arde (sube y se apaga). */
   spawnFlame(x: number, y: number, z: number): void {
-    if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
-    this.particles.push({
-      x, y, z, vx: (Math.random() - 0.5) * 0.3, vy: 0.8 + Math.random() * 0.8, vz: (Math.random() - 0.5) * 0.3,
-      life: 0, max: 0.35 + Math.random() * 0.3, size: 0.12 + Math.random() * 0.1, layer: -1.97, u: 0, v: 0, light: 0xff,
-      smoke: true,
-    });
+    this.pfx.flame(x, y, z);
   }
 
   /** Corazones (animales en modo amor, crías que nacen). */
   spawnHearts(x: number, y: number, z: number, n: number, spread = 0.4): void {
-    this.spawnShaped(x, y, z, n, spread, -3, 0.22);
+    this.pfx.hearts(x, y, z, n, spread);
   }
 
   /** Destellos verdes (polvo de hueso). */
   spawnSparkles(x: number, y: number, z: number, n: number, spread = 0.5): void {
-    this.spawnShaped(x, y, z, n, spread, -4, 0.14);
-  }
-
-  private spawnShaped(x: number, y: number, z: number, n: number, spread: number, layer: number, size: number): void {
-    for (let i = 0; i < n; i++) {
-      if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
-      this.particles.push({
-        x: x + (Math.random() - 0.5) * spread * 2, y: y + (Math.random() - 0.5) * spread, z: z + (Math.random() - 0.5) * spread * 2,
-        vx: (Math.random() - 0.5) * 0.3, vy: 0.3 + Math.random() * 0.4, vz: (Math.random() - 0.5) * 0.3,
-        life: 0, max: 0.9 + Math.random() * 0.6, size: size * (0.8 + Math.random() * 0.4), layer, u: 0, v: 0, light: 0xff,
-        smoke: true,
-      });
-    }
+    this.pfx.sparkles(x, y, z, n, spread);
   }
 
   /** Chispas de golpe crítico / daño. */
   spawnCrit(x: number, y: number, z: number, n: number): void {
-    for (let i = 0; i < n; i++) {
-      if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
-      this.particles.push({
-        x, y, z, vx: (Math.random() - 0.5) * 6, vy: Math.random() * 4, vz: (Math.random() - 0.5) * 6,
-        life: 0, max: 0.4 + Math.random() * 0.3, size: 0.07, layer: -1.95, u: 0, v: 0, light: 0xff, smoke: false,
-      });
-    }
-  }
-
-  updateParticles(dt: number, solid: (x: number, y: number, z: number) => boolean): void {
-    const ps = this.particles;
-    for (let i = ps.length - 1; i >= 0; i--) {
-      const p = ps[i];
-      p.life += dt;
-      if (p.life >= p.max) {
-        ps.splice(i, 1);
-        continue;
-      }
-      if (p.smoke) {
-        // El humo sube despacio y se frena.
-        p.vx *= Math.exp(-dt * 2);
-        p.vz *= Math.exp(-dt * 2);
-        p.vy = p.vy * Math.exp(-dt * 1.5) + 0.6 * dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.z += p.vz * dt;
-        continue;
-      }
-      p.vy -= 18 * dt;
-      p.vx *= 0.98;
-      p.vz *= 0.98;
-      const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt, nz = p.z + p.vz * dt;
-      if (solid(Math.floor(nx), Math.floor(p.y), Math.floor(p.z))) p.vx = 0; else p.x = nx;
-      if (solid(Math.floor(p.x), Math.floor(p.y), Math.floor(nz))) p.vz = 0; else p.z = nz;
-      if (solid(Math.floor(p.x), Math.floor(ny), Math.floor(p.z))) {
-        p.vy = 0;
-        p.vx *= 0.7;
-        p.vz *= 0.7;
-      } else p.y = ny;
-    }
-  }
-
-  drawParticles(camX: number, camY: number, camZ: number, irradiance: WebGLTexture): void {
-    const n = this.particles.length;
-    if (n === 0) return;
-    const gl = this.gl;
-    const d = this.particleData;
-    for (let i = 0; i < n; i++) {
-      const p = this.particles[i];
-      const o = i * 8;
-      const fade = 1 - Math.max(0, (p.life - p.max * 0.7) / (p.max * 0.3));
-      d[o] = p.x - camX;
-      d[o + 1] = p.y - camY;
-      d[o + 2] = p.z - camZ;
-      d[o + 3] = p.size * fade;
-      d[o + 4] = p.layer;
-      d[o + 5] = p.u;
-      d[o + 6] = p.v;
-      d[o + 7] = p.light;
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.particleBuf);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, d, 0, n * 8);
-    this.pParticle.use().tex('uAlbedo', gl.TEXTURE_2D_ARRAY, this.textures.albedo).tex2D('uIrradiance', irradiance);
-    gl.bindVertexArray(this.particleVao);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
-    gl.bindVertexArray(null);
+    this.pfx.crit(x, y, z, n);
   }
 }

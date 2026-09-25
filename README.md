@@ -86,6 +86,11 @@ Objects). Pensado para PC (teclado y ratón).
 - **Mundo vivo**: la arena y la grava caen, las plantas y antorchas necesitan apoyo, las hojas se
   caen al talar el árbol, los brotes crecen hasta ser árboles, la hierba se extiende y los cactus y
   la caña crecen.
+- **Partículas propias** (hasta 16 000, dibujadas con un atlas procedural): humo que crece y se lo
+  lleva el viento, llamas animadas, chispas, destellos, corazones, trozos de bloque que rebotan,
+  explosiones con fogonazo, gotas que cuelgan de los techos y salpican, burbujas, brasas de la lava,
+  esporas del micelio, luciérnagas en las noches despejadas, salpicaduras de lluvia y pétalos y hojas
+  que caen meciéndose y se posan en el suelo. Se funden suavemente con la geometría.
 - **Gráficos avanzados** (WebGL2, todo propio):
   - Cielo físico con dispersión atmosférica (modelo de Hillaire): amaneceres, atardeceres, noche con
     luna con fases y estrellas.
@@ -136,6 +141,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Tortuga, ajolote, delfín y peces en la playa](docs/screenshots/aquatic.png) | ![Panda, oso polar, zorro, abeja y armadillo](docs/screenshots/fauna.png) |
 | ![Capitán de una patrulla con el estandarte ominoso](docs/screenshots/pillagers.png) | ![Evocador y, detrás, una patrulla de saqueadores](docs/screenshots/evoker.png) |
 | ![Puesto de saqueadores en la taiga](docs/screenshots/outpost.png) | ![Barra de un asalto sobre la aldea](docs/screenshots/raid.png) |
+| ![Pétalos cayendo bajo las ramas de un cerezo](docs/screenshots/cherry_petals.png) | |
 
 ## Controles
 

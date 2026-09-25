@@ -120,3 +120,5 @@ export * from './monsterBlocks';
 import { BEE_INVENTORY } from './beeBlocks';
 export * from './beeBlocks';
 (INVENTORY_ORDER as number[]).push(...BEE_INVENTORY);
+// Troncos tumbados (se registran los últimos: ids guardados).
+export * from './logAxis';

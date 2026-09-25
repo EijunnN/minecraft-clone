@@ -8,7 +8,7 @@
 // Cada quad son 4 vértices; se dibujan con un buffer de índices compartido (0,1,2, 0,2,3).
 import {
   AIR, BEDROCK, ICE, GLASS, CACTUS, SUGAR_CANE,
-  BLOCK_RENDER, BLOCK_OPAQUE, BLOCK_AO, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, BLOCK_TEX, BLOCK_FLUID, BLOCK_SOLID,
+  BLOCK_RENDER, BLOCK_OPAQUE, BLOCK_AO, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, BLOCK_TEX, BLOCK_FLUID, BLOCK_SOLID, BLOCK_TEXROT,
   BLOCK_FLUID_LEVEL, R_NONE, R_CUBE, R_CUTOUT, R_CROSS, R_WATER, R_TRANSLUCENT, R_TORCH, R_CACTUS, R_LAVA, R_MODEL,
   BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland, isCrop,
 } from '../../../shared/blocks';
@@ -483,23 +483,26 @@ export class Mesher {
       bl[k] = Math.round(sb / cnt);
     }
     const flip = ao[0] + ao[2] > ao[1] + ao[3];
+    // Textura girada 90° (troncos tumbados): cada esquina toma la UV de la siguiente.
+    const rot = (BLOCK_TEXROT[id] >> f) & 1;
     buf.ensure(8);
     const d = buf.data;
     let o = buf.length;
     for (let kk = 0; kk < 4; kk++) {
       const k = flip ? (kk + 1) & 3 : kk;
+      const kr = rot ? (k + 1) & 3 : k;
       const c = corners[k];
       const px = (x + c[0]) * 16;
       const pz = (z + c[2]) * 16;
       let py = y * 16 + c[1] * 16;
-      let v = CORNER_V[k];
+      let v = CORNER_V[kr];
       if (c[1] === 1 && hts) {
         const h = hts[c[0] + c[2] * 2];
         py = y * 16 + h;
         if (f !== 2) v = 16 - h;
       }
       d[o++] = (px + 16) | ((pz + 16) << 9) | (py << 18);
-      d[o++] = CORNER_U[k] | (v << 5) | (layer << 10) | (f << 19) | (ao[k] << 22) | (sl[k] << 24) | (bl[k] << 28);
+      d[o++] = CORNER_U[kr] | (v << 5) | (layer << 10) | (f << 19) | (ao[k] << 22) | (sl[k] << 24) | (bl[k] << 28);
     }
     buf.length = o;
   }
