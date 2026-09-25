@@ -29,6 +29,7 @@ NEW_WOODS.push('mangrove', 'pale_oak', 'bamboo', 'bamboo_mosaic'); // Fase 6.5 (
 // Fase 6.5 (piedras): las losas y escaleras de las piedras nuevas tampoco son de la fase 3.
 import { SMOOTH_STONE } from '../src/shared/blocks';
 NEW_WOODS.push(...Object.keys(SLABS).filter((k) => SLABS[k] > SMOOTH_STONE));
+NEW_WOODS.push('prismarine', 'prismarine_brick', 'dark_prismarine'); // Fase 6.5 (océano y plantas): formas nuevas, sin fijar
 
 test('los ids de bloques guardados no cambian', () => {
   // Bloques clásicos (0..255).

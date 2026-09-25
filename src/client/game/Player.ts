@@ -2,6 +2,7 @@
 // en postura horizontal corriendo bajo el agua), gatear por huecos de un bloque, volar, subir
 // escalones bajos (losas, escaleras) y trepar por escaleras de mano.
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluidHeight } from '../../shared/blocks';
+import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { moveBox, boxBlocked } from '../../shared/collide';
 import { scaffoldClimb, scaffoldFloor } from '../../shared/scaffoldPhysics'; // Fase 6.5 (decoración)
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
@@ -52,6 +53,8 @@ export class Player {
   inLava = false;
   /** Dentro de una telaraña: se mueve muy despacio. */
   inWeb = false;
+  /** Fase 6.5 (océano y plantas): dentro de un arbusto de bayas dulces (frena y pincha). */
+  inBush = false;
   /** Distancia horizontal recorrida en el suelo (para pasos y balanceo). */
   walkDistance = 0;
   /** 0..1: cuánto se está moviendo (para animaciones). */
@@ -126,6 +129,7 @@ export class Player {
     let water = false;
     let lava = false;
     let web = false;
+    let bush = false;
     let fx = 0, fz = 0;
     const x0 = Math.floor(this.x - HW), x1 = Math.floor(this.x + HW - EPS);
     const z0 = Math.floor(this.z - HW), z1 = Math.floor(this.z + HW - EPS);
@@ -136,6 +140,7 @@ export class Player {
           const b = world.getBlock(x, y, z);
           if (b <= 0) continue;
           if (b === COBWEB) web = true;
+          if (isPricklyBush(b)) bush = true;
           const f = BLOCK_FLUID[b];
           if (!f || this.y + 0.05 >= this.fluidTop(world, x, y, z, b)) continue;
           if (f === 1) water = true;
@@ -151,6 +156,7 @@ export class Player {
     this.inWater = water;
     this.inLava = lava;
     this.inWeb = web;
+    this.inBush = bush;
     const fl = Math.hypot(fx, fz);
     this.flowX = fl > 0.01 ? fx / fl : 0;
     this.flowZ = fl > 0.01 ? fz / fl : 0;
@@ -291,6 +297,12 @@ export class Player {
       dy *= 0.05;
       this.vy = Math.max(this.vy, -2);
       this.fallDistance = 0;
+    }
+    // Fase 6.5 (océano y plantas): el arbusto de bayas dulces frena (como en Minecraft).
+    if (this.inBush && !this.inWeb && !this.flying) {
+      dx *= 0.8;
+      dz *= 0.8;
+      dy *= 0.75;
     }
     // Agachado: no caer por los bordes.
     if (this.sneaking && this.onGround && !this.inWater) {

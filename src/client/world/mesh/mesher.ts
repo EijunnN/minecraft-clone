@@ -14,6 +14,7 @@ import {
   BLOCK_MODEL_CUTOUT, BLOCK_WALL, R_CROP, fluidHeight, blockModel, isFarmland, isCrop,
   BLOCK_MODEL_TRANSLUCENT, // Fase 6.5 (colores)
 } from '../../../shared/blocks';
+import { WATER, BLOCK_WATERLOGGED } from '../../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
 import { hash2, MIN_Y, WORLD_HEIGHT, CHUNK_VOLUME } from '../../../shared/constants';
 
@@ -330,6 +331,8 @@ export class Mesher {
               emitted = true;
               break;
           }
+          // Fase 6.5 (océano y plantas): las plantas y corales anegados llevan agua en su celda.
+          if (BLOCK_WATERLOGGED[id] && this.emitCube(i, WATER, R_WATER, x, y, z)) emitted = true;
           if (emitted) {
             if (y < minY) minY = y;
             if (y > maxY) maxY = y;

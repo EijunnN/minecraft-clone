@@ -15,6 +15,8 @@ import { colorBlockDrops } from '../blocks'; // Fase 6.5 (colores)
 import { COPPER_ORE } from '../blocks';
 import { RAW_COPPER } from '../items';
 import { FLOWER_POT, pottedPlant } from '../blocks'; // Fase 6.5 (decoración)
+import { isWaterlogged } from '../blocks'; // Fase 6.5 (océano y plantas)
+import { plantDrops65 } from './plantDrops'; // Fase 6.5 (océano y plantas)
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -24,7 +26,7 @@ import {
 /** Botín de un bloque roto con la herramienta `toolId` (0 = mano). */
 export function blockDrops(block: number, toolId: number, rand: () => number = Math.random): ItemStack[] {
   const b = BLOCKS[block];
-  if (!b || b.hardness < 0 || BLOCK_FLUID[block]) return [];
+  if (!b || b.hardness < 0 || (BLOCK_FLUID[block] && !isWaterlogged(block))) return [];
   if (isInfested(block)) return []; // Fase 6 (monstruos)
   // Fase 6.5 (colores): el cristal de color no se recoge; las velas sueltan todas las que hay.
   const colored = colorBlockDrops(block);
@@ -32,6 +34,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   const tool = toolId > 0 ? ITEMS[toolId]?.tool : undefined;
   // Bloques que exigen un pico de cierto nivel.
   if (b.tier > 0 && !(tool && tool.kind === 'pickaxe' && tool.tier >= b.tier)) return [];
+  // Fase 6.5 (océano y plantas): corales, plantas marinas, pepinos, bayas y plantas de dos bloques.
+  const plant65 = plantDrops65(block, toolId, rand);
+  if (plant65) return plant65;
   const one = (id: number, n = 1): ItemStack[] => [{ id, count: n }];
   const rnd = (a: number, c: number) => a + Math.floor(rand() * (c - a + 1));
   // Puertas y camas sueltan el objeto una sola vez (por la mitad de abajo / los pies).

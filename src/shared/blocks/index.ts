@@ -148,3 +148,11 @@ export * from './copperBlocks';
 import { DECOR_INVENTORY } from './decorBlocks';
 export * from './decorBlocks';
 (INVENTORY_ORDER as number[]).push(...DECOR_INVENTORY);
+// Fase 6.5 (océano y plantas): corales, algas, plantas marinas, pepinos de mar, prismarina y esponjas;
+// flores altas, bayas dulces, azaleas, plantaformas, liquen, raíces y flor de esporas (registrados los
+// últimos para no mover ids) y su sitio en el inventario creativo.
+import { OCEAN_INVENTORY } from './ocean';
+import { WILD_PLANT_INVENTORY } from './wildPlants';
+export * from './ocean';
+export * from './wildPlants';
+(INVENTORY_ORDER as number[]).push(...OCEAN_INVENTORY, ...WILD_PLANT_INVENTORY);

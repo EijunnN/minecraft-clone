@@ -8,6 +8,7 @@ import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
 import { useTotem } from './raidClient'; // Fase 6 (asaltos)
+import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 
 /** Destino de los efectos en creativo: nada hace daño ni cura. */
 const CREATIVE_TARGET: EffectTarget = { health: 20, absorption: 0, heal: () => {}, damage: () => 0, addExhaustion: () => {} };
@@ -184,6 +185,8 @@ export class LifeCycle {
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
         onCampfire: familyBase(feet) === CAMPFIRE && stateProps(feet)!.lit === 1,
       });
+      // Fase 6.5 (océano y plantas): el arbusto de bayas dulces pincha al moverse dentro.
+      if (isPricklyBush(feet) && Math.hypot(p.vx, p.vz) > 0.5) surv.damage(1, 'sweet_berry_bush');
       if (surv.health < hpBefore) this.hurtFeedback(hpBefore - surv.health);
       if (surv.dead) this.die();
     } else {

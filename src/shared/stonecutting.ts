@@ -12,6 +12,7 @@ import {
   SULFUR_BRICKS, CHISELED_SULFUR,
 } from './blocks';
 import { COPPER, OXIDATION_STAGES } from './blocks'; // Fase 6.5 (cobre)
+import { PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE } from './blocks'; // Fase 6.5 (océano y plantas)
 
 const table = new Map<number, ItemStack[]>();
 const add = (input: number, id: number, count = 1) => {
@@ -93,6 +94,12 @@ for (let s = 0; s < OXIDATION_STAGES; s++) {
     add(cut, COPPER.cut_slab[w][s], 2);
     add(cut, COPPER.cut_stairs[w][s]);
     add(cut, COPPER.chiseled[w][s]);
+  }
+}
+// Fase 6.5 (océano y plantas): losas y escaleras de las tres prismarinas.
+for (const [block, key] of [[PRISMARINE, 'prismarine'], [PRISMARINE_BRICKS, 'prismarine_brick'], [DARK_PRISMARINE, 'dark_prismarine']] as const) {
+  for (const [id, n] of [[SLABS[key], 2], [STAIRS[key], 1]] as const) {
+    if (!(table.get(block) ?? []).some((s) => s.id === id)) add(block, id, n);
   }
 }
 

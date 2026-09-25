@@ -61,7 +61,7 @@ test('decoración: bloques, objetos, texturas y sprites registrados', () => {
   }
   assert.ok(ITEM_COUNT <= 1024);
   // Texturas: todas con generador y dentro del límite de 1024 capas.
-  const mine = TEXTURE_DEFS.slice(textureLayer('flower_pot')).map((d) => d.name);
+  const mine = TEXTURE_DEFS.slice(textureLayer('flower_pot'), textureLayer('tube_coral_block')).map((d) => d.name);
   assert.equal(mine.length, 14 + PAINTING_TEXTURES.length);
   for (const n of mine) assert.ok(DECOR_GENERATORS[n], `textura con generador: ${n}`);
   assert.ok(TEXTURE_COUNT <= 1024);

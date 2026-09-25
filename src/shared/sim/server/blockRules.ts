@@ -10,6 +10,7 @@ import { isConcretePowder } from '../../blocks'; // Fase 6.5 (colores)
 import type { Edit } from '../../placement';
 import { blockDrops } from '../drops';
 import { SAPLINGS, SOIL } from './plants';
+import { emptyAfterBreak } from '../../blocks'; // Fase 6.5 (océano y plantas)
 import type { ServerContext } from './context';
 
 const NEIGHBORS7 = [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
@@ -102,7 +103,7 @@ export class BlockRules {
   }
 
   breakWithDrops(x: number, y: number, z: number, id: number): void {
-    this.ctx.world.setBlock(x, y, z, AIR);
+    this.ctx.world.setBlock(x, y, z, emptyAfterBreak(id)); // Fase 6.5: las plantas anegadas dejan agua
     if (!this.silentDrops) this.ctx.entities.dropStacks(blockDrops(id, 0, () => this.ctx.rand()), x + 0.5, y + 0.3, z + 0.5);
   }
 

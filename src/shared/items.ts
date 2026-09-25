@@ -24,6 +24,7 @@ import { // Fase 6.5 (piedras)
 import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 import { SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
+import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush'; // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -321,6 +322,16 @@ ARMOR_PIECES.forEach((piece, slot) => {
 });
 // Las puertas de cobre se ven planas, con el color de su fase (las enceradas, como las otras).
 COPPER.door.forEach((row) => row.forEach((id, stage) => (ITEMS[id].sprite = copperTexture('copper_door', stage))));
+// ------------------------------------------------------------------ Fase 6.5 (océano y plantas)
+/** Algas secas: comida rápida (el alga se seca en el horno). */
+export const DRIED_KELP = item('dried_kelp', 'Algas secas', { food: { hunger: 1, saturation: 0.6 } });
+/** Bayas dulces: se comen o se plantan (arbusto de bayas dulces). */
+export const SWEET_BERRIES = item('sweet_berries', 'Bayas dulces', { block: SWEET_BERRY_BUSH, food: { hunger: 2, saturation: 0.4 } });
+export const PRISMARINE_SHARD = item('prismarine_shard', 'Fragmento de prismarina');
+export const PRISMARINE_CRYSTALS = item('prismarine_crystals', 'Cristales de prismarina');
+ITEMS[KELP].smelt = DRIED_KELP;
+ITEMS[WET_SPONGE].smelt = SPONGE;
+ITEMS[DRIED_KELP_BLOCK].fuel = 200;
 
 // Comida con efectos (valores de Minecraft).
 ITEMS[OMINOUS_BOTTLE].food!.effects = [[EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, 0, 1]]; // Fase 6 (asaltos)
@@ -346,6 +357,8 @@ export const BREED_FOOD: Readonly<Record<string, readonly number[]>> = {
   panda: [BAMBOO],
   armadillo: [SPIDER_EYE],
 };
+// Fase 6.5 (océano y plantas): los zorros también crían con bayas dulces.
+(BREED_FOOD.fox as number[]).push(SWEET_BERRIES);
 
 // ------------------------------------------------------------------ Fase 6.5 (decoración)
 // Comida (valores de Minecraft), pepitas, cuenco, catalejo, reloj, cuadros, marcos y huevos generadores.
@@ -442,7 +455,7 @@ export function itemSpriteIndex(id: number): number {
  * (hornos encendidos, carteles de pared, cofres dobles) o lo que lo planta (semillas, zanahorias…).
  */
 export function itemForBlock(block: number): number {
-  if (block <= 0 || BLOCKS[block]?.fluid) return 0;
+  if (block <= 0 || (BLOCKS[block]?.fluid && !isWaterlogged(block))) return 0;
   const base = baseBlock(block);
   if (ITEMS[base]?.block === base) return base;
   const fam = familyBase(block);
@@ -498,6 +511,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   // Fase 6.5 (decoración).
   BOWL, IRON_NUGGET, GOLD_NUGGET, COCOA_BEANS, COOKIE, MUSHROOM_STEW, RABBIT_STEW, BEETROOT_SOUP, SUSPICIOUS_STEW, GOLDEN_CARROT,
   GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, ...Object.values(SPAWN_EGGS),
+  DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

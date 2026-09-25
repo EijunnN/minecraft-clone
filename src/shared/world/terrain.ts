@@ -23,6 +23,7 @@ import { placeInfested } from './infested'; // Fase 6 (monstruos)
 import { placeBeeNest } from './beeNests'; // Fase 6 (fauna)
 import { placeWoodTree, growWoodTree, placeBamboo } from './woodTrees'; // Fase 6.5 (maderas)
 import { placeStones } from './stones'; // Fase 6.5 (piedras)
+import { decorate65 } from './oceanDecor'; // Fase 6.5 (océano y plantas)
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -795,6 +796,8 @@ export class TerrainGenerator {
     // --- 8b. Estructuras (mazmorras, minas, templos, naufragios…) ---
     const villagers: VillagerSpawn[] = []; // Fase 6 (aldeanos)
     const chests = placeStructures(this, blocks, cx, cz, tops, villagers);
+    // Fase 6.5 (océano y plantas): arrecifes, algas y praderas marinas; flores altas, bayas, azaleas y cuevas frondosas.
+    decorate65(this, blocks, tops, infos, cx, cz);
 
     // --- 8c. Nieve sobre todo lo que queda a la intemperie en las zonas frías ---
     for (let lz = 0; lz < 16; lz++) {

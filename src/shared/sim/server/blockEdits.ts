@@ -26,10 +26,13 @@ import { copperInfo } from '../../blocks';
 import { partnerOf } from '../../placement';
 import type { Copper } from './copper';
 import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
+import { isWaterlogged, emptyAfterBreak } from '../../blocks'; // Fase 6.5 (océano y plantas)
 
 export class BlockEdits {
   /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
   copper: Copper | null = null;
+  /** Fase 6.5 (océano y plantas): clic derecho que atiende otro sistema (cosechar bayas dulces). */
+  extraUse: ((s: Session, x: number, y: number, z: number, id: number) => boolean) | null = null;
 
   constructor(
     private ctx: ServerContext, private rules: BlockRules, private farming: Farming, private beds: Beds,
@@ -59,7 +62,8 @@ export class BlockEdits {
     ctx.asActor(s.id, () => this.rules.withoutDrops(creative, () => {
       if (b === AIR) {
         if (cur === AIR) return;
-        if (BLOCK_FLUID[cur]) {
+        const wet = isWaterlogged(cur); // Fase 6.5: una planta anegada se rompe como un bloque y deja el agua
+        if (BLOCK_FLUID[cur] && !wet) {
           // Recoger con el cubo: sólo fuentes.
           if (BLOCK_FLUID_LEVEL[cur] !== 0) {
             ctx.reject(s, x, y, z);
@@ -69,8 +73,8 @@ export class BlockEdits {
           ctx.reject(s, x, y, z);
           return;
         }
-        const drops = !creative && !BLOCK_FLUID[cur] ? blockDrops(cur, Number.isInteger(tool) ? tool : 0, () => ctx.rand()) : [];
-        ctx.world.setBlock(x, y, z, AIR);
+        const drops = !creative && (!BLOCK_FLUID[cur] || wet) ? blockDrops(cur, Number.isInteger(tool) ? tool : 0, () => ctx.rand()) : [];
+        ctx.world.setBlock(x, y, z, wet ? emptyAfterBreak(cur) : AIR);
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
         // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
         const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand());
@@ -163,6 +167,8 @@ export class BlockEdits {
     }
     // Fase 6.5 (decoración): macetas, campanas y huevos generadores.
     if (useDecor(ctx, s, x, y, z, id, item)) return;
+    // Fase 6.5 (océano y plantas): cosechar un arbusto de bayas dulces (con cualquier cosa salvo polvo de hueso).
+    if (item !== BONE_MEAL && this.extraUse && ctx.asActor(s.id, () => this.extraUse!(s, x, y, z, id))) return;
     // Usar un objeto sobre el bloque: azada (labrar), polvo de hueso y tijeras (tallar calabazas).
     if (Number.isInteger(item) && item > 0) {
       const done = ctx.asActor(s.id, () => {

@@ -43,6 +43,12 @@ import {
   GOLDEN_CARROT, GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, COOKED_RABBIT, CARROT, BAKED_POTATO,
 } from './items';
 import { SUSPICIOUS_FLOWERS } from './decorFood';
+// Fase 6.5 (océano y plantas).
+import {
+  DRIED_KELP_BLOCK, PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE, SEA_LANTERN, SUNFLOWER, LILAC, ROSE_BUSH, PEONY, TORCHFLOWER,
+  PITCHER_PLANT,
+} from './blocks';
+import { ITEMS, DRIED_KELP, PRISMARINE_SHARD, PRISMARINE_CRYSTALS } from './items';
 
 type Cell = readonly number[] | null;
 
@@ -411,6 +417,27 @@ shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
   shape(['III', 'III'], { I: IRON_INGOT }, IRON_BARS, 16);
   shape(['SWS', 'S S', 'S S'], { S: STICK, W: STRING }, SCAFFOLDING, 6);
   shape([' B ', 'B B', ' B '], { B: BRICK }, DECORATED_POT);
+}
+
+// --- Fase 6.5 (océano y plantas): algas secas, prismarina, linterna marina y tintes de las flores nuevas ---
+{
+  shape(['KKK', 'KKK', 'KKK'], { K: DRIED_KELP }, DRIED_KELP_BLOCK);
+  mix([DRIED_KELP_BLOCK], DRIED_KELP, 9);
+  shape(['SS', 'SS'], { S: PRISMARINE_SHARD }, PRISMARINE);
+  shape(['SSS', 'SSS', 'SSS'], { S: PRISMARINE_SHARD }, PRISMARINE_BRICKS);
+  shape(['SCS', 'CCC', 'SCS'], { S: PRISMARINE_SHARD, C: PRISMARINE_CRYSTALS }, SEA_LANTERN);
+  // Los tintes los define otro módulo: se buscan por clave y, si aún no existen, se saltan.
+  const dye = (color: string): number | undefined => ITEMS.find((i) => i?.key === `${color}_dye`)?.id;
+  const black = dye('black');
+  if (black !== undefined) shape(['SSS', 'SDS', 'SSS'], { S: PRISMARINE_SHARD, D: black }, DARK_PRISMARINE);
+  const FLOWER_DYES: [number, string, number][] = [
+    [SUNFLOWER, 'yellow', 2], [LILAC, 'magenta', 2], [ROSE_BUSH, 'red', 2], [PEONY, 'pink', 2], [TORCHFLOWER, 'orange', 1],
+    [PITCHER_PLANT, 'cyan', 2],
+  ];
+  for (const [flower, color, n] of FLOWER_DYES) {
+    const id = dye(color);
+    if (id !== undefined) mix([flower], id, n);
+  }
 }
 
 export interface RecipeMatch {
