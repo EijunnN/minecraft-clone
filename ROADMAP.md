@@ -494,12 +494,20 @@ Fuera de la fase 7 (anotado para que no se pierda):
   estallido de viento), las lanzas y los encantamientos que se añadan con ellas; las pociones de las
   cámaras de desafío (supuración, tejido, infestación y carga de viento) y sus efectos.
 
-### Fase 7.5 — Estructuras y criaturas del mundo normal (L)
+### Fase 7.5 — Estructuras y criaturas del mundo normal (XL) · 🟡 en curso
 Lo del mundo normal que no tenía fase y que depende de la fase 7 (su botín son libros encantados y el
-sculk da señales de redstone): el Deep Dark con el guardián (*warden*), el sculk y la ciudad antigua
-(eco, brújula de recuperación, sigilo rápido); los monumentos oceánicos con guardianes y el guardián
-anciano (prismarina y esponjas en supervivencia); la mansión del bosque con sus illagers; el tesoro
-enterrado; y los mapas de explorador del cartógrafo que llevan a todo esto.
+sculk da señales de redstone), y las criaturas y estructuras del mundo normal que quedaban sueltas:
+- **Deep Dark:** el bioma, el sculk (bloque, venas, catalizador, sensor y sensor calibrado,
+  chillador) con sus vibraciones, el *warden* y la ciudad antigua (pizarra reforzada, eco, fragmentos
+  y disco 5, brújula de recuperación, sigilo rápido). La ciudad usa bloques de alma (arena y tierra de
+  alma, fuego y farol de alma), que se adelantan de la fase 8.
+- **Océano:** monumentos oceánicos con guardianes y el guardián anciano (fatiga minera; prismarina,
+  faroles marinos y esponjas en supervivencia), ruinas oceánicas y el tesoro enterrado (corazón del
+  mar) con sus mapas.
+- **Mansión del bosque** con sus illagers y el alay (también en los puestos de saqueadores); mapas de
+  explorador del cartógrafo (bosque y océano).
+- **Criaturas sueltas:** murciélago, ocelote, champiñaca, llama de comerciante, caballos esqueleto
+  (trampa del rayo) y zombi; cabaña de bruja (bruja y gato negro) y fósiles.
 
 ### Fase 8 — Nether y End (XL)
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
