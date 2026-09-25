@@ -25,7 +25,7 @@ TerrainVertex decodeVertex() {
   uint b = aData.y;
   v.local = vec3(float(a & 511u) - 16.0, float((a >> 18) & 8191u), float((a >> 9) & 511u) - 16.0) / 16.0;
   v.uv = vec2(float(b & 31u), float((b >> 5) & 31u)) / 16.0;
-  v.layer = int((b >> 10) & 511u);
+  v.layer = int(((b >> 10) & 511u) | ((a >> 31) << 9));
   v.normal = int((b >> 19) & 7u);
   v.ao = float((b >> 22) & 3u) / 3.0;
   v.sky = float((b >> 24) & 15u) / 15.0;

@@ -3,8 +3,9 @@
 // que llega desde los chunks vecinos (hasta 15 bloques) sea correcta.
 //
 // Formato de vértice (2 x uint32):
-//   A: x+16 (9 bits, 1/16 de bloque) | z+16 (9 bits) << 9 | y − MIN_Y (13 bits) << 18
-//   B: u (5) | v (5) << 5 | capa (9) << 10 | normal (3) << 19 | ao (2) << 22 | cielo (4) << 24 | bloque (4) << 28
+//   A: x+16 (9 bits, 1/16 de bloque) | z+16 (9 bits) << 9 | y − MIN_Y (13 bits) << 18 | capa bit 9 << 31
+//   B: u (5) | v (5) << 5 | capa bits 0–8 << 10 | normal (3) << 19 | ao (2) << 22 | cielo (4) << 24 | bloque (4) << 28
+// (La capa de textura tiene 10 bits: hasta 1024 texturas.)
 // Cada quad son 4 vértices; se dibujan con un buffer de índices compartido (0,1,2, 0,2,3).
 import {
   AIR, BEDROCK, ICE, GLASS, CACTUS, SUGAR_CANE,
@@ -501,8 +502,8 @@ export class Mesher {
         py = y * 16 + h;
         if (f !== 2) v = 16 - h;
       }
-      d[o++] = (px + 16) | ((pz + 16) << 9) | (py << 18);
-      d[o++] = CORNER_U[kr] | (v << 5) | (layer << 10) | (f << 19) | (ao[k] << 22) | (sl[k] << 24) | (bl[k] << 28);
+      d[o++] = (px + 16) | ((pz + 16) << 9) | (py << 18) | ((layer >> 9) << 31);
+      d[o++] = CORNER_U[kr] | (v << 5) | ((layer & 511) << 10) | (f << 19) | (ao[k] << 22) | (sl[k] << 24) | (bl[k] << 28);
     }
     buf.length = o;
   }
@@ -513,8 +514,8 @@ export class Mesher {
   ): void {
     const d = buf.data;
     const o = buf.length;
-    d[o] = (px + 16) | ((pz + 16) << 9) | (py << 18);
-    d[o + 1] = u | (v << 5) | (layer << 10) | (normal << 19) | (ao << 22) | (sl << 24) | (bl << 28);
+    d[o] = (px + 16) | ((pz + 16) << 9) | (py << 18) | ((layer >> 9) << 31);
+    d[o + 1] = u | (v << 5) | ((layer & 511) << 10) | (normal << 19) | (ao << 22) | (sl << 24) | (bl << 28);
     buf.length = o + 2;
   }
 

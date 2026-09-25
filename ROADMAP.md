@@ -388,6 +388,17 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
   cerezos, la jungla y el roble oscuro los usan (corteza a lo largo, anillos en los extremos).
 - ✅ **Aldeas despejadas.** Ya no crecen árboles dentro de las aldeas.
 
+### Fase 6.5 — Catálogo del mundo normal (XL)
+Todo lo del mundo normal que no pertenece a la redstone (fase 7), al Nether y al End (fase 8) ni a las
+novedades recientes (fase 9), con sus recetas, sacado del catálogo de Minecraft 26.3 (ver
+`docs/cobertura.md`): los 16 colores (tintes, lana, alfombras, hormigón, cristal tintado, terracota
+y terracota esmaltada, camas, velas, estandartes lisos), todas las piedras con sus escaleras, losas y
+muros, las maderas que faltan (mangle, bambú, roble pálido) y la madera descortezada, el cobre y su
+oxidación, el océano (coral, algas, praderas marinas, pepinos de mar, prismarina, esponjas) y las
+plantas (flores, arbustos de bayas, azaleas, plantas de cueva), la comida y la decoración (macetas,
+faroles, cadenas, andamios…), los huevos de aparición y objetos sueltos (catalejo, reloj, bolsa…).
+Antes de empezar se amplió el motor: hasta 1024 texturas (10 bits en el vértice) y 8192 ids de bloque.
+
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,
 antorchas, repetidores, comparadores, pistones, observadores, tolvas, dispensadores, TNT, lámparas),

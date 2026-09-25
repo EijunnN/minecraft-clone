@@ -31,7 +31,7 @@ export const WORLD_LIMIT = 1_000_000;
 
 /** Identificadores de bloque de 16 bits (estados incluidos). Los ids 256–1023 son objetos. */
 export type BlockArray = Uint16Array;
-export const MAX_BLOCK_ID = 4096;
+export const MAX_BLOCK_ID = 8192;
 /** Primer id de los bloques nuevos (los 0–255 antiguos no cambian; 256–1023 son objetos). */
 export const FIRST_EXTENDED_BLOCK = 1024;
 
