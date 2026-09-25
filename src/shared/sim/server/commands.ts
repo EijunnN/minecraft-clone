@@ -9,6 +9,7 @@ import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../..
 import type { ServerContext, Session } from './context';
 import type { Raids } from './raids'; // Fase 6 (asaltos)
 import { locateStructure, STRUCTURE_NAMES } from '../../world/structures';
+import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
 
 /** Nombres que acepta /localizar (sin tildes, en minúsculas). */
 export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
@@ -199,6 +200,31 @@ export class Commands {
         reply(n ? `Aparece una patrulla de ${n} saqueadores cerca.` : 'No hay sitio para una patrulla aquí.');
         return;
       }
+      // Fase 7 (encantamientos): /encantar <encantamiento> [nivel] (al objeto de la mano; lo aplica el cliente)
+      // y /experiencia <cantidad> [niveles|puntos].
+      case 'enchant':
+      case 'encantar': {
+        const def = enchantByName(args[0] ?? '');
+        if (!def) {
+          reply('Uso: /encantar <encantamiento> [nivel] (por ejemplo: /encantar filo 5, /encantar toque_de_seda)');
+          return;
+        }
+        const lvl = Math.max(1, Math.min(MAX_ENCHANT_LEVEL, Math.floor(Number(args[1]) || 1)));
+        ctx.send(s, { t: 'ench', e: [[def.id, lvl]] });
+        return;
+      }
+      case 'xp':
+      case 'experiencia': {
+        const n = Math.floor(Number(args[0]));
+        const unit = norm(args[1] ?? 'puntos');
+        if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) {
+          reply('Uso: /experiencia <cantidad> [puntos|niveles]');
+          return;
+        }
+        if (unit.startsWith('nivel') || unit === 'levels' || unit === 'l') ctx.send(s, { t: 'xp', n: 0, l: Math.min(n, 10_000) });
+        else ctx.send(s, { t: 'xp', n });
+        return;
+      }
       case 'seed':
       case 'semilla':
         reply(`Semilla del mundo: ${ctx.seed}`);
@@ -212,7 +238,8 @@ export class Commands {
         reply(
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar, ' +
-          '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla',
+          '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
+          '/experiencia <n> [puntos|niveles]',
         );
         return;
       default:

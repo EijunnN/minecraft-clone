@@ -28,6 +28,8 @@ export interface Session {
   o: number;
   /** Armadura visible: ids [cabeza, pecho, piernas, pies] (0 = nada). */
   a: number[];
+  /** Fase 7 (encantamientos): brillo de lo que lleva (bits de PlayerInfo.g). */
+  g?: number;
   mode: GameMode;
   lookAt: number;
   lookUntil: number;

@@ -192,7 +192,7 @@ export class IllagerAI {
     const d = Math.hypot(dx, dz) || 1;
     this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
     if (f.p) {
-      this.m.host.hurtPlayer(f.p.id, damage * this.m.difficultyScale(), (dx / d) * 5 * knock, 4 + knock, (dz / d) * 5 * knock, MOBS[e.type].key);
+      this.m.host.hurtPlayer(f.p.id, damage * this.m.difficultyScale(), (dx / d) * 5 * knock, 4 + knock, (dz / d) * 5 * knock, MOBS[e.type].key, e); // Fase 7: e (Espinas)
       return false;
     }
     f.e!.invuln = 0;

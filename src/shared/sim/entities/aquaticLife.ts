@@ -394,7 +394,7 @@ export class AquaticLife {
         this.swim(e, dx / d, dy / d, dz / d, def.run, dt);
         if (d < 1.8 && ai.attackCd <= 0) {
           ai.attackCd = 1;
-          this.m.host.hurtPlayer(t.id, def.damage * this.m.difficultyScale(), (dx / d) * 4, 3, (dz / d) * 4, def.key);
+          this.m.host.hurtPlayer(t.id, def.damage * this.m.difficultyScale(), (dx / d) * 4, 3, (dz / d) * 4, def.key, e); // Fase 7: e (Espinas)
           this.m.host.fx('mob_attack', e.x, e.y + e.height / 2, e.z, e.type);
         }
         return;

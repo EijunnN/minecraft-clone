@@ -176,7 +176,7 @@ export class MonsterAI {
     if (def.damage <= 0 || ai.attackCd > 0 || dist >= def.width / 2 + 1.1 || Math.abs(dy) >= dyMax) return false;
     ai.attackCd = 1;
     const d = dist || 1;
-    this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (dx / d) * 5, 4, (dz / d) * 5, def.key);
+    this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (dx / d) * 5, 4, (dz / d) * 5, def.key, e); // Fase 7: e (Espinas)
     this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
     this.onMelee(e, target);
     return true;
@@ -473,7 +473,7 @@ export class MonsterAI {
       if (def.damage > 0 && ai.attackCd <= 0 && Math.hypot(dx, dz) < def.width / 2 + 0.6 && dy > -1.8 && dy < e.height) {
         ai.attackCd = 1;
         const d = Math.hypot(dx, dz) || 1;
-        this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (dx / d) * 4, 3, (dz / d) * 4, 'slime');
+        this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (dx / d) * 4, 3, (dz / d) * 4, 'slime', e); // Fase 7: e (Espinas)
         this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.5, e.z, e.type);
       }
       e.yaw = lerpAngle(e.yaw, angleTo(e.x, e.z, target.x, target.z), dt * 6);
@@ -508,7 +508,7 @@ export class MonsterAI {
       if (d < 1.3 && ai.attackCd <= 0) {
         ai.attackCd = 1;
         const h = Math.hypot(e.vx, e.vz) || 1;
-        this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (e.vx / h) * 4, 3, (e.vz / h) * 4, def.key);
+        this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (e.vx / h) * 4, 3, (e.vz / h) * 4, def.key, e); // Fase 7: e (Espinas)
         this.m.host.fx('mob_attack', e.x, e.y, e.z, e.type);
         s.swoop = 0;
       }

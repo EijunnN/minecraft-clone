@@ -8,6 +8,10 @@ import { FISH_WAIT, FISH_BITE } from '../../fishing';
 import { moveBody } from '../physics';
 import { isSplashPotion, splashPotion } from './potions'; // Fase 6 (monstruos)
 import { lureReduction } from '../../enchantEffects'; // Fase 7 (encantamientos)
+import { EXPERIENCE_BOTTLE } from '../../items';
+
+/** Fase 7 (encantamientos): gravedad de la botella con experiencia (Minecraft: 0,07 por tick). */
+const XP_BOTTLE_GRAVITY = 28;
 import type { PlayerView, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -26,7 +30,7 @@ export class Projectiles {
       this.m.remove(e.id);
       return;
     }
-    e.vy -= THROWN_GRAVITY * dt;
+    e.vy -= (e.stack?.id === EXPERIENCE_BOTTLE ? XP_BOTTLE_GRAVITY : THROWN_GRAVITY) * dt; // Fase 7: la botella cae más
     const drag = Math.pow(e.inWater ? 0.8 : 0.99, dt * 20);
     e.vx *= drag;
     e.vy *= drag;
@@ -69,6 +73,13 @@ export class Projectiles {
     // Fase 6 (monstruos): las pociones arrojadizas de las brujas salpican su efecto.
     if (isSplashPotion(e.stack?.id)) {
       splashPotion(m, e);
+      m.remove(e.id);
+      return;
+    }
+    // Fase 7 (encantamientos): la botella con experiencia se rompe y suelta de 3 a 11 puntos en orbes.
+    if (e.stack?.id === EXPERIENCE_BOTTLE) {
+      m.host.fx('xp_bottle', e.x, e.y, e.z);
+      m.xp.spawn(3 + Math.floor(m.rand() * 5) + Math.floor(m.rand() * 5), e.x, e.y, e.z);
       m.remove(e.id);
       return;
     }

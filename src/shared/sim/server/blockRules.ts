@@ -7,6 +7,7 @@ import {
   BLOCK_NEEDS_SUPPORT, R_CROSS, R_TORCH, blockSupported, isFarmland,
 } from '../../blocks';
 import { isConcretePowder } from '../../blocks'; // Fase 6.5 (colores)
+import { isAnvil } from '../../blocks'; // Fase 7 (encantamientos)
 import type { Edit } from '../../placement';
 import { blockDrops } from '../drops';
 import { SAPLINGS, SOIL } from './plants';
@@ -31,7 +32,8 @@ function supportOk(id: number, below: number): boolean {
 }
 
 function isFalling(id: number): boolean {
-  return id === SAND || id === RED_SAND || id === GRAVEL || isConcretePowder(id); // Fase 6.5 (colores): hormigón en polvo
+  return id === SAND || id === RED_SAND || id === GRAVEL || isConcretePowder(id) || // Fase 6.5 (colores): hormigón en polvo
+    isAnvil(id); // Fase 7 (encantamientos)
 }
 
 /** ¿Puede ocupar una celda un bloque que cae (o se desplaza) sobre ella? */

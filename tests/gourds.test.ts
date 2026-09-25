@@ -12,6 +12,7 @@ import {
   STRING, COD, SALMON, PUFFERFISH, TROPICAL_FISH, ITEMS,
 } from '../src/shared/items';
 import { NAUTILUS_SHELL } from '../src/shared/items'; // Fase 6.5 (equipo)
+import { ENCHANTED_BOOK, NAME_TAG, SADDLE } from '../src/shared/items'; // Fase 7 (encantamientos)
 import { MOB_CHICKEN, ENT_ITEM, ENT_BOBBER, ENT_XP } from '../src/shared/mobs';
 import { matchRecipe } from '../src/shared/recipes';
 import { blockDrops } from '../src/shared/sim/drops';
@@ -263,6 +264,7 @@ test('pesca: reparto del botín', () => {
     assert.ok(s.count === 1 && ITEMS[s.id], 'un objeto válido');
     if (fish.has(s.id)) counts.fish++;
     else if (s.id === FISHING_ROD || ITEMS[s.id].tool?.kind === 'bow' || s.id === NAUTILUS_SHELL) counts.treasure++; // Fase 6.5 (equipo): concha
+    else if (s.id === ENCHANTED_BOOK || s.id === NAME_TAG || s.id === SADDLE) counts.treasure++; // Fase 7 (encantamientos)
     else counts.junk++;
     if (s.dmg !== undefined) assert.ok(s.dmg > 0 && s.dmg < (ITEMS[s.id].tool?.durability ?? ITEMS[s.id].armor!.durability));
   }

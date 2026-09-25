@@ -23,6 +23,10 @@ export interface TradeOffer {
   result: [number, number];
   max: number;
   xp: number;
+  /** Fase 7 (encantamientos): datos de lo que da (un libro encantado, equipo encantado). */
+  data?: ItemData;
+  /** Fase 7 (encantamientos): se encanta al crear la oferta ('book': libro al azar; 'item': con 5–19 niveles). */
+  enchant?: 'book' | 'item';
 }
 
 export interface Profession {
@@ -240,7 +244,7 @@ export function offersFor(prof: number, level: number, seed: number): Offer[] {
     out.push(...pool.slice(0, PICKS[lvl]));
   }
   while (out.length > MAX_OFFERS) out.shift();
-  return out;
+  return out.map((o) => (o.enchant ? enchantOffer(o, seed) : o)); // Fase 7 (encantamientos)
 }
 
 /** Ofertas del comerciante ambulante (5, según su semilla). */
@@ -254,11 +258,13 @@ export function traderOffers(seed: number): Offer[] {
   return pool.slice(0, 5);
 }
 
-/** Oferta en la red: [pide, n, pide2, n2, da, n, usos, máximo]. */
-export type TradeWire = [number, number, number, number, number, number, number, number];
+/** Oferta en la red: [pide, n, pide2, n2, da, n, usos, máximo] y, Fase 7 (encantamientos), los datos de lo que da. */
+export type TradeWire = [number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, ItemData];
 
 export function offerToWire(o: TradeOffer, uses: number): TradeWire {
-  return [o.cost[0], o.cost[1], o.cost2?.[0] ?? 0, o.cost2?.[1] ?? 0, o.result[0], o.result[1], uses, o.max];
+  const w: TradeWire = [o.cost[0], o.cost[1], o.cost2?.[0] ?? 0, o.cost2?.[1] ?? 0, o.result[0], o.result[1], uses, o.max];
+  return o.data ? [...w, o.data] : w;
 }
 
 /** Nombre visible de un aldeano según su profesión (y del comerciante). */
@@ -277,4 +283,68 @@ import { CROSSBOW, HORSE_ARMOR } from './items';
   prof(PROF_FLETCHER).pool[2].push(sell(CROSSBOW, 1, 3, 12, 10));
   const leather = prof(PROF_LEATHERWORKER).pool;
   if (leather[2]) leather[2].push(sell(HORSE_ARMOR.leather, 1, 6, 12, 15));
+}
+
+// Fase 7 (encantamientos): libros encantados del bibliotecario (uno por nivel, de novato a experto: un
+// encantamiento al azar con un nivel al azar; cuestan 2 + azar(5 + nivel·10) + 3·nivel esmeraldas, el doble
+// si es un tesoro, y un libro) y el equipo encantado del armero, el herrero de armas, el herrero, el
+// flechero y el pescador (encantado con 5 a 19 niveles, que se suman a su precio), como en Minecraft.
+import { EXPERIENCE_BOTTLE, ENCHANTED_BOOK, type ItemStack } from './items';
+import type { ItemData } from './itemData';
+import { librarianBook, enchantWithLevels, rndFrom, TABLE_POOL } from './enchanting';
+{
+  const prof = (id: number) => PROFESSIONS.find((p) => p.id === id)!;
+  const book = (xp: number): TradeOffer => ({ cost: [EMERALD, 1], cost2: [BOOK, 1], result: [ENCHANTED_BOOK, 1], max: 12, xp, enchant: 'book' });
+  const gear = (id: number, em: number, xp: number): TradeOffer => ({ cost: [EMERALD, em], result: [id, 1], max: 3, xp, enchant: 'item' });
+  const lib = prof(PROF_LIBRARIAN).pool;
+  lib[0].push(book(1));
+  lib[1].push(book(5));
+  lib[2].push(book(10));
+  lib[3].push(book(15));
+  // El equipo de diamante de los niveles altos sale encantado (sustituye a la versión sin encantar).
+  const enchanted = (p: number, lvl: number, id: number, em: number, xp: number) => {
+    const pool = prof(p).pool[lvl];
+    const i = pool.findIndex((o) => o.result[0] === id);
+    if (i >= 0) pool.splice(i, 1, gear(id, em, xp));
+    else pool.push(gear(id, em, xp));
+  };
+  enchanted(PROF_ARMORER, 3, ARMOR.diamond.leggings, 14, 15);
+  enchanted(PROF_ARMORER, 4, ARMOR.diamond.chestplate, 16, 30);
+  prof(PROF_ARMORER).pool[3].push(gear(ARMOR.diamond.boots, 8, 15));
+  prof(PROF_ARMORER).pool[4].push(gear(ARMOR.diamond.helmet, 8, 30));
+  prof(PROF_WEAPONSMITH).pool[0].push(gear(TOOLS.iron.sword, 2, 1));
+  enchanted(PROF_WEAPONSMITH, 3, TOOLS.diamond.axe, 12, 15);
+  enchanted(PROF_WEAPONSMITH, 4, TOOLS.diamond.sword, 8, 30);
+  prof(PROF_TOOLSMITH).pool[2].push(gear(TOOLS.iron.axe, 1, 10));
+  enchanted(PROF_TOOLSMITH, 3, TOOLS.diamond.axe, 12, 15);
+  prof(PROF_TOOLSMITH).pool[3].push(gear(TOOLS.diamond.shovel, 5, 15));
+  enchanted(PROF_TOOLSMITH, 4, TOOLS.diamond.pickaxe, 13, 30);
+  prof(PROF_FLETCHER).pool[3].push(gear(BOW, 2, 15));
+  enchanted(PROF_FLETCHER, 4, BOW, 2, 30);
+  prof(PROF_FLETCHER).pool[4].push(gear(CROSSBOW, 3, 30));
+  enchanted(PROF_FISHERMAN, 4, FISHING_ROD, 3, 30);
+  // Botellas con experiencia: el cartógrafo no, el bibliotecario maestro sí (no hay clérigo todavía).
+  prof(PROF_LIBRARIAN).pool[4].push(sell(EXPERIENCE_BOTTLE, 1, 3, 12, 30));
+}
+
+/**
+ * Fase 7 (encantamientos): la oferta encantada concreta de un aldeano (siempre la misma para su semilla y
+ * la oferta): el libro o el objeto encantado, con su precio.
+ */
+function enchantOffer(o: Offer, seed: number): Offer {
+  const r = rndFrom(rng(seed ^ Math.imul(o.key + 1, 0x2c1b3c6d)));
+  let stack: ItemStack;
+  let price: number;
+  if (o.enchant === 'book') {
+    const b = librarianBook(r);
+    stack = b.book;
+    price = b.price;
+  } else {
+    const levels = 5 + r.nextInt(15);
+    stack = enchantWithLevels({ id: o.result[0], count: 1 }, levels, r, TABLE_POOL);
+    price = Math.min(64, o.cost[1] + levels);
+  }
+  const { enchant: _e, ...rest } = o;
+  void _e;
+  return { ...rest, cost: [o.cost[0], price], result: [stack.id, 1], ...(stack.data ? { data: stack.data } : {}) };
 }

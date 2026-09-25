@@ -67,7 +67,7 @@ export class Entities {
   readonly gearShots = new GearShots(this);
   // Fase 7 (encantamientos)
   /** Un bloque que caía toca el suelo (antes de ponerse): el yunque hiere y se deteriora. */
-  fallingLanded: ((e: Entity) => void) | null = null;
+  fallingLanded: ((e: Entity) => boolean) | null = null;
   /** Nivel de Saqueo del golpe que se está resolviendo (lo pone quien ataca). */
   looting = 0;
 
@@ -202,6 +202,7 @@ export class Entities {
   spawnFalling(block: number, x: number, y: number, z: number): Entity {
     const e = this.base(ENT_FALLING, x, y, z, 0.98, 0.98, 1);
     e.block = block;
+    e.fallFrom = y; // Fase 7 (encantamientos)
     e.yaw = 0;
     this.list.set(e.id, e);
     return e;

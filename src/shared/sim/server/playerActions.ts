@@ -8,6 +8,7 @@ import type { PlayerView } from '../entities';
 import { CROSSBOW_SPEED, CROSSBOW_ARROW_DAMAGE } from '../../equipment'; // Fase 6.5 (equipo)
 // Fase 7 (encantamientos): encantamientos del arma, del arco y de la ballesta.
 import { meleeHit, shootArrows } from './enchantCombat';
+import { EXPERIENCE_BOTTLE } from '../../items';
 import type { ServerContext, Session } from './context';
 
 export class PlayerActions {
@@ -93,13 +94,16 @@ export class PlayerActions {
   onThrow(s: Session, msg: Extract<ClientMsg, { t: 'throw' }>): void {
     const ctx = this.ctx;
     const item = Number(msg.item);
-    if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
+    if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL && item !== EXPERIENCE_BOTTLE) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
     const p = msg.p.map(Number), d = msg.d.map(Number);
     if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite)) return;
     if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
+    // Fase 7 (encantamientos): la botella con experiencia sale más despacio (0,7 bloques por tick) y 20° más alta.
+    const bottle = item === EXPERIENCE_BOTTLE;
+    if (bottle) d[1] += 0.36 * Math.hypot(d[0], d[1], d[2]);
     const len = Math.hypot(d[0], d[1], d[2]) || 1;
     // 1,5 bloques por tick, como en Minecraft.
-    const speed = 30;
+    const speed = bottle ? 14 : 30;
     ctx.entities.spawnThrown(item, p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id);
     ctx.fx('throw', p[0], p[1], p[2]);
   }

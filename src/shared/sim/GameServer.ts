@@ -60,6 +60,8 @@ import { Collections } from './server/collections'; // Fase 6.5 (colecciones)
 import { Fire } from './server/fire';
 import { Conduits } from './server/conduits';
 import { Equipment } from './server/equipment';
+import { EnchantWork } from './server/enchantWork'; // Fase 7 (encantamientos)
+import { thunderAt } from '../weather'; // Fase 7 (encantamientos): Conductividad
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -163,6 +165,7 @@ export class GameServer {
   readonly fire: Fire;
   readonly conduits: Conduits;
   private equipment: Equipment;
+  private enchantWork: EnchantWork; // Fase 7 (encantamientos)
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -272,6 +275,11 @@ export class GameServer {
     };
     const interact = this.farming.extraInteract;
     this.farming.extraInteract = (s, e, msg) => this.equipment.onInteract(s, e, msg) ?? interact?.(s, e, msg) ?? null;
+    // Fase 7 (encantamientos): mesa, yunque, afiladora, yunques que caen, Paso helado y Conductividad.
+    this.enchantWork = new EnchantWork(this.ctx, this.nature);
+    this.entities.fallingLanded = (e) => this.enchantWork.fallingLanded(e);
+    this.entities.gearShots.lightning = (x, y, z) => this.storms.strike(x, y, z);
+    this.entities.gearShots.thundering = () => thunderAt(this.worldTime(), this.seed) > 0;
   }
 
   get seed(): number {
@@ -354,10 +362,11 @@ export class GameServer {
       sunHeight: () => sunHeightAt(this.worldTime()),
       raining: () => rainAt(this.worldTime(), this.seed),
       difficulty: () => this.difficulty,
-      hurtPlayer: (id, amount, kx, ky, kz, cause) => {
+      hurtPlayer: (id, amount, kx, ky, kz, cause, src) => {
         for (const s of this.sessions.values()) {
           if (s.id !== id || !s.joined || s.mode === 'c' || s.s & STATE_DEAD) continue;
-          this.send(s, { t: 'hurt', a: Math.round(amount * 10) / 10, k: [r2(kx), r2(ky), r2(kz)], c: cause });
+          const th = src ? this.enchantWork.thorns(s, src) : 0; // Fase 7 (encantamientos): Espinas
+          this.send(s, { t: 'hurt', a: Math.round(amount * 10) / 10, k: [r2(kx), r2(ky), r2(kz)], c: cause, ...(th ? { th } : {}) });
         }
       },
       fx: (kind, x, y, z, a, b) => this.fx(kind, x, y, z, a, b),
@@ -436,7 +445,7 @@ export class GameServer {
   }
 
   private info(s: Session): PlayerInfo {
-    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a };
+    return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.g ? { g: s.g } : {}) }; // Fase 7: g
   }
 
   /** Envía las ediciones pendientes respetando el orden en que se aplicaron. */
@@ -670,6 +679,13 @@ export class GameServer {
       case 'boost':
         if (this.allow(s, 1)) this.equipment.onBoost(s, msg);
         break;
+      // Fase 7 (encantamientos)
+      case 'work':
+        if (this.allow(s, 2)) this.enchantWork.onWork(s, msg);
+        break;
+      case 'frost':
+        if (this.allow(s, 0.2)) this.enchantWork.onFrost(s, msg);
+        break;
     }
   }
 
@@ -773,7 +789,10 @@ export class GameServer {
       const id = Number(a[slot]);
       return Number.isInteger(id) && isValidItem(id) && ITEMS[id]?.armor?.slot === slot ? id : 0;
     });
-    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a }, s);
+    // Fase 7 (encantamientos): qué brilla (mano, mano secundaria y cada pieza de armadura).
+    const g = Number(msg.g);
+    s.g = Number.isInteger(g) ? g & 0x3f : 0;
+    this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.g ? { g: s.g } : {}) }, s);
   }
 
   /** Distancia del ojo del jugador al centro del bloque. */
@@ -815,6 +834,9 @@ export class GameServer {
       xp: Math.floor(num(raw.xp, 0, 10_000_000, 0)),
       abs: num(raw.abs, 0, 20, 0),
     };
+    // Fase 7 (encantamientos): semilla de encantamiento (entero de 32 bits).
+    const es = Number(raw.es);
+    if (Number.isInteger(es)) save.es = es | 0;
     if (Array.isArray(raw.fx)) {
       // Efectos activos: sólo los conocidos, con nivel y duración acotados.
       save.fx = raw.fx.slice(0, 16).flatMap((f) => {
@@ -832,7 +854,7 @@ export class GameServer {
       // Cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies).
       save.armor = [0, 1, 2, 3].map((slot) => {
         const st = sanitizeStack(stackFromWire(raw.armor![slot]));
-        return st && ITEMS[st.id]?.armor?.slot === slot ? (st.dmg ? [st.id, 1, st.dmg] : [st.id, 1]) : null;
+        return st && ITEMS[st.id]?.armor?.slot === slot ? stackToWire({ ...st, count: 1 }) : null; // Fase 7: con sus encantamientos
       });
     }
     if (Array.isArray(raw.pos) && raw.pos.length === 3 && raw.pos.map(Number).every(Number.isFinite)) {
@@ -920,6 +942,7 @@ export class GameServer {
     this.fire.tick(); // Fase 6.5 (equipo)
     this.conduits.tick();
     this.equipment.tick();
+    this.enchantWork.tick(); // Fase 7 (encantamientos)
     this.entitySync.takeRemoved(this.entities.removed);
     this.entities.removed = [];
     if (this.tickCount % 4 === 0) {

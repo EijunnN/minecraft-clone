@@ -611,3 +611,9 @@ export function fireworkCraft(grid: readonly (ItemStack | null)[]): ItemStack | 
 export function fireworkMask(s: ItemStack): number {
   return s.id === FIREWORK_STAR ? (s.dmg ?? 0) & 0xffff : s.id === FIREWORK_ROCKET ? fireworkColors(s.dmg) : 0;
 }
+
+// Fase 7 (encantamientos): mesa de encantamientos (libro, dos diamantes y cuatro de obsidiana) y yunque
+// (tres bloques de hierro y cuatro lingotes), como en Minecraft.
+import { ENCHANTING_TABLE, ANVIL, OBSIDIAN } from './blocks';
+shape([' B ', 'DOD', 'OOO'], { B: BOOK, D: DIAMOND, O: OBSIDIAN }, ENCHANTING_TABLE);
+shape(['BBB', ' I ', 'III'], { B: IRON_BLOCK, I: IRON_INGOT }, ANVIL);

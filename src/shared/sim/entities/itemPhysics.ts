@@ -19,7 +19,7 @@ export class ItemPhysics {
     moveBody(e, this.m.w, dt);
     if (e.onGround || e.age > 30) {
       this.m.remove(e.id);
-      this.m.fallingLanded?.(e); // Fase 7 (encantamientos): el yunque aplasta y se deteriora
+      if (this.m.fallingLanded?.(e) === false) return; // Fase 7 (encantamientos): el yunque aplasta y se deteriora
       this.m.host.landBlock(Math.floor(e.x), Math.floor(e.y + 0.1), Math.floor(e.z), e.block ?? AIR);
     }
     e.flags = 0;

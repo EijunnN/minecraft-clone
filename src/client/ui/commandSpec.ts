@@ -4,6 +4,7 @@ import { EFFECTS } from '../../shared/effects';
 import { MOBS, MOB_TYPES } from '../../shared/mobs';
 import { ITEMS } from '../../shared/items';
 import { STRUCTURE_NAMES } from '../../shared/world/structures';
+import { ENCHANTS, ENCHANT_IDS } from '../../shared/enchantments'; // Fase 7 (encantamientos)
 
 export interface Option {
   /** Lo que se escribe. */
@@ -117,6 +118,24 @@ export const COMMAND_SPECS: CommandSpec[] = [
   },
   { name: 'asalto', aliases: ['raid'], desc: 'Desata un asalto en la aldea más cercana', args: [] },
   { name: 'patrulla', aliases: ['patrol'], desc: 'Hace aparecer una patrulla de saqueadores', args: [] },
+  // Fase 7 (encantamientos)
+  {
+    name: 'encantar', aliases: ['enchant'], desc: 'Encanta el objeto que tienes en la mano',
+    args: [
+      {
+        name: 'encantamiento', desc: 'Por su nombre en español (con guiones bajos)',
+        options: () => ENCHANT_IDS.map((id) => ({ value: underscore(ENCHANTS[id].name), label: `Hasta ${ENCHANTS[id].max}` })),
+      },
+      { name: 'nivel', optional: true, desc: 'Nivel (1 por defecto, hasta 10)', options: () => ['1', '2', '3', '4', '5'].map((v) => ({ value: v })) },
+    ],
+  },
+  {
+    name: 'experiencia', aliases: ['xp'], desc: 'Te da experiencia (puntos o niveles)',
+    args: [
+      { name: 'cantidad', desc: 'Cuánta experiencia', options: () => ['10', '30', '100', '1000'].map((v) => ({ value: v })) },
+      { name: 'unidad', optional: true, desc: 'Puntos (por defecto) o niveles', options: () => [{ value: 'puntos' }, { value: 'niveles' }] },
+    ],
+  },
   { name: 'semilla', aliases: ['seed'], desc: 'Muestra la semilla del mundo', args: [] },
   { name: 'lista', aliases: ['list'], desc: 'Jugadores conectados', args: [] },
 ];

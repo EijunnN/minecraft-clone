@@ -248,7 +248,7 @@ export class MobBrain {
         if (dist < reach && Math.abs(dy) < 1.6 && ai.attackCd <= 0) {
           ai.attackCd = 1;
           const dmg = def.damage * this.m.difficultyScale();
-          this.m.host.hurtPlayer(target.id, dmg, (dx / (dist || 1)) * 5, 4, (dz / (dist || 1)) * 5, def.key);
+          this.m.host.hurtPlayer(target.id, dmg, (dx / (dist || 1)) * 5, 4, (dz / (dist || 1)) * 5, def.key, e); // Fase 7: e (Espinas)
           this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
           this.monsters.onMelee(e, target); // Fase 6 (monstruos): veneno de la araña de cueva
           this.m.companions.onPlayerHurtBy(target.id, e); // Fase 6 (gólems/domesticar)

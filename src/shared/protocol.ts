@@ -52,6 +52,10 @@ export const EF_VARIANT_SHIFT = 16;
 export const EF_VARIANT_MASK = 7 << EF_VARIANT_SHIFT;
 /** Fase 6 (asaltos): capitán de una patrulla o de un asalto (lleva el estandarte ominoso). */
 export const EF_CAPTAIN = 1 << 21;
+/** Fase 7 (encantamientos): objeto (tirado, lanzado, expuesto o tridente) con el brillo de los encantamientos. */
+export const EF_GLINT = 1 << 22;
+/** Fase 7 (encantamientos): soporte para armadura: brillo de cada pieza (bits 22..25, de la cabeza a los pies). */
+export const EF_GLINT_ARMOR_SHIFT = 22;
 
 /** 's' supervivencia, 'c' creativo. */
 export type GameMode = 's' | 'c';

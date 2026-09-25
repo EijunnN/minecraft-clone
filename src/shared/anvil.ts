@@ -10,7 +10,7 @@
 // iguales los repara (se suman las durabilidades más un 5 %).
 import {
   ITEMS, BOOK, ENCHANTED_BOOK, IRON_INGOT, GOLD_INGOT, DIAMOND, COPPER_INGOT, LEATHER, TURTLE_SCUTE, ARMADILLO_SCUTE, WOLF_ARMOR,
-  SHIELD, maxStack, type ItemStack,
+  SHIELD, type ItemStack,
 } from './items';
 import { ALL_PLANKS, COBBLESTONE, COBBLED_DEEPSLATE } from './blocks';
 import {
@@ -228,12 +228,9 @@ export function grindstoneResult(a: ItemStack | null, b: ItemStack | null): Item
   if (!a && !b) return null;
   if (a && b) {
     if (a.count > 1 || b.count > 1 || a.id !== b.id) return null;
+    // Dos objetos: sólo los que se desgastan (se reparan juntando su durabilidad).
     const max = maxDurability(a.id);
-    if (max <= 0) {
-      // Dos iguales que no se desgastan (libros encantados): sólo si son idénticos y se apilan.
-      if (maxStack(a.id) < 2 || JSON.stringify(a.data ?? null) !== JSON.stringify(b.data ?? null)) return null;
-      return removeNonCurses({ ...copyStack(a), count: 2 });
-    }
+    if (max <= 0) return null;
     const sum = max - (a.dmg ?? 0) + (max - (b.dmg ?? 0)) + Math.floor((max * 5) / 100);
     const out = copyStack(a);
     const dmg = Math.max(max - sum, 0);
