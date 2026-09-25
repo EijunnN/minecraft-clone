@@ -105,6 +105,7 @@ void main() {
     vec3 up = texelFetch(uIrradiance, ivec2(2, 0), 0).rgb;
     float sky = vLight.x;
     vec3 lt = up * sky * sky + blockLightColor(vLight.y) + uLightColor.rgb * 0.3 * smoothstep(0.55, 1.0, sky) + 0.01;
+    lt += underwaterLight(up);
     col = albedo / PI * lt;
   }
   // Niebla del borde de la distancia de dibujado.

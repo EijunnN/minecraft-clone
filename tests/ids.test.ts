@@ -88,6 +88,42 @@ test('los ids de objetos guardados no cambian', () => {
   assert.deepEqual([OMINOUS_BOTTLE, TOTEM_OF_UNDYING], [386, 387]);
 });
 
+// Fase 6.5 (catálogo del mundo normal): además de algunos ids a mano, una huella de todas las claves en
+// orden hasta el último id de la fase (si algo se inserta en medio o cambia de sitio, la huella cambia).
+import {
+  BLOCKS, BLOCK_COUNT, MANGROVE_LOG, CARPETS, CANDLE, BANNERS, POLISHED_GRANITE, CINNABAR, RAW_COPPER_BLOCK, FLOWER_POT, LANTERN,
+  SCAFFOLDING, DECORATED_POT, CORALS, KELP, PRISMARINE, SPONGE, SUNFLOWER, SWEET_BERRY_BUSH, SPORE_BLOSSOM,
+} from '../src/shared/blocks';
+import { ITEMS, ITEM_COUNT, DYES, RAW_COPPER, BOWL, SPAWN_EGGS, CLOCK, DRIED_KELP, PRISMARINE_CRYSTALS, INK_SAC } from '../src/shared/items';
+
+function keyPrint(keys: (string | undefined)[], from: number, to: number): number {
+  let h = 2166136261;
+  for (let i = from; i < to; i++) {
+    const s = `${i}:${keys[i] ?? ''}`;
+    for (let k = 0; k < s.length; k++) h = Math.imul(h ^ s.charCodeAt(k), 16777619) >>> 0;
+  }
+  return h;
+}
+
+test('los ids de la fase 6.5 no cambian', () => {
+  assert.ok(BLOCK_COUNT >= 3986 && ITEM_COUNT >= 488);
+  assert.equal(INK_SAC, 487);
+  assert.deepEqual(
+    [MANGROVE_LOG, CARPETS.white, CANDLE, BANNERS.white, POLISHED_GRANITE, CINNABAR, RAW_COPPER_BLOCK, FLOWER_POT, LANTERN],
+    [1995, 2323, 2531, 2667, 2797, 2817, 3114, 3671, 3738],
+  );
+  assert.deepEqual(
+    [SCAFFOLDING, DECORATED_POT, CORALS.tube.block, KELP, PRISMARINE, SPONGE, SUNFLOWER, SWEET_BERRY_BUSH, SPORE_BLOSSOM],
+    [3749, 3750, 3766, 3896, 3912, 3949, 3951, 3968, 3985],
+  );
+  assert.deepEqual(
+    [DYES.white, RAW_COPPER, TOOLS.copper.pickaxe, DRIED_KELP, PRISMARINE_CRYSTALS, BOWL, CLOCK, Object.values(SPAWN_EGGS)[0]],
+    [388, 404, 406, 415, 418, 419, 431, 434],
+  );
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 3986), 3546737497, 'huella de los bloques');
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 487), 2003609854, 'huella de los objetos');
+});
+
 test('los ids de criatura guardados no cambian', () => {
   assert.deepEqual([MOB_FOX, MOB_WOLF, MOB_VILLAGER, MOB_WANDERING_TRADER], [13, 17, 18, 19]);
   assert.deepEqual([MOB_IRON_GOLEM, MOB_SNOW_GOLEM, MOB_CAT, MOB_HORSE, MOB_CAMEL], [20, 21, 22, 25, 29]);

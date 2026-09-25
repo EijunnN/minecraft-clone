@@ -19,8 +19,16 @@ Objects). Pensado para PC (teclado y ratón).
 - **Clima**: lluvia, nieve y tormentas con rayos (destello, trueno y daño). En las zonas frías la nieve
   se acumula en capas y el agua se congela; junto a la luz se derriten.
 - **Mapas y brújula**: un mapa vacío se convierte en el mapa de la zona (128×128 bloques) y se ve al
-  llevarlo en la mano; la brújula apunta al punto de aparición. Siete maderas (roble, abedul, abeto, jungla, acacia, roble oscuro y cerezo). 384 bloques
+  llevarlo en la mano; la brújula apunta al punto de aparición. Diez maderas (roble, abedul, abeto, jungla, acacia, roble oscuro, cerezo,
+  mangle, roble pálido y bambú). 384 bloques
   de alto como en Minecraft actual: de y = −64 (lecho de roca) a 319.
+- **Catálogo del mundo normal** (unos 780 bloques y 950 objetos, ver [`docs/cobertura.md`](docs/cobertura.md)):
+  los 16 colores (tintes, lana, alfombras, hormigón que se endurece en el agua, cristal tintado,
+  terracota esmaltada, camas, velas y estandartes), todas las piedras con escaleras, losas y muros, el
+  cobre que se oxida (el panal lo encera y el hacha lo raspa) con sus herramientas y armadura,
+  arrecifes de coral, bosques de algas, prismarina y esponjas, flores altas, bayas dulces, azaleas y
+  plantaformas; macetas, faroles, cadenas, campana, andamios, cuadros y marcos; nuevas comidas, 52
+  huevos generadores, catalejo y reloj.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
   Minado con tiempos reales según la dureza del bloque y la herramienta (con grietas), desgaste de
@@ -103,8 +111,8 @@ Objects). Pensado para PC (teclado y ratón).
   - Materiales PBR (normales, rugosidad, metales, emisión), dispersión subsuperficial en hojas y
     plantas, viento en la vegetación, iluminación de antorchas y oclusión ambiental.
   - TAA, bloom, exposición automática (adaptación de la vista), tonemapping ACES y visión nocturna.
-  - Texturas pixel art 16×16 originales generadas por código (bloques, 56 objetos y las 12
-    criaturas; sin recursos de Mojang).
+  - Texturas pixel art 16×16 originales generadas por código (más de 600 texturas de bloque, los
+    objetos y todas las criaturas; sin recursos de Mojang).
 - **Multijugador**: comparte el enlace del mundo. Cada mundo es un Durable Object que ejecuta el
   servidor de juego (20 ticks por segundo mientras haya alguien conectado) y guarda en SQLite los
   cambios, los cofres y hornos, el estado de cada jugador y los animales.
@@ -142,6 +150,8 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Capitán de una patrulla con el estandarte ominoso](docs/screenshots/pillagers.png) | ![Evocador y, detrás, una patrulla de saqueadores](docs/screenshots/evoker.png) |
 | ![Puesto de saqueadores en la taiga](docs/screenshots/outpost.png) | ![Barra de un asalto sobre la aldea](docs/screenshots/raid.png) |
 | ![Pétalos cayendo bajo las ramas de un cerezo](docs/screenshots/cherry_petals.png) | ![Asistente de comandos del chat con sugerencias e iconos](docs/screenshots/chat.png) |
+| ![Muestrario de maderas, colores, piedras, cobre, prismarina y corales, con flores altas y decoración](docs/screenshots/catalog.png) | ![Macetas, faroles, campana, andamios, un cuadro y un marco de noche](docs/screenshots/decoration.png) |
+| ![Arrecife de coral con pepinos de mar que brillan](docs/screenshots/coral_reef.png) | ![Bosque de algas en un océano templado](docs/screenshots/kelp_forest.png) |
 
 ## Controles
 

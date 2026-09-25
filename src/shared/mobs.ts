@@ -6,6 +6,7 @@ import {
   IRON_INGOT, SNOWBALL,
 } from './items';
 import { RAW_RABBIT, RABBIT_HIDE } from './items'; // Fase 6 (fauna): botín del conejo
+import { INK_SAC } from './items';
 import { WHITE_WOOL, POPPY } from './blocks';
 // Fase 6 (monstruos): botín de los monstruos nuevos.
 import { STICK, SUGAR, REDSTONE, SLIME_BALL, PHANTOM_MEMBRANE } from './items';
@@ -283,7 +284,7 @@ mob({
 });
 mob({
   id: MOB_SQUID, key: 'squid', name: 'Calamar', hostile: false, health: 10, walk: 1.2, run: 2.5, width: 0.8, height: 0.8,
-  damage: 0, burnsInSun: false, drops: [], atlas: [64, 32], anim: 'squid', scale: 0.8, aquatic: true,
+  damage: 0, burnsInSun: false, drops: [[INK_SAC, 1, 3]], atlas: [64, 32], anim: 'squid', scale: 0.8, aquatic: true,
   parts: [{ name: 'body', pivot: [0, 18, 0], from: [-6, -8, -6], size: [12, 16, 12], uv: [0, 0] }, ...squidTentacles()],
 });
 

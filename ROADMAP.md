@@ -12,9 +12,9 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 | Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
 | Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 6 (y 3 elementos decorativos) |
 | Criaturas | más de 80, incluidos 2 jefes | 52 |
-| Bloques | ~1.100 contando colores y variantes | ~70 |
-| Objetos | ~1.500 | 56 objetos + bloques |
-| Recetas | más de 1.000 | ~50 |
+| Bloques | ~1.290 contando colores y variantes | ~780 (ver `docs/cobertura.md`) |
+| Objetos | ~1.650 | ~950 (bloques incluidos) |
+| Recetas | más de 2.000 | ~740 |
 | Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319) |
 | Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | supervivencia, fluidos, criaturas, cofres y hornos, clima, comercio, domesticar y montar |
 
@@ -387,8 +387,13 @@ monstruos: ahogado, bruja, slime, fantasma, lepisma, araña de cueva; saqueadore
 - ✅ **Troncos tumbados.** Al poner un tronco contra un lateral queda tumbado; las ramas de los
   cerezos, la jungla y el roble oscuro los usan (corteza a lo largo, anillos en los extremos).
 - ✅ **Aldeas despejadas.** Ya no crecen árboles dentro de las aldeas.
+- ✅ **Agua sin paredes colgando.** El agua que crea el generador es quieta; las cuevas y los huecos
+  que la tocaban dejaban paredes y techos de agua en el aire. Ahora llevan una barrera de roca (como
+  los acuíferos de Minecraft); al romperla, el agua cae y se extiende.
+- ✅ **Luz bajo el agua.** La mano y las partículas reciben la luz del sol filtrada por el agua (antes
+  salían negras a pocos bloques de profundidad).
 
-### Fase 6.5 — Catálogo del mundo normal (XL)
+### Fase 6.5 — Catálogo del mundo normal (XL) · ✅ hecha
 Todo lo del mundo normal que no pertenece a la redstone (fase 7), al Nether y al End (fase 8) ni a las
 novedades recientes (fase 9), con sus recetas, sacado del catálogo de Minecraft 26.3 (ver
 `docs/cobertura.md`): los 16 colores (tintes, lana, alfombras, hormigón, cristal tintado, terracota
@@ -398,6 +403,28 @@ oxidación, el océano (coral, algas, praderas marinas, pepinos de mar, prismari
 plantas (flores, arbustos de bayas, azaleas, plantas de cueva), la comida y la decoración (macetas,
 faroles, cadenas, andamios…), los huevos de aparición y objetos sueltos (catalejo, reloj, bolsa…).
 Antes de empezar se amplió el motor: hasta 1024 texturas (10 bits en el vértice) y 8192 ids de bloque.
+
+- ✅ **Maderas.** Mangle (con raíces y propágulos), roble pálido y bambú (tallos que crecen, bloques
+  y mosaico), con todas sus formas; troncos descortezados y leños de todas las maderas (con el hacha).
+- ✅ **Colores.** Los 16 tintes (de flores y plantas), lana, alfombras, hormigón y hormigón en polvo
+  (se endurece en el agua), cristal y paneles tintados, terracota y terracota esmaltada, camas, velas
+  (hasta 4, se encienden) y estandartes lisos, con sus recetas de teñido.
+- ✅ **Piedras.** Piedra lisa, las pulidas, pizarra profunda y sus ladrillos y baldosas, toba, las
+  areniscas rojas, barro y ladrillos de barro, cinabrio y azufre, con escaleras, losas y muros y las
+  cadenas del cortapiedras.
+- ✅ **Cobre.** Bloques, cortado, grabado, rejillas, puertas, trampillas, barrotes, cadenas, faroles y
+  antorcha de cobre en 4 fases de oxidación que avanzan solas; el panal los encera y el hacha raspa.
+  Herramientas y armadura de cobre.
+- ✅ **Océano y plantas.** Corales (mueren fuera del agua), algas que crecen, praderas marinas,
+  pepinos de mar que alumbran, prismarina y esponjas que secan el agua; arrecifes y bosques de algas
+  en los océanos. Flores altas, bayas dulces, azaleas, plantaformas que se inclinan, liquen luminoso,
+  raíces colgantes y flor de esporas.
+- ✅ **Comida y decoración.** Galleta, estofados, sopa de remolacha, zanahoria dorada; macetas para
+  cualquier planta, faroles, cadena y barrotes de hierro, campana, andamios, vasija decorada, cuadros
+  y marcos; 52 huevos de aparición, catalejo y reloj. El calamar suelta sacos de tinta (tinte negro).
+- 🟡 **Pendiente.** Bolsa, etiqueta, correa y soporte para armaduras; estantería cincelada; carteles
+  colgantes; los corales y el hielo compacto necesitan toque de seda (fase 7); guardianes y monumentos
+  (fase 8) para la prismarina y las esponjas.
 
 ### Fase 7 — Magia y técnica (XL)
 Encantamientos (mesa, libros, yunque, afiladora), pociones y efectos, redstone completa (polvo,

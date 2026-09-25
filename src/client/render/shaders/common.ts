@@ -14,7 +14,7 @@ layout(std140) uniform Frame {
   vec4 uSunDir;       // xyz dirección al sol, w = factor de día (0..1)
   vec4 uMoonDir;      // xyz dirección a la luna, w = fase (0..1)
   vec4 uLightDir;     // xyz dirección de la luz que proyecta sombras, w = 1 si es el sol
-  vec4 uLightColor;   // rgb iluminancia directa en el suelo (tras la atmósfera)
+  vec4 uLightColor;   // rgb iluminancia directa en el suelo (tras la atmósfera), w = luz filtrada bajo el agua (0..1)
   vec4 uSunIllum;     // rgb iluminancia solar fuera de la atmósfera, w = iluminancia lunar
   vec4 uFog;          // x = densidad de niebla, y = caída con la altura, z/w = inicio/fin de niebla de borde
   vec4 uRes;          // xy = tamaño, zw = 1/tamaño
@@ -38,6 +38,10 @@ vec3 saturate(vec3 x) { return clamp(x, 0.0, 1.0); }
 vec4 saturate(vec4 x) { return clamp(x, 0.0, 1.0); }
 vec3 saturate3(vec3 x) { return clamp(x, 0.0, 1.0); }
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+// Bajo el agua abierta: luz del sol y del cielo que llega filtrada por el agua (azul verdosa).
+vec3 underwaterLight(vec3 skyUp) {
+  return (uLightColor.rgb * max(uLightDir.y, 0.0) * 0.45 + skyUp * 0.8) * vec3(0.3, 0.8, 0.95) * uLightColor.w;
+}
 float sq(float x) { return x * x; }
 
 // Ruido de gradiente entrelazado (Jimenez) con desplazamiento temporal para el TAA.

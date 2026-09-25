@@ -391,6 +391,9 @@ export function spawnEggMob(id: number): string {
   return k.endsWith('_spawn_egg') && SPAWN_EGGS[k.slice(0, -10)] === id ? k.slice(0, -10) : '';
 }
 
+/** Bolsa de tinta: la suelta el calamar; da el tinte negro. */
+export const INK_SAC = item('ink_sac', 'Saco de tinta');
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -512,6 +515,7 @@ export const CREATIVE_ITEMS: readonly number[] = [
   BOWL, IRON_NUGGET, GOLD_NUGGET, COCOA_BEANS, COOKIE, MUSHROOM_STEW, RABBIT_STEW, BEETROOT_SOUP, SUSPICIOUS_STEW, GOLDEN_CARROT,
   GLISTERING_MELON_SLICE, SPYGLASS, CLOCK, PAINTING, ITEM_FRAME, ...Object.values(SPAWN_EGGS),
   DRIED_KELP, SWEET_BERRIES, PRISMARINE_SHARD, PRISMARINE_CRYSTALS, // Fase 6.5 (océano y plantas)
+  INK_SAC,
 ];
 
 /** Bloques que algún objeto sabe colocar (el servidor sólo acepta éstos en 'place'). */

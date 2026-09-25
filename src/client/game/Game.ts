@@ -855,6 +855,18 @@ export class Game {
     const skyAtEye = (le >> 4) / 15;
     this.eyeSky += (skyAtEye - this.eyeSky) * (1 - Math.exp(-dt * 1.5));
     const underwater = p.eyeInWater;
+    // Bajo el agua abierta al cielo, la luz del sol llega filtrada (menos cuanto más hondo): la usan la
+    // mano y las partículas, que si no sólo verían la luz del cielo del bloque (se apaga a pocos bloques).
+    let waterLight = 0;
+    if (underwater) {
+      const ex = Math.floor(eyeX), ez = Math.floor(eyeZ);
+      let y = Math.floor(eyeY), depth = 0;
+      for (; depth < 64; depth++, y++) {
+        const b = world.getBlock(ex, y, ez);
+        if (b <= 0 || BLOCK_FLUID[b] !== 1) break;
+      }
+      if (world.getBlock(ex, y, ez) === AIR && world.getLight(ex, y, ez) >> 4 >= 14) waterLight = Math.exp(-0.07 * depth);
+    }
 
     // --- Cámara (primera/tercera persona) ---
     let camX = eyeX, camY = eyeY, camZ = eyeZ;
@@ -958,6 +970,7 @@ export class Game {
       dayTime,
       day,
       underwater,
+      waterLight,
       eyeSkyExposure: this.eyeSky,
       rain,
       nightVision: this.statusEffects.nightVision,

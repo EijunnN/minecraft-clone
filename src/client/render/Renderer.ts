@@ -95,6 +95,8 @@ export interface FrameState {
   /** Número de día (para las fases lunares). */
   day: number;
   underwater: boolean;
+  /** Bajo el agua abierta: cuánta luz del sol llega filtrada al ojo (0..1; 0 fuera del agua o en cuevas). */
+  waterLight?: number;
   eyeSkyExposure: number;
   rain: number;
   /** Efecto Visión nocturna (0..1): la exposición sube para ver en la oscuridad. */
@@ -444,7 +446,7 @@ export class Renderer {
     d[104] = L.sun[0]; d[105] = L.sun[1]; d[106] = L.sun[2]; d[107] = smooth(-0.1, 0.2, L.sun[1]);
     d[108] = L.moon[0]; d[109] = L.moon[1]; d[110] = L.moon[2]; d[111] = L.phase;
     d[112] = L.light[0]; d[113] = L.light[1]; d[114] = L.light[2]; d[115] = L.sunUp ? 1 : 0;
-    d[116] = L.lightColor[0]; d[117] = L.lightColor[1]; d[118] = L.lightColor[2]; d[119] = 0;
+    d[116] = L.lightColor[0]; d[117] = L.lightColor[1]; d[118] = L.lightColor[2]; d[119] = s.underwater ? s.waterLight ?? 0 : 0;
     d[120] = SUN_ILLUMINANCE[0]; d[121] = SUN_ILLUMINANCE[1]; d[122] = SUN_ILLUMINANCE[2]; d[123] = L.moonIllum;
     const R = this.settings.renderDistance * 16;
     d[124] = s.mist; d[125] = 1 / 28; d[126] = R * 0.62; d[127] = R * 0.93;

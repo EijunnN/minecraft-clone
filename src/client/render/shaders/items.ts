@@ -79,6 +79,7 @@ void main() {
     float sh = sampleShadow(sc, gl_FragCoord.xy, 2.0);
     vec3 direct = uLightColor.rgb * NdotL * sh * smoothstep(0.55, 0.95, sky);
     vec3 amb = (mix(side, up, N.y * 0.5 + 0.5) * 1.6 + uLightColor.rgb * 0.05) * (sky * sky) + blockLightColor(uLightLevel.y) + vec3(0.015);
+    amb += underwaterLight(up) * (0.6 + 0.4 * saturate(N.y * 0.5 + 0.5));
     col = albedo / PI * (direct + amb);
   } else {
     vec3 L = uLightDir.xyz;
