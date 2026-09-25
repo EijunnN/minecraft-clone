@@ -200,7 +200,15 @@ export class Pistons {
     try {
       for (const c of m.cells) {
         this.cells.delete(posKey(c.x, c.y, c.z));
-        if (w.getBlock(c.x, c.y, c.z) === MOVING_BLOCK) w.setBlock(c.x, c.y, c.z, c.block);
+        if (w.getBlock(c.x, c.y, c.z) !== MOVING_BLOCK) continue;
+        // Una cabeza cuya base ya no está (se rompió mientras se extendía) no se queda sola.
+        let id = c.block;
+        if (isPistonHead(id)) {
+          const f = facingOf(id);
+          const b = w.getBlock(c.x - FACE_X[f], c.y - FACE_Y[f], c.z - FACE_Z[f]);
+          if (!isPiston(b) || !pistonExtended(b) || facingOf(b) !== f) id = AIR;
+        }
+        w.setBlock(c.x, c.y, c.z, id);
       }
     } finally {
       this.busy = false;

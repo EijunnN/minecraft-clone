@@ -32,9 +32,10 @@ interface Moving {
   y: number;
   z: number;
   dir: number;
-  /** Cuándo empezó (s) y cuándo se asentó (−1 aún no). */
+  /** Cuándo empezó (s), cuándo se asentó (−1 aún no) y si ya se vio su hueco de bloque en movimiento. */
   t0: number;
   settled: number;
+  seen: boolean;
   /** Ya lanzó al jugador (el slime) y el avance del frame anterior (la miel lo lleva pegado). */
   launched: boolean;
   lastK: number;
@@ -52,12 +53,12 @@ export class MechanismsClient {
   /** Un bloque empieza a deslizarse desde la celda (x, y, z) hacia `dir`. */
   add(block: number, x: number, y: number, z: number, dir: number): void {
     if (!isValidBlockId(block) || dir < 0 || dir > 5 || this.moving.length > 512) return;
-    this.moving.push({ block, x, y, z, dir, t0: now(), settled: -1, launched: false, lastK: 0 });
+    this.moving.push({ block, x, y, z, dir, t0: now(), settled: -1, seen: false, launched: false, lastK: 0 });
   }
 
-  /** Avance (0..1) de un bloque que se mueve. */
+  /** Avance (0..1) de un bloque que se mueve (ya asentado, 1: está donde el bloque de verdad). */
   private progress(m: Moving, t: number): number {
-    return Math.max(0, Math.min(1, (t - m.t0) / MOVE_SECONDS));
+    return m.settled >= 0 ? 1 : Math.max(0, Math.min(1, (t - m.t0) / MOVE_SECONDS));
   }
 
   /** Mensajes del servidor: la armadura que pone un dispensador. true si era uno de éstos. */
@@ -86,7 +87,10 @@ export class MechanismsClient {
     const p = this.g.player;
     this.moving = this.moving.filter((m) => {
       const dx = m.x + FACE_X[m.dir], dy = m.y + FACE_Y[m.dir], dz = m.z + FACE_Z[m.dir];
-      if (m.settled < 0 && t - m.t0 >= MOVE_SECONDS && world && world.getBlock(dx, dy, dz) !== MOVING_BLOCK) m.settled = t;
+      // Se asienta cuando su hueco (que ya se vio) pasa a ser el bloque de verdad; si no llegó a verse, al rato.
+      const b = world ? world.getBlock(dx, dy, dz) : MOVING_BLOCK;
+      if (b === MOVING_BLOCK) m.seen = true;
+      if (m.settled < 0 && ((m.seen && b !== MOVING_BLOCK) || t - m.t0 > MOVE_SECONDS + 0.3)) m.settled = t;
       return m.settled < 0 ? t - m.t0 < 3 : t - m.settled < LINGER;
     });
     if (this.g.vehicles.active || this.g.riding.active) return;
