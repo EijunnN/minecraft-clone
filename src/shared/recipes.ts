@@ -33,6 +33,9 @@ import {
   CUT_RED_SANDSTONE, CHISELED_RED_SANDSTONE, MUD, PACKED_MUD, MUD_BRICKS, CINNABAR, POLISHED_CINNABAR, CINNABAR_BRICKS,
   CHISELED_CINNABAR, SULFUR, POLISHED_SULFUR, SULFUR_BRICKS, CHISELED_SULFUR,
 } from './blocks';
+// Fase 6.5 (cobre).
+import { COPPER, OXIDATION_STAGES, RAW_COPPER_BLOCK, COPPER_TORCH, type CopperKind } from './blocks';
+import { RAW_COPPER, COPPER_NUGGET } from './items';
 
 type Cell = readonly number[] | null;
 
@@ -231,6 +234,42 @@ mix([HONEY_BOTTLE], SUGAR, 3);
 shape(['CC', 'CC'], { C: HONEYCOMB }, HONEYCOMB_BLOCK);
 shape(['F', 'C', 'S'], { F: FEATHER, C: COPPER_INGOT, S: STICK }, BRUSH);
 shape(['HH', 'HH'], { H: RABBIT_HIDE }, LEATHER);
+// --- Fase 6.5 (cobre) ---
+{
+  shape(['NNN', 'NNN', 'NNN'], { N: COPPER_NUGGET }, COPPER_INGOT);
+  mix([COPPER_INGOT], COPPER_NUGGET, 9);
+  shape(['RRR', 'RRR', 'RRR'], { R: RAW_COPPER }, RAW_COPPER_BLOCK);
+  mix([RAW_COPPER_BLOCK], RAW_COPPER, 9);
+  mix([COPPER.block[1][0]], COPPER_INGOT, 9); // el bloque encerado también se deshace en lingotes
+  for (let s = 0; s < OXIDATION_STAGES; s++) {
+    for (const w of [0, 1]) {
+      const [block, cut, slab] = [COPPER.block[w][s], COPPER.cut[w][s], COPPER.cut_slab[w][s]];
+      shape(['BB', 'BB'], { B: block }, cut, 4);
+      shape(['CCC'], { C: cut }, slab, 6);
+      shape(['C  ', 'CC ', 'CCC'], { C: cut }, COPPER.cut_stairs[w][s], 4);
+      shape(['S', 'S'], { S: slab }, COPPER.chiseled[w][s]);
+      shape([' B ', 'B B', ' B '], { B: block }, COPPER.grate[w][s], 4);
+    }
+    // Encerar con panal (sin mesa de trabajo): cualquier bloque de cobre sin cera y un panal.
+    for (const kind of Object.keys(COPPER) as CopperKind[]) mix([COPPER[kind][0][s], HONEYCOMB], COPPER[kind][1][s]);
+  }
+  const I = COPPER_INGOT;
+  shape(['II', 'II', 'II'], { I }, COPPER.door[0][0], 3);
+  shape(['II', 'II'], { I }, COPPER.trapdoor[0][0]);
+  shape(['III', 'III'], { I }, COPPER.bars[0][0], 16);
+  shape(['N', 'I', 'N'], { N: COPPER_NUGGET, I }, COPPER.chain[0][0]);
+  shape(['N', 'C', 'S'], { N: COPPER_NUGGET, C: FUEL_COAL, S: STICK }, COPPER_TORCH, 4);
+  shape(['NNN', 'NTN', 'NNN'], { N: COPPER_NUGGET, T: COPPER_TORCH }, COPPER.lantern[0][0]);
+  shape(['MMM', ' S ', ' S '], { M: I, S: STICK }, TOOLS.copper.pickaxe);
+  shape(['MM', 'MS', ' S'], { M: I, S: STICK }, TOOLS.copper.axe);
+  shape(['M', 'S', 'S'], { M: I, S: STICK }, TOOLS.copper.shovel);
+  shape(['M', 'M', 'S'], { M: I, S: STICK }, TOOLS.copper.sword);
+  shape(['MM', ' S', ' S'], { M: I, S: STICK }, TOOLS.copper.hoe);
+  shape(['MMM', 'M M'], { M: I }, ARMOR.copper.helmet);
+  shape(['M M', 'MMM', 'MMM'], { M: I }, ARMOR.copper.chestplate);
+  shape(['MMM', 'M M', 'M M'], { M: I }, ARMOR.copper.leggings);
+  shape(['M M', 'M M'], { M: I }, ARMOR.copper.boots);
+}
 
 // --- Fase 6.5 (maderas): sin corteza, leños y bambú ---
 import { WOOD_EXTRAS, BAMBOO, BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_PLANKS, BAMBOO_MOSAIC } from './blocks';

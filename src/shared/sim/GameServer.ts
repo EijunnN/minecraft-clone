@@ -44,6 +44,7 @@ import { Monsters } from './server/monsters'; // Fase 6 (monstruos)
 import { Golems } from './server/golems'; // Fase 6 (gólems/domesticar)
 import { Raids } from './server/raids'; // Fase 6 (asaltos)
 import { ColorBlocks } from './server/colorBlocks'; // Fase 6.5 (colores)
+import { Copper } from './server/copper'; // Fase 6.5 (cobre)
 
 export { TICK_RATE, type Conn };
 export { canSleepAt } from './server/beds';
@@ -115,6 +116,8 @@ export class GameServer {
   readonly raids: Raids;
   /** Fase 6.5 (colores): hormigón en polvo que se endurece en el agua. */
   private colorBlocks: ColorBlocks;
+  /** Fase 6.5 (cobre): oxidación, cera, raspado y rayos. */
+  private copper: Copper;
 
   constructor(store: ServerStore, opts: GameServerOptions = {}) {
     this.store = store;
@@ -180,6 +183,10 @@ export class GameServer {
     this.colorBlocks = new ColorBlocks(this.ctx); // Fase 6.5 (colores)
     this.trading.heroOf = (name) => this.raids.isHero(name);
     this.commands.raids = this.raids;
+    // Fase 6.5 (cobre).
+    this.copper = new Copper(this.ctx, this.nature, this.rules);
+    this.edits.copper = this.copper;
+    this.storms.onStrike = (x, y, z) => this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z));
   }
 
   get seed(): number {

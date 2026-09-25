@@ -789,14 +789,6 @@ const IRON_BLOCK: PolishStyle = {
   smooth: 198,
   f0: 230,
 };
-const COPPER_BLOCK: PolishStyle = {
-  base: [206, 120, 84],
-  light: [236, 160, 120],
-  dark: [170, 92, 62],
-  edge: [130, 66, 44],
-  smooth: 195,
-  f0: 234,
-};
 const DIAMOND_BLOCK: PolishStyle = {
   base: [96, 218, 210],
   light: [176, 248, 242],
@@ -901,7 +893,7 @@ export const MISC_GENERATORS: Record<string, Generator> = {
   gold_block: (t) => polished(t, GOLD_BLOCK),
   iron_block: (t) => polished(t, IRON_BLOCK),
   diamond_block: diamondBlock,
-  copper_block: (t) => polished(t, COPPER_BLOCK),
+  // copper_block: con sus fases de oxidación en genCopper.ts (fase 6.5).
   white_wool: (t) => wool(t, [226, 228, 226]),
   black_wool: (t) => wool(t, [40, 40, 46]),
   red_wool: (t) => wool(t, [158, 42, 40]),

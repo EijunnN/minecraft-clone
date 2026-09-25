@@ -29,6 +29,7 @@ import { useOnBeeHome, faunaCanInteract, faunaAfterEat } from './faunaInteractio
 import { afterDrinkOminous } from './raidClient'; // Fase 6 (asaltos)
 import { useAxeOnWood } from './woodInteraction'; // Fase 6.5 (maderas)
 import { canAddCandle } from '../../shared/blocks'; // Fase 6.5 (colores)
+import { useOnCopper } from './copperInteraction'; // Fase 6.5 (cobre)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod']);
@@ -144,6 +145,8 @@ export class Interaction {
     if (pressed && hit && held && useOnBeeHome(this.g, this, hit, held)) return;
     // Fase 6.5 (maderas): descortezar troncos con el hacha.
     if (pressed && hit && held && useAxeOnWood(this.g, this, hit, held)) return;
+    // Fase 6.5 (cobre): encerar con panal o raspar con un hacha.
+    if (pressed && hit && held && useOnCopper(this.g, this, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       // Fase 6.5 (colores): con la misma vela en la mano se añade otra en vez de encenderla o apagarla.

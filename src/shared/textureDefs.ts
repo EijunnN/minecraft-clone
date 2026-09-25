@@ -311,6 +311,17 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'chiseled_tuff_bricks', 'chiseled_tuff_bricks_top', 'cut_red_sandstone', 'chiseled_red_sandstone', 'mud', 'packed_mud',
     'mud_bricks', 'cinnabar', 'polished_cinnabar', 'cinnabar_bricks', 'chiseled_cinnabar', 'sulfur', 'polished_sulfur',
     'sulfur_bricks', 'chiseled_sulfur'].map((name): TextureDef => ({ name })),
+  // Fase 6.5 (cobre): bloque de cobre en bruto y las fases expuesta, degradada y oxidada de cada textura
+  // de cobre (la normal del bloque de cobre ya estaba). Las cuatro fases salen de un mismo dibujo (genCopper.ts).
+  { name: 'raw_copper_block' },
+  { name: 'copper_torch', cutout: true },
+  ...['', 'exposed_', 'weathered_', 'oxidized_'].flatMap((p): TextureDef[] => [
+    ...(p ? [{ name: `${p}copper` }] : []),
+    { name: `${p}cut_copper` },
+    { name: `${p}chiseled_copper` },
+    ...['copper_grate', 'copper_door_top', 'copper_door_bottom', 'copper_trapdoor', 'copper_bars', 'copper_chain', 'copper_lantern']
+      .map((n): TextureDef => ({ name: p + n, cutout: true })),
+  ]),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

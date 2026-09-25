@@ -5,6 +5,7 @@
 // ni si Web Audio no está disponible (p. ej. navegadores headless de pruebas).
 import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
+import { buildCopperSfx } from './copperSounds'; // Fase 6.5 (cobre)
 import { AmbienceController } from './ambience';
 import {
   buildArrowHit,
@@ -388,6 +389,11 @@ export class AudioEngine {
   playRaidSfx(kind: string, pos: Vec3 | null): void {
     const build = (ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number) => buildRaidSfx(ctx, noise, kind, dest, now);
     this.safe(() => (pos ? this.spawnPositional(pos, build, 0.5) : this.spawnLocal(0.4, build)));
+  }
+
+  /** Fase 6.5 (cobre): encerar o raspar un bloque de cobre en `pos`. */
+  playCopperSfx(kind: 'wax' | 'scrape', pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildCopperSfx(ctx, noise, kind, dest, now)));
   }
 
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */

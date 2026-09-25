@@ -11,6 +11,7 @@ import {
   CHISELED_RED_SANDSTONE, CINNABAR, POLISHED_CINNABAR, CINNABAR_BRICKS, CHISELED_CINNABAR, SULFUR, POLISHED_SULFUR,
   SULFUR_BRICKS, CHISELED_SULFUR,
 } from './blocks';
+import { COPPER, OXIDATION_STAGES } from './blocks'; // Fase 6.5 (cobre)
 
 const table = new Map<number, ItemStack[]>();
 const add = (input: number, id: number, count = 1) => {
@@ -76,6 +77,22 @@ const CUT_EDGES: readonly (readonly [number, number])[] = [
       if (b !== input) addOnce(input, b, 1);
       for (const [id, n] of shapes.get(b) ?? []) addOnce(input, id, n);
     }
+  }
+}
+
+// Fase 6.5 (cobre): de cada bloque de cobre (en su fase y con su cera) sale cobre cortado, grabado,
+// rejillas, losas y escaleras; del cobre cortado, losas, escaleras y cobre grabado.
+for (let s = 0; s < OXIDATION_STAGES; s++) {
+  for (const w of [0, 1]) {
+    const block = COPPER.block[w][s], cut = COPPER.cut[w][s];
+    add(block, cut, 4);
+    add(block, COPPER.cut_slab[w][s], 8);
+    add(block, COPPER.cut_stairs[w][s], 4);
+    add(block, COPPER.chiseled[w][s], 4);
+    add(block, COPPER.grate[w][s], 4);
+    add(cut, COPPER.cut_slab[w][s], 2);
+    add(cut, COPPER.cut_stairs[w][s]);
+    add(cut, COPPER.chiseled[w][s]);
   }
 }
 

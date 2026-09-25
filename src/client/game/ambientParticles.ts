@@ -14,6 +14,7 @@ import { DIR_X, DIR_Z } from '../../shared/blockModels';
 import { TerrainGenerator } from '../../shared/world/terrain';
 import { BIOME_MUSHROOM_FIELDS } from '../../shared/world/biomeIds';
 import type { Game } from './Game';
+import { COPPER_TORCH, COPPER_WALL_TORCH } from '../../shared/blocks'; // Fase 6.5 (cobre)
 
 type P3 = [number, number, number];
 
@@ -25,6 +26,8 @@ const SAMPLES = 140;
 
 export class AmbientParticles {
   private torches: P3[] = [];
+  /** Fase 6.5 (cobre): antorchas de cobre (llama verde). */
+  private copperTorches: P3[] = [];
   private furnaces: [number, number, number, number][] = [];
   private fires: P3[] = [];
   private lava: P3[] = [];
@@ -47,6 +50,7 @@ export class AmbientParticles {
     }
     // Fuentes fijas.
     for (const [x, y, z] of this.torches) if (Math.random() < dt * 2.2) fx.torch(x, y, z);
+    for (const [x, y, z] of this.copperTorches) if (Math.random() < dt * 2.2) fx.torch(x, y, z, true); // Fase 6.5 (cobre)
     for (const [x, y, z, f] of this.furnaces) {
       if (Math.random() < dt * 1.2) {
         // Llama junto a la boca del horno y humo encima.
@@ -118,6 +122,7 @@ export class AmbientParticles {
   private scan(px: number, py: number, pz: number): void {
     const world = this.g.world!;
     const torches: P3[] = [], furnaces: [number, number, number, number][] = [], fires: P3[] = [], lava: P3[] = [];
+    const copperTorches: P3[] = []; // Fase 6.5 (cobre)
     for (let dy = -SCAN_H; dy <= SCAN_H; dy++) {
       for (let dz = -SCAN_R; dz <= SCAN_R; dz++) {
         for (let dx = -SCAN_R; dx <= SCAN_R; dx++) {
@@ -129,6 +134,12 @@ export class AmbientParticles {
           } else if (familyBase(b) === WALL_TORCH) {
             const f = stateProps(b)?.facing ?? 0;
             if (torches.length < 64) torches.push([x + 0.5 - DIR_X[f] * 0.12, y + 0.84, z + 0.5 - DIR_Z[f] * 0.12]);
+          } else if (b === COPPER_TORCH || familyBase(b) === COPPER_WALL_TORCH) {
+            // Fase 6.5 (cobre): la llama en la punta, como en las normales.
+            const f = b === COPPER_TORCH ? -1 : stateProps(b)?.facing ?? 0;
+            if (copperTorches.length < 64) {
+              copperTorches.push(f < 0 ? [x + 0.5, y + 0.7, z + 0.5] : [x + 0.5 - DIR_X[f] * 0.12, y + 0.84, z + 0.5 - DIR_Z[f] * 0.12]);
+            }
           } else if (isLitFurnace(b)) {
             if (furnaces.length < 16) furnaces.push([x, y, z, blockFacing(b)]);
           } else if (familyBase(b) === CAMPFIRE) {
@@ -138,6 +149,7 @@ export class AmbientParticles {
       }
     }
     this.torches = torches;
+    this.copperTorches = copperTorches;
     this.furnaces = furnaces;
     this.fires = fires;
     this.lava = lava;
