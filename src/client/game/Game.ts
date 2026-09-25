@@ -454,9 +454,9 @@ export class Game {
       this.input.gameKeys = true;
       this.input.requestLock();
     };
-    ui.onInventoryPick = (id, slot) => {
+    ui.onInventoryPick = (id, slot, dmg) => {
       const s = slot ?? this.selected;
-      this.inv.set(s, { id, count: maxStack(id) });
+      this.inv.set(s, { id, count: maxStack(id), ...(dmg ? { dmg } : {}) }); // Fase 7 (pociones): con su tipo
       this.refreshHotbar(true);
       this.equipT = 1;
     };

@@ -7,6 +7,7 @@ import {
   EFFECT_HUNGER, EFFECT_FIRE_RESISTANCE, EFFECT_NIGHT_VISION, EFFECT_WATER_BREATHING, EFFECT_ABSORPTION, effectLevel,
   EFFECT_BAD_OMEN, EFFECT_HERO,
   EFFECT_RESISTANCE, EFFECT_CONDUIT_POWER, // Fase 6.5 (equipo)
+  EFFECT_JUMP_BOOST, EFFECT_INVISIBILITY, EFFECT_SLOW_FALLING, EFFECT_LUCK, EFFECT_UNLUCK, // Fase 7 (pociones)
 } from '../../shared/effects';
 import type { StatusEffects } from '../game/statusEffects';
 
@@ -58,6 +59,23 @@ const GLYPHS: Record<number, string[]> = {
   ],
   [EFFECT_CONDUIT_POWER]: [
     '..KKKKK..', '.KbbbbaK.', 'KbKKKKKaK', 'KbKwwwKaK', 'KbKwKwKcK', 'KbKwwwKcK', 'KaKKKKKcK', '.KaaaccK.', '..KKKKK..',
+  ],
+  // Fase 7 (pociones): la flecha del supersalto, la silueta del invisible, la pluma de la caída lenta y
+  // el trébol de la suerte (mustio en la mala suerte).
+  [EFFECT_JUMP_BOOST]: [
+    '....K....', '...KbK...', '..KbbaK..', '.KbaaacK.', 'KKKaacKKK', '..KaacK..', '..KaacK..', '..KaacK..', '..KKKKK..',
+  ],
+  [EFFECT_INVISIBILITY]: [
+    '...KKK...', '..KbbbK..', '..KbwbK..', '...KbK...', '.KbbbbbK.', 'K.KbbbK.K', '..KbKbK..', '..Kb.bK..', '..KK.KK..',
+  ],
+  [EFFECT_SLOW_FALLING]: [
+    '.......KK', '.....KKbK', '....KbbaK', '...KbbaK.', '..KbbaaK.', '..KbaaK..', '.KbaacK..', '.KacKK...', 'KKK......',
+  ],
+  [EFFECT_LUCK]: [
+    '.KKK.KKK.', 'KbbaKbbaK', 'KbaaKbaaK', '.KKaKaKK.', 'KbbaKbbaK', 'KbaaKaacK', '.KKKKKKK.', '....KcK..', '....KK...',
+  ],
+  [EFFECT_UNLUCK]: [
+    '.KKK.KKK.', 'KccaKbcaK', 'KcaaKcacK', '.KKaKcKK.', 'KbcaKccaK', 'KcacKaccK', '.KKKKKKK.', '...KcK...', '...KK....',
   ],
 };
 

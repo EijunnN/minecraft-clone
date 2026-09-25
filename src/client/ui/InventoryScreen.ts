@@ -21,8 +21,11 @@ import { itemTooltipHtml } from './itemTooltip';
 import { LoomPanel, LOOM_HTML } from './loomScreen';
 import { bookCopy } from '../../shared/books';
 import { stackIconUrl } from './bannerIcons';
+// Fase 7 (pociones): alambique y flechas con efecto.
+import { BREWING_HTML, renderBrewing } from './brewingScreen';
+import { tippedArrowCraft } from '../../shared/potions';
 
-export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom';
+export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom' | 'brewing'; // Fase 7 (pociones): alambique
 
 export interface ScreenHost {
   icons: Map<number, string>;
@@ -193,7 +196,7 @@ export class InventoryScreen {
       this.inv.changed();
       this.render();
     } else if (msg.t === 'cclose') {
-      if (this.kind === 'chest' || this.kind === 'furnace') this.close();
+      if (this.kind === 'chest' || this.kind === 'furnace' || this.kind === 'brewing') this.close();
     }
   }
 
@@ -232,6 +235,8 @@ export class InventoryScreen {
       top = `<h3>${n > 27 ? 'Cofre grande' : this.title || 'Cofre'}</h3><div class="grid g9">${Array.from({ length: n }, (_, i) => `<div class="slot2" data-s="cont:${i}"></div>`).join('')}</div>`;
     } else if (kind === 'loom') {
       top = LOOM_HTML;
+    } else if (kind === 'brewing') {
+      top = BREWING_HTML; // Fase 7 (pociones)
     } else if (kind === 'stonecutter') {
       top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
         `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
@@ -315,6 +320,8 @@ export class InventoryScreen {
     // Fase 6.5 (equipo): los fuegos artificiales miran las pilas (los colores de las estrellas).
     const fw = fireworkCraft(this.grid);
     if (fw) return fw;
+    const tipped = tippedArrowCraft(this.grid); // Fase 7 (pociones): flechas con efecto
+    if (tipped) return tipped;
     const m = matchRecipe(this.grid.map((s) => (s ? s.id : 0)), this.gridSize);
     return m ? m.out : bookCopy(this.grid)?.out ?? null; // Fase 6.5: copias de un libro escrito
   }
@@ -640,6 +647,7 @@ export class InventoryScreen {
     }
     if (this.kind === 'stonecutter') this.renderCuts();
     if (this.kind === 'loom') this.loom.render(this.panel, this.grid);
+    if (this.kind === 'brewing') renderBrewing(this.panel, this.container); // Fase 7 (pociones)
     const out = this.slotEls.get('out');
     if (out) out.classList.toggle('ready', !!this.result());
     this.placeCursor();

@@ -5,12 +5,13 @@ import { KEY_ACTIONS, assignKey, defaultKeybinds, keyLabel } from '../game/keybi
 import { itemTooltipHtml } from './itemTooltip';
 import { ChatCompletion } from './chatCompletion';
 import { BLOCKS, INVENTORY_ORDER, type BlockCategory } from '../../shared/blocks';
-import { CREATIVE_ITEMS, ITEMS, itemName, type ItemStack } from '../../shared/items';
+import { CREATIVE_ITEMS, ITEMS, type ItemStack } from '../../shared/items';
 import type { GameMode } from '../../shared/protocol';
 import { applyPreset, saveSettings, type Settings } from '../game/settings';
 import type { PresetName } from '../render/Renderer';
 import type { HudIcons } from './hudIcons';
 import { stackIconUrl } from './bannerIcons'; // Fase 6.5 (libros y estandartes)
+import { CREATIVE_POTIONS, CREATIVE_BREWING, stackName } from '../../shared/potions'; // Fase 7 (pociones)
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -20,7 +21,7 @@ export interface NameTagInfo {
   pos: [number, number] | null;
 }
 
-type InvCategory = BlockCategory | 'todo' | 'objetos';
+type InvCategory = BlockCategory | 'todo' | 'objetos' | 'pociones'; // Fase 7 (pociones)
 
 const CATEGORIES: { id: InvCategory; label: string }[] = [
   { id: 'todo', label: 'Todo' },
@@ -30,6 +31,7 @@ const CATEGORIES: { id: InvCategory; label: string }[] = [
   { id: 'minerales', label: 'Minerales' },
   { id: 'colores', label: 'Colores' },
   { id: 'objetos', label: 'Objetos' },
+  { id: 'pociones', label: 'Pociones' }, // Fase 7 (pociones): alambique, ingredientes y pociones
 ];
 
 function escapeHtml(s: string): string {
@@ -49,7 +51,8 @@ export class UI {
   /** Nombres de los jugadores conectados (para autocompletar en el chat). */
   playerNames: () => string[] = () => [];
   onChatClosed: (() => void) | null = null;
-  onInventoryPick: ((id: number, slot: number | null) => void) | null = null;
+  /** Fase 7 (pociones): `dmg`, el tipo de las pociones. */
+  onInventoryPick: ((id: number, slot: number | null, dmg?: number) => void) | null = null;
   onInventorySelectSlot: ((slot: number) => void) | null = null;
   onSettingsChanged: ((s: Settings) => void) | null = null;
   onFullscreen: (() => void) | null = null;
@@ -65,6 +68,8 @@ export class UI {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private invCategory: InvCategory = 'todo';
   private hoveredItem: number | null = null;
+  /** Fase 7 (pociones): tipo de la poción bajo el ratón. */
+  private hoveredDmg = 0;
   private tooltip: HTMLDivElement;
   private settingsReturn: 'menu' | 'pause' = 'menu';
   hotbar: (ItemStack | null)[] = [];
@@ -176,7 +181,7 @@ export class UI {
       if (!this.isInventoryOpen() || !this.hoveredItem) return;
       const n = Number(e.key);
       if (n >= 1 && n <= 9) {
-        this.onInventoryPick?.(this.hoveredItem, n - 1);
+        this.onInventoryPick?.(this.hoveredItem, n - 1, this.hoveredDmg);
         this.renderInvHotbar();
       }
     });
@@ -580,27 +585,33 @@ export class UI {
     grid.innerHTML = '';
     const q = $<HTMLInputElement>('invsearch').value.trim().toLowerCase();
     const ids: number[] = [];
-    if (this.invCategory !== 'objetos') {
+    if (this.invCategory !== 'objetos' && this.invCategory !== 'pociones') {
       for (const id of INVENTORY_ORDER) {
         if (this.invCategory === 'todo' || BLOCKS[id].category === this.invCategory) ids.push(id);
       }
     }
     if (this.invCategory === 'todo' || this.invCategory === 'objetos') ids.push(...CREATIVE_ITEMS);
-    for (const id of ids) {
-      const name = itemName(id);
+    // Fase 7 (pociones): su pestaña (alambique, frascos e ingredientes) y cada poción con su tipo.
+    if (this.invCategory === 'pociones') ids.push(...CREATIVE_BREWING);
+    const stacks: ItemStack[] = ids.map((id) => ({ id, count: 1 }));
+    if (this.invCategory === 'todo' || this.invCategory === 'pociones') stacks.push(...CREATIVE_POTIONS);
+    for (const st of stacks) {
+      const id = st.id;
       if (!ITEMS[id]) continue;
+      const name = stackName(st);
       if (q && !name.toLowerCase().includes(q)) continue;
       const item = document.createElement('div');
       item.className = 'invitem';
-      item.innerHTML = `<div class="ico" style="background-image:url(${this.icons.get(id) ?? ''})"></div>`;
+      item.innerHTML = `<div class="ico" style="background-image:url(${stackIconUrl(st, this.icons) ?? ''})"></div>`;
       item.addEventListener('click', () => {
         this.onUiSound?.('click');
-        this.onInventoryPick?.(id, null);
+        this.onInventoryPick?.(id, null, st.dmg);
         this.renderInvHotbar();
       });
       item.addEventListener('mouseenter', () => {
         this.hoveredItem = id;
-        this.tooltip.innerHTML = itemTooltipHtml({ id, count: 1 });
+        this.hoveredDmg = st.dmg ?? 0;
+        this.tooltip.innerHTML = itemTooltipHtml(st);
         this.tooltip.classList.remove('hidden');
       });
       item.addEventListener('mousemove', (e) => {

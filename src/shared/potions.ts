@@ -11,8 +11,9 @@ import {
   POTION, SPLASH_POTION, LINGERING_POTION, TIPPED_ARROW, SPLASH_HARMING, SPLASH_SLOWNESS, SPLASH_POISON, ARROW, NETHER_WART,
   REDSTONE, GLOWSTONE_DUST, FERMENTED_SPIDER_EYE, GUNPOWDER, DRAGON_BREATH, SUGAR, GLISTERING_MELON_SLICE, SPIDER_EYE,
   GHAST_TEAR, BLAZE_POWDER, MAGMA_CREAM, RABBIT_FOOT, GOLDEN_CARROT, PUFFERFISH, TURTLE_HELMET, PHANTOM_MEMBRANE, itemName,
-  GLASS_BOTTLE, type ItemStack,
+  GLASS_BOTTLE, BLAZE_ROD, type ItemStack,
 } from './items';
+import { BREWING_STAND } from './blocks';
 import { MOBS, MOB_WITCH } from './mobs';
 import { ARMOR_BYPASS } from './armor';
 
@@ -273,6 +274,13 @@ export function tippedArrowCraft(grid: readonly (ItemStack | null)[]): ItemStack
 /** Todas las pociones (frasco, arrojadiza y persistente de cada tipo) y las flechas con efecto. */
 export const CREATIVE_POTIONS: readonly ItemStack[] = (['drink', 'splash', 'lingering', 'arrow'] as const).flatMap((kind) =>
   POTIONS.filter((p) => kind !== 'arrow' || !isBasePotion(p.id) || p.id === PT_WATER).map((p) => potionStack(kind, p.id)));
+
+/** Pestaña de las pociones del inventario creativo: el alambique, los frascos y los ingredientes. */
+export const CREATIVE_BREWING: readonly number[] = [
+  BREWING_STAND, GLASS_BOTTLE, NETHER_WART, REDSTONE, GLOWSTONE_DUST, FERMENTED_SPIDER_EYE, GUNPOWDER, DRAGON_BREATH, SUGAR,
+  RABBIT_FOOT, GLISTERING_MELON_SLICE, SPIDER_EYE, PUFFERFISH, MAGMA_CREAM, GOLDEN_CARROT, BLAZE_ROD, BLAZE_POWDER, GHAST_TEAR,
+  TURTLE_HELMET, PHANTOM_MEMBRANE, ARROW,
+];
 
 // ------------------------------------------------------------------ descripción
 

@@ -70,7 +70,8 @@ export class ServerEvents {
           const variant = furnaceVariant(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
           // Fase 6 (aldeanos): el barril se abre como un cofre con su propio título.
           const barrel = isBarrel(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
-          this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, barrel ? 'Barril' : c.kind === 'chest' ? '' : ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]);
+          if (c.kind === 'brewing') this.g.openScreen('brewing', pos); // Fase 7 (pociones): alambique
+          else this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, barrel ? 'Barril' : c.kind === 'chest' ? '' : ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]);
           this.g.audio.playUi('open');
         }
         if (this.g.screen.isOpen() && same(this.g.screen.containerPos)) this.g.screen.setContainer(c);
