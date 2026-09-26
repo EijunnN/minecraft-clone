@@ -239,3 +239,24 @@ test('los bits de estado de la fase 7 no se pisan', () => {
   for (let i = 0; i < bits.length; i++) for (let k = i + 1; k < bits.length; k++) assert.equal(bits[i] & bits[k], 0, `${i} y ${k}`);
   assert.equal(STATE_INVISIBLE & STATE_GLOWING, 0);
 });
+
+// Fase 7.5 (estructuras y criaturas del mundo normal): Deep Dark (sculk, pizarra reforzada, bloques de
+// alma), huevos de las criaturas nuevas, eco, brújula de recuperación y disco 5; Sigilo rápido y las
+// criaturas nuevas.
+import { SCULK, REINFORCED_DEEPSLATE, SOUL_LANTERN } from '../src/shared/blocks';
+import { ECHO_SHARD, RECOVERY_COMPASS, DISC_FRAGMENT_5, MUSIC_DISC_5 } from '../src/shared/items';
+import { SWIFT_SNEAK } from '../src/shared/enchantments';
+import {
+  MOB_WARDEN, MOB_GUARDIAN, MOB_ELDER_GUARDIAN, MOB_ALLAY, MOB_BAT, MOB_OCELOT, MOB_MOOSHROOM, MOB_TRADER_LLAMA,
+  MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE,
+} from '../src/shared/mobs';
+test('los ids de la fase 7.5 no cambian', () => {
+  assert.deepEqual([SCULK, REINFORCED_DEEPSLATE, SOUL_LANTERN], [5420, 5525, 5534]);
+  assert.deepEqual([SPAWN_EGGS.guardian, SPAWN_EGGS.allay, ECHO_SHARD, RECOVERY_COMPASS, DISC_FRAGMENT_5, MUSIC_DISC_5], [599, 608, 609, 610, 611, 612]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 5536), 488954500, 'huella de los bloques');
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 256, 613), 1924479586, 'huella de los objetos');
+  assert.equal(SWIFT_SNEAK, 38);
+  assert.equal(keyPrint(ENCHANTS.map((e) => e?.key), 0, 39), 1062139658, 'huella de los encantamientos');
+  assert.deepEqual([MOB_WARDEN, MOB_GUARDIAN, MOB_ELDER_GUARDIAN, MOB_ALLAY], [70, 73, 74, 76]);
+  assert.deepEqual([MOB_BAT, MOB_OCELOT, MOB_MOOSHROOM, MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE], [78, 79, 80, 81, 82, 83]);
+});
