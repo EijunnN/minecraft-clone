@@ -6,6 +6,7 @@ import { MAP_SIZE } from '../../shared/maps';
 import { MapImage } from './maps';
 import { structureMapOf } from '../../shared/structureMaps'; // Fase 7.5 (océano)
 import { structureMapArea } from '../../shared/structureMapData'; // Fase 7.5 (mansión): escala y estilo
+import { mapZoom, mapLocked, mapArea } from '../../shared/mapOps'; // Fase 7.6: mapas ampliados y bloqueados
 import { structureMarkIcon } from './explorerMarks';
 import type { Game } from './Game';
 import '../ui/navigation.css';
@@ -35,11 +36,12 @@ export class Navigation {
    * Imagen de un mapa (se crea al verlo por primera vez y se sigue completando). Fase 7.5 (mansión): los
    * mapas de estructura (tesoro y explorador) tienen su propia zona y escala y el estilo de exploración.
    */
-  imageOf(key: number, area?: { x0: number; z0: number; scale: number }): MapImage {
-    const id = area ? `${area.scale}:${area.x0},${area.z0}` : key;
+  imageOf(key: number, area?: { x0: number; z0: number; scale: number }, explorer = !!area, locked = false): MapImage {
+    // Fase 7.6: el bloqueado deja de refrescarse, así que no comparte imagen con el que no lo está.
+    const id = `${area ? `${area.scale}:${area.x0},${area.z0}` : key}${explorer ? 'e' : ''}${locked ? 'L' : ''}`;
     let img = this.images.get(id);
     if (!img) {
-      img = new MapImage(key, area);
+      img = new MapImage(key, area, explorer);
       this.images.set(id, img);
       if (this.images.size > 12) this.images.delete(this.images.keys().next().value!);
     }
@@ -59,10 +61,13 @@ export class Navigation {
       document.body.appendChild(this.mapEl);
     }
     // Fase 7.5 (mansión): un mapa de estructura se dibuja a su escala, centrado en la celda del objetivo.
+    // Fase 7.6: un mapa ampliado se dibuja a su escala; uno bloqueado, una vez dibujado, ya no cambia.
     const target = structureMapOf(g.heldStack);
-    const img = target ? this.imageOf(key, structureMapArea(target.kind, target.x, target.z)) : this.imageOf(key);
+    const zoom = mapZoom(g.heldStack), locked = mapLocked(g.heldStack);
+    const img = target ? this.imageOf(key, structureMapArea(target.kind, target.x, target.z), true, locked)
+      : this.imageOf(key, zoom ? mapArea(key, zoom) : undefined, false, locked);
     // Unos milisegundos por fotograma: se dibuja entero en menos de un segundo y luego se refresca.
-    img.step(g.world, img.passes === 0 ? 6 : 1.5);
+    if (!locked || img.passes === 0) img.step(g.world, img.passes === 0 ? 6 : 1.5);
     const el = this.mapEl;
     el.style.display = 'block';
     if (this.shown !== img) {

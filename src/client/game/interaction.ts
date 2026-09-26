@@ -43,6 +43,7 @@ import { TRIDENT } from '../../shared/items';
 import { MOB_ALLAY } from '../../shared/allay'; // Fase 7.5 (mansión)
 import { allayCanInteract } from './allayClient';
 import { SWEET_BERRY_BUSH, isWaterlogged } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { CARTOGRAPHY_TABLE } from '../../shared/blocks'; // Fase 7.6: mesa de cartografía
 import { withWater, emptyAfterPlayerBreak } from '../../shared/blocks'; // Fase 7: anegar con el cubo y el hielo que deja agua
 import { levelIn } from '../../shared/enchantEffects';
 import { SILK_TOUCH } from '../../shared/enchantments';
@@ -211,8 +212,8 @@ export class Interaction {
         this.g.swing(true);
         return;
       }
-      if (hit.id === CRAFTING_TABLE || familyBase(hit.id) === STONECUTTER) {
-        this.g.openScreen(hit.id === CRAFTING_TABLE ? 'table' : 'stonecutter', null);
+      if (hit.id === CRAFTING_TABLE || familyBase(hit.id) === STONECUTTER || hit.id === CARTOGRAPHY_TABLE) {
+        this.g.openScreen(hit.id === CRAFTING_TABLE ? 'table' : hit.id === CARTOGRAPHY_TABLE ? 'cartography' : 'stonecutter', null); // Fase 7.6
         this.g.audio.playUi('open');
         return;
       }

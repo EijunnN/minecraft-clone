@@ -12,6 +12,8 @@ import { TEXTURE_DEFS, textureLayer } from '../../shared/textureDefs';
 import type { BlockTextures } from './BlockTextures';
 import type { ItemSprites } from '../textures/itemSprites';
 import { potionSpriteLayer } from '../textures/potionSprites'; // Fase 7 (pociones)
+import { SHIELD } from '../../shared/items';
+import { decoratedShieldRGBA, parseShieldKey } from './shieldArt'; // Fase 7.6: escudos con estandarte
 
 export interface ItemModel {
   vao: WebGLVertexArrayObject;
@@ -44,6 +46,8 @@ const NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0,
 const CU = [0, 1, 1, 0];
 const CV = [1, 1, 0, 0];
 const MAX_QUADS = 4096;
+/** Fase 7.6: capas libres del atlas para los escudos decorados que se van viendo (se reutilizan). */
+const SHIELD_SLOTS = 16;
 
 /** Fase 7 (encantamientos): reloj del brillo (segundos, acotado para no perder precisión). */
 export function glintTime(): number {
@@ -59,6 +63,9 @@ export class ItemRenderer {
   private shadowProg: Program;
   private index: WebGLBuffer;
   private cache = new Map<string, ItemModel>();
+  /** Fase 7.6: primera capa libre del atlas y decoración de escudo que ocupa cada una (por orden de uso). */
+  private shieldBase: number;
+  private shieldSlots: string[] = [];
 
   constructor(gl: GL, caps: GLCaps, blocks: BlockTextures, sprites: ItemSprites) {
     this.gl = gl;
@@ -68,10 +75,12 @@ export class ItemRenderer {
     this.shadowProg = new Program(gl, { name: 'item3d-shadow', vs: ITEM3D_SHADOW_VS, fs: ITEM3D_SHADOW_FS });
     // Atlas de sprites como TEXTURE_2D_ARRAY sRGB con mipmaps.
     const count = Math.max(1, sprites.count);
+    this.shieldBase = count;
+    const all = new Uint8Array((count + SHIELD_SLOTS) * 16 * 16 * 4);
+    if (sprites.count) all.set(sprites.rgba);
     this.spriteTex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.spriteTex);
-    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.SRGB8_ALPHA8, 16, 16, count, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-      sprites.count ? sprites.rgba : new Uint8Array(16 * 16 * 4));
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.SRGB8_ALPHA8, 16, 16, count + SHIELD_SLOTS, 0, gl.RGBA, gl.UNSIGNED_BYTE, all);
     gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -162,7 +171,8 @@ export class ItemRenderer {
    * Modelo de un objeto (bloque o sprite). null si no se puede dibujar. Fase 7 (pociones): `dmg`, el tipo
    * de las pociones y las flechas con efecto (cada uno con su color).
    */
-  model(id: number, dmg = 0): ItemModel | null {
+  model(id: number, dmg = 0, decor: string | null = null): ItemModel | null {
+    if (decor && id === SHIELD) return this.shieldModel(decor); // Fase 7.6
     const layer = dmg > 0 ? potionSpriteLayer(id, dmg) : -1;
     if (layer >= 0 && layer !== itemSpriteIndex(id)) {
       const pk = 'p' + layer;
@@ -202,6 +212,42 @@ export class ItemRenderer {
     this.cache.set(key, m);
     return m;
   }
+
+  /**
+   * Fase 7.6: escudo con el dibujo de un estandarte. Cada decoración ocupa una de las capas libres del
+   * atlas; cuando se acaban, la menos usada deja su sitio.
+   */
+  private shieldModel(decor: string): ItemModel | null {
+    const key = 'sh' + decor;
+    const hit = this.cache.get(key);
+    if (hit) {
+      this.shieldSlots.push(this.shieldSlots.splice(this.shieldSlots.indexOf(decor), 1)[0]);
+      return hit;
+    }
+    const d = parseShieldKey(decor);
+    const s = itemSpriteIndex(SHIELD);
+    if (!d || s < 0) return null;
+    let slot = this.shieldSlots.length;
+    if (slot >= SHIELD_SLOTS) {
+      const old = this.shieldSlots.shift()!;
+      slot = this.shieldIndex.get(old)!;
+      this.shieldIndex.delete(old);
+      this.cache.delete('sh' + old);
+    }
+    const layer = this.shieldBase + slot;
+    const rgba = decoratedShieldRGBA(this.spriteRGBA, s * 256 * 4, d.base, d.layers);
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.spriteTex);
+    gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, 16, 16, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+    gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
+    const m = this.upload(this.extrudeData(rgba, 0, layer), false, true, true);
+    this.shieldSlots.push(decor);
+    this.shieldIndex.set(decor, slot);
+    this.cache.set(key, m);
+    return m;
+  }
+
+  private shieldIndex = new Map<string, number>();
 
   /** Cubo de un bloque concreto (bloques que caen). */
   blockModel(block: number): ItemModel {

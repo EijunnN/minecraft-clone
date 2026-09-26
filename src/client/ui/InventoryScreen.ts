@@ -26,10 +26,16 @@ import { BREWING_HTML, renderBrewing } from './brewingScreen';
 import { tippedArrowCraft } from '../../shared/potions';
 import { paintGlint } from './glint'; // Fase 7 (encantamientos)
 import { EnchantPanel, AnvilPanel, GrindstonePanel, type WorkHost, type WorkPanel } from './enchantScreens';
+// Fase 7.6: mesa de cartografía, ampliar mapas en la mesa de trabajo, reparar juntando dos y escudo con estandarte.
+import { cartographyResult, mapExtendCraft } from '../../shared/mapOps';
+import { FILLED_MAP, EMPTY_MAP, PAPER } from '../../shared/items';
+import { GLASS_PANE } from '../../shared/blocks';
+import { repairCraft, shieldDecorCraft } from '../../shared/craftSpecials';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom'
   | 'brewing' // Fase 7 (pociones): alambique
-  | 'enchant' | 'anvil' | 'grindstone'; // Fase 7 (encantamientos)
+  | 'enchant' | 'anvil' | 'grindstone' // Fase 7 (encantamientos)
+  | 'cartography'; // Fase 7.6: mesa de cartografía
 
 export interface ScreenHost {
   icons: Map<number, string>;
@@ -291,6 +297,11 @@ export class InventoryScreen {
       top = BREWING_HTML; // Fase 7 (pociones)
     } else if (this.work) {
       top = this.work.html(); // Fase 7 (encantamientos)
+    } else if (kind === 'cartography') {
+      // Fase 7.6: el mapa arriba y el material debajo (papel, mapa vacío o panel de cristal).
+      top = `<h3>Mesa de cartografía</h3><div class="cutter carto"><div class="carto-in">` +
+        `<div class="slot2" data-s="grid:0" title="Mapa"></div><div class="slot2" data-s="grid:1" title="Papel, mapa vacío o panel de cristal"></div></div>` +
+        `<div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
     } else if (kind === 'stonecutter') {
       top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
         `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
@@ -371,7 +382,11 @@ export class InventoryScreen {
     }
     if (this.kind === 'loom') return this.loom.result(this.grid);
     if (this.work) return this.work.result(this.grid); // Fase 7 (encantamientos)
+    if (this.kind === 'cartography') return cartographyResult(this.grid[0], this.grid[1]); // Fase 7.6
     if (this.kind !== 'player' && this.kind !== 'table') return null;
+    // Fase 7.6: ampliar un mapa con papel, reparar juntando dos objetos y el escudo con estandarte.
+    const special = (this.kind === 'table' ? mapExtendCraft(this.grid) : null) ?? repairCraft(this.grid) ?? shieldDecorCraft(this.grid);
+    if (special) return special;
     // Fase 6.5 (equipo): los fuegos artificiales miran las pilas (los colores de las estrellas).
     const fw = fireworkCraft(this.grid);
     if (fw) return fw;
@@ -605,6 +620,17 @@ export class InventoryScreen {
         const g = this.grid[i];
         if (limit <= 0 || (g && (!sameKind(g, s) || g.count >= limit))) continue;
         const n = Math.min(limit - (g?.count ?? 0), s.count);
+        this.grid[i] = { ...s, count: (g?.count ?? 0) + n };
+        this.inv.slots[r.i] = s.count > n ? { ...s, count: s.count - n } : null;
+        return;
+      }
+    }
+    // Fase 7.6: a la mesa de cartografía, el mapa arriba y el material (papel, mapa vacío, cristal) abajo.
+    if (this.kind === 'cartography') {
+      const i = s.id === FILLED_MAP ? 0 : s.id === PAPER || s.id === EMPTY_MAP || s.id === GLASS_PANE ? 1 : -1;
+      const g = i >= 0 ? this.grid[i] : null;
+      if (i >= 0 && (!g || (sameKind(g, s) && g.count < maxStack(s.id)))) {
+        const n = Math.min(maxStack(s.id) - (g?.count ?? 0), s.count);
         this.grid[i] = { ...s, count: (g?.count ?? 0) + n };
         this.inv.slots[r.i] = s.count > n ? { ...s, count: s.count - n } : null;
         return;

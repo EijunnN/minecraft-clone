@@ -73,6 +73,7 @@ export class RemotePlayer {
       sneaking: false, light: [1, 0], armor: armorFrom(info.a), held: itemFrom(info.h), offhand: itemFrom(info.o),
       glint: (Number(info.g) | 0) & 0x3f, // Fase 7 (encantamientos)
       heldDmg: potionFrom(info.hp), offhandDmg: potionFrom(info.op), // Fase 7 (remate)
+      heldDecor: info.hs ?? null, offhandDecor: info.os ?? null, // Fase 7.6: escudos decorados
     };
     this.lastX = info.p[0];
     this.lastZ = info.p[2];
@@ -80,12 +81,15 @@ export class RemotePlayer {
 
   push(
     p: [number, number, number], r: [number, number], s: number, a?: number[], h?: number, o?: number, g?: number, hp?: number, op?: number,
+    hs?: string, os?: string,
   ): void {
     if (!Array.isArray(p) || !Array.isArray(r) || ![p[0], p[1], p[2], r[0], r[1]].every(Number.isFinite)) return;
     this.view.glint = (Number(g) | 0) & 0x3f; // Fase 7 (encantamientos): cada 'pos' trae el brillo (sin él, nada)
     // Fase 7 (remate): y el tipo de poción de cada mano (sin él, agua).
     this.view.heldDmg = potionFrom(hp);
     this.view.offhandDmg = potionFrom(op);
+    this.view.heldDecor = typeof hs === 'string' ? hs : null; // Fase 7.6
+    this.view.offhandDecor = typeof os === 'string' ? os : null;
     // La armadura y lo que lleva en las manos se cambian al instante (no se interpolan).
     if (a !== undefined) this.view.armor = armorFrom(a);
     if (h !== undefined) this.view.held = itemFrom(h);

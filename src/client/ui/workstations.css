@@ -89,3 +89,14 @@
   border-color: #f2d25a;
   color: #f2d25a;
 }
+
+/* Fase 7.6: mesa de cartografía: el mapa y el material uno sobre otro, y el resultado. */
+.cutter.carto {
+  justify-content: center;
+}
+
+.carto-in {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

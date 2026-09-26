@@ -1,4 +1,5 @@
 // Punto de entrada: prepara texturas, renderizador, menú y arranca el juego.
+import { setShieldIconSprites } from './ui/shieldIcons'; // Fase 7.6
 import { parseSeed } from '../shared/seed';
 import { loadRecentWorlds, rememberWorld, forgetWorld } from './ui/recentWorlds';
 import './style.css';
@@ -73,6 +74,7 @@ async function boot(): Promise<void> {
   ui.icons = buildItemIcons(buildIcons(textures), sprites);
   prepareBannerIcons(ui.icons); // Fase 6.5 (libros y estandartes)
   addPotionIcons(ui.icons, sprites); // Fase 7 (pociones): una por tipo
+  setShieldIconSprites(sprites); // Fase 7.6: escudos decorados
   ui.hudIcons = buildHudIcons();
 
   // Renderizador (compila shaders mientras el jugador está en el menú).

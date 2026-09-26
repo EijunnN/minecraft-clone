@@ -60,17 +60,17 @@ export class MapImage {
   passes = 0;
 
   /**
-   * Fase 7.5 (mansión): `explorer`, mapa de estructura (del tesoro o de explorador): su esquina, su escala
-   * (bloques por píxel) y el estilo de Minecraft para lo que aún no se ha visto (tierra anaranjada y agua a
-   * rayas).
+   * `area`: zona propia del mapa (su esquina y su escala en bloques por píxel): la de un mapa de estructura
+   * (fase 7.5) o la de un mapa ampliado (fase 7.6). `explorer`: el estilo de Minecraft de los mapas de
+   * estructura para lo que aún no se ha visto (tierra anaranjada y agua a rayas).
    */
   readonly scale: number;
   readonly explorer: boolean;
 
-  constructor(readonly key: number, explorer?: { x0: number; z0: number; scale: number }) {
-    [this.x0, this.z0] = explorer ? [explorer.x0, explorer.z0] : mapOrigin(key);
-    this.scale = explorer?.scale ?? 1;
-    this.explorer = !!explorer;
+  constructor(readonly key: number, area?: { x0: number; z0: number; scale: number }, explorer = !!area) {
+    [this.x0, this.z0] = area ? [area.x0, area.z0] : mapOrigin(key);
+    this.scale = area?.scale ?? 1;
+    this.explorer = explorer;
     this.canvas.width = MAP_SIZE;
     this.canvas.height = MAP_SIZE;
     this.ctx = this.canvas.getContext('2d')!;

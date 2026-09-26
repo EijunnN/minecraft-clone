@@ -16,6 +16,7 @@ import { effectsView } from './effectsClient';
 import { fishingLines } from './fishingLines';
 import { leashLines } from './leashLines';
 import { guardianBeams } from './guardianBeams';
+import { shieldDecorKey } from '../render/shieldArt';
 import type { FrameState } from '../render/Renderer';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import type { ClientEntity } from './ClientEntities';
@@ -57,6 +58,7 @@ export function selfView(g: Game, eye: EyeLight): RemotePlayerView {
     bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
     swing: g.swingT >= 0 ? g.swingT : 0, sneaking: p.sneaking, sleeping: !!g.life.sleeping, prone: p.pose !== 'stand', held: g.heldId, offhand: g.inv.offhand?.id ?? 0,
     heldDmg: hands.hp, offhandDmg: hands.op, // Fase 7 (remate)
+    heldDecor: shieldDecorKey(g.heldStack), offhandDecor: shieldDecorKey(g.inv.offhand), // Fase 7.6
     use: ((k) => (k === 'none' ? null : k))(useLook(g.interaction.use).kind), light: [eye.skyAtEye, (eye.le & 15) / 15],
     armor: g.inv.armorIds(),
     riding: g.riding.active || g.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
@@ -147,6 +149,8 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     heldItem: dead ? 0 : g.heldId,
     heldDmg: g.heldStack?.dmg ?? 0, // Fase 7 (pociones): color de la poción
     offhandDmg: g.inv.offhand?.dmg ?? 0,
+    heldDecor: shieldDecorKey(g.heldStack), // Fase 7.6: escudo decorado
+    offhandDecor: shieldDecorKey(g.inv.offhand),
     handUse: useLook(mainUse).amount, // Fase 6.5 (equipo): con la ballesta y el tridente
     handUseKind: useLook(mainUse).kind,
     offhandItem: dead ? 0 : g.inv.offhand?.id ?? 0,

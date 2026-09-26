@@ -6,7 +6,7 @@ import {
 } from '../../protocol';
 import { WORLD_LIMIT, VOID_Y } from '../../constants';
 import { sanitizeStack } from '../../containers';
-import { ITEMS, isValidItem } from '../../items';
+import { ITEMS, SHIELD, isValidItem } from '../../items';
 import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, STATE_GLOWING, MAX_HEALTH_CAP } from '../../effects';
 import { STATE_INVISIBLE, potionKind, isPotionType } from '../../potions';
 import { effectColorFrom } from './potionPlayers';
@@ -18,9 +18,15 @@ function heldPotionType(item: number, raw: unknown): number {
   return potionKind(item) && Number.isInteger(t) && isPotionType(t) ? t : 0;
 }
 
-/** Fase 7 (remate): campos hp y op de un jugador (sólo los que no son agua). */
-export function handPotions(s: Session): { hp?: number; op?: number } {
-  return { ...(s.hp ? { hp: s.hp } : {}), ...(s.op ? { op: s.op } : {}) };
+/** Fase 7.6: decoración del escudo de una mano ('fondo:dibujo.color,...'), sólo si lleva un escudo. */
+const SHIELD_DECOR = /^\d{1,2}(:(\d{1,2}\.\d{1,2}(,\d{1,2}\.\d{1,2}){0,5})?)?$/;
+function shieldDecor(item: number, raw: unknown): string | undefined {
+  return item === SHIELD && typeof raw === 'string' && raw.length <= 40 && SHIELD_DECOR.test(raw) ? raw : undefined;
+}
+
+/** Fase 7 (remate): campos hp y op de un jugador (sólo los que no son agua). Fase 7.6: y los escudos decorados. */
+export function handPotions(s: Session): { hp?: number; op?: number; hs?: string; os?: string } {
+  return { ...(s.hp ? { hp: s.hp } : {}), ...(s.op ? { op: s.op } : {}), ...(s.hs ? { hs: s.hs } : {}), ...(s.os ? { os: s.os } : {}) };
 }
 
 /** Lo que los demás saben de un jugador. */
@@ -47,6 +53,8 @@ export function applyPos(s: Session, msg: Extract<ClientMsg, { t: 'pos' }>): boo
   // Fase 7 (remate): el tipo de poción de cada mano, sólo si lleva una poción o una flecha con efecto.
   s.hp = heldPotionType(s.h, msg.hp);
   s.op = heldPotionType(s.o, msg.op);
+  s.hs = shieldDecor(s.h, msg.hs); // Fase 7.6
+  s.os = shieldDecor(s.o, msg.os);
   // Armadura visible: cada ranura sólo admite su pieza (cabeza, pecho, piernas, pies); lo demás es 0.
   const a = Array.isArray(msg.a) ? msg.a : [];
   s.a = [0, 1, 2, 3].map((slot) => {

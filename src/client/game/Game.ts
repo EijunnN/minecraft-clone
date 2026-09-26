@@ -61,6 +61,7 @@ import { raycastHangings } from './decorInteraction'; // Fase 6.5 (decoración):
 import { EnchantClient } from './enchantClient';
 import { EnchantBooks } from './enchantBooks';
 import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
+import { shieldDecorKey } from '../render/shieldArt'; // Fase 7.6
 
 export interface GameConfig {
   room: string;
@@ -609,11 +610,12 @@ export class Game {
     const off = this.inv.offhand?.id ?? 0;
     const g = this.enchant.glintBits(); // Fase 7 (encantamientos): qué brilla
     const { hp, op } = handPotionTypes(this); // Fase 7 (remate): el color de la poción en cada mano
-    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${ec},${g},${hp},${op}`;
+    const hs = shieldDecorKey(this.heldStack), os = shieldDecorKey(this.inv.offhand); // Fase 7.6: escudos decorados
+    const key = `${q(p.x, 0.05)},${q(p.y, 0.05)},${q(p.z, 0.05)},${q(p.yaw, 0.03)},${q(p.pitch, 0.03)},${s},${this.heldId},${off},${armor},${ec},${g},${hp},${op},${hs},${os}`;
     if (!force && key === this.lastSentKey) return;
     this.net?.send({
       t: 'pos', p: [p.x, p.y, p.z], r: [p.yaw, p.pitch], s, h: this.heldId, o: off, a: armor, ...(ec ? { ec } : {}), ...(g ? { g } : {}),
-      ...(hp ? { hp } : {}), ...(op ? { op } : {}),
+      ...(hp ? { hp } : {}), ...(op ? { op } : {}), ...(hs ? { hs } : {}), ...(os ? { os } : {}),
     });
     this.lastSentKey = key;
   }

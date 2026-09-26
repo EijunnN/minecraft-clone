@@ -33,6 +33,9 @@ export interface Session {
   /** Fase 7 (remate): tipo de poción de lo que lleva en cada mano (PlayerInfo.hp y .op). */
   hp?: number;
   op?: number;
+  /** Fase 7.6: escudo decorado en cada mano (clave de la decoración). */
+  hs?: string;
+  os?: string;
   mode: GameMode;
   lookAt: number;
   lookUntil: number;

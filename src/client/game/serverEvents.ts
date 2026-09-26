@@ -31,7 +31,7 @@ export class ServerEvents {
         break;
       case 'pos': {
         const rp = this.g.remote.get(msg.id);
-        rp?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o, msg.g, msg.hp, msg.op); // Fase 7: g, el brillo; hp y op, las pociones
+        rp?.push(msg.p, msg.r, msg.s, msg.a, msg.h, msg.o, msg.g, msg.hp, msg.op, msg.hs, msg.os); // Fase 7: g, el brillo; hp y op, las pociones
         if (rp) rp.effectColor = Number.isInteger(msg.ec) ? msg.ec! & 0xffffff : 0; // Fase 7 (pociones)
         break;
       }

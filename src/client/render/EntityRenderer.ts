@@ -41,6 +41,9 @@ export interface RemotePlayerView {
   /** Fase 7 (remate): tipo de poción de lo que lleva en cada mano (el color del frasco o de la flecha). */
   heldDmg?: number;
   offhandDmg?: number;
+  /** Fase 7.6: escudo decorado en cada mano (clave de shieldArt). */
+  heldDecor?: string | null;
+  offhandDecor?: string | null;
   /** Lo que está usando: comer, tensar el arco o cubrirse con el escudo. */
   use?: 'eat' | 'bow' | 'block' | null;
   light: [number, number];

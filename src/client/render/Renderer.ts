@@ -129,6 +129,9 @@ export interface FrameState {
   /** Fase 7 (pociones): tipo de las pociones de cada mano (su color). */
   heldDmg?: number;
   offhandDmg?: number;
+  /** Fase 7.6: escudo decorado en cada mano (clave de shieldArt). */
+  heldDecor?: string | null;
+  offhandDecor?: string | null;
   /** Mano secundaria: objeto y su uso (comer o cubrirse con el escudo). */
   offhandItem?: number;
   /** Fase 7 (encantamientos): brillo de lo que se lleva en la mano principal y en la secundaria. */
@@ -993,8 +996,8 @@ export class Renderer {
     const list: ItemDraw[] = [];
     for (const p of s.players) {
       if (p.sleeping) continue;
-      for (const [id, left, dmg] of [[p.held ?? 0, false, p.heldDmg], [p.offhand ?? 0, true, p.offhandDmg]] as const) {
-        const model = id > 0 ? this.items.model(id, dmg) : null; // Fase 7 (remate): con el color de su poción
+      for (const [id, left, dmg, decor] of [[p.held ?? 0, false, p.heldDmg, p.heldDecor], [p.offhand ?? 0, true, p.offhandDmg, p.offhandDecor]] as const) {
+        const model = id > 0 ? this.items.model(id, dmg, decor ?? null) : null; // Fase 7 (remate): con el color de su poción; 7.6: escudos
         if (!model) continue;
         const glint = ((p.glint ?? 0) & (left ? 2 : 1)) !== 0; // Fase 7 (encantamientos)
         const m = this.entities.handMatrix(p, s.camX, s.camY, s.camZ, left);
@@ -1062,16 +1065,17 @@ export class Renderer {
 
   /** Objetos en las manos: la principal a la derecha y la secundaria reflejada a la izquierda. */
   private drawHeld(s: FrameState, aspect: number, bindLighting: (p: Program) => Program): void {
-    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false, s.heldDmg, !!s.heldGlint);
+    if (s.heldItem > 0) this.drawHand(s, aspect, bindLighting, s.heldItem, s.handUseKind, s.handUse, s.handSwing, s.handEquip, false, s.heldDmg, !!s.heldGlint, s.heldDecor ?? null);
     const off = s.offhandItem ?? 0;
-    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true, s.offhandDmg, !!s.offhandGlint);
+    if (off > 0) this.drawHand(s, aspect, bindLighting, off, s.offhandUseKind ?? 'none', s.offhandUse ?? 0, 0, 0, true, s.offhandDmg, !!s.offhandGlint, s.offhandDecor ?? null);
   }
 
   private drawHand(
     s: FrameState, aspect: number, bindLighting: (p: Program) => Program, item: number,
     useKind: FrameState['handUseKind'], handUse: number, handSwing: number, equip: number, left: boolean, dmg = 0, glint = false,
+    decor: string | null = null,
   ): void {
-    const model = this.items.model(item, dmg); // Fase 7 (pociones): con el color de su tipo
+    const model = this.items.model(item, dmg, decor); // Fase 7 (pociones): con el color de su tipo; 7.6: escudos decorados
     if (!model) return;
     const proj = mat4.create();
     mat4.perspective(proj, (70 * Math.PI) / 180, aspect, 0.01, 10);

@@ -532,8 +532,13 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
   vuelven a teñir, bombillas enceradas y fundir menas, herramientas y pepinos de mar) y cuatro habían
   cambiado en 26.x (correa, etiqueta, silla y andamio de bambú; el alto horno lleva piedra lisa).
   Ahora coinciden todas; las 450 que usan objetos que aún no existen llegarán con ellos (fases 8 y 9).
-- **Sistemas sueltos:** mesa de cartografía (ampliar, copiar y bloquear mapas), estandarte en el
-  escudo, reparar juntando dos herramientas, cabeza de esqueleto en la pared y discos que faltan.
+- ✅ **Sistemas sueltos:** mesa de cartografía (ampliar hasta 1:16 con papel, copiar con un mapa vacío y
+  bloquear con un panel de cristal; también ampliar en la mesa de trabajo con 8 papeles), escudo con
+  estandarte (se ve en la mano, en el inventario y en los demás jugadores) y reparar juntando dos
+  objetos iguales (+5 %, sólo conserva las maldiciones). La cabeza de esqueleto en la pared ya existía
+  (sólo cambia el nombre interno) y los discos que faltan son de las fases 8 (Pigstep, Tears) y 9
+  (Relic, Creator, Precipice, Bounce, Lava Chicken). Como los mapas se dibujan en vivo, uno bloqueado
+  deja de cambiar una vez dibujado en esa sesión (no guarda los píxeles).
 - **Ciudad antigua** con edificios más detallados.
 - **Los ~30 biomas que faltan** (montañas, colinas ventosas, taigas y abedulares viejos, jungla de
   bambú y dispersa, badlands erosionadas y boscosas, manglar, bosque de flores, océanos templados y

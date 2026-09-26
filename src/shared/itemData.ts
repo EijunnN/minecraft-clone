@@ -9,7 +9,7 @@ import { ENCHANTED_BOOK } from './items';
 import { sanitizeEnchList, isEnchantable } from './enchantments';
 import { isPotionType } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta
 // Fase 7.5 (océano): mapas del tesoro y de explorador.
-import { FILLED_MAP } from './items';
+import { FILLED_MAP, SHIELD } from './items';
 import { sanitizeStructureMap, STRUCTURE_MAPS, type StructureMapData } from './structureMapData';
 
 export interface ItemData {
@@ -34,6 +34,11 @@ export interface ItemData {
   ap?: number;
   /** Fase 7.5 (océano): mapa de estructura (tesoro enterrado, explorador): tipo y objetivo. */
   smap?: StructureMapData;
+  /** Fase 7.6: mapa ampliado (1 a 4: escala 1:2 a 1:16) y mapa bloqueado (el dibujo ya no cambia). */
+  mz?: number;
+  lock?: 1;
+  /** Fase 7.6: escudo decorado con un estandarte: el color de su fondo (las capas van en `layers`). */
+  sb?: number;
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -129,10 +134,22 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
     const ap = Number(r.ap);
     return r.ap !== undefined && isPotionType(ap) ? { ap } : undefined;
   }
-  // Fase 7.5 (océano): sólo los mapas resueltos (con objetivo) viajan y se guardan.
+  // Fase 7.5 (océano): sólo los mapas resueltos (con objetivo) viajan y se guardan. Fase 7.6: escala y bloqueo.
   if (id === FILLED_MAP) {
+    const out: ItemData = {};
     const smap = sanitizeStructureMap(r.smap);
-    return smap && smap.x !== undefined ? { smap } : undefined;
+    if (smap && smap.x !== undefined) out.smap = smap;
+    const mz = Number(r.mz);
+    if (Number.isInteger(mz) && mz >= 1 && mz <= 4) out.mz = mz;
+    if (r.lock === 1) out.lock = 1;
+    return Object.keys(out).length ? out : undefined;
+  }
+  // Fase 7.6: escudo con estandarte (color del fondo y capas).
+  if (id === SHIELD) {
+    const sb = Number(r.sb);
+    if (!Number.isInteger(sb) || sb < 0 || sb > 15) return undefined;
+    const layers = sanitizeLayers(r.layers);
+    return layers ? { sb, layers } : { sb };
   }
   return undefined;
 }
@@ -152,6 +169,9 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.rc !== undefined) c.rc = d.rc;
   if (d.ap !== undefined) c.ap = d.ap; // Fase 7 (remate)
   if (d.smap) c.smap = { ...d.smap }; // Fase 7.5 (océano)
+  if (d.mz !== undefined) c.mz = d.mz; // Fase 7.6
+  if (d.lock) c.lock = 1;
+  if (d.sb !== undefined) c.sb = d.sb;
   return c;
 }
 
