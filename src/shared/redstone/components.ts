@@ -3,6 +3,9 @@
 // proyectiles de: antorchas (con su fundido), palanca, botones, placas de presión, gancho y cuerda,
 // repetidor (retardo y bloqueo), comparador (comparar y restar), lámpara, bloque musical, sensor de
 // luz solar, diana, pararrayos, bombilla de cobre, puertas, trampillas y portillos, campana y mena.
+// Auditoría de la redstone: cada uno hace lo mismo que su clase de Java (neighborChanged, tick, onPlace,
+// onRemove, updateShape), con sus mismas opciones de setBlock y avisando a los mismos bloques en el mismo
+// orden (de eso dependen la cuasi-conectividad, los BUD y los pulsos cortos).
 // Se importa por sus efectos (registra en api.ts) desde redstone/index.ts.
 import {
   defs, familyBase, stateProps, stateOf, isDoor, isTrapdoor, isFenceGate, isBell, BLOCK_COUNT, CHEST, FURNACE, FURNACE_LIT,
@@ -13,19 +16,19 @@ import {
 import {
   REDSTONE_TORCH, REDSTONE_WALL_TORCH, torchLit, torchWithLit, torchAttachFace, LEVER, BUTTONS, isWoodenButton, mountedPowered,
   mountedWithPowered, PRESSURE_PLATES, isPressurePlate, isWoodenPlate, LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE, platePower,
-  REPEATER, isRepeater, repeaterDelay, repeaterLocked, repeaterWith, diodeFacing, diodePowered, diodeOutFace, isDiode, COMPARATOR,
+  REPEATER, isRepeater, repeaterDelay, repeaterLocked, repeaterWith, diodePowered, diodeOutFace, isDiode, COMPARATOR,
   comparatorSubtract, comparatorWith, REDSTONE_BLOCK, REDSTONE_LAMP, DAYLIGHT_DETECTOR, daylightInverted, daylightWith, TARGET,
   NOTE_BLOCK, noteOf, noteBlockWith, TRIPWIRE_HOOK, isTripwireHook, hookFacing, hookAttached, hookPowered, hookWith, TRIPWIRE,
   isTripwire, tripwirePowered, tripwireAttached, tripwireDisarmed, tripwireWith, TRAPPED_CHEST, TRAPPED_CHEST_DOUBLE,
-  LIGHTNING_ROD, rodPowered, rodWith, COPPER_BULB, bulbLit, bulbPowered, bulbWith, isIronOpenable,
-  LIT_REDSTONE_ORE, LIT_DEEPSLATE_REDSTONE_ORE, redstoneOreLit, isWire, wirePower, REDSTONE_WIRE,
+  LIGHTNING_ROD, rodPowered, rodWith, rodFacing, COPPER_BULB, bulbLit, bulbPowered, bulbWith, isIronOpenable,
+  LIT_REDSTONE_ORE, LIT_DEEPSLATE_REDSTONE_ORE, redstoneOreLit, isWire, wirePower, REDSTONE_WIRE, mountedAttachFace, isButton, isLever,
 } from '../blocks/redstoneBlocks';
 import { DEEPSLATE_ORE, REDSTONE_ORE, BREWING_STAND } from '../blocks';
 import {
-  registerRedstone, isConductor, FACE_X, FACE_Y, FACE_Z, HFACE, PRIORITY_EXTREMELY_HIGH, PRIORITY_VERY_HIGH, PRIORITY_HIGH,
-  PRIORITY_NORMAL, type RedstoneApi, type EntityFilter,
+  registerRedstone, isConductor, emitterOf, FACE_X, FACE_Y, FACE_Z, HFACE, JAVA_DIRECTIONS, DOWN, PRIORITY_EXTREMELY_HIGH,
+  PRIORITY_VERY_HIGH, PRIORITY_HIGH, PRIORITY_NORMAL, UPDATE_CLIENTS, UPDATE_KNOWN_SHAPE, type RedstoneApi, type EntityFilter,
 } from './api';
-import { strongAt } from './signals';
+import { strongAt, signalFrom } from './signals';
 import { redstoneUseState } from './use';
 import { composterLevel } from '../composting';
 import { maxStack, type ItemStack } from '../items';
@@ -40,58 +43,85 @@ const center = (api: RedstoneApi, kind: string, x: number, y: number, z: number,
 
 /** Retardo de una antorcha (un tick de redstone) y su fundido: 8 cambios en 60 ticks la apagan 160 ticks. */
 const TORCH_DELAY = 2, BURNOUT_WINDOW = 60, BURNOUT_TOGGLES = 8, BURNOUT_WAIT = 160;
-/** Cambios recientes de cada antorcha (por servidor: las pruebas levantan varios). */
-const TOGGLES = new WeakMap<RedstoneApi, Map<number, number[]>>();
+/** Cambios recientes de las antorchas (RECENT_TOGGLES de Java: una lista por mundo, en orden). */
+const TOGGLES = new WeakMap<RedstoneApi, { k: number; t: number }[]>();
 
-function recentToggles(api: RedstoneApi, x: number, y: number, z: number): number[] {
-  let m = TOGGLES.get(api);
-  if (!m) TOGGLES.set(api, (m = new Map()));
-  const k = posKey(x, y, z);
-  let list = m.get(k);
-  if (!list) m.set(k, (list = []));
-  while (list.length && api.gameTick - list[0] > BURNOUT_WINDOW) list.shift();
-  // Limpieza de vez en cuando (las antorchas quietas no vuelven a mirar su lista).
-  if (m.size > 256) for (const [kk, l] of m) if (!l.length || api.gameTick - l[l.length - 1] > BURNOUT_WINDOW) m.delete(kk);
-  return list;
+function toggleList(api: RedstoneApi): { k: number; t: number }[] {
+  let l = TOGGLES.get(api);
+  if (!l) TOGGLES.set(api, (l = []));
+  return l;
 }
 
-/** ¿Le llega potencia a la antorcha desde el bloque en el que se apoya? */
+/** isToggledTooFrequently de Java: apunta el cambio (si toca) y dice si esa antorcha lleva 8 en la lista. */
+function toggledTooOften(api: RedstoneApi, x: number, y: number, z: number, log: boolean): boolean {
+  const l = toggleList(api), k = posKey(x, y, z);
+  if (log) l.push({ k, t: api.gameTick });
+  let n = 0;
+  for (const e of l) if (e.k === k && ++n >= BURNOUT_TOGGLES) return true;
+  return false;
+}
+
+/** ¿Le llega potencia a la antorcha desde el bloque en el que se apoya? (hasNeighborSignal de la antorcha). */
 function torchPowered(api: RedstoneApi, x: number, y: number, z: number, id: number): boolean {
   return api.powerFrom(x, y, z, torchAttachFace(id)) > 0;
 }
 
+/** Avisa a los vecinos de sus seis vecinos (onPlace y onRemove de la antorcha en Java). */
+function updateAround(api: RedstoneApi, x: number, y: number, z: number, src: number): void {
+  for (const f of JAVA_DIRECTIONS) api.updateNeighbors(x + FACE_X[f], y + FACE_Y[f], z + FACE_Z[f], -1, src);
+}
+
 registerRedstone([REDSTONE_TORCH, REDSTONE_WALL_TORCH], {
   neighbor: (api, x, y, z, id) => {
-    if (torchLit(id) === torchPowered(api, x, y, z, id)) api.schedule(x, y, z, TORCH_DELAY);
+    if (torchLit(id) === torchPowered(api, x, y, z, id) && !api.willTickNow(x, y, z)) api.schedule(x, y, z, TORCH_DELAY);
   },
   tick: (api, x, y, z, id) => {
     const powered = torchPowered(api, x, y, z, id);
-    const list = recentToggles(api, x, y, z);
+    const l = toggleList(api);
+    while (l.length && api.gameTick - l[0].t > BURNOUT_WINDOW) l.shift();
     if (torchLit(id)) {
       if (!powered) return;
       api.setBlock(x, y, z, torchWithLit(id, false));
-      list.push(api.gameTick);
-      if (list.length >= BURNOUT_TOGGLES) {
+      if (toggledTooOften(api, x, y, z, true)) {
         // Se funde: humo y chisporroteo; vuelve a mirar dentro de un rato.
         api.fx('torch_burnout', x + 0.5, y + 0.7, z + 0.5);
         api.schedule(x, y, z, BURNOUT_WAIT);
       }
-    } else if (!powered && list.length < BURNOUT_TOGGLES) api.setBlock(x, y, z, torchWithLit(id, true));
+    } else if (!powered && !toggledTooOften(api, x, y, z, false)) api.setBlock(x, y, z, torchWithLit(id, true));
   },
-  changed: (api, x, y, z, old, id) => {
+  placed: (api, x, y, z, _old, id) => updateAround(api, x, y, z, id),
+  removed: (api, x, y, z, old, id, moved) => {
+    if (!moved && !(id > 0 && (familyBase(id) === REDSTONE_TORCH || familyBase(id) === REDSTONE_WALL_TORCH))) updateAround(api, x, y, z, old);
+  },
+  changed: (api, x, y, z, old) => {
     if (old < 0) api.updateAt(x, y, z); // al cargar el chunk, que mire si le toca cambiar
   },
 });
 
 // ------------------------------------------------------------------ palanca y botones
 
+/** updateNeighbours de la palanca y los botones: sus vecinos y los del bloque en el que se apoyan. */
+function updateMounted(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  api.updateNeighbors(x, y, z, -1, id);
+  const f = mountedAttachFace(id);
+  api.updateNeighbors(x + FACE_X[f], y + FACE_Y[f], z + FACE_Z[f], -1, id);
+}
+
+/** onRemove de la palanca y los botones: si estaban encendidos, avisan (salvo que los mueva un pistón). */
+const mountedRemoved = (api: RedstoneApi, x: number, y: number, z: number, old: number, id: number, moved: boolean) => {
+  if (!moved && !(id > 0 && familyBase(id) === familyBase(old)) && mountedPowered(old)) updateMounted(api, x, y, z, old);
+};
+
 registerRedstone(LEVER, {
   use: (api, x, y, z, id) => {
     const on = !mountedPowered(id);
-    api.setBlock(x, y, z, mountedWithPowered(id, on));
+    const next = mountedWithPowered(id, on);
+    api.setBlock(x, y, z, next);
+    updateMounted(api, x, y, z, next);
     center(api, 'lever', x, y, z, on ? 1 : 0);
     return true;
   },
+  removed: mountedRemoved,
 });
 
 /** Ticks que se queda pulsado un botón: 20 el de piedra y 30 los de madera. */
@@ -104,11 +134,26 @@ function arrowsOn(api: RedstoneApi, x: number, y: number, z: number, id: number)
   return api.countEntities(x + b[0] - m, y + b[1] - m, z + b[2] - m, x + b[3] + m, y + b[4] + m, z + b[5] + m, 'arrows') > 0;
 }
 
+/** press de Java: se enciende, avisa y se apaga solo al cabo de su tiempo. */
 function pressButton(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
   if (mountedPowered(id)) return;
-  api.setBlock(x, y, z, mountedWithPowered(id, true));
+  const next = mountedWithPowered(id, true);
+  api.setBlock(x, y, z, next);
+  updateMounted(api, x, y, z, next);
   api.schedule(x, y, z, buttonTicks(id));
   center(api, 'button', x, y, z, 1, isWoodenButton(id) ? 1 : 0);
+}
+
+/** checkPressed de Java: pulsado mientras tenga una flecha (los de madera); si cambia, avisa. */
+function checkButton(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  const arrow = isWoodenButton(id) && arrowsOn(api, x, y, z, id);
+  if (arrow !== mountedPowered(id)) {
+    const next = mountedWithPowered(id, arrow);
+    api.setBlock(x, y, z, next);
+    updateMounted(api, x, y, z, next);
+    center(api, 'button', x, y, z, arrow ? 1 : 0, isWoodenButton(id) ? 1 : 0);
+  }
+  if (arrow) api.schedule(x, y, z, buttonTicks(id));
 }
 
 registerRedstone(Object.values(BUTTONS), {
@@ -117,23 +162,17 @@ registerRedstone(Object.values(BUTTONS), {
     return true;
   },
   tick: (api, x, y, z, id) => {
-    if (!mountedPowered(id)) return;
-    // Los de madera siguen pulsados mientras tengan una flecha clavada.
-    if (isWoodenButton(id) && arrowsOn(api, x, y, z, id)) {
-      api.schedule(x, y, z, buttonTicks(id));
-      return;
-    }
-    api.setBlock(x, y, z, mountedWithPowered(id, false));
-    center(api, 'button', x, y, z, 0, isWoodenButton(id) ? 1 : 0);
+    if (mountedPowered(id)) checkButton(api, x, y, z, id);
   },
+  removed: mountedRemoved,
   changed: (api, x, y, z, old, id) => {
     if (old < 0 && mountedPowered(id)) api.schedule(x, y, z, buttonTicks(id));
   },
 });
 
-/** Una flecha (o un tridente) toca un botón de madera: lo pulsa. Lo llama el motor. */
+/** Una flecha (o un tridente) toca un botón de madera (entityInside de Java): lo pulsa. Lo llama el motor. */
 export function arrowOnButton(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
-  if (isWoodenButton(id) && arrowsOn(api, x, y, z, id)) pressButton(api, x, y, z, id);
+  if (isWoodenButton(id) && !mountedPowered(id)) checkButton(api, x, y, z, id);
 }
 
 // ------------------------------------------------------------------ placas de presión
@@ -141,7 +180,13 @@ export function arrowOnButton(api: RedstoneApi, x: number, y: number, z: number,
 /** Material de una placa para el sonido: 0 piedra, 1 madera, 2 metal. */
 const plateSound = (id: number) => (isWoodenPlate(id) ? 1 : isPressurePlate(id) ? 0 : 2);
 
-/** Cuenta lo que hay encima de la placa y pone su potencia; mientras siga pisada, vuelve a mirar. */
+/** updateNeighbours de las placas: sus vecinos y los del bloque de debajo. */
+function updatePlate(api: RedstoneApi, x: number, y: number, z: number, src: number): void {
+  api.updateNeighbors(x, y, z, -1, src);
+  api.updateNeighbors(x, y - 1, z, -1, src);
+}
+
+/** checkPressed de Java: cuenta lo que hay encima y pone su potencia (sin avisar al cambiar, y avisa después). */
 function checkPlate(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
   const base = familyBase(id);
   const weighted = base === LIGHT_WEIGHTED_PLATE || base === HEAVY_WEIGHTED_PLATE;
@@ -153,18 +198,23 @@ function checkPlate(api: RedstoneApi, x: number, y: number, z: number, id: numbe
   else p = Math.ceil(Math.min(n, 150) / 10);
   const cur = platePower(id);
   if (p !== cur) {
-    api.setBlock(x, y, z, weighted ? base + p : base + (p > 0 ? 1 : 0));
-    if ((p > 0) !== (cur > 0)) center(api, 'plate', x, y - 0.4, z, p > 0 ? 1 : 0, plateSound(id));
+    api.setBlock(x, y, z, weighted ? base + p : base + (p > 0 ? 1 : 0), UPDATE_CLIENTS);
+    updatePlate(api, x, y, z, id);
   }
+  if ((p > 0) !== (cur > 0)) center(api, 'plate', x, y - 0.4, z, p > 0 ? 1 : 0, plateSound(id));
   if (p > 0) api.schedule(x, y, z, weighted ? 10 : 20);
 }
 
 registerRedstone([...Object.values(PRESSURE_PLATES), LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE], {
+  // entityInside de Java: sólo mira si está sin pisar (luego, su tick vuelve a mirar mientras siga pisada).
   stepped: (api, x, y, z, id) => {
-    if (platePower(id) === 0 || (!isPressurePlate(id) && !api.isScheduled(x, y, z))) checkPlate(api, x, y, z, id);
+    if (platePower(id) === 0) checkPlate(api, x, y, z, id);
   },
   tick: (api, x, y, z, id) => {
     if (platePower(id) > 0) checkPlate(api, x, y, z, id);
+  },
+  removed: (api, x, y, z, old, id, moved) => {
+    if (!moved && !(id > 0 && familyBase(id) === familyBase(old)) && platePower(old) > 0) updatePlate(api, x, y, z, old);
   },
   changed: (api, x, y, z, old, id) => {
     if (old < 0 && platePower(id) > 0) api.schedule(x, y, z, 1);
@@ -209,6 +259,12 @@ function updateHook(api: RedstoneApi, x: number, y: number, z: number, pulse = -
     const next = hookWith(id, attached, powered);
     if (next === id) return;
     api.setBlock(hx, y, hz, next);
+    // notifyNeighbors de Java: sus vecinos (ya avisados por el setBlock) y los del bloque en el que se apoya.
+    if (hookPowered(id) !== powered) {
+      const back = HFACE[(hookFacing(next) + 2) & 3];
+      api.updateNeighbors(hx, y, hz, -1, next);
+      api.updateNeighbors(hx + FACE_X[back], y, hz + FACE_Z[back], -1, next);
+    }
     // Clic al tensarse, al soltarse y al activarse o desactivarse.
     center(api, 'tripwire', hx, y, hz, hookPowered(id) !== powered ? (powered ? 1 : 0) : attached ? 2 : 3);
   };
@@ -275,6 +331,13 @@ registerRedstone(TRIPWIRE, {
 
 registerRedstone(TRIPWIRE_HOOK, {
   tick: (api, x, y, z) => updateHook(api, x, y, z),
+  // onRemove de Java: si estaba activado, avisa a sus vecinos y a los del bloque en el que se apoyaba.
+  removed: (api, x, y, z, old, id, moved) => {
+    if (moved || isTripwireHook(id) || !hookPowered(old)) return;
+    const back = HFACE[(hookFacing(old) + 2) & 3];
+    api.updateNeighbors(x, y, z, -1, old);
+    api.updateNeighbors(x + FACE_X[back], y, z + FACE_Z[back], -1, old);
+  },
   changed: (api, x, y, z, old, id) => {
     if (old < 0) {
       if (hookPowered(id)) api.schedule(x, y, z, 1);
@@ -303,45 +366,86 @@ registerRedstone(TRIPWIRE_HOOK, {
 
 const faceX = (x: number, f: number) => x + FACE_X[f], faceY = (y: number, f: number) => y + FACE_Y[f], faceZ = (z: number, f: number) => z + FACE_Z[f];
 
-/** Potencia que entra por detrás de un repetidor o un comparador. */
+/** getInputSignal de DiodeBlock: la potencia que entra por detrás (o la del polvo que haya detrás, aunque no se una). */
 function backSignal(api: RedstoneApi, x: number, y: number, z: number, id: number): number {
-  return api.powerFrom(x, y, z, diodeOutFace(id) ^ 1);
+  const back = diodeOutFace(id) ^ 1;
+  const i = signalFrom(api, x, y, z, back);
+  if (i >= 15) return i;
+  return Math.max(i, wirePowerAt(api, faceX(x, back), faceY(y, back), faceZ(z, back)));
 }
 
-/** Las dos caras laterales de un repetidor o un comparador. */
-const sideFaces = (id: number) => [HFACE[(diodeFacing(id) + 1) & 3], HFACE[(diodeFacing(id) + 3) & 3]];
+const wirePowerAt = (api: RedstoneApi, x: number, y: number, z: number) => {
+  const b = api.getBlock(x, y, z);
+  return isWire(b) ? wirePower(b) : 0;
+};
 
-/** ¿Bloquea al repetidor un repetidor o un comparador que le da de lado? */
-function repeaterSideLocked(api: RedstoneApi, x: number, y: number, z: number, id: number): boolean {
-  for (const f of sideFaces(id)) {
-    if (isDiode(api.getBlock(faceX(x, f), faceY(y, f), faceZ(z, f))) && api.powerFrom(x, y, z, f) > 0) return true;
-  }
-  return false;
+/** Las dos caras laterales de un repetidor o un comparador (en el orden de Java: a la derecha y a la izquierda). */
+const sideFaces = (id: number) => {
+  const o = HFACE.indexOf(diodeOutFace(id) ^ 1); // FACING de Java: hacia la entrada
+  return [HFACE[(o + 1) & 3], HFACE[(o + 3) & 3]];
+};
+
+/**
+ * getControlInputSignal de Java por un lado: sólo repetidores y comparadores (los del repetidor), o además el
+ * bloque de redstone (15), el polvo (su potencia) y cualquier emisor (su potencia fuerte).
+ */
+function controlInput(api: RedstoneApi, x: number, y: number, z: number, f: number, diodesOnly: boolean): number {
+  const nx = faceX(x, f), ny = faceY(y, f), nz = faceZ(z, f);
+  const b = api.getBlock(nx, ny, nz);
+  if (diodesOnly) return isDiode(b) ? strongAt(api, nx, ny, nz, f ^ 1) : 0;
+  if (b === REDSTONE_BLOCK) return 15;
+  if (isWire(b)) return wirePower(b);
+  return emitterOf(b) ? strongAt(api, nx, ny, nz, f ^ 1) : 0;
 }
 
-/** ¿Tiene delante otro repetidor o comparador que no le mira? (sus ticks van antes, como en Minecraft). */
+/** getAlternateSignal de Java: lo que entra por los lados. */
+function sideSignal(api: RedstoneApi, x: number, y: number, z: number, id: number, diodesOnly: boolean): number {
+  let best = 0;
+  for (const f of sideFaces(id)) best = Math.max(best, controlInput(api, x, y, z, f, diodesOnly));
+  return best;
+}
+
+/** isLocked del repetidor: le da de lado un repetidor o un comparador encendido. */
+const repeaterSideLocked = (api: RedstoneApi, x: number, y: number, z: number, id: number) => sideSignal(api, x, y, z, id, true) > 0;
+
+/** shouldPrioritize de Java: tiene delante otro repetidor o comparador que no le mira. */
 function prioritized(api: RedstoneApi, x: number, y: number, z: number, id: number): boolean {
   const out = diodeOutFace(id);
   const front = api.getBlock(faceX(x, out), faceY(y, out), faceZ(z, out));
   return isDiode(front) && diodeOutFace(front) !== (out ^ 1);
 }
 
+/** updateNeighborsInFront de Java: el bloque de delante y sus vecinos (menos el propio diodo). */
+function updateFront(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  const out = diodeOutFace(id);
+  const fx = faceX(x, out), fy = faceY(y, out), fz = faceZ(z, out);
+  api.updateAt(fx, fy, fz, x, y, z, id);
+  api.updateNeighbors(fx, fy, fz, out ^ 1, id);
+}
+
+/** ¿Es el mismo tipo de diodo (repetidor con repetidor, comparador con comparador)? */
+const sameDiode = (a: number, b: number) => a > 0 && b > 0 && familyBase(a) === familyBase(b);
+
 registerRedstone(REPEATER, {
+  // checkTickOnNeighbor de DiodeBlock.
   neighbor: (api, x, y, z, id) => {
-    const locked = repeaterSideLocked(api, x, y, z, id);
-    if (locked !== repeaterLocked(id)) api.setBlock(x, y, z, (id = repeaterWith(id, diodePowered(id), locked)));
-    if (locked) return;
+    if (repeaterSideLocked(api, x, y, z, id)) return;
     const on = backSignal(api, x, y, z, id) > 0;
     if (on === diodePowered(id) || api.willTickNow(x, y, z)) return;
     const prio = prioritized(api, x, y, z, id) ? PRIORITY_EXTREMELY_HIGH : diodePowered(id) ? PRIORITY_VERY_HIGH : PRIORITY_HIGH;
     api.schedule(x, y, z, (repeaterDelay(id) + 1) * 2, prio);
   },
+  // El bloqueo va por la forma (updateShape): lo que cambia a un lado.
+  shape: (api, x, y, z, id, face) => {
+    if (face === diodeOutFace(id) || face === (diodeOutFace(id) ^ 1)) return id;
+    return repeaterWith(id, diodePowered(id), repeaterSideLocked(api, x, y, z, id));
+  },
   tick: (api, x, y, z, id) => {
-    if (repeaterLocked(id)) return;
+    if (repeaterSideLocked(api, x, y, z, id)) return;
     const on = backSignal(api, x, y, z, id) > 0;
-    if (diodePowered(id) && !on) api.setBlock(x, y, z, repeaterWith(id, false, false));
+    if (diodePowered(id) && !on) api.setBlock(x, y, z, repeaterWith(id, false, repeaterLocked(id)), UPDATE_CLIENTS);
     else if (!diodePowered(id)) {
-      api.setBlock(x, y, z, repeaterWith(id, true, false));
+      api.setBlock(x, y, z, repeaterWith(id, true, repeaterLocked(id)), UPDATE_CLIENTS);
       // El pulso dura al menos el retardo del repetidor.
       if (!on) api.schedule(x, y, z, (repeaterDelay(id) + 1) * 2, PRIORITY_VERY_HIGH);
     }
@@ -351,12 +455,20 @@ registerRedstone(REPEATER, {
     center(api, 'repeater', x, y, z);
     return true;
   },
-  changed: (api, x, y, z, old, id) => {
+  // onPlace: cualquier cambio de estado avisa delante; recién puesto con entrada, se enciende en 1 tick (setPlacedBy).
+  placed: (api, x, y, z, old, id) => {
+    updateFront(api, x, y, z, id);
+    if (!sameDiode(old, id) && old >= 0 && !diodePowered(id) && backSignal(api, x, y, z, id) > 0) api.schedule(x, y, z, 1);
+  },
+  removed: (api, x, y, z, old, id, moved) => {
+    if (!moved && !sameDiode(old, id)) updateFront(api, x, y, z, old);
+  },
+  changed: (api, x, y, z, old) => {
     if (old < 0) api.updateAt(x, y, z);
   },
 });
 
-/** Entrada de un comparador: la de detrás o, si lo hay, lo que lee de un contenedor (también a través de un bloque). */
+/** getInputSignal del comparador: la de detrás o, si lo hay, lo que lee de un contenedor (también a través de un bloque). */
 function comparatorInput(api: RedstoneApi, x: number, y: number, z: number, id: number): number {
   const back = diodeOutFace(id) ^ 1;
   let i = backSignal(api, x, y, z, id);
@@ -371,47 +483,38 @@ function comparatorInput(api: RedstoneApi, x: number, y: number, z: number, id: 
   return i;
 }
 
-/** Entrada lateral de un comparador: polvo, bloques de redstone y potencia fuerte (repetidores, comparadores…). */
-function comparatorSide(api: RedstoneApi, x: number, y: number, z: number, id: number): number {
-  let best = 0;
-  for (const f of sideFaces(id)) {
-    const nx = faceX(x, f), ny = faceY(y, f), nz = faceZ(z, f);
-    const b = api.getBlock(nx, ny, nz);
-    const s = b === REDSTONE_BLOCK ? 15 : isWire(b) ? wirePower(b) : strongAt(api, nx, ny, nz, f ^ 1);
-    if (s > best) best = s;
-  }
-  return best;
-}
-
+/** calculateOutputSignal de Java. */
 function comparatorOutput(api: RedstoneApi, x: number, y: number, z: number, id: number): number {
   const i = comparatorInput(api, x, y, z, id);
   if (i === 0) return 0;
-  const j = comparatorSide(api, x, y, z, id);
+  const j = sideSignal(api, x, y, z, id, false);
   if (j > i) return 0;
   return comparatorSubtract(id) ? i - j : i;
 }
 
+/** shouldTurnOn del comparador. */
 function comparatorOn(api: RedstoneApi, x: number, y: number, z: number, id: number): boolean {
   const i = comparatorInput(api, x, y, z, id);
   if (i === 0) return false;
-  const j = comparatorSide(api, x, y, z, id);
+  const j = sideSignal(api, x, y, z, id, false);
   return i > j || (i === j && !comparatorSubtract(id));
 }
 
-/** refreshOutputState de Minecraft: guarda la salida nueva y enciende o apaga el comparador. */
+/** refreshOutputState de Java: guarda la salida nueva, se enciende o apaga (sin avisar) y avisa delante. */
 function refreshComparator(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
   const out = comparatorOutput(api, x, y, z, id);
   const old = api.getData(x, y, z);
   api.setData(x, y, z, out);
   if (old === out && comparatorSubtract(id)) return;
   const on = comparatorOn(api, x, y, z, id);
-  if (diodePowered(id) !== on) api.setBlock(x, y, z, comparatorWith(id, on));
-  api.outputChanged(x, y, z);
+  if (diodePowered(id) !== on) api.setBlock(x, y, z, (id = comparatorWith(id, on)), UPDATE_CLIENTS);
+  updateFront(api, x, y, z, id);
 }
 
 registerRedstone(COMPARATOR, {
+  // checkTickOnNeighbor del comparador.
   neighbor: (api, x, y, z, id) => {
-    if (api.isScheduled(x, y, z)) return;
+    if (api.willTickNow(x, y, z)) return;
     const out = comparatorOutput(api, x, y, z, id);
     if (out === api.getData(x, y, z) && diodePowered(id) === comparatorOn(api, x, y, z, id)) return;
     api.schedule(x, y, z, 2, prioritized(api, x, y, z, id) ? PRIORITY_HIGH : PRIORITY_NORMAL);
@@ -419,12 +522,19 @@ registerRedstone(COMPARATOR, {
   tick: refreshComparator,
   use: (api, x, y, z, id) => {
     const next = redstoneUseState(id, rel(api, x, y, z))!;
-    api.setBlock(x, y, z, next);
+    api.setBlock(x, y, z, next, UPDATE_CLIENTS);
     center(api, 'comparator', x, y, z, comparatorSubtract(next) ? 1 : 0);
     refreshComparator(api, x, y, z, next);
     return true;
   },
-  changed: (api, x, y, z, old, id) => {
+  placed: (api, x, y, z, old, id) => {
+    updateFront(api, x, y, z, id);
+    if (!sameDiode(old, id) && old >= 0 && comparatorOn(api, x, y, z, id)) api.schedule(x, y, z, 1);
+  },
+  removed: (api, x, y, z, old, id, moved) => {
+    if (!moved && !sameDiode(old, id)) updateFront(api, x, y, z, old);
+  },
+  changed: (api, x, y, z, old) => {
     if (old < 0) api.schedule(x, y, z, 1);
   },
 });
@@ -433,14 +543,21 @@ registerRedstone(COMPARATOR, {
 
 const lampLit = (id: number) => id === REDSTONE_LAMP + 1;
 registerRedstone(REDSTONE_LAMP, {
-  // Se enciende al momento y tarda 4 ticks en apagarse (como en Minecraft).
+  // Se enciende al momento y tarda 4 ticks en apagarse; cambia sin avisar a nadie (opción 2), como en Java.
   neighbor: (api, x, y, z, id) => {
     const powered = api.isPowered(x, y, z);
-    if (lampLit(id) && !powered) api.schedule(x, y, z, 4);
-    else if (!lampLit(id) && powered) api.setBlock(x, y, z, REDSTONE_LAMP + 1);
+    if (lampLit(id) === powered) return;
+    if (lampLit(id)) api.schedule(x, y, z, 4);
+    else api.setBlock(x, y, z, REDSTONE_LAMP + 1, UPDATE_CLIENTS);
   },
   tick: (api, x, y, z, id) => {
-    if (lampLit(id) && !api.isPowered(x, y, z)) api.setBlock(x, y, z, REDSTONE_LAMP);
+    if (lampLit(id) && !api.isPowered(x, y, z)) api.setBlock(x, y, z, REDSTONE_LAMP, UPDATE_CLIENTS);
+  },
+  // getStateForPlacement: se pone ya encendida si recibe potencia.
+  placed: (api, x, y, z, old, id) => {
+    if (old >= 0 && familyBase(old) !== REDSTONE_LAMP && !lampLit(id) && api.isPowered(x, y, z)) {
+      api.setBlock(x, y, z, REDSTONE_LAMP + 1, UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE);
+    }
   },
   changed: (api, x, y, z, old, id) => {
     if (old < 0) api.updateAt(x, y, z);
@@ -537,26 +654,42 @@ registerRedstone(TARGET, {
 
 // ------------------------------------------------------------------ cobre: pararrayos y bombilla
 
+/** updateNeighbours del pararrayos: los vecinos del bloque de su base. */
+export function updateRodBase(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  const f = rodFacing(id) ^ 1;
+  api.updateNeighbors(x + FACE_X[f], y + FACE_Y[f], z + FACE_Z[f], -1, id);
+}
+
 registerRedstone(LIGHTNING_ROD.flat(), {
   tick: (api, x, y, z, id) => {
-    if (rodPowered(id)) api.setBlock(x, y, z, rodWith(id, false));
+    if (!rodPowered(id)) return;
+    api.setBlock(x, y, z, rodWith(id, false));
+    updateRodBase(api, x, y, z, id);
+  },
+  removed: (api, x, y, z, old, id, moved) => {
+    if (!moved && rodPowered(old) && !(id > 0 && familyBase(id) === familyBase(old))) updateRodBase(api, x, y, z, old);
   },
   changed: (api, x, y, z, old, id) => {
     if (old < 0 && rodPowered(id)) api.schedule(x, y, z, 1);
   },
 });
 
+/** checkAndFlip de Java: cambia de encendida a apagada con cada pulso (al empezar a recibir potencia). */
+function flipBulb(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  const powered = api.isPowered(x, y, z);
+  if (powered === bulbPowered(id)) return;
+  let lit = bulbLit(id);
+  if (powered) {
+    lit = !lit;
+    center(api, 'bulb', x, y, z, lit ? 1 : 0);
+  }
+  api.setBlock(x, y, z, bulbWith(id, lit, powered));
+}
+
 registerRedstone(COPPER_BULB.flat(), {
-  // Cambia de encendida a apagada con cada pulso (al empezar a recibir potencia).
-  neighbor: (api, x, y, z, id) => {
-    const powered = api.isPowered(x, y, z);
-    if (powered === bulbPowered(id)) return;
-    let lit = bulbLit(id);
-    if (powered) {
-      lit = !lit;
-      center(api, 'bulb', x, y, z, lit ? 1 : 0);
-    }
-    api.setBlock(x, y, z, bulbWith(id, lit, powered));
+  neighbor: (api, x, y, z, id) => flipBulb(api, x, y, z, id),
+  placed: (api, x, y, z, old, id) => {
+    if (old >= 0 && !(old > 0 && familyBase(old) === familyBase(id))) flipBulb(api, x, y, z, id);
   },
   analog: (_api, _x, _y, _z, id) => (bulbLit(id) ? 15 : 0),
 });
@@ -566,27 +699,33 @@ registerRedstone(COPPER_BULB.flat(), {
 /**
  * La potencia abre y cierra puertas, trampillas y portillos al cambiar (como la propiedad `powered` de
  * Minecraft, que aquí guarda el motor por posición): una puerta abierta a mano sigue abierta hasta
- * que llega o se va la potencia. Las de hierro sólo se abren así.
+ * que llega o se va la potencia. Las de hierro sólo se abren así. Como en Java, cambian sin avisar a sus
+ * vecinos (opción 2); el cambio de `powered` sin cambio de bloque se notifica como si lo hubiera (formas).
  */
-function openableNeighbor(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+function openableNeighbor(api: RedstoneApi, x: number, y: number, z: number, id: number, _sx: number, _sy: number, _sz: number, src: number): void {
   const st = stateProps(id)!;
   const base = familyBase(id);
   let ly = y;
   let powered: boolean;
   if (isDoor(id)) {
+    // Las puertas no atienden los avisos de una puerta de su tipo (su otra mitad).
+    if (src > 0 && familyBase(src) === base) return;
     ly = st.half === 0 ? y : y - 1;
     powered = api.isPowered(x, ly, z) || api.isPowered(x, ly + 1, z);
   } else powered = api.isPowered(x, y, z);
   const was = api.getData(x, ly, z) === 1;
   if (powered === was) return;
   api.setData(x, ly, z, powered ? 1 : 0);
-  if ((st.open === 1) === powered) return;
+  if ((st.open === 1) === powered) {
+    api.stateTouched(x, y, z, UPDATE_CLIENTS);
+    return;
+  }
   const open = powered ? 1 : 0;
   if (isDoor(id)) {
     const lower = api.getBlock(x, ly, z), upper = api.getBlock(x, ly + 1, z);
-    if (familyBase(lower) === base) api.setBlock(x, ly, z, stateOf(base, { ...stateProps(lower)!, open }));
-    if (familyBase(upper) === base) api.setBlock(x, ly + 1, z, stateOf(base, { ...stateProps(upper)!, open }));
-  } else api.setBlock(x, y, z, stateOf(base, { ...st, open }));
+    if (familyBase(lower) === base) api.setBlock(x, ly, z, stateOf(base, { ...stateProps(lower)!, open }), UPDATE_CLIENTS);
+    if (familyBase(upper) === base) api.setBlock(x, ly + 1, z, stateOf(base, { ...stateProps(upper)!, open }), UPDATE_CLIENTS);
+  } else api.setBlock(x, y, z, stateOf(base, { ...st, open }), UPDATE_CLIENTS);
   // Sonido de abrir o cerrar (b: 1 si es de metal).
   const metal = isIronOpenable(id) || BLOCKS[id].sound === 'metal';
   center(api, 'openable', x, y, z, open, (metal ? 1 : 0) + (isDoor(id) ? 0 : isTrapdoor(id) ? 2 : 4));
@@ -601,11 +740,13 @@ registerRedstone(OPENABLES, { neighbor: openableNeighbor });
 const BELLS: number[] = [];
 for (let id = 1; id < BLOCK_COUNT; id++) if (defs[id] && familyBase(id) === id && isBell(id)) BELLS.push(id);
 registerRedstone(BELLS, {
+  // Suena al empezar a recibir potencia; `powered` cambia con la opción 3 (avisa a sus vecinos), como en Java.
   neighbor: (api, x, y, z) => {
     const powered = api.isPowered(x, y, z);
     if (powered === (api.getData(x, y, z) === 1)) return;
-    api.setData(x, y, z, powered ? 1 : 0);
     if (powered) api.fx('bell', x + 0.5, y + 0.5, z + 0.5);
+    api.setData(x, y, z, powered ? 1 : 0);
+    api.stateTouched(x, y, z);
   },
 });
 

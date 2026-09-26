@@ -63,6 +63,10 @@ const SYSTEMS = new WeakMap<RedstoneApi, Pistons>();
 
 registerRedstone([PISTON, STICKY_PISTON], {
   neighbor: (api, x, y, z) => SYSTEMS.get(api)?.check(x, y, z),
+  // onPlace: uno recién puesto mira si tiene potencia.
+  placed: (api, x, y, z, old, id) => {
+    if (!(old > 0 && familyBase(old) === familyBase(id))) SYSTEMS.get(api)?.check(x, y, z);
+  },
 });
 registerRedstone(MOVING_BLOCK, {
   // Un hueco de bloque en movimiento sin movimiento (no debería guardarse ninguno): se vacía.

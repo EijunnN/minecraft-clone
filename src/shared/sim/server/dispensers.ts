@@ -23,7 +23,7 @@ import { ENT_ARMOR_STAND } from '../../armorStands';
 import { STATE_DEAD } from '../../protocol';
 import { isBoatType, isCartType } from '../../vehicles';
 import { vehicleForItem } from '../../vehicleItems';
-import { registerRedstone, FACE_X, FACE_Y, FACE_Z, UP, type RedstoneApi } from '../../redstone';
+import { registerRedstone, FACE_X, FACE_Y, FACE_Z, UP, UPDATE_CLIENTS, type RedstoneApi } from '../../redstone';
 import { railHeight } from '../vehicles/cartPhysics';
 import { insertStack, type Inventories } from './inventories';
 import type { Explosives } from './tnt';
@@ -35,30 +35,21 @@ import type { ServerContext } from './context';
 
 /** Retardo del disparo tras el pulso (Minecraft: 4 ticks). */
 const DISPENSE_DELAY = 4;
-/** Dato de la posición: recién puesto (el primer aviso, el suyo propio, no cuenta). */
-const JUST_PLACED = 1;
 
 const SYSTEMS = new WeakMap<RedstoneApi, Dispensers>();
 
 registerRedstone([DISPENSER, DROPPER], {
-  neighbor: (api, x, y, z, id, sx, sy, sz) => {
-    if (sx === x && sy === y && sz === z && api.getData(x, y, z) === JUST_PLACED) {
-      api.setData(x, y, z, 0);
-      return;
-    }
+  // neighborChanged de DispenserBlock (también la cuasi-conectividad por el bloque de encima); `triggered`
+  // cambia sin avisar (opción 2). Recién puesto no se dispara: Java no le avisa a él.
+  neighbor: (api, x, y, z, id) => {
     const powered = api.isPowered(x, y, z) || api.isPowered(x, y + 1, z);
     const triggered = dispenserTriggered(id);
     if (powered && !triggered) {
       api.schedule(x, y, z, DISPENSE_DELAY);
-      api.setBlock(x, y, z, dispenserWith(id, true));
-    } else if (!powered && triggered) api.setBlock(x, y, z, dispenserWith(id, false));
+      api.setBlock(x, y, z, dispenserWith(id, true), UPDATE_CLIENTS);
+    } else if (!powered && triggered) api.setBlock(x, y, z, dispenserWith(id, false), UPDATE_CLIENTS);
   },
   tick: (api, x, y, z, id) => SYSTEMS.get(api)?.dispense(x, y, z, id),
-  // Recién puesto (no al cargar su chunk ni al cambiar de estado): el aviso a sí mismo no lo dispara.
-  changed: (api, x, y, z, old, id) => {
-    const base = familyBase(id);
-    if ((base === DISPENSER || base === DROPPER) && (old === 0 || (old > 0 && familyBase(old) !== base))) api.setData(x, y, z, JUST_PLACED);
-  },
 });
 
 /** Resultado de usar un objeto: se gastó (o cambió), falló (clic) o se suelta como objeto. */

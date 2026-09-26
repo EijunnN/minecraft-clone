@@ -30,9 +30,12 @@ const BEST_PICKAXE = () => TOOLS.diamond?.pickaxe ?? 0;
 const SYSTEMS = new WeakMap<RedstoneApi, Explosives>();
 
 registerRedstone(TNT, {
-  // Con potencia (también al ponerla junto a una fuente) se enciende.
+  // Con potencia se enciende (neighborChanged), también al ponerla junto a una fuente (onPlace).
   neighbor: (api, x, y, z) => {
     if (api.isPowered(x, y, z)) SYSTEMS.get(api)?.prime(x, y, z);
+  },
+  placed: (api, x, y, z, old) => {
+    if (old >= 0 && old !== TNT && api.isPowered(x, y, z)) SYSTEMS.get(api)?.prime(x, y, z);
   },
 });
 

@@ -221,6 +221,11 @@ export class ServerSystems {
     this.edits.touched = (x, y, z) => rs.touch(x, y, z);
     this.edits.beforeBreak = (x, y, z, id, tool) => rs.beforeBreak(x, y, z, id, tool);
     this.transport.rails.railPowered = (x, y, z) => rs.isPowered(x, y, z);
+    // El detector (checkPressed de Java): tras cambiar avisa a sus vecinos y a los del bloque de debajo.
+    this.transport.rails.detectorOutput = (x, y, z) => {
+      rs.updateNeighbors(x, y, z);
+      rs.updateNeighbors(x, y - 1, z);
+    };
     for (const c of world.loadedChunks()) rs.onChunkLoaded(c);
     // Los mecanismos: lo que usan (contenedores, fuego, transporte…) y los avisos que les llegan.
     const mech = (this.mechanisms = new Mechanisms({

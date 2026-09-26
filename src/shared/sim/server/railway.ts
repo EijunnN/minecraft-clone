@@ -44,8 +44,18 @@ export class Rails {
     }
   }
 
-  /** Un bloque cambió: los propulsores y activadores de alrededor (y los que se unían a él) se recalculan. */
+  /**
+   * Un bloque cambió. Auditoría de la redstone: la potencia de los propulsores y activadores ya la lleva la
+   * redstone raíl a raíl, como en Java (redstone/rails.ts); esto queda para quien la pida a mano.
+   */
   onBlockChanged(x: number, y: number, z: number): void {
+    void x;
+    void y;
+    void z;
+  }
+
+  /** Recalcula a mano los propulsores y activadores de alrededor de (x, y, z) (y los que se unían a ellos). */
+  refreshAround(x: number, y: number, z: number): void {
     if (this.busy) return;
     const w = this.ctx.world;
     for (let dy = -1; dy <= 1; dy++) {

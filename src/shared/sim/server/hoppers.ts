@@ -14,7 +14,7 @@
 import {
   HOPPER, DISPENSER, DROPPER, BLOCK_COLLIDE, familyBase, hopperLocked, hopperWith, hopperOutFace,
 } from '../../blocks';
-import { registerRedstone, containerSignal, FACE_X, FACE_Y, FACE_Z, UP, DOWN, type RedstoneApi } from '../../redstone';
+import { registerRedstone, containerSignal, FACE_X, FACE_Y, FACE_Z, UP, DOWN, UPDATE_CLIENTS, type RedstoneApi } from '../../redstone';
 import { ENT_ITEM } from '../../mobs';
 import { ENT_CHEST_MINECART, ENT_HOPPER_MINECART } from '../../vehicles';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
@@ -27,12 +27,20 @@ export const HOPPER_COOLDOWN = 8;
 
 const SYSTEMS = new WeakMap<RedstoneApi, Hoppers>();
 
+/** checkPoweredState de HopperBlock: bloqueada mientras recibe potencia (cambia sin avisar: opción 2). */
+function checkHopperPower(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  const locked = api.isPowered(x, y, z);
+  if (locked !== hopperLocked(id)) api.setBlock(x, y, z, hopperWith(id, locked), UPDATE_CLIENTS);
+}
+
 registerRedstone(HOPPER, {
-  // Bloqueada mientras recibe potencia; cualquier cambio a su lado la despierta.
+  // Cualquier cambio a su lado la despierta.
   neighbor: (api, x, y, z, id) => {
-    const locked = api.isPowered(x, y, z);
-    if (locked !== hopperLocked(id)) api.setBlock(x, y, z, hopperWith(id, locked));
+    checkHopperPower(api, x, y, z, id);
     SYSTEMS.get(api)?.wake(x, y, z);
+  },
+  placed: (api, x, y, z, old, id) => {
+    if (old >= 0 && !(old > 0 && familyBase(old) === HOPPER)) checkHopperPower(api, x, y, z, id);
   },
   changed: (api, x, y, z, old, id) => {
     if (old < 0) api.updateAt(x, y, z);

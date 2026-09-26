@@ -22,7 +22,7 @@ import { makeServer, type Harness, type Client } from './harness';
 import {
   RAIL, RAIL_POWERED, RAIL_DETECTOR, RAIL_PLAIN, RAIL_EW, RAIL_NS, RAIL_SE, RAIL_NE, RAIL_SHAPE, railState, railIsPowered, BREWING_STAND, CAKE, WATER_CAULDRON,
 } from '../src/shared/blocks';
-import { BLAZE_POWDER } from '../src/shared/items';
+import { NETHER_WART } from '../src/shared/items';
 
 const hitOn = (x: number, y: number, z: number, nx: number, ny: number, nz: number, id: number): PlaceHit =>
   ({ x, y, z, nx, ny, nz, px: x + 0.5 + nx * 0.5, py: y + 0.5 + ny * 0.5, pz: z + 0.5 + nz * 0.5, id });
@@ -198,13 +198,17 @@ test('antorcha inversora, palanca y reloj de antorchas que se funde', () => {
   // Fundida se queda apagada un rato…
   h.tick(40);
   assert.ok(!torchLit(get(x, by, cz - 1)));
-  // …y cuando se enfría vuelve a encenderse (y a fundirse).
+  // …y, como en Java, no vuelve a encenderse sola: su tick de 160 se pierde contra el de 2 que ya tenía
+  // programado. Pasado el enfriamiento, el siguiente aviso la enciende (y vuelve a oscilar).
+  h.tick(200);
+  assert.ok(!torchLit(get(x, by, cz - 1)), 'sigue fundida sin avisos');
+  set(x - 1, by, cz - 1, STONE); // al lado de la antorcha: le llega el aviso
   let relit = false;
-  for (let i = 0; i < 200 && !relit; i++) {
+  for (let i = 0; i < 10 && !relit; i++) {
     h.tick(1);
     relit = torchLit(get(x, by, cz - 1));
   }
-  assert.ok(relit, 'se vuelve a encender pasado el enfriamiento');
+  assert.ok(relit, 'un aviso pasado el enfriamiento la vuelve a encender');
 });
 
 test('repetidor: retardo, prolonga pulsos cortos y se bloquea de lado', () => {
@@ -415,7 +419,7 @@ test('sensor de luz solar, diana, gancho y cuerda, pararrayos y mena de redstone
 });
 
 test('raíles: propulsores con potencia (8 más en línea), detector y cruce en T', () => {
-  const { h, bx, by, bz, set, get } = lab();
+  const { h, bx, by, bz, set, get, use } = lab();
   // Línea de 12 propulsores; un bloque de redstone junto al primero enciende ése y 8 más.
   const x0 = bx - 8, z = bz - 10;
   for (let i = 0; i < 12; i++) set(x0 + i, by, z, railState(RAIL_POWERED, RAIL_EW));
@@ -430,7 +434,8 @@ test('raíles: propulsores con potencia (8 más en línea), detector y cruce en 
   // También a través de un bloque: palanca en un bloque de piedra que está debajo de un raíl.
   set(x0 + 11, by - 1, z, STONE);
   set(x0 + 11, by - 1, z + 1, AIR);
-  set(x0 + 11, by - 1, z + 1, stateOf(LEVER, { mount: MOUNT_WALL, facing: 2, powered: 1 }));
+  set(x0 + 11, by - 1, z + 1, stateOf(LEVER, { mount: MOUNT_WALL, facing: 2, powered: 0 }));
+  use(x0 + 11, by - 1, z + 1);
   h.tick(1);
   assert.equal(on(), '000111111111', 'la palanca carga el bloque de debajo del último');
   // Detector: con una vagoneta encima da potencia (la lámpara de al lado se enciende) y se apaga al irse.
@@ -450,7 +455,14 @@ test('raíles: propulsores con potencia (8 más en línea), detector y cruce en 
   set(tx + 1, by, tz, railState(RAIL_PLAIN, RAIL_EW));
   set(tx, by, tz, railState(RAIL_PLAIN, RAIL_SE));
   h.tick(1);
+  // Como en Java, sólo cambia con el aviso de un emisor: la palanca (al poner un bloque de redstone, el aviso
+  // lo da el aire que había antes y el cruce no se entera).
   set(tx - 1, by, tz, REDSTONE_BLOCK);
+  h.tick(1);
+  assert.equal(RAIL_SHAPE[get(tx, by, tz)], RAIL_SE, 'el bloque de redstone recién puesto no avisa como emisor');
+  set(tx - 1, by, tz, AIR);
+  set(tx - 1, by, tz, stateOf(LEVER, { mount: 0, facing: 0, powered: 0 }));
+  use(tx - 1, by, tz);
   h.tick(1);
   assert.equal(RAIL_SHAPE[get(tx, by, tz)], RAIL_NE, 'con potencia cambia de lado');
   set(tx - 1, by, tz, AIR);
@@ -469,7 +481,9 @@ test('comparador: lee el alambique, la tarta y el caldero', () => {
   assert.equal(wirePower(get(x + 1, by, z)), 0, 'alambique vacío');
   c.pos(x + 0.5, by + 2, z + 0.5);
   c.send({ t: 'open', x: x - 1, y: by, z });
-  c.send({ t: 'cput', x: x - 1, y: by, z, stack: { id: BLAZE_POWDER, count: 1 }, q: 1 });
+  // (La verruga se queda en el hueco del ingrediente: sin combustible no destila. El polvo de blaze, en
+  // cambio, se consume al momento como combustible y el comparador ni lo llega a ver, como en Java.)
+  c.send({ t: 'cput', x: x - 1, y: by, z, stack: { id: NETHER_WART, count: 1 }, q: 1 });
   h.tick(4);
   assert.equal(wirePower(get(x + 1, by, z)), 1, 'con algo dentro, 1');
   c.send({ t: 'close' });
@@ -525,6 +539,8 @@ test('rendimiento: una red grande y varios relojes sin pasarse de tiempo', () =>
   // El tiempo depende de la máquina (con la suite entera va al doble): margen amplio, y el trabajo
   // (número de avisos) se comprueba aparte, que no depende de la carga.
   assert.ok(ms < 15, `${ms.toFixed(2)} ms por tick de media`);
-  assert.ok(h.gs.sys.redstone.updates < 60000, `${h.gs.sys.redstone.updates} avisos`);
+  // Auditoría de la redstone: el polvo va cable a cable como en Java (cada cambio avisa a los vecinos de sus
+  // siete posiciones), así que hay más avisos que cuando se resolvía la red de una vez.
+  assert.ok(h.gs.sys.redstone.updates < 250000, `${h.gs.sys.redstone.updates} avisos`);
   assert.ok(h.gs.sys.redstone.scheduledCount < 100);
 });

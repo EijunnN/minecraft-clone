@@ -1,24 +1,32 @@
 // Fase 7 (redstone): motor de la redstone del servidor. Implementa la RedstoneApi que usan los
 // componentes (shared/redstone): nada recorre el mundo; todo va por avisos locales y ticks programados.
-// - Avisos a vecinos: cada cambio de bloque avisa a sus seis vecinos (y, si es un emisor, a los vecinos
-//   de los bloques que conducen a su lado); se atienden en cola, sin recursión, con un tope por tick.
-// - Polvo: la red se resuelve entera de una vez (wire.ts) y no se vuelve a resolver mientras no cambie
-//   nada que no sea la potencia de otro polvo.
-// - Ticks programados: montón ordenado por (tick, prioridad, orden de llegada), como en Minecraft; uno
-//   por posición. Retardos de antorchas, repetidores, comparadores, botones, placas…
+// Auditoría de la redstone (docs/redstone-auditoria.md): el modelo de actualizaciones es el de Minecraft Java.
+// - Cada cambio de bloque, dentro de su setBlock: onRemove del viejo y onPlace del nuevo; después, si lleva la
+//   opción 1, aviso a los seis vecinos (updateNeighborsAt, en el orden de Java: oeste, este, abajo, arriba,
+//   norte, sur) y a los comparadores de al lado si el bloque tiene lectura; y, salvo con la opción 16, las
+//   actualizaciones de forma de los vecinos (oeste, este, norte, sur, abajo, arriba: el observador, el
+//   bloqueo del repetidor).
+// - Los avisos se atienden como el CollectingNeighborUpdater de Java: en profundidad (lo que provoca un aviso
+//   se atiende antes de seguir con el siguiente, como la recursión de siempre) y con su tope.
+// - Ticks programados: montón ordenado por (tick, prioridad, orden de llegada), uno por posición; los que
+//   vencen se recogen al empezar su fase (los que se programan mientras, al tick siguiente).
+// - Eventos de bloque (pistones, bloque musical): se apuntan y se atienden en su fase, después de los ticks.
+// - Fases del tick (las de Java): ticks programados → (fluidos y ticks aleatorios, fuera de aquí) → eventos de
+//   bloque → entidades (placas, cuerda, mena) → entidades de bloque (sensores de luz solar…).
 // - Pisadas: cada tick se miran las celdas que tocan los pies de jugadores y entidades (placas, cuerda
 //   y mena de redstone); proyectiles (diana, botones de madera) y rayos (pararrayos) llegan por avisos.
-// - Periódicos: los sensores de luz solar (y lo que registren otros) se apuntan al cargar su chunk.
 // Los cambios viajan a los clientes como cualquier cambio de bloque.
 import {
-  familyBase, BLOCK_COUNT, isLightningRod, rodWith, isTrappedChest, isWire, isWoodenButton, isLitRedstoneOre, redstoneOreLit,
+  familyBase, BLOCK_COUNT, isLightningRod, rodWith, isTrappedChest, isWoodenButton, isLitRedstoneOre, redstoneOreLit,
   isTripwire, tripwireWith, tripwirePowered, tripwireAttached,
 } from '../../blocks';
 import {
-  FACE_X, FACE_Y, FACE_Z, emitterOf, neighborHandlers, tickHandler, analogReader, changeHandlers, steppedHandler,
-  projectileHandler, useHandler, periodicOf, isConductor, bestNeighborSignal, hasNeighborSignal, signalFrom, strongInto,
-  solveWireNetwork, arrowOnButton, type RedstoneApi, type EntityFilter, type ProjectileKind,
+  FACE_X, FACE_Y, FACE_Z, neighborHandlers, tickHandler, analogReader, changeHandlers, steppedHandler, projectileHandler,
+  useHandler, periodicOf, isConductor, bestNeighborSignal, hasNeighborSignal, signalFrom, strongInto, arrowOnButton,
+  placedHandlers, removedHandlers, shapeHandler, eventHandler, updateRodBase, UPDATE_ORDER, SHAPE_ORDER, HORIZONTAL, DOWN, UPDATE_ALL,
+  UPDATE_NEIGHBORS, UPDATE_KNOWN_SHAPE, UPDATE_MOVE_BY_PISTON, type RedstoneApi, type EntityFilter, type ProjectileKind,
 } from '../../redstone';
+import { COMPARATOR } from '../../blocks';
 import { MAX_BLOCK_ID, CHUNK_SIZE, CHUNK_VOLUME, indexY } from '../../constants';
 import { rainAt, thunderAt } from '../../weather';
 import { ENT_ARROW, ENT_DISPLAY } from '../../mobs';
@@ -32,8 +40,8 @@ import type { SimChunk } from '../WorldSim';
 import type { Nature } from './nature';
 import type { ServerContext } from './context';
 
-/** Avisos a vecinos que se atienden como mucho por tick (el resto, al siguiente). */
-const MAX_UPDATES_PER_TICK = 200_000;
+/** Avisos encadenados como mucho (maxChainedNeighborUpdates de Java); los demás se descartan. */
+const MAX_CHAINED_UPDATES = 1_000_000;
 /** Ticks programados que se ejecutan como mucho por tick (el de Minecraft). */
 const MAX_TICKS_PER_TICK = 65_536;
 /** Radio en el que un pararrayos atrae los rayos. */
@@ -52,6 +60,40 @@ interface Scheduled {
 
 const before = (a: Scheduled, b: Scheduled) => a.due - b.due || a.prio - b.prio || a.seq - b.seq;
 
+/**
+ * Un aviso pendiente del NeighborUpdater: 0 neighborChanged en (x, y, z) desde (fx, fy, fz); 1 aviso a los seis
+ * vecinos de (x, y, z) (salvo la cara `skip`), uno por paso; 2 actualización de forma del bloque de (x, y, z)
+ * porque su vecino de la cara `face` es ahora `nid`.
+ */
+interface Update {
+  k: 0 | 1 | 2;
+  x: number;
+  y: number;
+  z: number;
+  fx: number;
+  fy: number;
+  fz: number;
+  /** Bloque que avisa (sourceBlock de Java). */
+  src: number;
+  /** Aviso a vecinos: siguiente cara (índice de UPDATE_ORDER) y la que se salta. */
+  i: number;
+  skip: number;
+  /** Forma: cara hacia el vecino que cambió, su bloque y las opciones del cambio. */
+  face: number;
+  nid: number;
+  flags: number;
+}
+
+/** Evento de bloque pendiente (BlockEventData de Java). */
+interface BlockEvent {
+  x: number;
+  y: number;
+  z: number;
+  base: number;
+  a: number;
+  b: number;
+}
+
 /** Lo que el motor necesita de otros sistemas del servidor (contenedores, atriles, tocadiscos, marcos). */
 export interface RedstoneHooks {
   slots(x: number, y: number, z: number): readonly (ItemStack | null)[] | null;
@@ -69,12 +111,18 @@ export class Redstone implements RedstoneApi {
   private seq = 0;
   /** Dato por posición (salida de comparadores, mirones de cofres trampa, potencia recibida por puertas…). */
   private data = new Map<number, number>();
-  /** Cola de avisos: x, y, z y la posición que los provocó. */
-  private queue: number[] = [];
-  private head = 0;
-  /** Redes de polvo resueltas en la «época» actual (cambia con cualquier cambio que no sea de potencia de polvo). */
-  private solved = new Map<number, number>();
-  private epoch = 0;
+  /** NeighborUpdater: pila de avisos en curso, los que se añadieron en este paso y cuántos van encadenados. */
+  private stack: Update[] = [];
+  private added: Update[] = [];
+  private chained = 0;
+  /** Opciones del próximo cambio de bloque (las pone setBlock justo antes de cambiarlo). */
+  private nextFlags = UPDATE_ALL;
+  /** Fase de ticks programados: los que vencen en este tick y aún no se han atendido. */
+  private tickPhase = false;
+  private dueNow = new Set<number>();
+  /** Eventos de bloque pendientes (sin repetidos, en orden de llegada). */
+  private events: BlockEvent[] = [];
+  private eventKeys = new Set<string>();
   /** Posiciones con algo periódico (por periodo) y pararrayos. */
   private periodic = new Map<number, Set<number>>();
   readonly rods = new Set<number>();
@@ -109,8 +157,13 @@ export class Redstone implements RedstoneApi {
     return this.ctx.world.getBlock(x, y, z);
   }
 
-  setBlock(x: number, y: number, z: number, id: number): void {
-    this.ctx.world.setBlock(x, y, z, id);
+  setBlock(x: number, y: number, z: number, id: number, flags = UPDATE_ALL): void {
+    this.nextFlags = flags;
+    try {
+      this.ctx.world.setBlock(x, y, z, id);
+    } finally {
+      this.nextFlags = UPDATE_ALL;
+    }
   }
 
   getData(x: number, y: number, z: number): number {
@@ -152,35 +205,116 @@ export class Redstone implements RedstoneApi {
     return this.pending.has(posKey(x, y, z));
   }
 
+  /** willTickThisTick de Java: sólo durante la fase de ticks programados, los que vencen en ella y aún no se han atendido. */
   willTickNow(x: number, y: number, z: number): boolean {
-    const e = this.pending.get(posKey(x, y, z));
-    return !!e && e.due <= this.gameTick;
+    return this.tickPhase && this.dueNow.has(posKey(x, y, z));
   }
 
-  updateAt(x: number, y: number, z: number): void {
-    this.enqueue(x, y, z, x, y, z);
+  updateAt(x: number, y: number, z: number, fx = x, fy = y, fz = z, src = this.getBlock(fx, fy, fz)): void {
+    this.addAndRun({ k: 0, x, y, z, fx, fy, fz, src, i: 0, skip: -1, face: 0, nid: 0, flags: 0 });
   }
 
-  updateNeighbors(x: number, y: number, z: number): void {
-    for (let f = 0; f < 6; f++) this.enqueue(x + FACE_X[f], y + FACE_Y[f], z + FACE_Z[f], x, y, z);
+  updateNeighbors(x: number, y: number, z: number, except = -1, src = this.getBlock(x, y, z)): void {
+    this.addAndRun({ k: 1, x, y, z, fx: x, fy: y, fz: z, src, i: UPDATE_ORDER[0] === except ? 1 : 0, skip: except, face: 0, nid: 0, flags: 0 });
   }
 
   outputChanged(x: number, y: number, z: number): void {
-    this.bumpEpoch();
     this.updateNeighbors(x, y, z);
-    this.updateThroughConductors(x, y, z);
+    this.updateNeighbors(x, y - 1, z);
   }
 
+  stateTouched(x: number, y: number, z: number, flags = UPDATE_ALL): void {
+    this.afterChange(x, y, z, this.getBlock(x, y, z), flags);
+  }
+
+  /** updateNeighbourForOutputSignal de Java: los comparadores de al lado, o a dos bloques con un conductor entre medias. */
   analogChanged(x: number, y: number, z: number): void {
-    // Comparadores al lado, o a dos bloques con un bloque que conduce entre medias (updateNeighbourForOutputSignal).
-    for (let f = 0; f < 6; f++) {
-      if (FACE_Y[f] !== 0) continue;
+    for (const f of HORIZONTAL) {
       const ax = x + FACE_X[f], az = z + FACE_Z[f];
       const a = this.getBlock(ax, y, az);
       if (a <= 0) continue;
-      if (neighborHandlers(a)) this.enqueue(ax, y, az, x, y, z);
-      else if (isConductor(a)) this.enqueue(ax + FACE_X[f], y, az + FACE_Z[f], x, y, z);
+      if (familyBase(a) === COMPARATOR) this.updateAt(ax, y, az, x, y, z);
+      else if (isConductor(a) && familyBase(this.getBlock(ax + FACE_X[f], y, az + FACE_Z[f])) === COMPARATOR) {
+        this.updateAt(ax + FACE_X[f], y, az + FACE_Z[f], x, y, z);
+      }
     }
+  }
+
+  blockEvent(x: number, y: number, z: number, a: number, b: number): void {
+    const id = this.getBlock(x, y, z);
+    if (id <= 0) return;
+    const base = familyBase(id);
+    const key = `${x},${y},${z},${base},${a},${b}`;
+    if (this.eventKeys.has(key)) return;
+    this.eventKeys.add(key);
+    this.events.push({ x, y, z, base, a, b });
+  }
+
+  // ------------------------------------------------------------------ NeighborUpdater (el de Java)
+
+  /** addAndRun de CollectingNeighborUpdater: si ya se está atendiendo algo, se apunta; si no, se atiende ya. */
+  private addAndRun(u: Update): void {
+    const running = this.chained > 0;
+    const over = this.chained >= MAX_CHAINED_UPDATES;
+    this.chained++;
+    if (!over) {
+      if (running) this.added.push(u);
+      else this.stack.push(u);
+    }
+    if (!running) this.runUpdates();
+  }
+
+  /** runUpdates: en profundidad; lo añadido en un paso se atiende antes de seguir (el primero añadido, antes). */
+  private runUpdates(): void {
+    const stack = this.stack, added = this.added;
+    try {
+      while (stack.length || added.length) {
+        for (let i = added.length - 1; i >= 0; i--) stack.push(added[i]);
+        added.length = 0;
+        const u = stack[stack.length - 1];
+        while (added.length === 0) {
+          if (!this.runNext(u)) {
+            stack.pop();
+            break;
+          }
+        }
+      }
+    } finally {
+      stack.length = 0;
+      added.length = 0;
+      this.chained = 0;
+    }
+  }
+
+  /** Un paso de un aviso; devuelve si le quedan más. */
+  private runNext(u: Update): boolean {
+    if (u.k === 0) {
+      this.neighborChanged(u.x, u.y, u.z, u.fx, u.fy, u.fz, u.src);
+      return false;
+    }
+    if (u.k === 2) {
+      const cur = this.getBlock(u.x, u.y, u.z);
+      const sh = shapeHandler(cur);
+      if (sh) {
+        const next = sh(this, u.x, u.y, u.z, cur, u.face, u.nid);
+        if (next !== cur) this.setBlock(u.x, u.y, u.z, next, u.flags);
+      }
+      return false;
+    }
+    const f = UPDATE_ORDER[u.i++];
+    this.neighborChanged(u.x + FACE_X[f], u.y + FACE_Y[f], u.z + FACE_Z[f], u.x, u.y, u.z, u.src);
+    if (u.i < 6 && UPDATE_ORDER[u.i] === u.skip) u.i++;
+    return u.i < 6;
+  }
+
+  /** neighborChanged de Java sobre el bloque de (x, y, z). */
+  private neighborChanged(x: number, y: number, z: number, fx: number, fy: number, fz: number, src: number): void {
+    const id = this.getBlock(x, y, z);
+    if (id <= 0) return;
+    const hs = neighborHandlers(id);
+    if (!hs) return;
+    this.updates++;
+    for (const fn of hs) fn(this, x, y, z, id, fx, fy, fz, src);
   }
 
   analog(x: number, y: number, z: number): number {
@@ -268,13 +402,22 @@ export class Redstone implements RedstoneApi {
 
   // ------------------------------------------------------------------ cambios de bloques
 
-  /** Cada cambio de bloque (lo llama GameServer): avisos, redes de polvo y anotaciones. */
+  /**
+   * Cada cambio de bloque (lo llama GameServer, venga de donde venga): lo que hace Java dentro de setBlock.
+   * onRemove del viejo y onPlace del nuevo; aviso a los vecinos (opción 1) y a los comparadores si tiene
+   * lectura; actualizaciones de forma (salvo con la opción 16).
+   */
   onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
+    const flags = this.nextFlags;
+    this.nextFlags = UPDATE_ALL;
+    const moved = (flags & UPDATE_MOVE_BY_PISTON) !== 0;
     const k = posKey(x, y, z);
     const sameFamily = old > 0 && id > 0 && familyBase(old) === familyBase(id);
     if (!sameFamily) this.data.delete(k);
-    // Sólo la potencia de un polvo no invalida las redes resueltas.
-    if (!(isWire(old) && isWire(id))) this.bumpEpoch();
+    const ro = removedHandlers(old);
+    if (ro) for (const h of ro) h(this, x, y, z, old, id, moved);
+    const pn = placedHandlers(id);
+    if (pn) for (const h of pn) h(this, x, y, z, old, id, moved);
     const ho = changeHandlers(old), hn = changeHandlers(id);
     if (ho && !sameFamily) for (const h of ho) h(this, x, y, z, old, id);
     if (hn) for (const h of hn) h(this, x, y, z, old, id);
@@ -282,19 +425,27 @@ export class Redstone implements RedstoneApi {
       this.track(x, y, z, old, false);
       this.track(x, y, z, id, true);
     }
-    // Avisos: el propio bloque (si escucha), sus vecinos y, si emite, los de los bloques que carga.
-    if (id > 0 && (neighborHandlers(id) || isWire(id))) this.enqueue(x, y, z, x, y, z);
-    this.updateNeighbors(x, y, z);
-    if (emitterOf(old) || emitterOf(id)) this.updateThroughConductors(x, y, z);
-    // Polvo quitado: los de los escalones de al lado tienen que recalcular.
-    if (isWire(old) && !isWire(id)) {
-      for (let f = 0; f < 6; f++) {
-        if (FACE_Y[f] !== 0) continue;
-        this.enqueue(x + FACE_X[f], y + 1, z + FACE_Z[f], x, y, z);
-        this.enqueue(x + FACE_X[f], y - 1, z + FACE_Z[f], x, y, z);
+    this.afterChange(x, y, z, id, flags, old);
+  }
+
+  /**
+   * Lo que sigue a un cambio en setBlock: avisos a vecinos y comparadores (opción 1; el bloque que avisa es el
+   * viejo, como en Java) y formas (sin la 16).
+   */
+  private afterChange(x: number, y: number, z: number, id: number, flags: number, old = id): void {
+    if (flags & UPDATE_NEIGHBORS) {
+      this.updateNeighbors(x, y, z, -1, old);
+      if (analogReader(id)) this.analogChanged(x, y, z);
+    }
+    if (!(flags & UPDATE_KNOWN_SHAPE)) {
+      // updateNeighbourShapes: sin las opciones 1 y 32 (lo que cambie por su forma no avisa a sus vecinos).
+      const sf = flags & ~33;
+      for (const f of SHAPE_ORDER) {
+        const nx = x + FACE_X[f], ny = y + FACE_Y[f], nz = z + FACE_Z[f];
+        if (!shapeHandler(this.getBlock(nx, ny, nz))) continue;
+        this.addAndRun({ k: 2, x: nx, y: ny, z: nz, fx: x, fy: y, fz: z, src: id, i: 0, skip: -1, face: f ^ 1, nid: id, flags: sf });
       }
     }
-    if (analogReader(old) || analogReader(id)) this.analogChanged(x, y, z);
   }
 
   /** Apunta (o borra) las posiciones con algo periódico y los pararrayos. */
@@ -325,56 +476,6 @@ export class Redstone implements RedstoneApi {
       this.track(x, y, z, id, true);
       const hs = changeHandlers(id);
       if (hs) for (const h of hs) h(this, x, y, z, -1, id);
-    }
-  }
-
-  private bumpEpoch(): void {
-    this.epoch++;
-    if (this.solved.size) this.solved.clear();
-  }
-
-  private enqueue(x: number, y: number, z: number, sx: number, sy: number, sz: number): void {
-    this.queue.push(x, y, z, sx, sy, sz);
-  }
-
-  /** Avisa a los vecinos de los bloques que conducen alrededor de (x, y, z) (la potencia fuerte los atraviesa). */
-  private updateThroughConductors(x: number, y: number, z: number): void {
-    for (let f = 0; f < 6; f++) {
-      const nx = x + FACE_X[f], ny = y + FACE_Y[f], nz = z + FACE_Z[f];
-      if (!isConductor(this.getBlock(nx, ny, nz))) continue;
-      for (let g = 0; g < 6; g++) {
-        if (g === (f ^ 1)) continue;
-        this.enqueue(nx + FACE_X[g], ny + FACE_Y[g], nz + FACE_Z[g], nx, ny, nz);
-      }
-    }
-  }
-
-  /** Atiende los avisos pendientes (los que surjan mientras tanto, también). */
-  private drain(budget: { n: number }): void {
-    const q = this.queue;
-    while (this.head < q.length && budget.n > 0) {
-      budget.n--;
-      const h = this.head;
-      this.head += 6;
-      const x = q[h], y = q[h + 1], z = q[h + 2];
-      const id = this.getBlock(x, y, z);
-      if (id <= 0) continue;
-      this.updates++;
-      if (isWire(id)) {
-        if (this.solved.get(posKey(x, y, z)) === this.epoch) continue;
-        const epoch = this.epoch;
-        solveWireNetwork(this, x, y, z, (key) => this.solved.set(key, epoch));
-        continue;
-      }
-      const hs = neighborHandlers(id);
-      if (hs) for (const fn of hs) fn(this, x, y, z, id, q[h + 3], q[h + 4], q[h + 5]);
-    }
-    if (this.head >= q.length) {
-      q.length = 0;
-      this.head = 0;
-    } else if (this.head > 60_000) {
-      this.queue = q.slice(this.head);
-      this.head = 0;
     }
   }
 
@@ -412,12 +513,9 @@ export class Redstone implements RedstoneApi {
     return top;
   }
 
-  /**
-   * Atiende ya los avisos pendientes: tras la acción de un jugador (palanca, bloque puesto o quitado) la
-   * redstone reacciona en el acto, como en Minecraft, sin esperar al tick.
-   */
+  /** Compatibilidad: los avisos ya se atienden en el acto (como en Java), no queda nada pendiente. */
   flush(): void {
-    this.drain({ n: MAX_UPDATES_PER_TICK });
+    /* nada */
   }
 
   /** Ticks pendientes (para las pruebas). */
@@ -425,24 +523,57 @@ export class Redstone implements RedstoneApi {
     return this.pending.size;
   }
 
-  // ------------------------------------------------------------------ bucle
+  // ------------------------------------------------------------------ fases del tick
 
-  /** Un tick del servidor: avisos pendientes, ticks programados, pisadas y periódicos. */
+  /** Un tick entero (las pruebas y quien no reparte las fases): ticks, eventos, entidades y entidades de bloque. */
   tick(): void {
-    const budget = { n: MAX_UPDATES_PER_TICK };
-    this.drain(budget);
+    this.tickScheduled();
+    this.runBlockEvents();
+    this.entityPhase();
+    this.blockEntityPhase();
+  }
+
+  /** Fase de ticks programados (blockTicks de Java): se recogen los que vencen y se atienden en orden. */
+  tickScheduled(): void {
     const now = this.gameTick;
-    let n = 0;
-    while (this.heap.length && this.heap[0].due <= now && n++ < MAX_TICKS_PER_TICK) {
-      const e = this.pop();
-      this.pending.delete(e.key);
+    const run: Scheduled[] = [];
+    while (this.heap.length && this.heap[0].due <= now && run.length < MAX_TICKS_PER_TICK) run.push(this.pop());
+    if (run.length === 0) return;
+    this.tickPhase = true;
+    for (const e of run) this.dueNow.add(e.key);
+    try {
+      for (const e of run) {
+        this.dueNow.delete(e.key);
+        this.pending.delete(e.key);
+        const id = this.getBlock(e.x, e.y, e.z);
+        if (id <= 0 || familyBase(id) !== e.base) continue;
+        tickHandler(id)?.(this, e.x, e.y, e.z, id);
+      }
+    } finally {
+      this.tickPhase = false;
+      this.dueNow.clear();
+    }
+  }
+
+  /** Fase de eventos de bloque (runBlockEvents de Java): también los que se apuntan mientras. */
+  runBlockEvents(): void {
+    while (this.events.length) {
+      const e = this.events.shift()!;
+      this.eventKeys.delete(`${e.x},${e.y},${e.z},${e.base},${e.a},${e.b}`);
       const id = this.getBlock(e.x, e.y, e.z);
       if (id <= 0 || familyBase(id) !== e.base) continue;
-      tickHandler(id)?.(this, e.x, e.y, e.z, id);
-      this.drain(budget);
+      eventHandler(id)?.(this, e.x, e.y, e.z, id, e.a, e.b);
     }
+  }
+
+  /** Fase de entidades: lo que pisan (placas, cuerda y mena de redstone). */
+  entityPhase(): void {
     this.stepping();
-    this.drain(budget);
+  }
+
+  /** Fase de entidades de bloque: lo periódico (sensores de luz solar cada 20 ticks…). */
+  blockEntityPhase(): void {
+    const now = this.gameTick;
     for (const [every, set] of this.periodic) {
       if (now % every !== 0) continue;
       for (const k of set) {
@@ -456,7 +587,6 @@ export class Redstone implements RedstoneApi {
         }
         p.run(this, x, y, z, id);
       }
-      this.drain(budget);
     }
   }
 
@@ -575,6 +705,7 @@ export class Redstone implements RedstoneApi {
     const id = this.getBlock(bx, by, bz);
     if (!isLightningRod(id)) return;
     this.setBlock(bx, by, bz, rodWith(id, true));
+    updateRodBase(this, bx, by, bz, id);
     this.schedule(bx, by, bz, 8);
     this.fx('rod_spark', bx + 0.5, by + 0.5, bz + 0.5);
   }

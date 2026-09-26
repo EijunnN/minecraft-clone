@@ -29,6 +29,28 @@ export const HFACE: readonly number[] = [NORTH, EAST, SOUTH, WEST];
 /** Dirección horizontal (0..3) de una cara horizontal; −1 si es vertical. */
 export const faceDir = (face: number): number => HFACE.indexOf(face);
 
+// Órdenes de Minecraft Java (auditoría de la redstone): de ellos depende el orden de las actualizaciones.
+/** `Direction.values()`: abajo, arriba, norte, sur, oeste, este. */
+export const JAVA_DIRECTIONS: readonly number[] = [DOWN, UP, NORTH, SOUTH, WEST, EAST];
+/** `NeighborUpdater.UPDATE_ORDER`, el de los avisos a vecinos: oeste, este, abajo, arriba, norte, sur. */
+export const UPDATE_ORDER: readonly number[] = [WEST, EAST, DOWN, UP, NORTH, SOUTH];
+/** `BlockBehaviour.UPDATE_SHAPE_ORDER`, el de las actualizaciones de forma: oeste, este, norte, sur, abajo, arriba. */
+export const SHAPE_ORDER: readonly number[] = [WEST, EAST, NORTH, SOUTH, DOWN, UP];
+/** `Direction.Plane.HORIZONTAL`: norte, este, sur, oeste. */
+export const HORIZONTAL: readonly number[] = [NORTH, EAST, SOUTH, WEST];
+
+// Opciones de setBlock (los bits de `Block.UPDATE_*` de Java).
+/** Avisar a los vecinos (neighborChanged). */
+export const UPDATE_NEIGHBORS = 1;
+/** Mandarlo a los clientes (aquí siempre se manda). */
+export const UPDATE_CLIENTS = 2;
+/** No actualizar las formas de los vecinos. */
+export const UPDATE_KNOWN_SHAPE = 16;
+/** Lo mueve un pistón (onPlace/onRemove lo saben). */
+export const UPDATE_MOVE_BY_PISTON = 64;
+/** Lo normal: avisar y mandar. */
+export const UPDATE_ALL = UPDATE_NEIGHBORS | UPDATE_CLIENTS;
+
 // ------------------------------------------------------------------ vista y API del motor
 
 /** Lo mínimo para calcular potencias: bloques del mundo y el dato que guarda el motor por posición. */
@@ -52,8 +74,11 @@ export const PRIORITY_EXTREMELY_HIGH = -3, PRIORITY_VERY_HIGH = -2, PRIORITY_HIG
 export interface RedstoneApi extends RedstoneView {
   /** Tick de juego actual (20 por segundo). */
   readonly gameTick: number;
-  /** Cambia un bloque (se difunde a los clientes y avisa a los vecinos en este mismo tick). */
-  setBlock(x: number, y: number, z: number, id: number): void;
+  /**
+   * Cambia un bloque (se difunde a los clientes). `flags`: las opciones de Java (UPDATE_ALL por defecto: avisa
+   * a los vecinos y actualiza sus formas; UPDATE_CLIENTS sólo cambia el bloque y su onPlace/onRemove).
+   */
+  setBlock(x: number, y: number, z: number, id: number, flags?: number): void;
   /** Guarda un dato por posición (se borra solo cuando el bloque cambia de familia). */
   setData(x: number, y: number, z: number, value: number): void;
   /** Mayor potencia (0..15) que recibe (x, y, z) de sus seis vecinos (getBestNeighborSignal de Minecraft). */
@@ -73,15 +98,28 @@ export interface RedstoneApi extends RedstoneView {
   isScheduled(x: number, y: number, z: number): boolean;
   /** ¿Vence en este mismo tick un tick pendiente en (x, y, z)? */
   willTickNow(x: number, y: number, z: number): boolean;
-  /** Avisa (como oyente) al bloque de (x, y, z). */
-  updateAt(x: number, y: number, z: number): void;
-  /** Avisa a los seis vecinos de (x, y, z). */
-  updateNeighbors(x: number, y: number, z: number): void;
   /**
-   * La salida de un emisor en (x, y, z) cambió sin que cambiara su bloque (comparador, cofre trampa):
-   * avisa a sus vecinos y a los vecinos de los bloques que alimenta.
+   * Avisa al bloque de (x, y, z) de que algo cambió en (fx, fy, fz) (neighborChanged de Java; por defecto, él
+   * mismo). `src`: el bloque que avisa (el `sourceBlock` de Java; por defecto, el que hay en (fx, fy, fz)).
+   */
+  updateAt(x: number, y: number, z: number, fx?: number, fy?: number, fz?: number, src?: number): void;
+  /**
+   * Avisa a los seis vecinos de (x, y, z) en el orden de Java (updateNeighborsAt), salvo al de la cara `except`.
+   * `src`: el bloque que avisa (por defecto, el que hay en (x, y, z)).
+   */
+  updateNeighbors(x: number, y: number, z: number, except?: number, src?: number): void;
+  /**
+   * La salida de un emisor en (x, y, z) cambió sin que cambiara su bloque (cofre trampa, sensor de sculk):
+   * avisa a sus vecinos y a los del bloque de debajo (como hacen ellos en Java).
    */
   outputChanged(x: number, y: number, z: number): void;
+  /**
+   * El estado de (x, y, z) cambió sin cambiar su id (una propiedad que aquí va en el dato de posición, como el
+   * `powered` de puertas y campanas): avisos y formas como si hubiera cambiado, con las opciones `flags`.
+   */
+  stateTouched(x: number, y: number, z: number, flags?: number): void;
+  /** Apunta un evento de bloque (triggerEvent de Java: pistones, bloque musical…), que se atiende en su fase del tick. */
+  blockEvent(x: number, y: number, z: number, a: number, b: number): void;
   /** Cambió lo que un comparador leería de (x, y, z) (el contenido de un contenedor): avisa a los comparadores cercanos. */
   analogChanged(x: number, y: number, z: number): void;
   /** Lectura analógica (0..15) del bloque de (x, y, z) para un comparador; −1 si no tiene. */
@@ -120,15 +158,30 @@ export interface Emitter {
 
 /**
  * Algo cambió junto a (x, y, z) (un bloque vecino, la potencia que recibe…). (sx, sy, sz) es la
- * posición que provocó el aviso (la del bloque que cambió; la propia si el bloque acaba de aparecer).
+ * posición que provocó el aviso y `src` el bloque que avisa (el `sourceBlock` de Java: en un cambio de bloque,
+ * el que había antes; en los avisos de un componente, el propio componente).
  */
-export type NeighborHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number, sx: number, sy: number, sz: number) => void;
+export type NeighborHandler = (
+  api: RedstoneApi, x: number, y: number, z: number, id: number, sx: number, sy: number, sz: number, src: number,
+) => void;
 /** Venció un tick programado en (x, y, z). */
 export type TickHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => void;
 /** Lo que lee un comparador (0..15). */
 export type AnalogReader = (api: RedstoneApi, x: number, y: number, z: number, id: number) => number;
 /** Clic derecho sobre el bloque en el servidor: devuelve si lo atendió. */
 export type UseHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number) => boolean;
+/**
+ * onPlace / onRemove de Java: el bloque de (x, y, z) pasó de `old` a `id` (dentro del propio setBlock, antes de
+ * avisar a los vecinos). `placed` es del bloque nuevo; `removed`, del viejo. `moved`: lo movió un pistón.
+ */
+export type PlaceHandler = (api: RedstoneApi, x: number, y: number, z: number, old: number, id: number, moved: boolean) => void;
+/**
+ * updateShape de Java: cambió el vecino de la cara `face` (de este bloque hacia él), que ahora es `nid`.
+ * Devuelve el estado nuevo del bloque (el mismo si no cambia).
+ */
+export type ShapeHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number, face: number, nid: number) => number;
+/** triggerEvent de Java: un evento de bloque apuntado con blockEvent. */
+export type EventHandler = (api: RedstoneApi, x: number, y: number, z: number, id: number, a: number, b: number) => void;
 /**
  * El bloque de (x, y, z) pasó de `old` a `id` (uno de los dos es de esta familia): se colocó, se quitó
  * o cambió de estado. Al cargar su chunk se llama con old = −1 (y entonces no debe cambiar bloques: sólo anotar y programar).
@@ -151,6 +204,10 @@ export interface Periodic {
 export interface RedstoneBehavior {
   emitter?: Emitter;
   neighbor?: NeighborHandler;
+  placed?: PlaceHandler;
+  removed?: PlaceHandler;
+  shape?: ShapeHandler;
+  event?: EventHandler;
   tick?: TickHandler;
   analog?: AnalogReader;
   changed?: ChangeHandler;
@@ -169,6 +226,10 @@ const STEPPED: (SteppedHandler | undefined)[] = [];
 const PROJECTILE: (ProjectileHandler | undefined)[] = [];
 const USES: (UseHandler | undefined)[] = [];
 const PERIODIC: (Periodic | undefined)[] = [];
+const PLACED: (PlaceHandler[] | undefined)[] = [];
+const REMOVED: (PlaceHandler[] | undefined)[] = [];
+const SHAPES: (ShapeHandler | undefined)[] = [];
+const EVENTS: (EventHandler | undefined)[] = [];
 /** Conductores forzados: 1 conduce, 2 no conduce (0: lo decide su forma). */
 const CONDUCTOR = new Uint8Array(MAX_BLOCK_ID);
 /** Estados base que tienen algún comportamiento. */
@@ -193,6 +254,10 @@ export function registerRedstone(base: number | readonly number[], b: RedstoneBe
     if (b.projectile) PROJECTILE[f] = b.projectile;
     if (b.use) USES[f] = b.use;
     if (b.periodic) PERIODIC[f] = b.periodic;
+    if (b.placed) (PLACED[f] ??= []).push(b.placed);
+    if (b.removed) (REMOVED[f] ??= []).push(b.removed);
+    if (b.shape) SHAPES[f] = b.shape;
+    if (b.event) EVENTS[f] = b.event;
   }
 }
 
@@ -227,6 +292,18 @@ export function useHandler(id: number): UseHandler | undefined {
 }
 export function periodicOf(id: number): Periodic | undefined {
   return id > 0 ? PERIODIC[familyBase(id)] : undefined;
+}
+export function placedHandlers(id: number): readonly PlaceHandler[] | undefined {
+  return id > 0 ? PLACED[familyBase(id)] : undefined;
+}
+export function removedHandlers(id: number): readonly PlaceHandler[] | undefined {
+  return id > 0 ? REMOVED[familyBase(id)] : undefined;
+}
+export function shapeHandler(id: number): ShapeHandler | undefined {
+  return id > 0 ? SHAPES[familyBase(id)] : undefined;
+}
+export function eventHandler(id: number): EventHandler | undefined {
+  return id > 0 ? EVENTS[familyBase(id)] : undefined;
 }
 /** ¿Tiene el bloque algún comportamiento de redstone? */
 export function hasRedstone(id: number): boolean {

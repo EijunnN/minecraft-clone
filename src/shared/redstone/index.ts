@@ -7,4 +7,4 @@ export * from './api';
 export * from './signals';
 export * from './wire';
 export * from './use';
-export { containerSignal, noteInstrument, INSTRUMENTS, arrowOnButton } from './components';
+export { containerSignal, noteInstrument, INSTRUMENTS, arrowOnButton, updateRodBase } from './components';

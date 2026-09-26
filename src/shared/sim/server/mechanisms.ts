@@ -1,11 +1,12 @@
 // Fase 7 (mecanismos): los mecanismos del servidor juntos (lo que GameServer crea y avisa).
 // - Pistones (pistons.ts), tolvas (hoppers.ts), dispensadores y soltadores (dispensers.ts), dinamita y
 //   explosiones (tnt.ts) y las vagonetas con tolva y con dinamita (mechanismCarts.ts).
-// - Observadores (aquí): cuando cambia el bloque que vigila su cara (cualquier cambio de estado, también un
-//   bloque que empieza o termina de moverse), a los 2 ticks dan un pulso de 2 ticks por detrás.
+// - Observadores (aquí), como ObserverBlock de Java: la actualización de forma que llega por su cara (cualquier
+//   cambio de estado del bloque que vigila, también uno que empieza o termina de moverse) programa un tick a los
+//   2; en él se enciende 2 ticks (sin avisar: opción 2) y avisa al bloque de detrás y a los vecinos de ese.
 // Se enganchan a la redstone con su API (docs/redstone.md): no tocan el motor.
-import { OBSERVER, TNT, isObserver, observerPowered, observerWith, facingOf } from '../../blocks';
-import { registerRedstone, FACE_X, FACE_Y, FACE_Z } from '../../redstone';
+import { OBSERVER, TNT, observerPowered, observerWith, facingOf, familyBase } from '../../blocks';
+import { registerRedstone, FACE_X, FACE_Y, FACE_Z, UPDATE_CLIENTS, UPDATE_KNOWN_SHAPE, type RedstoneApi } from '../../redstone';
 import { Pistons } from './pistons';
 import { Hoppers } from './hoppers';
 import { Dispensers } from './dispensers';
@@ -26,14 +27,40 @@ import type { ServerContext } from './context';
 /** Duración del pulso del observador y su retardo (2 ticks de juego). */
 const OBSERVER_TICKS = 2;
 
+/** updateNeighborsInFront del observador: el bloque de detrás (su salida) y los vecinos de ese, menos él. */
+function observerFront(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
+  const back = facingOf(id) ^ 1;
+  const bx = x + FACE_X[back], by = y + FACE_Y[back], bz = z + FACE_Z[back];
+  api.updateAt(bx, by, bz, x, y, z, id);
+  api.updateNeighbors(bx, by, bz, back ^ 1, id);
+}
+
 registerRedstone(OBSERVER, {
-  // Pulso: se enciende y a los 2 ticks se apaga.
+  // Pulso: se enciende y a los 2 ticks se apaga (sin avisar al cambiar; avisa detrás).
   tick: (api, x, y, z, id) => {
-    if (observerPowered(id)) api.setBlock(x, y, z, observerWith(id, false));
+    if (observerPowered(id)) api.setBlock(x, y, z, observerWith(id, false), UPDATE_CLIENTS);
     else {
-      api.setBlock(x, y, z, observerWith(id, true));
+      api.setBlock(x, y, z, observerWith(id, true), UPDATE_CLIENTS);
       api.schedule(x, y, z, OBSERVER_TICKS);
     }
+    observerFront(api, x, y, z, id);
+  },
+  // updateShape: lo que cambia delante de su cara.
+  shape: (api, x, y, z, id, face) => {
+    if (face === facingOf(id) && !observerPowered(id) && !api.isScheduled(x, y, z)) api.schedule(x, y, z, OBSERVER_TICKS);
+    return id;
+  },
+  // onPlace: uno puesto encendido (por un pistón, un comando…) se apaga sin avisar y avisa detrás.
+  placed: (api, x, y, z, old, id) => {
+    if (old >= 0 && !(old > 0 && familyBase(old) === OBSERVER) && observerPowered(id) && !api.isScheduled(x, y, z)) {
+      const off = observerWith(id, false);
+      api.setBlock(x, y, z, off, UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE);
+      observerFront(api, x, y, z, off);
+    }
+  },
+  // onRemove: uno quitado a media señal avisa detrás de que se apaga.
+  removed: (api, x, y, z, old, id) => {
+    if (!(id > 0 && familyBase(id) === OBSERVER) && observerPowered(old) && api.isScheduled(x, y, z)) observerFront(api, x, y, z, observerWith(old, false));
   },
   // Guardado encendido: que se apague.
   changed: (api, x, y, z, old, id) => {
@@ -86,18 +113,9 @@ export class Mechanisms {
     };
   }
 
-  /** Cada cambio de bloque: pistones (base y cabeza) y observadores que lo vigilan. */
+  /** Cada cambio de bloque: pistones (base y cabeza). Los observadores van por las formas (el motor). */
   onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
     this.pistons.onBlockChanged(x, y, z, old, id);
-    if (old === id) return;
-    const w = this.d.ctx.world, rs = this.d.redstone;
-    for (let f = 0; f < 6; f++) {
-      const ox = x + FACE_X[f], oy = y + FACE_Y[f], oz = z + FACE_Z[f];
-      const o = w.getBlock(ox, oy, oz);
-      // Un observador al lado cuya cara mira a este bloque.
-      if (!isObserver(o) || facingOf(o) !== (f ^ 1) || observerPowered(o) || rs.isScheduled(ox, oy, oz)) continue;
-      rs.schedule(ox, oy, oz, OBSERVER_TICKS);
-    }
   }
 
   /**
