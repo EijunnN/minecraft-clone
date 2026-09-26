@@ -107,13 +107,16 @@ void main() {
       float fogT = exp(-fogOpticalDepth(rd, dist));
       vec3 fogCol = texelFetch(uIrradiance, ivec2(6, 0), 0).rgb * mix(0.08, 1.0, eyeSky) + ambUp * 0.02;
       col = col * fogT + fogCol * (1.0 - fogT);
+      // Bajo tierra (sin cielo a la vista) la lejanía se funde con la niebla oscura, no con el cielo:
+      // en una caverna grande (Deep Dark) se veía un «cielo» al fondo.
+      vec3 farC = mix(fogCol, skyC, eyeSky);
       // Perspectiva aérea (bruma azulada con la distancia).
       float haze = 1.0 - exp(-dist * 0.0011);
-      col = mix(col, skyC, haze * (0.35 + 0.65 * eyeSky) * 0.75);
+      col = mix(col, farC, haze * (0.35 + 0.65 * eyeSky) * 0.75);
       // Niebla de borde para ocultar el final de la distancia de renderizado.
       float hd = length(rel.xz);
       float border = smoothstep(uFog.z, uFog.w, hd);
-      col = mix(col, skyC, border);
+      col = mix(col, farC, border);
     }
     if (uCloudsOn > 0.5) {
       vec4 cl = texture(uClouds, vUV);
