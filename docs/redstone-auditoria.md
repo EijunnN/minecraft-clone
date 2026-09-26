@@ -41,9 +41,18 @@ Java. Lo que no coincide es **el modelo de actualizaciones**, y de él dependen 
 
 ## Decisiones y lo que queda
 
-- **Versión:** 1.21.x con la retirada de `onRemove` de 1.21.5 (ahora `affectNeighborsAfterRemoval`, sólo
-  cuando cambia el tipo de bloque). El polvo usa el evaluador de siempre (el de los «experimentos de
-  redstone» es opcional en Java y no está).
+- **Versión: la 26.3.** El comportamiento se portó del código de Java que conozco (1.21.x, sobre el que se
+  construye la 26.x) y se contrastó con el índice del JAR de la 26.3 del catálogo (`implementation.json`:
+  clases y firmas de métodos, sin su código). Coincide la estructura: `affectNeighborsAfterRemoval` en vez de
+  `onRemove` (sólo cuando cambia el tipo de bloque), `CollectingNeighborUpdater` con sus avisos simples, a
+  vecinos, de forma y completos, `neighborChanged` con orientación, eventos de bloque (`blockEvent`,
+  `runBlockEvents`), `LevelTicks.willTickThisTick`, `DefaultRedstoneWireEvaluator` (el de siempre; el de los
+  «experimentos de redstone» es opcional y no está), `PistonBaseBlock.checkIfExtend`/`moveBlocks`,
+  `PistonMovingBlockEntity.finalTick`, `DiodeBlock.updateNeighborsInFront`, `ObserverBlock.startSignal`,
+  `PoweredRailBlock.findPoweredRailSignal`… Lo que el índice no dice (el cuerpo de los métodos) no está
+  comprobado contra la 26.3; hay tres pistas de cambios pequeños en la 26.x que convendría mirar con el JAR
+  de verdad: `RedstoneWireBlock.updatePowerStrength(…, shapeUpdateWiresAroundInitialPosition)` y
+  `updatesOnShapeChange`, el nuevo `ownSignal` de las potencias y `ServerLevel.updateNeighboursOnBlockSet`.
 - **El bloque que avisa** en un cambio de bloque es el que había antes (como `Level.setBlock` de Java). Un
   efecto curioso, también en Java: al poner un bloque de redstone junto a un cruce de raíles en T no cambia
   (el aviso lo da el aire que había), sí con una palanca o una antorcha.
