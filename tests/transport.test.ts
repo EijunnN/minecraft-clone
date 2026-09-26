@@ -308,14 +308,14 @@ test('servidor: poner una barca en el agua, que flote, subir, remar, bajar y rom
   const [boat] = vehicles(h, ENT_BOAT);
   assert.ok(boat, 'hay barca');
   assert.equal(boat.variant, BOAT_WOODS.indexOf('spruce'));
-  assert.ok(h.gs.transport.floating(h.gs.transport.vehicleOf(boat.id)!), 'flota');
+  assert.ok(h.gs.sys.transport.floating(h.gs.sys.transport.vehicleOf(boat.id)!), 'flota');
   assert.ok(boat.y > by - 1 && boat.y < by, `a flote (y = ${boat.y.toFixed(2)})`);
   // Subirse.
   c.pos(boat.x + 1, by, boat.z);
   c.send({ t: 'vride', e: boat.id });
   const pass = c.conn.take('vpass').pop();
   assert.deepEqual(pass?.p, [c.welcome.id, 0], 'va delante');
-  assert.equal(h.gs.transport.rideOf(c.welcome.id), boat.id);
+  assert.equal(h.gs.sys.transport.rideOf(c.welcome.id), boat.id);
   // Remar: el cliente manda la posición de la barca; el servidor la acepta si es alcanzable.
   const x0 = boat.x;
   for (let i = 1; i <= 10; i++) {
@@ -334,7 +334,7 @@ test('servidor: poner una barca en el agua, que flote, subir, remar, bajar y rom
   assert.equal(pig.vehicle, undefined, 'con remero no se sube');
   // Bajarse.
   c.send({ t: 'vleave' });
-  assert.equal(h.gs.transport.rideOf(c.welcome.id), undefined);
+  assert.equal(h.gs.sys.transport.rideOf(c.welcome.id), undefined);
   // Sin nadie remando, la criatura pequeña que choca se sube.
   pig.x = boat.x + 0.3;
   pig.z = boat.z;
@@ -369,9 +369,9 @@ test('servidor: vagonetas en los raíles (poner, subir, cofre, horno) y guardado
   assert.ok(cart && Math.abs(cart.y - (by + 0.0625)) < 1e-6, 'sobre el raíl');
   // Subirse y bajarse.
   c.send({ t: 'vride', e: cart.id });
-  assert.equal(h.gs.transport.rideOf(c.welcome.id), cart.id);
+  assert.equal(h.gs.sys.transport.rideOf(c.welcome.id), cart.id);
   c.send({ t: 'vleave' });
-  assert.equal(h.gs.transport.rideOf(c.welcome.id), undefined);
+  assert.equal(h.gs.sys.transport.rideOf(c.welcome.id), undefined);
   // Vagoneta con cofre: su inventario se abre como un cofre.
   c.send({ t: 'vplace', item: CHEST_MINECART, p: [bx + 6.5, by + 0.1, bz + 0.5], b: [bx + 6, by, bz], yaw: 0, q: 3 });
   const [chest] = vehicles(h, ENT_CHEST_MINECART);
@@ -380,9 +380,9 @@ test('servidor: vagonetas en los raíles (poner, subir, cofre, horno) y guardado
   c.send({ t: 'open', x: px, y: py, z: pz });
   const open = c.conn.take('cont').pop() ?? c.conn.msgs.find((m) => m.x === px && m.y === py);
   assert.ok(open, 'se abre el cofre');
-  const inv = h.gs.transport.vehicleOf(chest.id)!.inv!;
+  const inv = h.gs.sys.transport.vehicleOf(chest.id)!.inv!;
   inv.slots[4] = { id: COAL, count: 12 };
-  h.gs.transport.containerChanged();
+  h.gs.sys.transport.containerChanged();
   // Vagoneta con horno: con carbón empuja.
   c.send({ t: 'vplace', item: FURNACE_MINECART, p: [bx + 4.5, by + 0.1, bz + 0.5], b: [bx + 4, by, bz], yaw: 0, q: 4 });
   const [furnace] = vehicles(h, ENT_FURNACE_MINECART);
@@ -398,13 +398,13 @@ test('servidor: vagonetas en los raíles (poner, subir, cofre, horno) y guardado
   const back = [...h2.gs.entities.list.values()].filter((e) => isVehicleType(e.type));
   assert.equal(back.length, 3, 'vuelven las tres vagonetas');
   const chest2 = back.find((e) => e.type === ENT_CHEST_MINECART)!;
-  assert.deepEqual(h2.gs.transport.vehicleOf(chest2.id)!.inv!.slots[4], { id: COAL, count: 12 }, 'con lo que llevaba');
+  assert.deepEqual(h2.gs.sys.transport.vehicleOf(chest2.id)!.inv!.slots[4], { id: COAL, count: 12 }, 'con lo que llevaba');
   // Romper la vagoneta con cofre suelta la vagoneta, el cofre y lo de dentro (supervivencia).
   const c2 = h2.join('Barquera');
   c2.pos(chest2.x + 1, by, chest2.z);
   h2.tick(2);
-  for (let i = 0; i < 6 && h2.gs.transport.vehicleOf(chest2.id); i++) c2.send({ t: 'attack', e: chest2.id, item: 0 });
-  assert.equal(h2.gs.transport.vehicleOf(chest2.id), undefined, 'rota');
+  for (let i = 0; i < 6 && h2.gs.sys.transport.vehicleOf(chest2.id); i++) c2.send({ t: 'attack', e: chest2.id, item: 0 });
+  assert.equal(h2.gs.sys.transport.vehicleOf(chest2.id), undefined, 'rota');
   assert.equal(itemsOf(h2, COAL), 12);
 });
 

@@ -103,7 +103,7 @@ test('servidor: los cofres de un templo se llenan al generarse, una sola vez', (
   // La cámara del tesoro está 12 bloques por debajo del suelo del templo.
   W.ensureChunk(Math.floor(p[0] / 16), Math.floor(p[2] / 16));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const containers = (h.gs as any).containers.containers as Map<number, { slots: unknown[] }>;
+  const containers = (h.gs.sys.containers as unknown as { containers: unknown }).containers as Map<number, { slots: unknown[] }>;
   const chestAt = (x: number, y: number, z: number) => isChest(W.getBlock(x, y, z));
   const cy = p[1] - 12;
   const spots = [[p[0], cy, p[2] - 4], [p[0] + 4, cy, p[2]], [p[0], cy, p[2] + 4], [p[0] - 4, cy, p[2]]].filter(([x, y, z]) => chestAt(x, y, z));

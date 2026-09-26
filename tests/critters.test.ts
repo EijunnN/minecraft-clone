@@ -253,7 +253,7 @@ test('champiñaca: tijeras (vaca y 5 champiñones), cuenco, cubo, flor y estofad
   r = interact(c, moo, POPPY, 3);
   assert.ok(!r.ok, 'la roja no come flores');
   // Un rayo la vuelve marrón sin hacerle daño.
-  const storms = (h.gs as unknown as { storms: Storms }).storms;
+  const storms = h.gs.sys.storms;
   const hp = moo.health;
   storms.strike(moo.x, moo.y + 0.5, moo.z);
   assert.ok(mooshroomBrown(moo) && moo.health === hp && moo.fire <= 0, 'marrón, sin daño ni fuego');
@@ -292,7 +292,7 @@ test('champiñaca: tijeras (vaca y 5 champiñones), cuenco, cubo, flor y estofad
 
 test('llama de comerciante: llegan dos atadas al comerciante, lo defienden y se van con él', () => {
   const { h, c } = platform();
-  const trading = (h.gs as unknown as { trading: Trading }).trading;
+  const trading = h.gs.sys.trading;
   const trader = trading.spawnTrader()!;
   assert.ok(trader && trader.type === MOB_WANDERING_TRADER, 'llega un comerciante');
   const llamas = mobsOf(h, MOB_TRADER_LLAMA);
@@ -312,7 +312,7 @@ test('llama de comerciante: llegan dos atadas al comerciante, lo defienden y se 
 
 test('llama de comerciante: si muere el comerciante se quedan y se pueden domar', () => {
   const { h, c } = platform();
-  const trading = (h.gs as unknown as { trading: Trading }).trading;
+  const trading = h.gs.sys.trading;
   const trader = trading.spawnTrader()!;
   const llama = mobsOf(h, MOB_TRADER_LLAMA)[0];
   h.gs.entities.kill(trader, true);
@@ -331,7 +331,7 @@ test('trampa del rayo: caballo trampa, cuatro jinetes con casco y arco, y caball
   const { h, c, bx, by, bz } = platform();
   const E = h.gs.entities;
   assert.ok(trapChance(0) === 0 && trapChance(3) > trapChance(1), 'más trampas cuanto más difícil');
-  const storms = (h.gs as unknown as { storms: Storms }).storms;
+  const storms = h.gs.sys.storms;
   assert.ok(storms.natural && storms.struck, 'la tormenta sabe de trampas y champiñacas');
   const horse = spawnTrapHorse(E, bx + 0.5, by, bz + 0.5)!;
   h.tick(20);

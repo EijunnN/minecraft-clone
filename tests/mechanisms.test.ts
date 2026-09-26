@@ -202,7 +202,7 @@ test('pistón: guardar a medio movimiento no pierde nada (y la base que se recog
   assert.equal(get(x, by, z), MOVING_BLOCK);
   c.pos(bx + 5000.5, by + 30, bz + 0.5);
   h.gs.world.unloadUnused(h.clock.now + 60_000, () => false);
-  assert.equal(h.gs.mechanisms.pistons.pending, 0, 'nada a medias');
+  assert.equal(h.gs.sys.mechanisms.pistons.pending, 0, 'nada a medias');
   assert.equal(h.gs.world.getBlock(x, by, z), -1, 'descargado');
   c.pos(bx + 0.5, by + 30, bz + 0.5);
   h.tick(40);
@@ -257,7 +257,7 @@ test('observador: pulso de 2 ticks cuando cambia lo que vigila', () => {
 
 test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por el comparador', () => {
   const { h, bx, by, bz, set, get } = lab();
-  const inv = h.gs.mechanisms.inventories;
+  const inv = h.gs.sys.mechanisms.inventories;
   // Lo que se mete a mano se guarda con done() (como todo lo que cambia un contenedor: despierta a las tolvas).
   const fill = (a: number, b: number, d: number, slot: number, st: { id: number; count: number }) => {
     const o = inv.open(a, b, d)!;
@@ -319,8 +319,8 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
 
 test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las que no tienen nada que hacer duermen', () => {
   const { h, bx, by, bz, set } = lab();
-  const inv = h.gs.mechanisms.inventories;
-  const hoppers = h.gs.mechanisms.hoppers;
+  const inv = h.gs.sys.mechanisms.inventories;
+  const hoppers = h.gs.sys.mechanisms.hoppers;
   const count = (a: number, b: number, d: number) => inv.open(a, b, d)!.state.slots.reduce((n, st) => n + (st?.count ?? 0), 0);
   const fill = (a: number, b: number, d: number, n: number) => {
     const o = inv.open(a, b, d)!;
@@ -369,7 +369,7 @@ test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las qu
 
 test('dispensador y soltador: flecha, cubo de agua, dinamita, mechero y soltar', () => {
   const { h, bx, by, bz, set, get } = lab();
-  const inv = h.gs.mechanisms.inventories;
+  const inv = h.gs.sys.mechanisms.inventories;
   const x = bx + 10, z = bz - 12;
   const pulse = (px: number, pz: number) => {
     set(px, by + 1, pz, REDSTONE_BLOCK);
@@ -496,12 +496,11 @@ test('vagonetas con tolva y con dinamita', () => {
   h.tick(2);
   const cart = [...h.gs.entities.list.values()].find((e) => e.type === ENT_HOPPER_MINECART)!;
   assert.ok(cart, 'puesta');
-  const inv = h.gs.mechanisms.inventories;
+  const inv = h.gs.sys.mechanisms.inventories;
   inv.open(x + 2, by + 1, z)!.state.slots[0] = { id: DIRT, count: 4 };
   h.tick(40);
   const [cx, cy, cz] = vehicleContainerPos(cart.id);
-  const cartSlots = (h.gs as unknown as { containers: { access(x: number, y: number, z: number): { state: { slots: ({ count: number } | null)[] } } } })
-    .containers.access(cx, cy, cz).state.slots;
+  const cartSlots = h.gs.sys.containers.access(cx, cy, cz)!.state.slots;
   const got = cartSlots.reduce((n, s) => n + (s?.count ?? 0), 0);
   assert.equal(got, 4, 'saca lo del cofre de encima');
   // Dinamita: en un raíl activador encendido se enciende y explota.
@@ -538,8 +537,8 @@ test('vagoneta con dinamita: rota corriendo se enciende y no se suelta; quieta, 
   };
   const cartItems = () => [...h.gs.entities.list.values()].filter((e) => e.type === ENT_ITEM && e.stack?.id === TNT_MINECART).length;
   const hit = (id: number, speed: number) => {
-    for (let i = 0; i < 6 && h.gs.transport.vehicleOf(id) && num(h.gs.transport.vehicleOf(id)!.extra?.fuse) < 0; i++) {
-      const v = h.gs.transport.vehicleOf(id)!;
+    for (let i = 0; i < 6 && h.gs.sys.transport.vehicleOf(id) && num(h.gs.sys.transport.vehicleOf(id)!.extra?.fuse) < 0; i++) {
+      const v = h.gs.sys.transport.vehicleOf(id)!;
       v.cart!.vx = speed;
       minera.pos(v.e.x, by, v.e.z + 1.5);
       minera.send({ t: 'attack', e: id, item: 0 });
@@ -549,8 +548,8 @@ test('vagoneta con dinamita: rota corriendo se enciende y no se suelta; quieta, 
   // Corriendo (8 bloques/s): se enciende con una mecha corta, no suelta nada y explota.
   const fast = place(z, 3);
   hit(fast.id, 8);
-  assert.ok(h.gs.transport.vehicleOf(fast.id), 'no se rompe');
-  assert.ok(num(h.gs.transport.vehicleOf(fast.id)!.extra?.fuse) >= 0, 'se enciende');
+  assert.ok(h.gs.sys.transport.vehicleOf(fast.id), 'no se rompe');
+  assert.ok(num(h.gs.sys.transport.vehicleOf(fast.id)!.extra?.fuse) >= 0, 'se enciende');
   assert.equal(cartItems(), 0, 'no se suelta');
   h.tick(45);
   assert.ok(!h.gs.entities.list.has(fast.id), 'explota');
@@ -558,7 +557,7 @@ test('vagoneta con dinamita: rota corriendo se enciende y no se suelta; quieta, 
   // Quieta: se suelta sin explotar.
   const still = place(z + 6, 4);
   hit(still.id, 0);
-  assert.ok(!h.gs.transport.vehicleOf(still.id), 'rota');
+  assert.ok(!h.gs.sys.transport.vehicleOf(still.id), 'rota');
   assert.equal(cartItems(), 1, 'suelta la vagoneta con dinamita');
   assert.equal([...h.gs.entities.list.values()].filter((e) => e.type === ENT_TNT).length, 0);
 });

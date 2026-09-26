@@ -191,7 +191,7 @@ function mobsOf(h: Harness, type: number): Entity[] {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const priv = (h: Harness): any => h.gs;
+const priv = (h: Harness): any => h.gs.sys;
 
 test('servidor: al romper un bloque infestado sale una lepisma, y herida despierta a las demás', () => {
   const h = makeServer(101);
@@ -342,8 +342,9 @@ test('servidor: insomnio y phantoms (se reinicia al dormir y se guarda)', () => 
   const c = h.join('Desvelado');
   c.pos(8.5, 150, 8.5);
   h.tick(2);
-  const gs = priv(h);
-  const monsters = gs.monsters;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const gs = h.gs as any;
+  const monsters = h.gs.sys.monsters;
   gs.setTime(10.75); // medianoche
   gs.rand = () => 0.99;
   monsters.setInsomnia('Desvelado', INSOMNIA_SECONDS * 2);

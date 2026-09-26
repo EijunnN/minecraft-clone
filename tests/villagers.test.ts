@@ -311,7 +311,7 @@ test('barril: se abre y guarda cosas como un cofre', () => {
 
 test('comerciante ambulante: aparece de día cerca de un jugador, vende plantas y se va con el tiempo', () => {
   const { h, c } = arena();
-  const trading = (h.gs as unknown as { trading: { spawnTrader(): Entity | null } }).trading;
+  const trading = h.gs.sys.trading;
   const t = trading.spawnTrader();
   assert.ok(t, 'aparece');
   assert.equal(t!.type, MOB_WANDERING_TRADER);

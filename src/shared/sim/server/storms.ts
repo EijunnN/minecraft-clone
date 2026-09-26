@@ -1,6 +1,7 @@
 // Tormentas eléctricas: mientras truena caen rayos al azar cerca de los jugadores (en lo más alto
 // de la columna, a la intemperie). Un rayo hace 5 de daño y prende a lo que haya a 3 bloques, y
 // todos los jugadores ven el destello y oyen el trueno (más tarde cuanto más lejos).
+import { Listeners } from './hooks';
 import { thunderAt } from '../../weather';
 import { MIN_Y } from '../../constants';
 import type { ServerContext } from './context';
@@ -11,7 +12,8 @@ const STRIKES_PER_SECOND = 1 / 9;
 
 export class Storms {
   /** Fase 6.5 (cobre): aviso de cada rayo (el punto de impacto, encima del bloque alcanzado). */
-  onStrike: ((x: number, y: number, z: number) => void) | null = null;
+  /** Cada rayo que cae (cobre, creepers cargados, fuego, redstone, vibraciones…). */
+  readonly strikes = new Listeners<[number, number, number]>();
   /** Fase 7 (redstone): un pararrayos cercano atrae el rayo (devuelve el nuevo punto de impacto). */
   redirect: ((x: number, y: number, z: number) => [number, number, number] | null) | null = null;
   /** Fase 7.5 (fauna): antes de cada rayo natural; true si en su lugar quedó una trampa de esqueletos. */
@@ -51,6 +53,6 @@ export class Storms {
       if (!s.joined || Math.hypot(s.p[0] - x, s.p[1] - y, s.p[2] - z) > 3) continue;
       ctx.entities.host.hurtPlayer(s.id, 5, 0, 0.3, 0, 'lightning');
     }
-    this.onStrike?.(x, y, z);
+    this.strikes.emit(x, y, z);
   }
 }

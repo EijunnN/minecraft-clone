@@ -85,7 +85,7 @@ test('servidor: un rayo hace daño; el agua se congela y el hielo se derrite con
   W.ensureChunk(0, 0);
   const z = h.gs.entities.spawnMob(MOB_ZOMBIE, 8.5, 200, 8.5)!;
   const hp = z.health;
-  gs.storms.strike(8.5, 200, 8.5);
+  gs.sys.storms.strike(8.5, 200, 8.5);
   assert.ok(z.health < hp && z.fire > 0, 'el zombi recibe daño y arde');
   // Una columna cualquiera del chunk, forzada a ser fría con el generador a mano: se busca una fría.
   let cx = 0, cz = 0;
@@ -96,16 +96,16 @@ test('servidor: un rayo hace daño; el agua se congela y el hielo se derrite con
   W.ensureChunk(Math.floor(cx / 16), Math.floor(cz / 16));
   W.setBlock(cx, 210, cz, STONE);
   W.setBlock(cx, 211, cz, WATER);
-  gs.nature.weatherTickAt(cx, cz, false);
+  gs.sys.nature.weatherTickAt(cx, cz, false);
   assert.equal(W.getBlock(cx, 211, cz), ICE, 'el agua a la intemperie se congela en el frío');
-  gs.nature.weatherTickAt(cx, cz, true);
+  gs.sys.nature.weatherTickAt(cx, cz, true);
   W.setBlock(cx + 1, 210, cz, STONE);
-  gs.nature.weatherTickAt(cx + 1, cz, true);
+  gs.sys.nature.weatherTickAt(cx + 1, cz, true);
   assert.equal(W.getBlock(cx + 1, 211, cz), SNOW_LAYER, 'si nieva, se posa una capa de nieve');
   // Una piedra luminosa al lado: el hielo se derrite y la nieve desaparece.
   W.setBlock(cx, 212, cz + 1, GLOWSTONE);
-  gs.nature.randomTickAt(cx, 211, cz);
-  gs.nature.randomTickAt(cx + 1, 211, cz);
+  gs.sys.nature.randomTickAt(cx, 211, cz);
+  gs.sys.nature.randomTickAt(cx + 1, 211, cz);
   assert.equal(W.getBlock(cx, 211, cz), WATER, 'el hielo se derrite junto a la luz');
   assert.equal(W.getBlock(cx + 1, 211, cz), AIR, 'la nieve también');
 });

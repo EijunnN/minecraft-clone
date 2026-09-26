@@ -142,7 +142,7 @@ test('montar y bajarse: silla, jinete, otros jugadores y quien llega después', 
   const seen = c2.conn.take('ride').find((m) => m.id === me);
   assert.ok(seen && seen.e === horse.id && seen.c === true && Array.isArray(seen.st), 'los demás saben quién monta qué');
   assert.equal(horse.rider, me);
-  assert.equal(h.gs.riding.mountOf(me), horse.id);
+  assert.equal(h.gs.sys.riding.mountOf(me), horse.id);
   h.tick(2);
   assert.ok((horse.flags & EF_SADDLE) && (horse.flags & EF_RIDDEN) && (horse.flags & EF_TAMED), 'bits de silla, jinete y domado');
 
@@ -159,7 +159,7 @@ test('montar y bajarse: silla, jinete, otros jugadores y quien llega después', 
   c2.conn.msgs = [];
   c.send({ t: 'dismount' });
   assert.equal(horse.rider, undefined);
-  assert.equal(h.gs.riding.mountOf(me), undefined);
+  assert.equal(h.gs.sys.riding.mountOf(me), undefined);
   assert.ok(c2.conn.take('ride').some((m) => m.id === me && m.e === 0), 'los demás ven que se bajó');
 
   // Lejos no se puede montar; al morir o alejarse del caballo se baja solo.

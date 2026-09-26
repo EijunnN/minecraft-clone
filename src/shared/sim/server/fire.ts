@@ -4,6 +4,7 @@
 // (los consume o los prende) y se propaga a huecos junto a madera, hojas, lana… Sobre rocanegra no se
 // apaga nunca. La lava prende lo inflamable que tiene cerca y los rayos encienden fuego donde caen.
 // Las criaturas que lo tocan se prenden (los jugadores se queman en su cliente) y los objetos arden.
+import { Handlers } from './hooks';
 import {
   AIR, BLOCK_SOLID, BLOCK_FLUID, NETHERRACK, NEIGHBORS6, isFire, fireAge, fireWithAge, fireSupport, flammability,
   flameEncouragement, familyBase, stateOf, stateProps, CAMPFIRE, isCandle, isLitCandle, candleState, candleCount,
@@ -23,6 +24,8 @@ const CONTACT_EVERY = 10;
 const MAX_PER_TICK = 64;
 
 export class Fire {
+  /** Otros sistemas que encienden algo en un bloque (la dinamita); si uno lo hace, no se mira más. */
+  readonly igniters = new Handlers<[number, number, number], boolean>();
   /** Fuegos vivos: posición → tick de su próxima revisión. */
   private due = new Map<number, number>();
 
@@ -84,6 +87,7 @@ export class Fire {
    * si encendió algo.
    */
   lightBlock(x: number, y: number, z: number): boolean {
+    if (this.igniters.first(x, y, z)) return true; // Fase 7 (mecanismos): la dinamita, antes que nada
     const w = this.ctx.world;
     const id = w.getBlock(x, y, z);
     if (isCandle(id) && !isLitCandle(id)) {

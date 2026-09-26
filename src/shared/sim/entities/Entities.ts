@@ -177,7 +177,11 @@ export class Entities {
   }
 
   /** Suelta objetos con la dispersión típica de un bloque roto. */
+  /** Retoques de lo que se suelta antes de soltarlo (las capas de los estandartes rotos). */
+  decorateDrops: ((stacks: ItemStack[], x: number, y: number, z: number) => ItemStack[]) | null = null;
+
   dropStacks(stacks: ItemStack[], x: number, y: number, z: number): void {
+    if (this.decorateDrops) stacks = this.decorateDrops(stacks, x, y, z);
     for (const s of stacks) {
       if (!s || s.count <= 0) continue;
       this.spawnItem(s, x + (this.rand() - 0.5) * 0.4, y, z + (this.rand() - 0.5) * 0.4, (this.rand() - 0.5) * 2, 3 + this.rand() * 1.5, (this.rand() - 0.5) * 2);

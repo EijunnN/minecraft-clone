@@ -89,7 +89,7 @@ test('la amatista con brotes echa racimos', () => {
   const h = makeServer(99);
   const W = h.gs.world;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nature = (h.gs as any).nature;
+  const nature = h.gs.sys.nature;
   W.ensureChunk(0, 0);
   W.setBlock(4, 150, 4, BUDDING_AMETHYST);
   W.setBlock(4, 151, 4, AIR);

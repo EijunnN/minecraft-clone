@@ -272,7 +272,7 @@ test('tortugas: ponen huevos en su playa y de ellos nacen crías', () => {
   const { h, bx, by, bz } = setup();
   const E = h.gs.entities;
   const W = h.gs.world;
-  const nature = (h.gs as unknown as { nature: { randomTickAt(x: number, y: number, z: number): void } }).nature;
+  const nature = h.gs.sys.nature;
   // (La arena cae si no tiene nada debajo: piedra bajo la playa.)
   for (let dx = -3; dx <= 3; dx++) {
     for (let dz = -3; dz <= 3; dz++) {

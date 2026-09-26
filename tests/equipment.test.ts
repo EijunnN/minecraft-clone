@@ -240,7 +240,7 @@ test('servidor: el fuego quema la madera, se propaga y prende a las criaturas', 
     return n;
   };
   const pig = h.gs.entities.spawnMob(MOB_PIG, bx + 2.5, by, bz + 1.5)!;
-  assert.ok(h.gs.fire.ignite(bx + 2, by, bz + 1));
+  assert.ok(h.gs.sys.fire.ignite(bx + 2, by, bz + 1));
   h.tick(20 * 90);
   assert.ok(count() < before, `la madera arde (${count()} de ${before})`);
   assert.ok(pig.fire > 0 || pig.dead || pig.health < pig.maxHealth, 'el cerdo se quemó');
@@ -249,7 +249,7 @@ test('servidor: el fuego quema la madera, se propaga y prende a las criaturas', 
 test('servidor: rayo que enciende fuego', () => {
   const { h, bx, by, bz } = platform();
   (h.gs as unknown as { difficulty: number }).difficulty = 2;
-  h.gs.fire.lightning(bx + 5.5, by, bz + 5.5);
+  h.gs.sys.fire.lightning(bx + 5.5, by, bz + 5.5);
   assert.ok(isFire(h.gs.world.getBlock(bx + 5, by, bz + 5)));
 });
 
@@ -435,7 +435,7 @@ test('servidor: conducto con marco de prismarina da Poder del conducto en el agu
     W.setBlock(cx + dx, cy + dy, cz + dz, PRISMARINE);
     n++;
   }
-  assert.equal(h.gs.conduits.frameAt(cx, cy, cz), 16);
+  assert.equal(h.gs.sys.conduits.frameAt(cx, cy, cz), 16);
   c.pos(cx + 1.5, cy - 1, cz + 1.5);
   c.conn.msgs = [];
   h.tick(45);

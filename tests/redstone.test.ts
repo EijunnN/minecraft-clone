@@ -64,7 +64,7 @@ function lab(seed = 4242): Lab {
       c.pos(x + 0.5, y + 3, z + 0.5, 0);
       c.send({ t: 'use', x, y, z, yaw: 0 });
     },
-    edits: (e) => (h.gs as unknown as { rules: { applyEdits(e: [number, number, number, number][]): void } }).rules.applyEdits(e),
+    edits: (e) => h.gs.sys.rules.applyEdits(e),
   };
 }
 
@@ -215,7 +215,7 @@ test('repetidor: retardo, prolonga pulsos cortos y se bloquea de lado', () => {
   set(x + 1, by, z, wireState(0, false));
   h.tick(1);
   set(x - 1, by, z, REDSTONE_BLOCK);
-  h.gs.redstone.flush();
+  h.gs.sys.redstone.flush();
   let on = -1;
   for (let t = 1; t <= 12 && on < 0; t++) {
     h.tick(1);
@@ -223,7 +223,7 @@ test('repetidor: retardo, prolonga pulsos cortos y se bloquea de lado', () => {
   }
   assert.equal(on, 8, 'se enciende a los 8 ticks de juego');
   set(x - 1, by, z, AIR);
-  h.gs.redstone.flush();
+  h.gs.sys.redstone.flush();
   h.tick(7);
   assert.equal(wirePower(get(x + 1, by, z)), 15, 'aún encendido');
   h.tick(2);
@@ -374,12 +374,12 @@ test('sensor de luz solar, diana, gancho y cuerda, pararrayos y mena de redstone
   // Diana: una flecha en el centro da 15.
   const tz = z + 4;
   set(x, by + 2, tz, TARGET);
-  h.gs.redstone.projectileHit('arrow', x, by + 2, tz, x - 0.02, by + 2.5, tz + 0.5);
+  h.gs.sys.redstone.projectileHit('arrow', x, by + 2, tz, x - 0.02, by + 2.5, tz + 0.5);
   assert.equal(get(x, by + 2, tz) - TARGET, 15);
-  h.gs.redstone.projectileHit('arrow', x, by + 2, tz, x - 0.02, by + 2.9, tz + 0.5);
+  h.gs.sys.redstone.projectileHit('arrow', x, by + 2, tz, x - 0.02, by + 2.9, tz + 0.5);
   h.tick(21);
   assert.equal(get(x, by + 2, tz), TARGET, 'vuelve a 0 al rato');
-  h.gs.redstone.projectileHit('arrow', x, by + 2, tz, x - 0.02, by + 2.95, tz + 0.5);
+  h.gs.sys.redstone.projectileHit('arrow', x, by + 2, tz, x - 0.02, by + 2.95, tz + 0.5);
   assert.ok(get(x, by + 2, tz) - TARGET <= 2, 'en el borde, poca potencia');
   // Gancho, cuerda y gancho: al pisar la cuerda se activan.
   const gz = z + 8;
@@ -400,9 +400,9 @@ test('sensor de luz solar, diana, gancho y cuerda, pararrayos y mena de redstone
   const rz = z + 12;
   set(x, by, rz, LIGHTNING_ROD[0][0] + 2);
   h.tick(1);
-  const target = h.gs.redstone.lightningTarget(x + 30, by, rz + 20);
+  const target = h.gs.sys.redstone.lightningTarget(x + 30, by, rz + 20);
   assert.deepEqual(target, [x + 0.5, by + 1, rz + 0.5]);
-  h.gs.redstone.lightning(target![0], target![1], target![2]);
+  h.gs.sys.redstone.lightning(target![0], target![1], target![2]);
   assert.ok(rodPowered(get(x, by, rz)));
   h.tick(9);
   assert.ok(!rodPowered(get(x, by, rz)));
@@ -438,7 +438,7 @@ test('raíles: propulsores con potencia (8 más en línea), detector y cruce en 
   set(x0, by, dz, railState(RAIL_DETECTOR, RAIL_EW));
   set(x0, by, dz + 1, REDSTONE_LAMP);
   h.tick(1);
-  h.gs.transport.rails.press(x0, by, dz);
+  h.gs.sys.transport.rails.press(x0, by, dz);
   h.tick(1);
   assert.equal(get(x0, by, dz + 1), REDSTONE_LAMP + 1);
   h.tick(16);
@@ -521,10 +521,10 @@ test('rendimiento: una red grande y varios relojes sin pasarse de tiempo', () =>
   assert.ok(isWire(get(x0 + 39, by, z0 + 39)));
   assert.ok(toggles >= 80, `los relojes siguen andando (${toggles} cambios)`);
   assert.ok(clocks.every((x) => get(x, by, z0 + 42) !== AIR), 'ninguna antorcha se ha roto');
-  console.log(`rendimiento: ${ms.toFixed(3)} ms por tick, ${h.gs.redstone.updates} avisos, ${h.gs.redstone.scheduledCount} ticks pendientes`);
+  console.log(`rendimiento: ${ms.toFixed(3)} ms por tick, ${h.gs.sys.redstone.updates} avisos, ${h.gs.sys.redstone.scheduledCount} ticks pendientes`);
   // El tiempo depende de la máquina (con la suite entera va al doble): margen amplio, y el trabajo
   // (número de avisos) se comprueba aparte, que no depende de la carga.
   assert.ok(ms < 15, `${ms.toFixed(2)} ms por tick de media`);
-  assert.ok(h.gs.redstone.updates < 60000, `${h.gs.redstone.updates} avisos`);
-  assert.ok(h.gs.redstone.scheduledCount < 100);
+  assert.ok(h.gs.sys.redstone.updates < 60000, `${h.gs.sys.redstone.updates} avisos`);
+  assert.ok(h.gs.sys.redstone.scheduledCount < 100);
 });

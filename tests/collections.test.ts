@@ -166,7 +166,7 @@ test('servidor: tocadiscos (meter, sonar para todos, sacar, romper y guardar)', 
   c.send({ t: 'jukebox', x: jx, y: by, z: jz, item: cat, q: 2 });
   assert.equal(c.conn.take('ires').find((m) => m.q === 2)?.take, 1, 'el disco se gasta');
   assert.ok(jukeboxHasDisc(W.getBlock(jx, by, jz)));
-  assert.ok(h.gs.collections.isPlaying(jx, by, jz));
+  assert.ok(h.gs.sys.collections.isPlaying(jx, by, jz));
   const fx = c.conn.take('fx').find((m) => m.k === 'jukebox');
   assert.equal(fx?.a, 1, 'avisa del disco (cat)');
   assert.deepEqual(fx?.p, [jx + 0.5, by + 0.5, jz + 0.5]);
@@ -186,16 +186,16 @@ test('servidor: tocadiscos (meter, sonar para todos, sacar, romper y guardar)', 
   // Al terminar la pieza deja de sonar (el disco sigue dentro).
   c.send({ t: 'jukebox', x: jx, y: by, z: jz, item: MUSIC_DISCS[10], q: 4 });
   h.tick(20 * (DISCS[10].seconds + 2));
-  assert.ok(!h.gs.collections.isPlaying(jx, by, jz), 'el disco 11 terminó');
-  assert.equal(h.gs.collections.discAt(jx, by, jz), MUSIC_DISCS[10]);
+  assert.ok(!h.gs.sys.collections.isPlaying(jx, by, jz), 'el disco 11 terminó');
+  assert.equal(h.gs.sys.collections.discAt(jx, by, jz), MUSIC_DISCS[10]);
   // Se guarda con su disco.
   h.gs.flush(true);
   const h2 = makeServer(6565, store);
-  assert.equal(h2.gs.collections.discAt(jx, by, jz), MUSIC_DISCS[10], 'el disco sigue dentro al volver');
+  assert.equal(h2.gs.sys.collections.discAt(jx, by, jz), MUSIC_DISCS[10], 'el disco sigue dentro al volver');
   // Al romperlo cae el disco.
   W.setBlock(jx, by, jz, AIR);
   assert.equal(itemsOf(h, [MUSIC_DISCS[10]]), 1);
-  assert.equal(h.gs.collections.discAt(jx, by, jz), 0);
+  assert.equal(h.gs.sys.collections.discAt(jx, by, jz), 0);
   // Poner un tocadiscos lo deja vacío.
   assert.equal(jukeboxWith(false), JUKEBOX);
 });
@@ -205,7 +205,7 @@ test('servidor: un rayo carga al creeper y su explosión suelta una cabeza por v
   const E = h.gs.entities;
   const creeper = E.spawnMob(MOB_CREEPER, bx + 3.5, by, bz + 0.5)!;
   const far = E.spawnMob(MOB_CREEPER, bx + 9.5, by, bz + 9.5)!;
-  h.gs.collections.lightning(bx + 4, by, bz + 1);
+  h.gs.sys.collections.lightning(bx + 4, by, bz + 1);
   assert.ok(creeper.charged, 'el cercano se carga');
   assert.ok(!far.charged, 'el lejano no');
   h.tick(2);

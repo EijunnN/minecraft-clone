@@ -1,6 +1,7 @@
 // Granja: labrar con la azada, polvo de hueso, humedad de la tierra de cultivo, crecimiento de los
 // cultivos, tallos que dan calabazas y sandías, tallar calabazas, pisoteo y lo que se hace con los
 // animales (dar de comer, esquilar, ordeñar).
+import { Handlers } from './hooks';
 import {
   AIR, GRASS, DIRT, FARMLAND, POPPY, DANDELION, SHORT_GRASS, PUMPKIN, MELON, CARVED_PUMPKIN, BLOCK_FLUID, CROP_MAX_AGE,
   STEM_FRUIT, isFarmland, isCrop, isMatureCrop, isStem, attachedFacing, familyBase, orientedFor,
@@ -16,7 +17,8 @@ import type { Entity, InteractResult } from '../entities'; // Fase 6.5 (remate)
 
 export class Farming {
   /** Fase 6.5 (remate): etiquetas y correas (antes que dar de comer, domesticar…). */
-  extraInteract: ((s: Session, e: Entity, msg: Extract<ClientMsg, { t: 'interact' }>) => InteractResult | null) | null = null;
+  /** Clic derecho sobre una entidad que atiende otro sistema (el primero que responde; si ninguno, la entidad). */
+  readonly interactions = new Handlers<[Session, Entity, Extract<ClientMsg, { t: 'interact' }>], InteractResult>();
 
   constructor(private ctx: ServerContext, private nature: Nature) {
     nature.addRandomTickHandler((id, x, y, z) => this.randomTick(id, x, y, z));
@@ -33,7 +35,7 @@ export class Farming {
       ctx.send(s, { t: 'ires', q, ok: false });
       return;
     }
-    const extra = this.extraInteract?.(s, e, msg) ?? null;
+    const extra = this.interactions.first(s, e, msg);
     const r = extra ?? ctx.entities.interact(e, item, s.mode === 'c', s.name); // Fase 6: el nombre, para domesticar
     ctx.send(s, { t: 'ires', q, ...r });
   }

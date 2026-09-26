@@ -163,9 +163,9 @@ test('sensor de sculk: se activa con la distancia, da potencia y frecuencia, se 
   const sx = bx + 3, sz = bz;
   L.set(sx, by, sz, SCULK_SENSOR);
   h.tick(2);
-  assert.equal(h.gs.deepDark.vibrations.listenerCount, 1);
+  assert.equal(h.gs.sys.deepDark.vibrations.listenerCount, 1);
   const powers: number[] = [];
-  h.gs.deepDark.vibrations.onSensor = (_x, _y, _z, p) => powers.push(p);
+  h.gs.sys.deepDark.vibrations.onSensor = (_x, _y, _z, p) => powers.push(p);
   // Colocar un bloque a 4 bloques: potencia 8, frecuencia 13 (lo lee el comparador).
   L.place(bx - 1, bz);
   h.tick(3);
@@ -173,12 +173,12 @@ test('sensor de sculk: se activa con la distancia, da potencia y frecuencia, se 
   h.tick(3);
   assert.equal(sensorPhase(L.get(sx, by, sz)), PHASE_ACTIVE);
   assert.deepEqual(powers, [8]);
-  assert.equal(h.gs.redstone.power(sx + 1, by, sz), 8, 'potencia al lado');
-  assert.equal(h.gs.redstone.analog(sx, by, sz), 13, 'el comparador lee la frecuencia');
+  assert.equal(h.gs.sys.redstone.power(sx + 1, by, sz), 8, 'potencia al lado');
+  assert.equal(h.gs.sys.redstone.analog(sx, by, sz), 13, 'el comparador lee la frecuencia');
   // 30 ticks activo y 10 enfriándose (sin potencia).
   h.tick(30);
   assert.equal(sensorPhase(L.get(sx, by, sz)), PHASE_COOLDOWN);
-  assert.equal(h.gs.redstone.power(sx + 1, by, sz), 0);
+  assert.equal(h.gs.sys.redstone.power(sx + 1, by, sz), 0);
   h.tick(10);
   assert.equal(sensorPhase(L.get(sx, by, sz)), PHASE_INACTIVE);
   // Con lana en medio no llega.
@@ -196,7 +196,7 @@ test('sensor de sculk: los pasos vibran, agachado no; colocar lana tampoco', () 
   L.set(bx + 4, by, bz + 4, SCULK_SENSOR);
   h.tick(2);
   let hits = 0;
-  h.gs.deepDark.vibrations.onSensor = () => hits++;
+  h.gs.sys.deepDark.vibrations.onSensor = () => hits++;
   // Andando agachada no suena.
   for (let i = 0; i <= 30; i++) {
     c.pos(bx + 0.5 + i * 0.2, by, bz + 0.5, STATE_SNEAK);
@@ -228,7 +228,7 @@ test('sensor calibrado: filtra la frecuencia que le llega por la entrada y la am
   L.set(cx + 1, by, cz, REDSTONE_BLOCK);
   h.tick(2);
   const heard: number[] = [];
-  h.gs.deepDark.vibrations.onSensor = (_x, _y, _z, _p, f) => heard.push(f);
+  h.gs.sys.deepDark.vibrations.onSensor = (_x, _y, _z, _p, f) => heard.push(f);
   L.place(bx, bz);
   h.tick(20);
   assert.deepEqual(heard, [], 'sólo atiende la frecuencia 15');
@@ -258,7 +258,7 @@ test('chillador: el sensor que activa un jugador lo hace chillar; cuatro avisos 
   L.set(bx + 3, by, bz, SCULK_SENSOR);
   L.set(kx, by, kz, shriekerFor(true));
   h.tick(2);
-  const trackers = h.gs.deepDark.sculk.trackers;
+  const trackers = h.gs.sys.deepDark.sculk.trackers;
   for (let n = 1; n <= 4; n++) {
     L.place(bx - 1, bz - 2 + n);
     h.tick(10);
@@ -287,7 +287,7 @@ test('chillador puesto por un jugador: chilla pero no avisa; pisarlo lo hace chi
   c.pos(bx + 2.5, by + 0.5, bz + 0.5, 0);
   h.tick(5);
   assert.ok(shriekerProps(L.get(bx + 2, by, bz)).shrieking, 'pisado');
-  assert.equal(h.gs.deepDark.sculk.trackers.get('espeleóloga')?.level ?? 0, 0, 'sin aviso');
+  assert.equal(h.gs.sys.deepDark.sculk.trackers.get('espeleóloga')?.level ?? 0, 0, 'sin aviso');
 });
 
 test('catalizador: se come la experiencia de lo que muere cerca, florece y extiende el sculk', () => {
@@ -302,7 +302,7 @@ test('catalizador: se come la experiencia de lo que muere cerca, florece y extie
   h.tick(1);
   assert.equal([...h.gs.entities.list.values()].filter((e) => e.type === 103).length, 0, 'sin orbes');
   assert.ok(isCatalyst(L.get(bx + 4, by, bz + 4)) && stateProps(L.get(bx + 4, by, bz + 4))!.bloom === 1, 'florece');
-  assert.ok(h.gs.deepDark.sculk.activeCursors > 0);
+  assert.ok(h.gs.sys.deepDark.sculk.activeCursors > 0);
   h.tick(200);
   let sculk = 0, veins = 0;
   for (let dx = -6; dx <= 8; dx++) {
@@ -378,7 +378,7 @@ test('brújula de recuperación: el servidor guarda la última muerte y se la ma
   c.send({ t: 'died', m: 'cayó' });
   const msg = c.conn.take('death')[0];
   assert.deepEqual(msg.p, [bx + 3, by, bz - 3]);
-  assert.deepEqual(h.gs.deepDark.deathOf('Espeleóloga'), [bx + 3, by, bz - 3]);
+  assert.deepEqual(h.gs.sys.deepDark.deathOf('Espeleóloga'), [bx + 3, by, bz - 3]);
   h.gs.flush(true);
   const h2 = makeServer(4242, h.store);
   const c2 = h2.join('Espeleóloga', 's');
@@ -429,7 +429,7 @@ test('Deep Dark: bajo las montañas y hondo, cubierto de sculk; la ciudad antigu
 test('rendimiento: sin oyentes emitir no cuesta; 300 sensores con mucho movimiento, deprisa', () => {
   const L = lab();
   const { h, bx, by, bz } = L;
-  const v = h.gs.deepDark.vibrations;
+  const v = h.gs.sys.deepDark.vibrations;
   let t0 = performance.now();
   for (let i = 0; i < 100000; i++) v.emit('step', bx + (i % 50), by, bz + ((i * 7) % 50));
   const idle = performance.now() - t0;

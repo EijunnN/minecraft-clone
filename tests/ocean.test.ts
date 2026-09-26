@@ -62,7 +62,7 @@ const itemsOf = (h: Harness, id: number) =>
 function clearItems(h: Harness): void {
   for (const e of [...h.gs.entities.list.values()]) if (e.type === ENT_ITEM) h.gs.entities.list.delete(e.id);
 }
-const nature = (h: Harness) => (h.gs as unknown as { nature: { randomTickAt(x: number, y: number, z: number): void } }).nature;
+const nature = (h: Harness) => h.gs.sys.nature;
 
 test('bloques nuevos: nombres, objetos, anegados e inventario', () => {
   for (const t of CORAL_TYPES) {

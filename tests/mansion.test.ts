@@ -243,7 +243,7 @@ test('alay: baila con un tocadiscos y se duplica con un fragmento de amatista (c
   const { h, c, bx, by, bz } = arena();
   const a = h.gs.entities.spawnMob(MOB_ALLAY, bx + 0.5, by + 1, bz + 0.5)!;
   h.gs.world.setBlock(bx + 3, by, bz, stateOf(JUKEBOX, { disc: 0 }));
-  assert.ok(h.gs.collections.insertDisc(bx + 3, by, bz, MUSIC_DISCS[0]));
+  assert.ok(h.gs.sys.collections.insertDisc(bx + 3, by, bz, MUSIC_DISCS[0]));
   h.tick(30);
   assert.ok(a.flags & EF_ALLAY_DANCING, 'baila');
   const r = interact(c, a, AMETHYST_SHARD, { id: AMETHYST_SHARD, count: 4 });

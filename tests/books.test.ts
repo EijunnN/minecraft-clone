@@ -166,7 +166,7 @@ test('servidor: atril (poner, leer, sacar, romper y guardar)', () => {
   c.send({ t: 'lectern', x, y, z, a: 'put', q: 7, book: quill });
   h.gs.flush(true);
   const h2 = makeServer(6262, store);
-  assert.deepEqual(h2.gs.lecterns.bookAt(x, y, z), quill, 'el libro del atril se guarda');
+  assert.deepEqual(h2.gs.sys.lecterns.bookAt(x, y, z), quill, 'el libro del atril se guarda');
   // Al romper el atril caen el atril y el libro.
   c.send({ t: 'set', x, y, z, b: AIR });
   assert.equal(W.getBlock(x, y, z), AIR);

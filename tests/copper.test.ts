@@ -25,9 +25,9 @@ interface CopperSystem {
   lightning(x: number, y: number, z: number): void;
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const copperOf = (h: Harness) => (h.gs as any).copper as CopperSystem;
+const copperOf = (h: Harness) => h.gs.sys.copper as CopperSystem;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const natureOf = (h: Harness) => (h.gs as any).nature as { randomTickAt(x: number, y: number, z: number): void };
+const natureOf = (h: Harness) => h.gs.sys.nature as { randomTickAt(x: number, y: number, z: number): void };
 
 /** Plataforma de piedra a y = 150 con un jugador al lado. */
 function arena(mode: 's' | 'c' = 's'): { h: Harness; c: Client; bx: number; by: number; bz: number } {

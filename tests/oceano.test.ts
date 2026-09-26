@@ -172,7 +172,7 @@ test('servidor: los cofres del tesoro y del camarote se llenan (con el mapa ya r
   const h = makeServer(12345);
   const W = h.gs.world;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const containers = (h.gs as any).containers.containers as Map<number, { slots: (ItemStack | null)[] }>;
+  const containers = (h.gs.sys.containers as unknown as { containers: unknown }).containers as Map<number, { slots: (ItemStack | null)[] }>;
   const t = locateStructure(W.gen, 'buried_treasure', 0, 0, 60)!;
   W.ensureChunk(Math.floor(t[0] / 16), Math.floor(t[2] / 16));
   assert.ok(isChest(W.getBlock(t[0], t[1] - 2, t[2])));
@@ -314,12 +314,12 @@ test('guardián anciano: fatiga minera III (5 min) a menos de 50 bloques cada mi
   assert.deepEqual(effect && [effect.s, effect.a], [300, 2], 'fatiga minera III durante 5 minutos');
   assert.ok(ghost, 'se ve su cara');
   // Ya maldito: no se repite; lejos o en creativo, nada.
-  assert.equal(h.gs.monuments.curse(elder.x, elder.y, elder.z), 0, 'no repite con tiempo de sobra');
+  assert.equal(h.gs.sys.monuments.curse(elder.x, elder.y, elder.z), 0, 'no repite con tiempo de sobra');
   c.pos(bx + 80, by + 1, bz);
   h.tick(1);
   const s = [...(h.gs as unknown as { sessions: Map<unknown, { save: { fx?: [number, number, number][] } | null }> }).sessions.values()][0];
   if (s.save) s.save.fx = [];
-  assert.equal(h.gs.monuments.curse(elder.x, elder.y, elder.z), 0, 'a 80 bloques no');
+  assert.equal(h.gs.sys.monuments.curse(elder.x, elder.y, elder.z), 0, 'a 80 bloques no');
 });
 
 test('guardianes ancianos: aparecen con el monumento, no desaparecen y se guardan', () => {

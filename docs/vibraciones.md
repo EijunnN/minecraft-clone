@@ -9,7 +9,7 @@ Cómo funcionan las vibraciones del Deep Dark (los «game events» de Minecraft)
 | `src/shared/vibrations.ts` | Frecuencia de cada suceso (tabla de Minecraft 1.20+), alcances, ticks de los sensores, lana que ocluye y ahoga, potencia por distancia. Puro. |
 | `src/shared/blocks/deepDarkBlocks.ts` | Sculk, venas, catalizador, sensores (fases, agua) y chillador; lo que emiten los sensores a la redstone. |
 | `src/shared/sculkSpread.ts` | Cómo extiende el sculk un catalizador (el `SculkSpreader` de Minecraft), puro. |
-| `src/shared/sim/server/vibrations.ts` | El sistema (`Vibrations`, en `gameServer.deepDark.vibrations`). |
+| `src/shared/sim/server/vibrations.ts` | El sistema (`Vibrations`, en `gameServer.sys.deepDark.vibrations`). |
 | `src/shared/sim/server/sculk.ts` | Catalizadores, venas sueltas, chilladores, avisos del warden y su invocación. |
 | `src/shared/sim/server/deepDark.ts` | Lo que crea `GameServer` y lo que le avisa (y la última muerte, para la brújula de recuperación). |
 | `src/shared/sim/entities/warden.ts` | El warden, que oye como un oyente más. |
@@ -17,7 +17,7 @@ Cómo funcionan las vibraciones del Deep Dark (los «game events» de Minecraft)
 ## Emitir una vibración
 
 ```ts
-gs.deepDark.vibrations.emit('block_activate', x + 0.5, y + 0.5, z + 0.5, { who: s.id });
+gs.sys.deepDark.vibrations.emit('block_activate', x + 0.5, y + 0.5, z + 0.5, { who: s.id });
 ```
 
 - `who`: jugador (id de sesión) o entidad (id) que la causa; `owner`: quien lanzó el proyectil o tiró

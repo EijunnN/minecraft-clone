@@ -412,8 +412,8 @@ test('servidor: las ranas crían con bolas de slime, ponen huevos en el agua y e
   let spawn: [number, number, number] | null = null;
   for (let dx = 3; dx <= 5; dx++) for (let dz = -1; dz <= 1; dz++) if (W.getBlock(bx + dx, by, bz + dz) === FROGSPAWN) spawn = [bx + dx, by, bz + dz];
   assert.ok(spawn, 'huevos de rana sobre el agua');
-  assert.ok(!h.gs.frogspawn.isPregnant(a.id) && !h.gs.frogspawn.isPregnant(b.id), 'ya no está preñada');
-  h.gs.frogspawn.hatch(spawn![0], spawn![1], spawn![2]);
+  assert.ok(!h.gs.sys.frogspawn.isPregnant(a.id) && !h.gs.sys.frogspawn.isPregnant(b.id), 'ya no está preñada');
+  h.gs.sys.frogspawn.hatch(spawn![0], spawn![1], spawn![2]);
   assert.equal(W.getBlock(spawn![0], spawn![1], spawn![2]), AIR);
   const tadpoles = [...h.gs.entities.list.values()].filter((e) => e.type === MOB_TADPOLE).length;
   assert.ok(tadpoles >= 2 && tadpoles <= 6, `renacuajos (${tadpoles})`);

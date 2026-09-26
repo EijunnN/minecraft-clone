@@ -38,7 +38,7 @@ function arena(): { h: Harness; c: Client; bx: number; by: number; bz: number } 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const farmingOf = (h: Harness) => (h.gs as any).farming as { randomTick(id: number, x: number, y: number, z: number): boolean };
+const farmingOf = (h: Harness) => h.gs.sys.farming as unknown as { randomTick(id: number, x: number, y: number, z: number): boolean };
 const itemsNear = (h: Harness, x: number, y: number, z: number, r = 3) =>
   [...h.gs.entities.list.values()].filter((e) => e.type === ENT_ITEM && Math.hypot(e.x - x, e.y - y, e.z - z) < r);
 

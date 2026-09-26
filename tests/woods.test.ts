@@ -147,7 +147,7 @@ test('bambú: se apoya en el suelo, crece con hojas arriba y se cae entero', () 
   W.setBlock(bx + 1, by - 1, bz, OAK_PLANKS);
   assert.ok(!blockSupported(BAMBOO, rel(bx + 1, by, bz)), 'sobre tablones, no');
   W.setBlock(bx, by, bz, BAMBOO);
-  const bamboo = h.gs.bamboo;
+  const bamboo = h.gs.sys.bamboo;
   let n = 1;
   while (bamboo.grow(bx, by, bz)) n++;
   assert.equal(n, bambooMaxHeight(bx, bz), 'crece hasta su altura máxima');
@@ -175,7 +175,7 @@ test('brotes: el propágulo da un mangle con raíces y el roble pálido crece', 
   const h = makeServer(4242);
   const W = h.gs.world;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nature = (h.gs as any).nature;
+  const nature = h.gs.sys.nature;
   W.ensureChunk(0, 0);
   W.setBlock(4, 200, 4, DIRT);
   W.setBlock(4, 201, 4, MANGROVE_PROPAGULE);

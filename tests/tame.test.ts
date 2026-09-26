@@ -405,7 +405,7 @@ test('persistencia: dueño, sentado, piel y gólems hechos a mano se guardan', (
 
 test('las aldeas se pueblan una vez con su gólem de hierro y gatos', () => {
   const { h, bx, by, bz } = field('s');
-  const g = h.gs.golems;
+  const g = h.gs.sys.golems;
   assert.ok(g.populateVillage(bx, by, bz), 'se puebla');
   assert.equal(mobsOf(h, MOB_IRON_GOLEM).length, 1);
   const cats = mobsOf(h, MOB_CAT);

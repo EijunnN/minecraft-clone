@@ -14,7 +14,7 @@ tolvas, dispensadores…) sin tocar el motor.
 | `src/shared/redstone/rails.ts` | Raíles propulsores, activadores, detectores y cruces en T. |
 | `src/shared/redstone/use.ts` | El clic derecho sobre componentes, como función pura (la usan cliente y servidor). |
 | `src/shared/blocks/redstoneBlocks.ts` | Los bloques y lo que **emite** cada uno. |
-| `src/shared/sim/server/redstone.ts` | El motor del servidor (`Redstone`, en `GameServer.redstone`). |
+| `src/shared/sim/server/redstone.ts` | El motor del servidor (`Redstone`, en `GameServer.sys.redstone`). |
 | `src/client/game/redstoneClient.ts` | Uso en el cliente, efectos y partículas. |
 
 Importar `src/shared/redstone` registra todos los componentes.
@@ -85,7 +85,7 @@ api.strongPower(x, y, z);     // la potencia fuerte que recibe (getDirectSignalT
 api.analog(x, y, z);          // lo que leería un comparador del bloque; -1 si nada
 ```
 
-Fuera de un manejador (otros sistemas del servidor), lo mismo con `gameServer.redstone`, o las
+Fuera de un manejador (otros sistemas del servidor), lo mismo con `gameServer.sys.redstone`, o las
 funciones puras de `signals.ts` con cualquier `RedstoneView` (`getBlock` y `getData`).
 
 ## Programar ticks y avisar

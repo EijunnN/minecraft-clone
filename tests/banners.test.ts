@@ -127,13 +127,13 @@ test('servidor: colocar, avisar, romper (el objeto conserva las capas) y guardar
   const layers: [number, number][] = [[0, BLUE], [19, 0]];
   placeBanner(c, bx + 1, by, bz, BANNERS.red, layers);
   assert.equal(bannerColor(W.getBlock(bx + 1, by, bz)), RED);
-  assert.deepEqual(h.gs.banners.layersAt(bx + 1, by, bz), layers);
+  assert.deepEqual(h.gs.sys.banners.layersAt(bx + 1, by, bz), layers);
   assert.deepEqual(c.conn.take('banner').at(-1), { t: 'banner', x: bx + 1, y: by, z: bz, l: layers });
   // Uno liso no guarda nada; unas capas inválidas tampoco.
   placeBanner(c, bx + 2, by, bz, BANNERS.red);
   placeBanner(c, bx + 3, by, bz, BANNERS.red, [[500, 1]] as [number, number][]);
-  assert.deepEqual(h.gs.banners.layersAt(bx + 2, by, bz), []);
-  assert.deepEqual(h.gs.banners.layersAt(bx + 3, by, bz), []);
+  assert.deepEqual(h.gs.sys.banners.layersAt(bx + 2, by, bz), []);
+  assert.deepEqual(h.gs.sys.banners.layersAt(bx + 3, by, bz), []);
   // Se guarda y quien entra lo recibe en la bienvenida.
   h.gs.flush(true);
   const h2 = makeServer(7373, store);
@@ -142,7 +142,7 @@ test('servidor: colocar, avisar, romper (el objeto conserva las capas) y guardar
   // Al romperlo (supervivencia) suelta el estandarte con sus capas y avisa de que ya no está.
   c.send({ t: 'set', x: bx + 1, y: by, z: bz, b: AIR });
   assert.deepEqual(bannerDrops(h), [{ id: BANNERS.red, count: 1, data: { layers } }]);
-  assert.deepEqual(h.gs.banners.layersAt(bx + 1, by, bz), []);
+  assert.deepEqual(h.gs.sys.banners.layersAt(bx + 1, by, bz), []);
   assert.deepEqual(c.conn.take('banner').at(-1)?.l, []);
   // El liso roto suelta un estandarte liso.
   c.send({ t: 'set', x: bx + 2, y: by, z: bz, b: AIR });
@@ -158,7 +158,7 @@ test('servidor: estandarte de pared y sin apoyo (también conserva las capas)', 
   const wall = W.getBlock(bx, by + 1, bz);
   assert.equal(bannerColor(wall), BLUE);
   assert.notEqual(wall, BANNERS.blue, 'va en la pared');
-  assert.deepEqual(h.gs.banners.layersAt(bx, by + 1, bz), [[10, RED]]);
+  assert.deepEqual(h.gs.sys.banners.layersAt(bx, by + 1, bz), [[10, RED]]);
   // Se quita la pared: cae con sus capas.
   c.send({ t: 'set', x: bx + 1, y: by + 1, z: bz, b: AIR });
   assert.deepEqual(bannerDrops(h), [{ id: BANNERS.blue, count: 1, data: { layers: [[10, RED]] } }]);
@@ -171,5 +171,5 @@ test('servidor: en creativo romperlo no suelta nada (ni deja capas esperando)', 
   h.tick(1);
   assert.deepEqual(bannerDrops(h), []);
   // Otro liso puesto y roto ahí mismo (en otro tick) suelta... nada en creativo, y en el servidor no queda rastro.
-  assert.deepEqual(h.gs.banners.all(), []);
+  assert.deepEqual(h.gs.sys.banners.all(), []);
 });

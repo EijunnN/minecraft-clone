@@ -70,7 +70,7 @@ test('brotes: el roble oscuro necesita 2×2 y la jungla en 2×2 da un árbol gig
   const h = makeServer(4242);
   const W = h.gs.world;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nature = (h.gs as any).nature;
+  const nature = h.gs.sys.nature;
   W.ensureChunk(0, 0);
   const plant = (x: number, z: number, id: number) => {
     W.setBlock(x, 200, z, DIRT);

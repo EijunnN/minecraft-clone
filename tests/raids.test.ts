@@ -246,7 +246,7 @@ test('zombi: sin jugadores cerca, en difícil convierte al aldeano en aldeano zo
 
 test('asalto: oleadas con calma entre ellas, victoria y Héroe de la aldea con rebaja', () => {
   const { h, x, y, z } = arena();
-  const raids = h.gs.raids;
+  const raids = h.gs.sys.raids;
   const r = raids.start(x + 0.5, y, z + 0.5);
   assert.equal(r.waves, RAID_WAVES[2]);
   // Calma y primera oleada.
@@ -276,7 +276,7 @@ test('asalto: oleadas con calma entre ellas, victoria y Héroe de la aldea con r
   const data = h.gs.entities.villagers.data(vil);
   data.prof = 4;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trading = (h.gs as any).trading;
+  const trading = h.gs.sys.trading;
   const normal = trading.offers(vil) as { cost: [number, number] }[];
   const hero = trading.offers(vil, s) as { cost: [number, number] }[];
   const i = normal.findIndex((o) => o.cost[0] === EMERALD && o.cost[1] > 1);
@@ -296,12 +296,12 @@ test('Mal presagio: al entrar en una aldea empieza un asalto y se quita el efect
     for (let cz = Math.floor(vz / 16) - 3; cz <= Math.floor(vz / 16) + 3; cz++) h.gs.world.ensureChunk(cx, cz);
   }
   c.send({ t: 'omen', a: 0 });
-  assert.ok(h.gs.raids.hasOmen('Portador'));
+  assert.ok(h.gs.sys.raids.hasOmen('Portador'));
   session(h, 'Portador').p = [vx + 0.5, vy + 1, vz + 0.5];
   c.conn.msgs = [];
   h.tick(25);
-  assert.equal(h.gs.raids.active.length, 1, 'empieza el asalto');
-  assert.ok(!h.gs.raids.hasOmen('Portador'), 'el presagio se gasta');
+  assert.equal(h.gs.sys.raids.active.length, 1, 'empieza el asalto');
+  assert.ok(!h.gs.sys.raids.hasOmen('Portador'), 'el presagio se gasta');
   assert.ok(c.conn.take('effect').some((m) => m.id === EFFECT_BAD_OMEN && m.s < 0), 'el cliente quita el efecto');
   assert.ok(c.conn.take('raid').some((m) => m.s === 1), 'barra del asalto');
 });
@@ -351,6 +351,6 @@ test('servidor: saqueadores alrededor del puesto con un jugador cerca, y patrull
   for (let i = 0; i < 60; i++) h.tick(20);
   const near = mobsOf(h, MOB_PILLAGER).filter((e) => Math.hypot(e.x - o[0], e.z - o[2]) < 40);
   assert.ok(near.length >= 1 && near.length <= 4, `saqueadores en el puesto (${near.length})`);
-  const patrol = h.gs.raids.spawnPatrol(o[0] + 30, o[2]);
+  const patrol = h.gs.sys.raids.spawnPatrol(o[0] + 30, o[2]);
   assert.ok(patrol.length >= 2 && patrol[0].captain && patrol.every((e) => e.patrolTo), 'patrulla con capitán y destino');
 });
