@@ -1,7 +1,9 @@
 // Generadores de monstruos (mazmorras y minas): con un jugador a 16 bloques o menos, cada 10–40 s
 // invocan de 1 a 4 criaturas alrededor, salvo que ya haya 6 cerca, que esté iluminado por bloques
 // (una antorcha encima lo apaga, como en Minecraft) o que la dificultad sea pacífica.
-import { AIR, COBWEB, MOB_SPAWNER } from '../../blocks';
+import { AIR, COBWEB, MOB_SPAWNER, NETHER_BRICKS } from '../../blocks';
+import { MOB_BLAZE, MOB_MAGMA_CUBE } from '../../netherMobs'; // Fase 8.4
+import { DIM_NETHER } from '../../dimensions';
 import { MOBS, MOB_ZOMBIE, MOB_SKELETON, MOB_SPIDER, MOB_CAVE_SPIDER } from '../../mobs';
 import { CHUNK_SIZE, hash3, indexY } from '../../constants';
 import { posKey } from '../posKey';
@@ -19,6 +21,14 @@ export class Spawners {
   /** Criatura de un generador: arañas de cueva si hay telarañas alrededor (minas); si no, según la posición. */
   mobOf(x: number, y: number, z: number): number {
     const w = this.ctx.world;
+    // Fase 8.4: en el Nether, el del trono de la fortaleza (entre ladrillos del Nether) es de blazes; el de la sala
+    // del tesoro de los bastiones, de cubos de magma.
+    if (this.ctx.dim === DIM_NETHER) {
+      for (let dy = -1; dy <= 0; dy++) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        if (w.getBlock(x + dx, y + dy, z + dz) === NETHER_BRICKS) return MOB_BLAZE;
+      }
+      return MOB_MAGMA_CUBE;
+    }
     for (let dy = -1; dy <= 1; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
       if (w.getBlock(x + dx, y + dy, z + dz) === COBWEB) return MOB_CAVE_SPIDER; // Fase 6 (monstruos)
     }
@@ -60,8 +70,9 @@ export class Spawners {
     const due = this.next.get(k) ?? 0;
     if (ctx.tickCount < due) return;
     this.next.set(k, ctx.tickCount + TICK_RATE * (10 + Math.floor(ctx.rand() * 30)));
-    if (w.isLitByBlocks(x, y + 1, z)) return;
     const type = this.mobOf(x, y, z);
+    // La antorcha apaga los de monstruos normales; los blazes y los cubos de magma salen con cualquier luz.
+    if (type !== MOB_BLAZE && type !== MOB_MAGMA_CUBE && w.isLitByBlocks(x, y + 1, z)) return;
     let nearby = 0;
     for (const e of ctx.entities.list.values()) {
       if (e.type === type && Math.abs(e.x - x) < 9 && Math.abs(e.y - y) < 5 && Math.abs(e.z - z) < 9) nearby++;

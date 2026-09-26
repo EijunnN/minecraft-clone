@@ -1,6 +1,7 @@
 // Granja: labrar con la azada, polvo de hueso, humedad de la tierra de cultivo, crecimiento de los
 // cultivos, tallos que dan calabazas y sandías, tallar calabazas, pisoteo y lo que se hace con los
 // animales (dar de comer, esquilar, ordeñar).
+import { NETHER_WART_CROP, NETHER_WART_MAX_AGE, isNetherWartCrop } from '../../blocks'; // Fase 8.4
 import { Handlers } from './hooks';
 import {
   AIR, GRASS, DIRT, FARMLAND, POPPY, DANDELION, SHORT_GRASS, PUMPKIN, MELON, CARVED_PUMPKIN, BLOCK_FLUID, CROP_MAX_AGE,
@@ -159,6 +160,11 @@ export class Farming {
         if (!moist) w.setBlock(x, y, z, FARMLAND + 1);
       } else if (moist) w.setBlock(x, y, z, FARMLAND);
       else if (!isCrop(above)) w.setBlock(x, y, z, DIRT);
+      return true;
+    }
+    // Fase 8.4: la verruga del Nether crece una edad una de cada diez veces (NetherWartBlock.randomTick), sin luz ni agua.
+    if (isNetherWartCrop(id)) {
+      if (id - NETHER_WART_CROP < NETHER_WART_MAX_AGE && this.ctx.rand() < 0.1) w.setBlock(x, y, z, id + 1);
       return true;
     }
     if (!isCrop(id)) return false;

@@ -7,6 +7,7 @@
 //   piedra luminosa, las rodajas de sandía, los cristales del farol marino, las bayas y las semillas de
 //   la hierba, da más tiradas a los cultivos maduros y sube la probabilidad del pedernal de la grava y
 //   de los brotes, palos y manzanas de las hojas.
+import { NETHER_WART_CROP, NETHER_WART_MAX_AGE } from '../blocks'; // Fase 8.4
 import {
   BLOCKS, GRASS, SNOWY_GRASS, GRAVEL, COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, EMERALD_ORE,
   COPPER_ORE, SURFACE_ORE, GLOWSTONE, SEA_LANTERN, MELON, SHORT_GRASS, FERN, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS,
@@ -105,6 +106,12 @@ function fortuneDrops(block: number, toolId: number, fortune: number, rand: () =
   if (block === SEA_LANTERN) return uniform(5);
   if (isSweetBerryBush(block)) return uniform(64);
   if (block === SHORT_GRASS || block === FERN) return uniform(64, 2);
+  // Fase 8.4: la verruga del Nether madura, de 0 a `fortuna` más (uniform_bonus_count).
+  if (block === NETHER_WART_CROP + NETHER_WART_MAX_AGE) {
+    const drops = blockDrops(block, toolId, rand);
+    if (drops[0]) drops[0].count += Math.floor(rand() * (fortune + 1));
+    return drops;
+  }
   // Cultivos maduros: una tirada más (al 57 %) por nivel para las semillas o el fruto.
   if (isMatureCrop(block)) {
     const drops = blockDrops(block, toolId, rand);

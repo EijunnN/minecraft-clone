@@ -4,6 +4,7 @@ import { EFFECTS } from '../../shared/effects';
 import { MOBS, MOB_TYPES } from '../../shared/mobs';
 import { ITEMS } from '../../shared/items';
 import { STRUCTURE_NAMES } from '../../shared/world/structures';
+import { NETHER_STRUCTURE_NAMES } from '../../shared/world/netherStructures'; // Fase 8.4
 import { ENCHANTS, ENCHANT_IDS } from '../../shared/enchantments'; // Fase 7 (encantamientos)
 import { BLOCKS } from '../../shared/blocks'; // Fase 8: /setblock y /fill
 import { allDimensions } from '../../shared/dimensions'; // Fase 8: /dimension
@@ -56,6 +57,7 @@ const STRUCTURES: [string, string][] = [
   ['monumento', 'monument'], ['ruinas', 'ocean_ruins'], ['tesoro', 'buried_treasure'], // Fase 7.5 (océano)
   ['cabana_de_bruja', 'swamp_hut'], ['fosil', 'fossil'], // Fase 7.5 (fauna)
   ['mansion', 'mansion'], // Fase 7.5 (mansión)
+  ['fortaleza', 'fortress'], ['bastion', 'bastion_remnant'], // Fase 8.4 (estructuras del Nether)
 ];
 
 export const COMMAND_SPECS: CommandSpec[] = [
@@ -128,7 +130,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
     name: 'localizar', aliases: ['locate'], desc: 'Dice dónde está la estructura más cercana',
     args: [{
       name: 'estructura', desc: 'Qué buscar',
-      options: () => STRUCTURES.map(([value, key]) => ({ value, label: key === 'mineshaft' ? 'Mina abandonada' : STRUCTURE_NAMES[key] })),
+      options: () => STRUCTURES.map(([value, key]) => ({ value, label: key === 'mineshaft' ? 'Mina abandonada' : STRUCTURE_NAMES[key] ?? NETHER_STRUCTURE_NAMES[key] })),
     }],
   },
   { name: 'asalto', aliases: ['raid'], desc: 'Desata un asalto en la aldea más cercana', args: [] },

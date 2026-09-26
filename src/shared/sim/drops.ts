@@ -1,4 +1,6 @@
 // Qué suelta cada bloque al romperse en supervivencia (según la herramienta usada).
+import { NETHER_WART_CROP, NETHER_WART_MAX_AGE, isNetherWartCrop } from '../blocks'; // Fase 8.4
+import { NETHER_WART } from '../items';
 import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, isLeaves, isVine, woodOf, MYCELIUM, PACKED_ICE,
@@ -104,6 +106,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (familyBase(block) === CAVE_VINES) return block === CAVE_VINES + 1 ? one(GLOW_BERRIES) : [];
   // El hielo compacto sólo se consigue con toque de seda.
   if (block === PACKED_ICE) return [];
+  // Fase 8.4: la verruga del Nether madura suelta de 2 a 4 (la fortuna se suma en enchantDrops); si no, una.
+  if (isNetherWartCrop(block)) return one(NETHER_WART, block - NETHER_WART_CROP >= NETHER_WART_MAX_AGE ? 2 + Math.floor(rand() * 3) : 1);
   if (isCrop(block)) {
     // Cosecha como en Minecraft: tres intentos al 57 % de sacar una semilla o fruto más.
     const extra = () => (rand() < 4 / 7 ? 1 : 0) + (rand() < 4 / 7 ? 1 : 0) + (rand() < 4 / 7 ? 1 : 0);

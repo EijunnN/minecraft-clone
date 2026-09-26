@@ -2,6 +2,7 @@
 // predice, y el servidor, que las aplica): losas dobles, escaleras invertidas, puertas de dos
 // bloques con bisagra, trampillas, portillos, escaleras de mano y antorchas en la pared, camas,
 // carteles (de pie o en la pared), cofres que se unen en dobles y fogatas encendidas.
+import { NETHER_WART_CROP, SOUL_SAND } from './blocks'; // Fase 8.4
 import { MIN_Y, MAX_Y } from './constants';
 import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, LILY_PAD, VINE, isVine, CAVE_VINES, isCaveVines,
@@ -154,6 +155,7 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
 
   // Semillas, zanahorias y patatas: sólo sobre tierra de cultivo.
   if (isCrop(base)) return isFarmland(get(x, y - 1, z)) ? one(base) : null;
+  if (base === NETHER_WART_CROP) return get(x, y - 1, z) === SOUL_SAND ? one(base) : null; // Fase 8.4: sólo en arena de alma
   if (isCake(base)) return firm(get(x, y - 1, z)) ? one(base) : null;
   if (isSlab(base)) return one(stateOf(base, { type: upper ? 1 : 0 }));
   if (isStairs(base)) return one(stateOf(base, { facing, half: upper ? 1 : 0 }));

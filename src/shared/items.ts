@@ -1,6 +1,7 @@
 // Registro de objetos. Los objetos de bloque comparten id con su bloque (1..255 y, para las familias
 // con estados como losas o puertas, el estado base a partir de 1024); el resto va de 256 a 1023 y usa
 // un sprite 16x16 del atlas de objetos.
+import { NETHER_WART_CROP } from './blocks'; // Fase 8.4
 import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
 import {
   EFFECT_HUNGER, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_ABSORPTION, EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, type FoodEffect,
@@ -528,7 +529,7 @@ export const TIPPED_ARROW = item('tipped_arrow', 'Flecha con efecto');
 /** Ingredientes de destilación que faltaban. Los del Nether y el End, de momento sólo en creativo y en el botín. */
 export const FERMENTED_SPIDER_EYE = item('fermented_spider_eye', 'Ojo de araña fermentado');
 export const GLOWSTONE_DUST = item('glowstone_dust', 'Polvo de piedra luminosa');
-export const NETHER_WART = item('nether_wart', 'Verruga del Nether');
+export const NETHER_WART = item('nether_wart', 'Verruga del Nether', { block: NETHER_WART_CROP }); // Fase 8.4: se planta en arena de alma
 export const BLAZE_ROD = item('blaze_rod', 'Vara de blaze', { fuel: 120 });
 export const BLAZE_POWDER = item('blaze_powder', 'Polvo de blaze');
 export const MAGMA_CREAM = item('magma_cream', 'Crema de magma');

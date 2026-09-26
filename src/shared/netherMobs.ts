@@ -301,6 +301,12 @@ export interface NetherSpawns {
 /** Tipos del mundo normal que también salen en el Nether (los pone mobs.ts para no importarlo aquí). */
 export const OVERWORLD_IN_NETHER = { skeleton: 7, enderman: 11 };
 
+/** Fase 8.4: monstruos de las fortalezas (NetherFortressStructure.FORTRESS_ENEMIES): [tipo, peso, mín., máx.]. */
+export const FORTRESS_ENEMIES: readonly SpawnEntry[] = [
+  [MOB_BLAZE, 10, 2, 3], [MOB_ZOMBIFIED_PIGLIN, 5, 4, 4], [MOB_WITHER_SKELETON, 8, 5, 5], [OVERWORLD_IN_NETHER.skeleton, 2, 5, 5],
+  [MOB_MAGMA_CUBE, 3, 4, 4],
+];
+
 export const NETHER_SPAWNS: Readonly<Record<string, NetherSpawns>> = {
   nether_wastes: {
     monsters: [[MOB_GHAST, 50, 4, 4], [MOB_ZOMBIFIED_PIGLIN, 100, 4, 4], [MOB_MAGMA_CUBE, 2, 4, 4], [OVERWORLD_IN_NETHER.enderman, 1, 4, 4], [MOB_PIGLIN, 15, 4, 4]],

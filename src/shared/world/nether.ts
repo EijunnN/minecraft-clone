@@ -15,6 +15,7 @@ import { TerrainGenerator, type ColumnInfo, type GenResult } from './terrain';
 import { NetherTerrain, NETHER_HEIGHT, baseIndex } from './netherTerrain';
 import { decorateNetherChunk, type FeatureLevel } from './netherFeatures';
 import { NoiseRandom } from './javaNoise';
+import { placeNetherStructures } from './netherStructures'; // Fase 8.4 (estructuras del Nether)
 
 /** Nivel del mar de lava (la lava llena el aire con y ≤ LAVA_LEVEL). */
 export const NETHER_LAVA_LEVEL = 31;
@@ -188,6 +189,9 @@ export class NetherGenerator extends TerrainGenerator {
         }
       }
     }
+    // Fase 8.4: las estructuras del Nether (fortalezas…) encima de la decoración.
+    const chests: GenResult['chests'] = [], mobs: GenResult['mobs'] = [];
+    placeNetherStructures(this, blocks, cx, cz, chests, mobs, fluidTicks);
     // Alturas (el bloque más alto que no es aire).
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
@@ -199,6 +203,6 @@ export class NetherGenerator extends TerrainGenerator {
     // Sin hierba: el tinte es un pardo cualquiera (temperatura alta en A).
     const tint = new Uint8Array(64);
     for (let i = 0; i < 16; i++) tint.set([110, 90, 60, 255], i * 4);
-    return { blocks, tint, heights, chests: [], villagers: [], mobs: [], fluidTicks };
+    return { blocks, tint, heights, chests, villagers: [], mobs, fluidTicks };
   }
 }

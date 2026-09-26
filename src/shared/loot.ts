@@ -260,3 +260,8 @@ import { LEAD } from './items';
     ],
   };
 }
+
+// ------------------------------------------------------------------ Fase 8.4 (estructuras del Nether)
+// Los cofres de las fortalezas del Nether (y, con los bastiones, los suyos).
+import { NETHER_LOOT } from './netherLoot';
+Object.assign(LOOT_TABLES, NETHER_LOOT);

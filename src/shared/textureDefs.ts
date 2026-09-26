@@ -460,6 +460,8 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'blackstone', 'blackstone_top', 'polished_blackstone', 'polished_blackstone_bricks', 'cracked_polished_blackstone_bricks',
     'chiseled_polished_blackstone', 'gilded_blackstone', 'nether_bricks', 'cracked_nether_bricks', 'chiseled_nether_bricks',
     'red_nether_bricks'].map((name): TextureDef => ({ name })),
+  // Fase 8.4 (estructuras del Nether): la verruga del Nether (tres dibujos para sus cuatro edades).
+  ...[0, 1, 2].map((s): TextureDef => ({ name: `nether_wart_stage${s}`, sss: 0.35, cutout: true })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

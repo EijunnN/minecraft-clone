@@ -8,6 +8,9 @@
 // suelo o, el strider, en la lava), las reglas de cada criatura (luz, verrugas, uno de cada veinte para el ghast), que
 // quepa y, en el valle de almas y el bosque distorsionado, el coste de aparición (el campo de carga de
 // PotentialCalculator). El ghast sale de uno en uno; los demás, hasta 4 por intento.
+import { FORTRESS_ENEMIES } from '../../netherMobs'; // Fase 8.4
+import { inFortressPiece, inFortressBounds } from '../../world/netherStructures';
+import { NETHER_BRICKS } from '../../blocks';
 import { MOBS, MOB_SKELETON, MOB_ENDERMAN } from '../../mobs';
 import {
   NETHER_SPAWNS, MONSTER_CAP, CREATURE_CAP, CREATURE_SPAWN_PERIOD, MOB_GHAST, MOB_PIGLIN, MOB_HOGLIN, MOB_ZOMBIFIED_PIGLIN,
@@ -125,7 +128,9 @@ export class NetherSpawner {
         for (const p of players) d2 = Math.min(d2, (p.x - px) ** 2 + (p.y - y) ** 2 + (p.z - pz) ** 2);
         if (d2 <= 576 || !w.isLoaded(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE))) continue;
         const spawns = this.spawnsAt(w.gen.biomeAt(x, z));
-        const list = cat === 'monster' ? spawns.monsters : spawns.creatures;
+        // Fase 8.4: en las fortalezas mandan sus monstruos (dentro de sus piezas, o sobre ladrillos del Nether dentro
+        // de su caja: NaturalSpawner.mobsAt).
+        const list = cat !== 'monster' ? spawns.creatures : this.fortressList(x, y, z) ?? spawns.monsters;
         if (!entry) {
           entry = this.pick(list);
           if (!entry) break;
@@ -148,6 +153,14 @@ export class NetherSpawner {
       }
     }
     return cluster;
+  }
+
+  /** Fase 8.4: la lista de la fortaleza si (x, y, z) está en ella. */
+  private fortressList(x: number, y: number, z: number): readonly SpawnEntry[] | null {
+    const gen = this.m.w.gen;
+    if (inFortressPiece(gen, x, y, z)) return FORTRESS_ENEMIES;
+    if (this.m.w.getBlock(x, y - 1, z) === NETHER_BRICKS && inFortressBounds(gen, x, y, z)) return FORTRESS_ENEMIES;
+    return null;
   }
 
   /** Una entrada de la lista al azar por su peso. */

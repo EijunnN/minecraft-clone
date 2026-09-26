@@ -225,3 +225,5 @@ export * from './netherBiomeBlocks';
 import { NETHER_MOB_INVENTORY } from './netherMobBlocks';
 export * from './netherMobBlocks';
 (INVENTORY_ORDER as number[]).push(...NETHER_MOB_INVENTORY);
+// Fase 8.4 (estructuras del Nether): la verruga del Nether plantada (ids nuevos, al final).
+export * from './netherStructureBlocks';

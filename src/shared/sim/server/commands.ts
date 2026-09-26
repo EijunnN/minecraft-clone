@@ -9,8 +9,9 @@ import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../..
 import type { ServerContext, Session } from './context';
 import type { Raids } from './raids'; // Fase 6 (asaltos)
 import { locateStructure, STRUCTURE_NAMES, LOCATE_REGIONS } from '../../world/structures';
+import { locateNetherStructure, NETHER_STRUCTURE_NAMES } from '../../world/netherStructures'; // Fase 8.4
 import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
-import { DIM_OVERWORLD, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
+import { DIM_OVERWORLD, DIM_NETHER, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
 import { BLOCKS, isValidBlockId } from '../../blocks';
 import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 
@@ -31,6 +32,8 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   tesoro: 'buried_treasure', tesoro_enterrado: 'buried_treasure',
   cabana_de_bruja: 'swamp_hut', cabana: 'swamp_hut', choza_de_bruja: 'swamp_hut', fosil: 'fossil', fosiles: 'fossil', // Fase 7.5 (fauna)
   mansion: 'mansion', mansion_del_bosque: 'mansion', // Fase 7.5 (mansión)
+  // Fase 8.4 (estructuras del Nether)
+  fortaleza: 'fortress', fortaleza_del_nether: 'fortress', bastion: 'bastion_remnant', bastion_en_ruinas: 'bastion_remnant',
 };
 
 export class Commands {
@@ -235,13 +238,21 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion|ciudad_antigua>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion|ciudad_antigua|fortaleza|bastion>');
           return;
         }
         const type = STRUCTURE_ALIASES[key];
-        // Fase 8: las estructuras de la lista son del mundo normal.
-        if (ctx.dim !== DIM_OVERWORLD) {
+        // Fase 8.4: en el Nether, las suyas (fortalezas, bastiones…); en el mundo normal, las demás.
+        const netherType = NETHER_STRUCTURE_NAMES[type] !== undefined;
+        if (netherType !== (ctx.dim === DIM_NETHER) || (ctx.dim !== DIM_OVERWORLD && ctx.dim !== DIM_NETHER)) {
           reply(`En ${dimensionDef(ctx.dim).name} no hay estructuras de ese tipo.`);
+          return;
+        }
+        if (netherType) {
+          const q = locateNetherStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS);
+          const name = NETHER_STRUCTURE_NAMES[type];
+          if (!q) reply(`No hay ninguna ${name.toLowerCase()} cerca.`);
+          else reply(`${name} más cercana: x ${q[0]}, y ${q[1]}, z ${q[2]} (a ${Math.round(Math.hypot(q[0] - s.p[0], q[2] - s.p[2]))} bloques).`);
           return;
         }
         const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS); // Fase 7.5: como en Minecraft

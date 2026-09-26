@@ -525,7 +525,7 @@ export class Renderer {
     const hue = (c: number) => 0.55 + 0.45 * (c / top);
     // Fase 8 (entorno del Nether): una penumbra algo más clara, para que lo oscuro (arena de alma, basalto) se lea
     // contra la niebla en vez de quedar en silueta negra.
-    const amb = dd.ambient * 1.25;
+    const amb = dd.ambient * 2.4; // en proporción a la luz de bloque, como el 10 % de Java (lerp(ambiente, luz, 1))
     d[164] = amb * hue(fog[0]); d[165] = amb * hue(fog[1]); d[166] = amb * hue(fog[2]); d[167] = 0;
     this.ubo.upload();
   }
