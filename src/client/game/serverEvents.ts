@@ -215,6 +215,11 @@ export class ServerEvents {
 
   onReconnectWelcome(w: Welcome): void {
     const world = this.g.world;
+    // Fase 8: bienvenida de otra dimensión (por un portal, al reaparecer…): otro mundo.
+    if (world && w.dim !== world.dim) {
+      this.g.changeDimension(w);
+      return;
+    }
     this.g.time = w.time;
     this.g.remote.clear();
     this.g.ents.clear();
@@ -225,6 +230,7 @@ export class ServerEvents {
     world.resetEdits(w.edits);
     this.g.screen.close();
     this.g.sendState(true);
+    this.g.net?.send({ t: 'dimok', d: world.dim }); // Fase 8
   }
 
   onChat(id: string | null, name: string, m: string): void {

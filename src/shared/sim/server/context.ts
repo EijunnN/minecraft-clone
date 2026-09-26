@@ -53,6 +53,8 @@ export interface Session {
   bed: [number, number, number] | null;
   /** Fase 7 (pociones): color de los remolinos de sus efectos (0 sin efectos). */
   ec?: number;
+  /** Fase 8 (dimensiones): acaba de llegar de otra dimensión y su cliente aún no la ha montado. */
+  dimPending?: boolean;
 }
 
 /** Lo que se guarda de cada jugador. */
@@ -60,11 +62,26 @@ export interface PlayerRecord {
   mode: GameMode;
   save: PlayerSave | null;
   bed?: [number, number, number] | null;
+  /** Fase 8: dimensión en la que está (sin ella, el mundo normal). */
+  dim?: number;
 }
+
+/** Fase 8 (dimensiones): cómo llega un jugador a una dimensión. */
+export type Arrival =
+  /** Por un portal: el sitio equivalente (ya escalado) y el eje del portal de salida. */
+  | { kind: 'portal'; x: number; y: number; z: number; axis: number }
+  /** A la cama o al punto de aparición (reaparecer). */
+  | { kind: 'spawn' }
+  /** A un punto concreto (comandos), o al punto de aparición de la dimensión si no se da. */
+  | { kind: 'pos'; x?: number; y?: number; z?: number };
 
 export interface ServerContext {
   readonly world: WorldSim;
   readonly entities: Entities;
+  /** Fase 8: dimensión de este servidor. */
+  readonly dim: number;
+  /** Fase 8: lleva a un jugador a otra dimensión (false si no se puede: sin anfitrión de dimensiones). */
+  travel(s: Session, dim: number, arrival: Arrival): boolean;
   /** Modo un jugador: sin límites de ritmo ni de distancia estrictos. */
   readonly local: boolean;
   readonly seed: number;

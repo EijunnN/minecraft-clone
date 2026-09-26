@@ -38,6 +38,7 @@ import { DISCS } from './discs'; // Fase 6.5 (colecciones)
 import { BREWING_STAND } from './blocks'; // Fase 7 (pociones)
 import { REDSTONE_WIRE, TRIPWIRE, IRON_DOOR } from './blocks'; // Fase 7 (redstone)
 import { HOPPER } from './blocks'; // Fase 7 (mecanismos)
+import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from './blocks'; // Fase 8 (dimensiones)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -776,3 +777,8 @@ Object.assign(BREED_FOOD as Record<string, readonly number[]>, { ocelot: [COD, S
 
 // ------------------------------------------------------------------ Fase 7.5 (abismo)
 (CREATIVE_ITEMS as number[]).push(ECHO_SHARD, RECOVERY_COMPASS, DISC_FRAGMENT_5, MUSIC_DISC_5);
+
+// ------------------------------------------------------------------ Fase 8 (dimensiones)
+// Las menas del Nether se funden como las demás (sacadas con Toque de seda).
+smelt(NETHER_QUARTZ_ORE, QUARTZ);
+smelt(NETHER_GOLD_ORE, GOLD_INGOT);

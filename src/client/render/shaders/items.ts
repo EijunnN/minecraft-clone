@@ -98,7 +98,7 @@ void main() {
     vec4 sc = shadowCoord(vec3(0.0, -0.35, 0.0), vec3(0.0, 1.0, 0.0));
     float sh = sampleShadow(sc, gl_FragCoord.xy, 2.0);
     vec3 direct = uLightColor.rgb * NdotL * sh * smoothstep(0.55, 0.95, sky);
-    vec3 amb = (mix(side, up, N.y * 0.5 + 0.5) * 1.6 + uLightColor.rgb * 0.05) * (sky * sky) + blockLightColor(uLightLevel.y) + vec3(0.015);
+    vec3 amb = (mix(side, up, N.y * 0.5 + 0.5) * 1.6 + uLightColor.rgb * 0.05) * (sky * sky * uDim.x) + blockLightColor(uLightLevel.y) + minAmbient() + 0.003;
     amb += underwaterLight(up) * (0.6 + 0.4 * saturate(N.y * 0.5 + 0.5));
     col = albedo / PI * (direct + amb);
   } else {
@@ -106,7 +106,7 @@ void main() {
     float NdotL = saturate(dot(N, L));
     float shadow = NdotL > 0.0 ? sampleShadow(shadowCoord(vRel, N), gl_FragCoord.xy, 1.5) : 0.0;
     vec3 lightCol = uLightColor.rgb * shadow * cloudShadow(vRel + uCamPos.xyz);
-    vec3 amb = ambientCube(N) * 1.6 * skyLightCurve(uLightLevel.x) + blockLightColor(uLightLevel.y) + vec3(0.012, 0.013, 0.016);
+    vec3 amb = ambientCube(N) * 1.6 * skyLightCurve(uLightLevel.x) + blockLightColor(uLightLevel.y) + minAmbient();
     col = albedo / PI * (NdotL * lightCol + amb);
   }
   col = col * uTint + albedo * emissive;

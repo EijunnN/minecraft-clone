@@ -1,5 +1,6 @@
 // Camas: dormir de noche (si todos los jugadores duermen, amanece) y punto de reaparición.
-import { isBed, stateProps } from '../../blocks';
+import { isBed, stateProps, AIR, FIRE, BLOCK_SOLID } from '../../blocks';
+import { dimensionDef } from '../../dimensions'; // Fase 8 (dimensiones)
 import { MOBS } from '../../mobs';
 import { STATE_DEAD, STATE_SLEEP } from '../../protocol';
 import { partnerOf } from '../../placement';
@@ -26,6 +27,11 @@ export class Beds {
     const fail = (m: string) => ctx.send(s, { t: 'sleep', ok: false, m });
     const footId = ctx.world.getBlock(foot[0], foot[1], foot[2]);
     if (!isBed(footId)) return fail('La cama está rota.');
+    // Fase 8: donde no se puede dormir (el Nether), la cama explota (potencia 5, con fuego), como en Minecraft.
+    if (!dimensionDef(ctx.dim).beds) {
+      this.explodeBed(foot[0], foot[1], foot[2], footId);
+      return;
+    }
     if (s.sleeping !== null) return;
     // Punto de reaparición: al usar la cama, aunque no se pueda dormir (como en Minecraft).
     const same = s.bed && s.bed[0] === foot[0] && s.bed[1] === foot[1] && s.bed[2] === foot[2];
@@ -55,6 +61,24 @@ export class Beds {
     let sleeping = 0;
     for (const o of ctx.sessions()) if (o.joined && o.sleeping !== null) sleeping++;
     if (n > 1) ctx.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} se fue a dormir (${sleeping}/${n}).` });
+  }
+
+  /** Fase 8: la cama explota y prende fuego alrededor. */
+  private explodeBed(x: number, y: number, z: number, id: number): void {
+    const ctx = this.ctx, w = ctx.world;
+    const head = partnerOf(x, y, z, id);
+    w.setBlock(x, y, z, AIR);
+    if (head) w.setBlock(head[0], head[1], head[2], AIR);
+    ctx.entities.explosion?.(x + 0.5, y + 0.5, z + 0.5, 5, false);
+    for (let dz = -3; dz <= 3; dz++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -3; dx <= 3; dx++) {
+          if (ctx.rand() > 0.33) continue;
+          const b = w.getBlock(x + dx, y + dy, z + dz), below = w.getBlock(x + dx, y + dy - 1, z + dz);
+          if (b === AIR && below > 0 && BLOCK_SOLID[below]) w.setBlock(x + dx, y + dy, z + dz, FIRE);
+        }
+      }
+    }
   }
 
   /** Levanta a un jugador de la cama. */

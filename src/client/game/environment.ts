@@ -5,6 +5,7 @@ import { CHUNK_SIZE, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex } from '../../shared/co
 import { rainAt } from '../../shared/weather';
 import { BIOME_MUSHROOM_FIELDS } from '../../shared/world/biomeIds';
 import type { Game } from './Game';
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 
 /** El cielo y el clima de un frame. */
 export interface SkyState {
@@ -34,7 +35,7 @@ export class Environment {
     const dawn = Math.exp(-Math.pow(((dayTime + 0.5) % 1) - 0.5, 2) / 0.0035);
     const mist = 0.0022 + 0.011 * dawn + (sunHeight < 0 ? 0.002 : 0) + rain * 0.006;
     const climate = this.g.world!.generator.columnInfo(Math.floor(p.x), Math.floor(p.z));
-    const snow = (climate.temp < -0.5 || climate.height > 150) && climate.biome !== BIOME_MUSHROOM_FIELDS;
+    const snow = (climate.temp < -0.5 || climate.height > 150) && climate.biome !== BIOME_MUSHROOM_FIELDS && dimensionDef(this.g.world!.dim).weather;
     this.rainMapTimer -= dt;
     if (rain > 0.01 && this.rainMapTimer <= 0) this.updateRainMap();
     const cloudCoverage = (window as unknown as { __cloudCov?: number }).__cloudCov ?? Math.max(0.1, Math.min(0.9, coverage));
@@ -48,6 +49,7 @@ export class Environment {
   weatherAt(worldTime: number): number {
     const override = (window as unknown as { __rain?: number }).__rain;
     if (override !== undefined) return override;
+    if (!dimensionDef(this.g.world!.dim).weather) return 0; // Fase 8: en el Nether no llueve
     return rainAt(worldTime, this.g.world!.seed);
   }
 

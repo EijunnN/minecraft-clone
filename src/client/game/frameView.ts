@@ -10,6 +10,7 @@ import { isVehicleType } from '../../shared/vehicles';
 import { TerrainGenerator, BIOME_NAMES } from '../../shared/world/terrain';
 import { BIOME_LUSH_CAVES, BIOME_DRIPSTONE_CAVES } from '../../shared/world/biomeIds';
 import { isDeepDark } from '../../shared/world/deepDark';
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 import { OFFHAND } from './Inventory';
 import { useLook } from './equipmentInteraction';
 import { handPotionTypes } from './potionClient';
@@ -132,7 +133,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     feet: [p.x, p.y, p.z] as [number, number, number], bodyYaw: p.yaw,
   };
   const dead = g.survival.dead;
-  return {
+  const out: FrameState = {
     camX, camY, camZ, yaw, pitch, roll: g.hurtRoll,
     time: performance.now() / 1000,
     dt: f.dt,
@@ -179,7 +180,11 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     leashes: leashLines(g.ents.list, g.net?.id ?? null, localRod, f.views), // Fase 6.5 (remate)
     showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass',
     ...effectsView(g, f.dt), // Fase 7 (efectos): náuseas, ceguera y oscuridad
+    dim: world.dim, // Fase 8: cielo, niebla y luz de la dimensión
   };
+  // Fase 8: dentro de un portal la imagen se retuerce como con las náuseas.
+  if (g.portalFx.warp > 0) out.nausea = Math.max(out.nausea ?? 0, g.portalFx.warp * 0.8);
+  return out;
 }
 
 /** Etiquetas de nombre: jugadores (a menos de 72 bloques, no invisibles) y criaturas con nombre (16). */
@@ -221,7 +226,7 @@ export function debugText(g: Game, eye: EyeLight, sky: SkyState, counts: { mobs:
   return (
     `VoxelCraft · ${g.fps.toFixed(0)} FPS\n` +
     `XYZ: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}\n` +
-    `Chunk: ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)} · Bioma: ${biome}\n` +
+    `Chunk: ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)} · Bioma: ${biome} · ${dimensionDef(world.dim).name}\n` +
     `Hora: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · Día ${sky.day + 1}\n` +
     `Luz: cielo ${eye.le >> 4} · bloque ${eye.le & 15}\n` +
     `Chunks: ${world.meshedCount} mallados · ${r.stats.drawCalls} draws · ${(r.stats.quads / 1000).toFixed(0)}k caras\n` +

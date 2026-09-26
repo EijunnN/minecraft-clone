@@ -49,7 +49,7 @@ void main() {
   vec3 col = albedo / PI * NdotL * lightCol;
   col += specularGGX(N, V, L, 0.7, vec3(0.04)) * lightCol;
   vec3 bounce = uLightColor.rgb * saturate(uLightDir.y) * 0.07 * (0.6 - 0.45 * N.y);
-  vec3 amb = (ambientCube(N) * 1.6 + bounce) * skyLightCurve(uLightLevel.x) + blockLightColor(uLightLevel.y) + vec3(0.012, 0.013, 0.016);
+  vec3 amb = (ambientCube(N) * 1.6 + bounce) * skyLightCurve(uLightLevel.x) + blockLightColor(uLightLevel.y) + minAmbient();
   col += albedo / PI * amb;
   outColor = vec4(col, 1.0);
 }

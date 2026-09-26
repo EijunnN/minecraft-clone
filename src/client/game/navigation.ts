@@ -11,6 +11,7 @@ import { structureMarkIcon } from './explorerMarks';
 import type { Game } from './Game';
 import '../ui/navigation.css';
 import { updateRecoveryCompass } from './recoveryCompass'; // Fase 7.5 (abismo)
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 
 export class Navigation {
   private mapEl: HTMLDivElement | null = null;
@@ -120,8 +121,8 @@ export class Navigation {
     const dx = g.spawn[0] - p.x, dz = g.spawn[2] - p.z;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
-    const near = Math.hypot(dx, dz) < 2;
-    // Muy cerca del punto la aguja gira sin rumbo, como en Minecraft.
+    // Muy cerca del punto (o en el Nether, fase 8) la aguja gira sin rumbo, como en Minecraft.
+    const near = Math.hypot(dx, dz) < 2 || !dimensionDef(g.world?.dim ?? 0).compass;
     const a = near ? performance.now() / 180 : Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
     this.needle!.style.transform = `translate(-50%, -100%) rotate(${a}rad)`;
     // La "N" de la esfera marca el norte (−z) respecto a la vista.

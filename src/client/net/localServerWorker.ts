@@ -1,11 +1,12 @@
 // Servidor de juego local (modo un jugador): el mismo GameServer que en Cloudflare, dentro de
 // un Web Worker para no competir con el renderizado, con el mundo guardado en IndexedDB.
-import { GameServer, TICK_RATE, type Conn } from '../../shared/sim/GameServer';
+import { TICK_RATE, type Conn } from '../../shared/sim/GameServer';
+import { Multiverse } from '../../shared/sim/Multiverse'; // Fase 8 (dimensiones)
 import { IdbStore } from './idbStore';
 
 type In = { t: 'init'; room: string; seed: number } | { t: 'open' } | { t: 'msg'; data: string } | { t: 'close' } | { t: 'flush' };
 
-let game: GameServer | null = null;
+let game: Multiverse | null = null;
 let store: IdbStore | null = null;
 let conn: Conn | null = null;
 const queue: In[] = [];
@@ -58,7 +59,7 @@ self.onmessage = async (e: MessageEvent<In>) => {
   if (m.t === 'init') {
     try {
       store = await IdbStore.open('voxelcraft-' + m.room);
-      game = new GameServer(store, { seed: m.seed, local: true, flushSeconds: 10 });
+      game = new Multiverse(store, { seed: m.seed, local: true, flushSeconds: 10 });
       setInterval(() => {
         try {
           game!.tick();

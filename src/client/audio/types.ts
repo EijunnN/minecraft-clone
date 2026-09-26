@@ -26,7 +26,8 @@ export interface AmbientState {
 export type SoundKind = 'break' | 'place' | 'step' | 'land';
 
 /** Sonidos cortos de interfaz. */
-export type UiKind = 'click' | 'open' | 'close' | 'chat' | 'join' | 'leave';
+export type UiKind = 'click' | 'open' | 'close' | 'chat' | 'join' | 'leave'
+  | 'portal'; // Fase 8 (dimensiones): el viaje por un portal
 
 /** Criaturas con voz propia en el modo supervivencia. */
 export type MobSoundKind =

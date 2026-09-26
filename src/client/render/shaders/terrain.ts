@@ -184,7 +184,7 @@ vec3 ambientCube(vec3 n) {
 
 /** Curva de la luz del cielo (0..1 → factor). */
 float skyLightCurve(float s) {
-  return s * s * (0.35 + 0.65 * s);
+  return s * s * (0.35 + 0.65 * s) * uDim.x; // Fase 8: sin cielo no hay luz del cielo
 }
 `;
 
@@ -355,7 +355,7 @@ void main() {
   float ft = uCamPos.w * 7.0 + dot(floor(vWorld * 0.25), vec3(1.7, 3.1, 2.3));
   float flicker = 0.93 + 0.05 * sin(ft) + 0.03 * sin(ft * 2.37 + 1.3);
   vec3 blockE = blockLightColor(vLight.y) * flicker;
-  vec3 minAmb = vec3(0.012, 0.013, 0.016);
+  vec3 minAmb = minAmbient();
   vec3 ambient = (metal ? albedo * 0.25 : albedo) / PI * (amb + blockE + minAmb) * ao;
   // Reflejo especular del cielo en materiales pulidos.
   vec3 R = reflect(-V, n);
@@ -366,7 +366,7 @@ void main() {
 
   vec3 color = diffuse + spec + trans + ambient + envSpec;
   color += albedo * emission * 6.0;
-  if (special == 2) color += albedo * 5.0;
+  if (special == 2) color += albedo * mix(1.6, 5.0, uDim.x); // Fase 8: sin cielo la exposición sube: la lava, menos
   outColor = vec4(color, 1.0);
 }
 `;

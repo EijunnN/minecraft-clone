@@ -118,7 +118,7 @@ function crackedBricks(t: Tex): void {
   }
 }
 
-function netherrack(t: Tex): void {
+export function netherrack(t: Tex): void {
   const r = t.rng();
   const n4 = new Noise(r, 4);
   const n8 = new Noise(r, 8);

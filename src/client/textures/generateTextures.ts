@@ -54,6 +54,7 @@ import { ENCHANT_GENERATORS } from './genEnchant'; // Fase 7 (encantamientos)
 import { REDSTONE_GENERATORS } from './genRedstone'; // Fase 7 (redstone)
 import { MECHANISM_GENERATORS } from './genMechanisms'; // Fase 7 (mecanismos)
 import { DEEP_DARK_GENERATORS } from './genDeepDark'; // Fase 7.5 (abismo)
+import { NETHER_GENERATORS } from './genNether'; // Fase 8 (dimensiones)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -100,6 +101,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...REDSTONE_GENERATORS, // Fase 7 (redstone)
   ...MECHANISM_GENERATORS, // Fase 7 (mecanismos)
   ...DEEP_DARK_GENERATORS, // Fase 7.5 (abismo)
+  ...NETHER_GENERATORS, // Fase 8 (dimensiones)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

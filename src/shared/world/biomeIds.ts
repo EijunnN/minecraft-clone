@@ -58,6 +58,8 @@ export const BIOME_MANGROVE_SWAMP = 49;
 /** Biomas de cueva (sólo para verlos con F3: bajo tierra no cambian el bioma de la columna). */
 export const BIOME_DRIPSTONE_CAVES = 50;
 export const BIOME_LUSH_CAVES = 51;
+// Fase 8: los biomas del Nether.
+export const BIOME_NETHER_WASTES = 52;
 
 export const BIOME_NAMES = [
   'Océano', 'Océano helado', 'Playa', 'Llanura', 'Bosque', 'Bosque de abedules', 'Taiga',
@@ -71,6 +73,8 @@ export const BIOME_NAMES = [
   'Picos escarpados', 'Picos pedregosos', 'Llanura nevada', 'Taiga de pinos viejos', 'Taiga de abetos viejos',
   'Jungla dispersa', 'Jungla de bambú', 'Tierras baldías erosionadas', 'Tierras baldías boscosas',
   'Meseta de sabana', 'Sabana ventosa', 'Pantano de manglares', 'Cuevas de goteo', 'Cuevas frondosas',
+  // Fase 8
+  'Desiertos del Nether',
 ];
 
 /**

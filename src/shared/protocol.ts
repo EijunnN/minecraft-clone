@@ -5,7 +5,7 @@ import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import type { BannerLayer } from './bannerPatterns';
 
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -136,6 +136,10 @@ export type EntExtra = [number, string, string | [number, number, number] | 0] |
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
+  /** Fase 8 (dimensiones): el cliente ya montó la dimensión nueva (hasta entonces no se atiende lo demás). */
+  | { t: 'dimok'; d: number }
+  /** Fase 8: reaparecer tras morir en una dimensión donde no se puede (se vuelve al mundo normal). */
+  | { t: 'respawn' }
   | {
     t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number;
     hp?: number; op?: number; hs?: string; os?: string;
@@ -244,6 +248,10 @@ export type ServerMsg =
     signs?: [number, number, number, string[]][];
     /** Fase 6.5 (libros y estandartes): estandartes con dibujos: [x, y, z, capas]. */
     banners?: [number, number, number, BannerLayer[]][];
+    /** Fase 8: dimensión (ver shared/dimensions.ts; sin ella, el mundo normal). Otra bienvenida = cambio de dimensión. */
+    dim?: number;
+    /** Fase 8: al llegar de otra dimensión, dónde aparece (el resto del estado sigue siendo el del cliente). */
+    at?: [number, number, number];
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }

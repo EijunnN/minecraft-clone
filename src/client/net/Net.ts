@@ -4,6 +4,7 @@ import {
   PROTOCOL_VERSION, decodeEdits, type ClientMsg, type ServerMsg, type WorldTime, type PlayerInfo, type GameMode,
   type PlayerSave,
 } from '../../shared/protocol';
+import { isDimension } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 
 export interface Welcome {
   id: string;
@@ -22,6 +23,9 @@ export interface Welcome {
   signs?: [number, number, number, string[]][];
   /** Fase 6.5 (libros y estandartes): estandartes con dibujos: [x, y, z, capas]. */
   banners?: unknown[];
+  /** Fase 8: dimensión y, al llegar de otra, dónde aparece. */
+  dim: number;
+  at?: [number, number, number];
 }
 
 /** Lo mínimo de un WebSocket que usamos (el servidor local imita esta interfaz). */
@@ -65,6 +69,8 @@ export class Net {
   id: string | null = null;
   readonly local: boolean;
   private everConnected = false;
+  /** Fase 8: la bienvenida que se espera es de un cambio de dimensión (no de una conexión nueva). */
+  private transfer = false;
   /** Ediciones hechas sin conexión: se reenvían al reconectar. */
   private pendingSets: [number, number, number, number][] = [];
   private lastMessageAt = 0;
@@ -151,7 +157,8 @@ export class Net {
           this.everConnected = true;
           this.retries = 0;
           this.events.onWelcome({ ...this.pendingWelcome, edits }, reconnect);
-          this.events.onStatus('connected');
+          if (!this.transfer) this.events.onStatus('connected');
+          this.transfer = false;
           const queued = this.pendingSets;
           this.pendingSets = [];
           for (const [x, y, z, b] of queued) this.sendRaw({ t: 'set', x, y, z, b });
@@ -191,6 +198,13 @@ export class Net {
       case 'hb':
         return;
       case 'welcome':
+        // Fase 8: otra bienvenida por la misma conexión = cambio de dimensión. Lo que iba a la anterior
+        // (ediciones pendientes) ya no vale; hasta que lleguen sus ediciones no se manda nada.
+        if (this.welcomed) {
+          this.welcomed = false;
+          this.pendingSets = [];
+          this.transfer = true;
+        }
         if (!Number.isFinite(msg.time?.base) || !Number.isFinite(msg.time?.at)) msg.time = { base: 0.08, at: msg.now, rate: msg.time?.rate || 1 / 1200 };
         this.id = msg.id;
         this.serverOffset = msg.now - Date.now();
@@ -200,6 +214,8 @@ export class Net {
           bed: msg.bed ?? null, rods: Array.isArray(msg.rods) ? msg.rods : [],
           signs: Array.isArray(msg.signs) ? msg.signs : [],
           banners: Array.isArray(msg.banners) ? msg.banners : [], // Fase 6.5 (libros y estandartes)
+          dim: isDimension(msg.dim) ? msg.dim : 0, // Fase 8
+          at: Array.isArray(msg.at) && msg.at.length === 3 && msg.at.every(Number.isFinite) ? msg.at : undefined,
         };
         return;
       case 'time':

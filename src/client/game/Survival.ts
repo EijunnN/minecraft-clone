@@ -17,6 +17,8 @@ export interface SurvivalContext {
   waterBreathing?: boolean;
   /** De pie sobre una fogata encendida (quema sin prender fuego). */
   onCampfire?: boolean;
+  /** Fase 8: de pie sobre un bloque de magma (sin agacharse). */
+  onMagma?: boolean;
   /** Fase 6.5 (equipo): dentro de un bloque de fuego (quema y prende). */
   inFire?: boolean;
 }
@@ -63,6 +65,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'lava': return 'intentó nadar en lava';
     case 'fire': return 'ardió hasta morir';
     case 'campfire': return 'se quemó en una fogata';
+    case 'hot_floor': return 'descubrió que el suelo era lava'; // Fase 8: el magma
     case 'sweet_berry_bush': return 'murió pinchado por un arbusto de bayas dulces'; // Fase 6.5
     case 'freeze': return 'se congeló hasta morir'; // Fase 6.5 (materiales)
     case 'drown': return 'se ahogó';
@@ -273,6 +276,7 @@ export class Survival {
     } else this.lavaTimer = 0.5;
     // La fogata quema al pisarla (la invulnerabilidad deja un golpe cada medio segundo).
     if (ctx.onCampfire && !ctx.fireResistant) this.damage(1, 'campfire');
+    if (ctx.onMagma && !ctx.fireResistant) this.damage(1, 'hot_floor'); // Fase 8
     // Fase 6.5 (equipo): el fuego prende al que lo toca (8 s) y quema al momento.
     if (ctx.inFire && !ctx.inWater) {
       this.fire = Math.max(this.fire, 8 * this.burnFactor); // Fase 7: Protección contra el fuego

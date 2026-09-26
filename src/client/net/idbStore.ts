@@ -1,6 +1,6 @@
 // Almacenamiento del servidor local en IndexedDB: se carga todo en memoria al abrir (las
 // operaciones del servidor son síncronas) y las escrituras se vuelcan en segundo plano.
-import type { ServerStore } from '../../shared/sim/store';
+import { dimEntries, type ServerStore } from '../../shared/sim/store';
 
 const STORES = ['meta', 'chunks', 'players', 'containers'] as const;
 type StoreName = (typeof STORES)[number];
@@ -18,6 +18,8 @@ export class IdbStore implements ServerStore {
   private chunks = new Map<string, Uint8Array>();
   private players = new Map<string, string>();
   private containers = new Map<number, string>();
+  /** Fase 8: contenedores de las otras dimensiones, con clave "dim:pos" (en el mismo almacén). */
+  private dimContainers = new Map<string, string>();
   private pending = new Map<StoreName, Map<IDBValidKey, unknown | null>>();
   private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -42,7 +44,10 @@ export class IdbStore implements ServerStore {
       load('meta', (k, v) => store.meta.set(String(k), String(v))),
       load('chunks', (k, v) => store.chunks.set(String(k), new Uint8Array(v as ArrayBuffer))),
       load('players', (k, v) => store.players.set(String(k), String(v))),
-      load('containers', (k, v) => store.containers.set(Number(k), String(v))),
+      load('containers', (k, v) => {
+        if (typeof k === 'string') store.dimContainers.set(k, String(v));
+        else store.containers.set(Number(k), String(v));
+      }),
     ]);
     return store;
   }
@@ -104,12 +109,14 @@ export class IdbStore implements ServerStore {
     this.players.set(name, data);
     this.queue('players', name, data);
   }
-  loadContainers(): [number, string][] {
-    return [...this.containers.entries()];
+  loadContainers(dim = 0): [number, string][] {
+    return dim ? dimEntries(this.dimContainers, dim) : [...this.containers.entries()];
   }
-  saveContainer(pos: number, data: string | null): void {
-    if (data === null) this.containers.delete(pos);
-    else this.containers.set(pos, data);
-    this.queue('containers', pos, data);
+  saveContainer(pos: number, data: string | null, dim = 0): void {
+    const m: Map<number | string, string> = dim ? this.dimContainers : this.containers;
+    const k = dim ? `${dim}:${pos}` : pos;
+    if (data === null) m.delete(k);
+    else m.set(k, data);
+    this.queue('containers', k, data);
   }
 }

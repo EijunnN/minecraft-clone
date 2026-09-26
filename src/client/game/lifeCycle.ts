@@ -3,7 +3,8 @@
 import { VOID_Y } from '../../shared/constants';
 import { deathMessage } from './Survival';
 import { faunaOnHurt } from './faunaInteraction'; // Fase 6 (fauna)
-import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, stateProps } from '../../shared/blocks';
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
+import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, stateProps, MAGMA_BLOCK } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
@@ -123,6 +124,16 @@ export class LifeCycle {
   respawn(): void {
     this.g.survival.reset();
     const p = this.g.player;
+    // Fase 8: donde no se puede reaparecer (el Nether), el servidor lleva al mundo normal (a la cama o al
+    // punto de aparición); el cambio de mundo llega con su bienvenida.
+    if (this.g.world && !dimensionDef(this.g.world.dim).respawn) {
+      this.g.ui.hideDeath();
+      this.g.input.requestLock();
+      this.g.sendState(true);
+      this.g.net?.send({ t: 'respawn' });
+      this.g.refreshHotbar(true);
+      return;
+    }
     let sp: [number, number, number] = [this.g.spawn[0], this.g.spawn[1] + 0.1, this.g.spawn[2]];
     if (this.bed) {
       // En la cama si sigue ahí (si su chunk aún no está cargado, se confía en ella).
@@ -194,6 +205,8 @@ export class LifeCycle {
         eyeInWater: p.eyeInWater, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
         onCampfire: familyBase(feet) === CAMPFIRE && stateProps(feet)!.lit === 1,
+        // Fase 8: el magma quema a quien lo pisa sin agacharse.
+        onMagma: p.onGround && !p.sneaking && g.world!.getBlock(Math.floor(p.x), Math.floor(p.y - 0.05), Math.floor(p.z)) === MAGMA_BLOCK,
         inFire: playerInFire(g), // Fase 6.5 (equipo)
       });
       // Fase 6.5 (océano y plantas): el arbusto de bayas dulces pincha al moverse dentro.

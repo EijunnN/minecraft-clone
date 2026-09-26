@@ -21,6 +21,8 @@ import { materialDrops } from './materialDrops'; // Fase 6.5 (materiales)
 import { redstoneDrops } from './redstoneDrops'; // Fase 7 (redstone)
 import { deepDarkDrops } from './deepDarkDrops'; // Fase 7.5 (abismo)
 import { POISONOUS_POTATO } from '../items'; // Fase 6.5 (equipo)
+import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from '../blocks'; // Fase 8 (dimensiones)
+import { QUARTZ, GOLD_NUGGET } from '../items';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -86,6 +88,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   }
   if (block === EMERALD_ORE) return one(EMERALD);
   if (block === COPPER_ORE) return one(RAW_COPPER, rnd(2, 5)); // Fase 6.5 (cobre), como en Minecraft
+  // Fase 8 (dimensiones): menas del Nether.
+  if (block === NETHER_QUARTZ_ORE) return one(QUARTZ);
+  if (block === NETHER_GOLD_ORE) return one(GOLD_NUGGET, rnd(2, 6));
   // La amatista con brotes no se puede recoger (como sin toque de seda).
   if (block === BUDDING_AMETHYST) return [];
   // Brotes de amatista: sólo el racimo suelta fragmentos (4 con pico, 2 a mano).

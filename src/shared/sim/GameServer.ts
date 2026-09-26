@@ -16,13 +16,17 @@ import { FluidSim, type FluidWorld } from './fluids';
 import { Entities, type EntityHost, type PlayerView } from './entities';
 import { blockDrops } from './drops';
 import { migrateStore, type ServerStore } from './store';
-import { TICK_RATE, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type PlayerRecord, type ServerContext } from './server/context';
+import {
+  TICK_RATE, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type PlayerRecord, type ServerContext, type Arrival,
+} from './server/context';
+import { DIM_OVERWORLD, dimensionDef, type DimensionDef } from '../dimensions'; // Fase 8 (dimensiones)
+import type { PlayerSave } from '../protocol';
 import { fallsThrough } from './server/blockRules';
 import { potionView } from './server/potionPlayers'; // Fase 7 (pociones)
 import { ServerSystems } from './server/systems';
 import { routeMessage, type RouterHost } from './server/messageRouter';
 import { applyPos, sanitizeSave, handPotions, playerInfo } from './server/playerState';
-export { TICK_RATE, type Conn };
+export { TICK_RATE, type Conn, type Arrival };
 export { canSleepAt } from './server/beds';
 
 /** Chunks generados como máximo por tick (la generación es lo más caro). */
@@ -44,6 +48,35 @@ export interface GameServerOptions {
   flushSeconds?: number;
   /** Azar del servidor y de las criaturas (por defecto Math.random; las pruebas pasan uno con semilla). */
   rand?: () => number;
+  /** Fase 8: dimensión de este servidor (por defecto el mundo normal). */
+  dim?: number;
+  /** Fase 8: el anfitrión de las dimensiones (sin él, sólo hay esta y no se viaja). */
+  hub?: DimensionHub;
+}
+
+/** Fase 8 (dimensiones): lo que el anfitrión de las dimensiones (Multiverse) ofrece a cada servidor. */
+export interface DimensionHub {
+  /** Lleva al jugador a otra dimensión: lo saca de este servidor y lo mete en el de destino. */
+  travel(from: GameServer, s: Session, dim: number, arrival: Arrival): void;
+  /** Mensaje para los jugadores de todas las dimensiones. */
+  broadcastAll(msg: ServerMsg, except?: Session): void;
+  /** Jugadores en todas las dimensiones (el límite es de la sala). */
+  totalPlayers(): number;
+  /** Echa de las otras dimensiones a quien use ese nombre (entra desde otra ventana). */
+  evictName(from: GameServer, name: string): void;
+  /** Cambió la hora o la dificultad: que lo sepan las demás dimensiones. */
+  sharedChanged(from: GameServer): void;
+}
+
+/** Fase 8: lo que viaja con un jugador de una dimensión a otra. */
+export interface Traveler {
+  conn: Conn;
+  id: string;
+  name: string;
+  shirt: string;
+  mode: 's' | 'c';
+  save: PlayerSave | null;
+  bed: [number, number, number] | null;
 }
 
 export class GameServer {
@@ -67,6 +100,10 @@ export class GameServer {
   private lastMobSave = 0;
   private nextSessionId = 1;
   private flushTicks: number;
+  /** Fase 8: dimensión de este servidor y el anfitrión de las dimensiones. */
+  readonly dim: number;
+  readonly dimDef: DimensionDef;
+  private hub: DimensionHub | null;
 
   /** Los sistemas (reglas de bloques, naturaleza, contenedores, redstone, criaturas…). */
   readonly sys: ServerSystems;
@@ -81,6 +118,9 @@ export class GameServer {
     if (opts.rand) this.rand = opts.rand;
     this.local = !!opts.local;
     this.flushTicks = Math.max(1, Math.round((opts.flushSeconds ?? 30) * TICK_RATE));
+    this.dim = opts.dim ?? DIM_OVERWORLD;
+    this.dimDef = dimensionDef(this.dim);
+    this.hub = opts.hub ?? null;
     let seed = Number(store.getMeta('seed'));
     if (!store.getMeta('seed') || !Number.isFinite(seed)) {
       seed = opts.seed ?? ((Math.random() * 0x7fffffff) | 0);
@@ -97,7 +137,7 @@ export class GameServer {
     if (store.getMeta('difficulty') !== null && Number.isInteger(d) && d >= 0 && d <= 3) this.difficulty = d;
     const m = store.getMeta('mode');
     if (m === 's' || m === 'c') this.defaultMode = m;
-    this.world = new WorldSim(seed | 0, store);
+    this.world = new WorldSim(seed | 0, store, this.dim);
     this.world.onChange = (x, y, z, old, id) => this.onBlockChanged(x, y, z, old, id);
     this.fluidWorld = {
       getBlock: (x, y, z) => this.world.getBlock(x, y, z),
@@ -147,6 +187,12 @@ export class GameServer {
     return {
       world: this.world,
       entities: this.entities,
+      dim: this.dim,
+      travel: (s, dim, arrival) => {
+        if (!this.hub || dim === this.dim || !s.joined) return false;
+        this.hub.travel(this, s, dim, arrival);
+        return true;
+      },
       local: this.local,
       get seed() {
         return gs.seed;
@@ -187,6 +233,7 @@ export class GameServer {
         this.difficulty = dd;
         this.store.setMeta('difficulty', String(dd));
         this.broadcast({ t: 'diff', d: dd });
+        this.hub?.sharedChanged(this);
       },
       markCollected: (id, who) => this.sys.entitySync.markCollected(id, who),
     };
@@ -198,8 +245,9 @@ export class GameServer {
     return {
       world: this.world,
       players: () => this.playerViews(),
-      sunHeight: () => sunHeightAt(this.worldTime()),
-      raining: () => rainAt(this.worldTime(), this.seed),
+      // Fase 8: sin cielo no hay sol (los muertos vivientes no arden) ni lluvia.
+      sunHeight: () => (this.dimDef.sky ? sunHeightAt(this.worldTime()) : -1),
+      raining: () => (this.dimDef.weather ? rainAt(this.worldTime(), this.seed) : 0),
       difficulty: () => this.difficulty,
       hurtPlayer: (id, amount, kx, ky, kz, cause, src) => {
         for (const s of this.sessions.values()) {
@@ -330,8 +378,100 @@ export class GameServer {
     this.sys.onLeave(s);
     this.savePlayer(s);
     this.broadcast({ t: 'leave', id: s.id });
-    this.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} salió del mundo.` });
+    this.chatAll({ t: 'chat', id: null, name: '', m: `${s.name} salió del mundo.` });
     if (this.playerCount === 0) this.flush(true);
+  }
+
+  /** Fase 8: chat y avisos para todas las dimensiones. */
+  private chatAll(msg: ServerMsg, except?: Session): void {
+    if (this.hub) this.hub.broadcastAll(msg, except);
+    else this.broadcast(msg, except);
+  }
+
+  /** Fase 8: manda un mensaje a todos los jugadores de este servidor (para el anfitrión). */
+  broadcastHere(msg: ServerMsg, except?: Session): void {
+    this.broadcast(msg, except);
+  }
+
+  /** Fase 8: echa a quien use este nombre (entró desde otra ventana, quizá en otra dimensión). */
+  kickName(name: string, except?: Session): void {
+    for (const other of [...this.sessions.values()]) {
+      if (other === except || !other.joined || other.name.toLowerCase() !== name.toLowerCase()) continue;
+      this.send(other, { t: 'error', m: 'Has entrado con este nombre desde otra ventana.' });
+      this.disconnect(other.conn);
+      try {
+        other.conn.close(4005, 'replaced');
+      } catch {
+        /* ya cerrada */
+      }
+    }
+  }
+
+  /** Fase 8: la hora y la dificultad guardadas cambiaron en otra dimensión. */
+  reloadShared(): void {
+    try {
+      const t = JSON.parse(this.store.getMeta('time') ?? '') as WorldTime;
+      if (Number.isFinite(t.base) && Number.isFinite(t.at)) {
+        this.time = { base: t.base, at: t.at, rate: DAY_RATE };
+        this.broadcast({ t: 'time', time: this.time, now: this.now() });
+      }
+    } catch {
+      /* sin hora guardada */
+    }
+    const d = Number(this.store.getMeta('difficulty'));
+    if (this.store.getMeta('difficulty') !== null && Number.isInteger(d) && d >= 0 && d <= 3 && d !== this.difficulty) {
+      this.difficulty = d;
+      this.broadcast({ t: 'diff', d });
+    }
+  }
+
+  // ------------------------------------------------------------------ Fase 8: viajes entre dimensiones
+
+  /** Saca a un jugador de esta dimensión para llevarlo a otra (sin avisar de que salió del mundo). */
+  detach(conn: Conn): Traveler | null {
+    const s = this.sessions.get(conn);
+    if (!s || !s.joined) return null;
+    this.sys.onLeave(s);
+    this.sessions.delete(conn);
+    this.broadcast({ t: 'leave', id: s.id });
+    if (this.playerCount === 0) this.flush(true);
+    return { conn, id: s.id, name: s.name, shirt: s.shirt, mode: s.mode, save: s.save, bed: s.bed };
+  }
+
+  /** Mete en esta dimensión a un jugador que viene de otra, en el sitio que toca según cómo llega. */
+  attach(t: Traveler, arrival: Arrival): void {
+    const now = this.now();
+    const s: Session = {
+      conn: t.conn, id: t.id, joined: true, joinedAt: now, lastMsg: now, name: t.name, shirt: t.shirt, p: [0, 100, 0], r: [0, 0], s: 0,
+      h: 0, o: 0, a: [0, 0, 0, 0], mode: t.mode, lookAt: -1, lookUntil: 0, lastAttack: 0, tokens: 60, tokenTime: now, known: new Map(),
+      container: null, save: t.save, saveDirty: true, sleeping: null, sleepTicks: 0, bed: t.bed, dimPending: true,
+    };
+    this.sessions.set(t.conn, s);
+    s.p = this.arrivalPos(s, arrival);
+    if (arrival.kind === 'portal') this.sys.portals.justArrived(s);
+    if (s.save) s.save = { ...s.save, pos: [s.p[0], s.p[1], s.p[2]] };
+    this.savePlayer(s);
+    this.welcome(s, true);
+  }
+
+  /** Dónde aparece quien llega. */
+  private arrivalPos(s: Session, arrival: Arrival): [number, number, number] {
+    if (arrival.kind === 'portal') {
+      const p = this.sys.portals.arrive(arrival.x, arrival.y, arrival.z, arrival.axis);
+      return [p[0], p[1], p[2]];
+    }
+    if (arrival.kind === 'pos' && [arrival.x, arrival.y, arrival.z].every(Number.isFinite)) return [arrival.x!, arrival.y!, arrival.z!];
+    if (arrival.kind === 'spawn' && s.bed) return [s.bed[0] + 0.5, s.bed[1] + 0.5625, s.bed[2] + 0.5];
+    const sp = this.spawn();
+    return [sp[0], sp[1] + 0.1, sp[2]];
+  }
+
+  private spawn(): [number, number, number] {
+    if (!this.spawnPoint) {
+      const sp = this.world.gen.findSpawn();
+      this.spawnPoint = [sp.x, sp.y, sp.z];
+    }
+    return this.spawnPoint;
   }
 
   message(conn: Conn, data: string | ArrayBuffer): void {
@@ -375,7 +515,17 @@ export class GameServer {
       this.send(s, { t: 'pong', c: Number(msg.c) || 0, now: this.now() });
       return;
     }
-    if (s.joined) routeMessage(this.router, s, msg);
+    // Fase 8: hasta que su cliente monte esta dimensión, lo que mande es de la anterior.
+    if (msg.t === 'dimok') {
+      if (msg.d === this.dim) s.dimPending = false;
+      return;
+    }
+    if (!s.joined || s.dimPending) return;
+    if (msg.t === 'respawn') {
+      if (!this.dimDef.respawn) this.ctx.travel(s, DIM_OVERWORLD, { kind: 'spawn' });
+      return;
+    }
+    routeMessage(this.router, s, msg);
   }
 
   // ------------------------------------------------------------------ jugadores
@@ -389,19 +539,11 @@ export class GameServer {
     }
     this.sweepStale(true);
     const name = sanitizeName(msg.name);
-    // Mismo nombre conectado: la conexión nueva sustituye a la antigua (p. ej. tras un corte).
-    for (const other of this.sessions.values()) {
-      if (other !== s && other.joined && other.name.toLowerCase() === name.toLowerCase()) {
-        this.send(other, { t: 'error', m: 'Has entrado con este nombre desde otra ventana.' });
-        this.disconnect(other.conn);
-        try {
-          other.conn.close(4005, 'replaced');
-        } catch {
-          /* ya cerrada */
-        }
-      }
-    }
-    if (this.playerCount >= MAX_PLAYERS) {
+    // Mismo nombre conectado: la conexión nueva sustituye a la antigua (p. ej. tras un corte), esté en la
+    // dimensión que esté.
+    this.kickName(name, s);
+    this.hub?.evictName(this, name);
+    if ((this.hub?.totalPlayers() ?? this.playerCount) >= MAX_PLAYERS) {
       this.send(s, { t: 'error', m: `La sala está llena (máximo ${MAX_PLAYERS} jugadores).` });
       s.conn.close(4001, 'full');
       return;
@@ -418,20 +560,25 @@ export class GameServer {
     const bed = rec?.bed;
     s.bed = Array.isArray(bed) && bed.length === 3 && bed.every(Number.isInteger) ? bed : null;
     if (s.save?.pos && s.save.pos.every(Number.isFinite)) s.p = [s.save.pos[0], s.save.pos[1], s.save.pos[2]];
+    // Fase 8: sin posición guardada fuera del mundo normal, el punto de aparición de esta dimensión.
+    else if (this.dim !== DIM_OVERWORLD) s.p = this.arrivalPos(s, { kind: 'pos' });
     s.joined = true;
     s.joinedAt = this.now();
-    if (!this.spawnPoint) {
-      const sp = this.world.gen.findSpawn();
-      this.spawnPoint = [sp.x, sp.y, sp.z];
-    }
+    this.welcome(s);
+  }
+
+  /** Bienvenida a esta dimensión: el estado del mundo y los demás jugadores. */
+  private welcome(s: Session, arriving = false): void {
     const edits = this.world.allEdits();
     const players: PlayerInfo[] = [];
     for (const o of this.sessions.values()) if (o.joined && o !== s) players.push(playerInfo(o));
     this.send(s, {
       t: 'welcome', id: s.id, seed: this.seed, time: this.time, now: this.now(), players, editCount: edits.length,
-      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawnPoint, bed: s.bed, rods: this.sys.fishing.active(),
+      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawn(), bed: s.bed, rods: this.sys.fishing.active(),
       signs: this.sys.signs.all(),
       banners: this.sys.banners.all(), // Fase 6.5 (libros y estandartes)
+      dim: this.dim, // Fase 8
+      ...(arriving ? { at: [s.p[0], s.p[1], s.p[2]] as [number, number, number] } : {}),
     });
     this.sendRaw(s, encodeEdits(edits));
     this.broadcast({ t: 'join', p: playerInfo(s) }, s);
@@ -452,7 +599,7 @@ export class GameServer {
 
   private savePlayer(s: Session): void {
     if (!s.joined) return;
-    const rec: PlayerRecord = { mode: s.mode, save: s.save, bed: s.bed };
+    const rec: PlayerRecord = { mode: s.mode, save: s.save, bed: s.bed, dim: this.dim };
     this.store.savePlayer(s.name.toLowerCase(), JSON.stringify(rec));
     s.saveDirty = false;
   }
@@ -490,7 +637,7 @@ export class GameServer {
       this.sys.commands.run(s, m);
       return;
     }
-    this.broadcast({ t: 'chat', id: s.id, name: s.name, m }, s);
+    this.chatAll({ t: 'chat', id: s.id, name: s.name, m }, s);
   }
 
   private setTime(days: number): void {
@@ -498,6 +645,7 @@ export class GameServer {
     this.time = { base: days, at: this.now(), rate: DAY_RATE };
     this.store.setMeta('time', JSON.stringify(this.time));
     this.broadcast({ t: 'time', time: this.time, now: this.now() });
+    this.hub?.sharedChanged(this);
   }
 
   // ------------------------------------------------------------------ cambios de bloques

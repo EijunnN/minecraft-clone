@@ -440,6 +440,9 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...['sculk_vein', 'sculk_sensor_tendril', 'sculk_sensor_tendril_active', 'calibrated_sculk_sensor_amethyst',
     'calibrated_sculk_sensor_amethyst_active', 'soul_torch'].map((name): TextureDef => ({ name, cutout: true })),
   { name: 'soul_fire', special: 5, cutout: true },
+  // Fase 8 (dimensiones): el velo del portal (translúcido y emisivo), las menas del Nether y el magma.
+  { name: 'nether_portal', special: 4 },
+  ...['nether_quartz_ore', 'nether_gold_ore', 'magma'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

@@ -211,3 +211,7 @@ export * from './mechanismBlocks';
 import { DEEP_DARK_INVENTORY } from './deepDarkBlocks';
 export * from './deepDarkBlocks';
 (INVENTORY_ORDER as number[]).push(...DEEP_DARK_INVENTORY);
+// Fase 8 (dimensiones): portal del Nether, menas del Nether y magma (registrados los últimos: ids nuevos).
+import { NETHER_INVENTORY } from './netherBlocks';
+export * from './netherBlocks';
+(INVENTORY_ORDER as number[]).push(...NETHER_INVENTORY);

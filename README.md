@@ -17,6 +17,12 @@ Objects). Pensado para PC (teclado y ratón).
   pedregosos; cuevas (frondosas con bayas luminosas, de goteo con estalactitas, inundadas, el Deep
   Dark), lagos de lava, geodas de amatista y las ocho menas de Minecraft (también en pizarra profunda
   por debajo de 0).
+- **Dimensiones** (fase 8, en curso): el **Nether**, al que se llega por un portal de obsidiana
+  encendido con fuego (4 s dentro; 1 bloque allí son 8 aquí). Cavernas de rocanegra entre un suelo y un
+  techo de lecho de roca, mar de lava, piedra luminosa, arena de alma, grava, magma que quema y menas de
+  cuarzo y de oro; niebla roja y penumbra sin cielo. El agua se evapora, las camas explotan y la
+  brújula y el reloj giran sin rumbo. Cada dimensión es un mundo aparte (su guardado, sus criaturas y sus
+  sistemas); al morir allí se vuelve al mundo normal.
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus
@@ -226,6 +232,8 @@ pulsación). Estas son las de por defecto:
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
 | `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`, `monumento`, `ruinas`, `tesoro`) |
 | `/asalto` · `/patrulla` | Desatar un asalto en la aldea más cercana · hacer aparecer una patrulla de saqueadores |
+| `/dimension overworld\|nether [x y z]` | Ir a otra dimensión (a su punto de aparición o a unas coordenadas) |
+| `/setblock <x> <y> <z> <bloque>` · `/fill <x1> <y1> <z1> <x2> <y2> <z2> <bloque>` | Poner un bloque o llenar una caja (hasta 32768; `~` = relativo a ti) |
 | `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
 
 ### Primeros pasos en supervivencia

@@ -10,6 +10,12 @@ import type { ServerContext, Session } from './context';
 import type { Raids } from './raids'; // Fase 6 (asaltos)
 import { locateStructure, STRUCTURE_NAMES, LOCATE_REGIONS } from '../../world/structures';
 import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
+import { DIM_OVERWORLD, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
+import { BLOCKS, isValidBlockId } from '../../blocks';
+import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
+
+/** Bloques como máximo en un /fill (como en Minecraft). */
+const MAX_FILL = 32768;
 
 /** Nombres que acepta /localizar (sin tildes, en minúsculas). */
 export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
@@ -61,6 +67,60 @@ export class Commands {
         }
         ctx.setTime(day + (target < now - day ? 1 : 0) + target);
         ctx.broadcast({ t: 'chat', id: null, name: '', m: `${s.name} cambió la hora del día.` });
+        return;
+      }
+      // Fase 8: /setblock y /fill (coordenadas absolutas o relativas con ~), como en Minecraft.
+      case 'setblock':
+      case 'fill': {
+        const fill = cmd === 'fill';
+        const n = fill ? 6 : 3;
+        const base = [Math.floor(s.p[0]), Math.floor(s.p[1]), Math.floor(s.p[2])];
+        const coord = (v: string | undefined, i: number): number => {
+          if (v === undefined) return NaN;
+          if (v.startsWith('~')) return base[i % 3] + (v.length > 1 ? Number(v.slice(1)) : 0);
+          return Number(v);
+        };
+        const c = args.slice(0, n).map((v, i) => coord(v, i));
+        const key = norm(args[n] ?? '');
+        const block = BLOCKS.findIndex((b) => b && (b.key === key || norm(b.name).replace(/ /g, '_') === key));
+        if (c.length !== n || !c.every(Number.isInteger) || block < 0 || !isValidBlockId(block)) {
+          reply(fill ? 'Uso: /fill <x1> <y1> <z1> <x2> <y2> <z2> <bloque>' : 'Uso: /setblock <x> <y> <z> <bloque>');
+          return;
+        }
+        const [x0, y0, z0] = c;
+        const [x1, y1, z1] = fill ? c.slice(3) : c;
+        const lo = [Math.min(x0, x1), Math.max(MIN_Y, Math.min(y0, y1)), Math.min(z0, z1)];
+        const hi = [Math.max(x0, x1), Math.min(MAX_Y - 1, Math.max(y0, y1)), Math.max(z0, z1)];
+        const count = (hi[0] - lo[0] + 1) * (hi[1] - lo[1] + 1) * (hi[2] - lo[2] + 1);
+        if (count > MAX_FILL || Math.max(Math.abs(lo[0]), Math.abs(hi[0]), Math.abs(lo[2]), Math.abs(hi[2])) > WORLD_LIMIT) {
+          reply(`Demasiados bloques (como mucho ${MAX_FILL}).`);
+          return;
+        }
+        for (let cz = Math.floor(lo[2] / CHUNK_SIZE); cz <= Math.floor(hi[2] / CHUNK_SIZE); cz++) {
+          for (let cx = Math.floor(lo[0] / CHUNK_SIZE); cx <= Math.floor(hi[0] / CHUNK_SIZE); cx++) ctx.world.ensureChunk(cx, cz, ctx.now());
+        }
+        ctx.asActor(s.id, () => {
+          for (let y = lo[1]; y <= hi[1]; y++) for (let z = lo[2]; z <= hi[2]; z++) for (let x = lo[0]; x <= hi[0]; x++) ctx.world.setBlock(x, y, z, block);
+        });
+        reply(fill ? `${count} bloques cambiados.` : 'Bloque cambiado.');
+        return;
+      }
+      // Fase 8: ir a otra dimensión (a su punto de aparición, o a x y z si se dan).
+      case 'dimension':
+      case 'dimensión': {
+        const d = dimensionByKey(norm(args[0] ?? ''));
+        const names = allDimensions().map((dd) => dd.key).join('|');
+        if (d < 0) {
+          reply(`Uso: /dimension <${names}> [x y z]`);
+          return;
+        }
+        if (d === ctx.dim) {
+          reply(`Ya estás en ${dimensionDef(d).name}.`);
+          return;
+        }
+        const [x, y, z] = args.slice(1, 4).map(Number);
+        const at = [x, y, z].every(Number.isFinite) ? { x, y, z } : {};
+        if (!ctx.travel(s, d, { kind: 'pos', ...at })) reply('Aquí no se puede cambiar de dimensión.');
         return;
       }
       case 'gamemode':
@@ -177,6 +237,11 @@ export class Commands {
           return;
         }
         const type = STRUCTURE_ALIASES[key];
+        // Fase 8: las estructuras de la lista son del mundo normal.
+        if (ctx.dim !== DIM_OVERWORLD) {
+          reply(`En ${dimensionDef(ctx.dim).name} no hay estructuras de ese tipo.`);
+          return;
+        }
         const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS); // Fase 7.5: como en Minecraft
         // Fase 7.5 (mansión): con el género del nombre («ninguna mansión», «aldea más cercana»).
         const fem = /^(Aldea|Mina|Mansión)/.test(STRUCTURE_NAMES[type]);
@@ -247,7 +312,7 @@ export class Commands {
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar, ' +
           '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
-          '/experiencia <n> [puntos|niveles]',
+          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether> [x y z], /setblock, /fill',
         );
         return;
       default:

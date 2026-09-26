@@ -56,6 +56,7 @@ import { DeepDark } from './deepDark';
 import { OceanMonuments } from './monuments';
 import { CritterWorld } from './critterWorld';
 import { Allays } from './allays';
+import { Portals } from './portals';
 
 export class ServerSystems {
   readonly rules: BlockRules;
@@ -131,6 +132,8 @@ export class ServerSystems {
   readonly critters: CritterWorld;
   /** Fase 7.5 (mansión): alays (bloques musicales, tocadiscos y objetos). */
   readonly allays: Allays;
+  /** Fase 8 (dimensiones): portales del Nether (encender, romper, cruzar y llegar). */
+  readonly portals: Portals;
 
   constructor(private ctx: ServerContext, store: ServerStore) {
     const { world, entities } = ctx;
@@ -234,6 +237,7 @@ export class ServerSystems {
     world.onStructureMobs = (m) => this.monuments.spawnStructureMobs(m);
     this.critters = new CritterWorld(ctx, this.storms, this.trading);
     this.allays = new Allays(ctx, this.collections);
+    this.portals = new Portals(ctx, store);
 
     // Cada rayo: el cobre se desoxida, carga creepers, prende fuego, la redstone (pararrayos) y vibra.
     this.storms.strikes.add((x, y, z) => this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z)));
@@ -276,6 +280,7 @@ export class ServerSystems {
     this.mechanisms?.onBlockChanged(x, y, z, old, id);
     this.redstone?.onBlockChanged(x, y, z, old, id);
     this.deepDark?.onBlockChanged(x, y, z, old, id, actor); // vibraciones y venas de sculk
+    this.portals?.onBlockChanged(x, y, z, old, id); // Fase 8: el fuego en un marco enciende el portal
   }
 
   /** Un efecto (sonido y partículas) que se difunde: algunos sistemas lo oyen. */
@@ -322,6 +327,7 @@ export class ServerSystems {
     this.mechanisms.tick(); // después de la redstone (los pulsos cortos llegan antes)
     this.deepDark.tick();
     this.monuments.tick();
+    this.portals.tick(); // Fase 8
     this.entitySync.takeRemoved(ctx.entities.removed);
     ctx.entities.removed = [];
     if (tickCount % 4 === 0) {
@@ -346,6 +352,7 @@ export class ServerSystems {
     this.raids.onLeave(s);
     this.leashes.onLeave(s);
     this.transport.onLeave(s);
+    this.portals.onLeave(s);
   }
 
   /** Un jugador ha muerto (lo avisa su cliente). */
@@ -369,5 +376,6 @@ export class ServerSystems {
     this.collections.flush(store);
     this.transport.flush(store);
     this.deepDark.flush(store);
+    this.portals.flush(store);
   }
 }

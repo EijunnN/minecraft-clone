@@ -100,7 +100,14 @@ void main() {
   bool under = uMisc.z > 0.5;
   float eyeSky = uMisc.w;
   vec3 ambUp = texelFetch(uIrradiance, ivec2(2, 0), 0).rgb;
-  if (!under) {
+  if (!under && uDim.x < 0.5) {
+    // Fase 8: dimensión sin cielo (el Nether): una niebla espesa de su color y ese mismo fondo.
+    if (sky) col = uDimFog.rgb;
+    else {
+      col = mix(col, uDimFog.rgb, 1.0 - exp(-dist * uDim.z));
+      col = mix(col, uDimFog.rgb, smoothstep(uFog.z, uFog.w, length(rel.xz)));
+    }
+  } else if (!under) {
     if (!sky) {
       vec3 skyC = skyAt(rd);
       // Niebla de altura (bruma matinal, valles).

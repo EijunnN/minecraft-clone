@@ -11,8 +11,9 @@ export interface ServerStore {
   saveChunkEdits(key: string, data: Uint8Array): void;
   loadPlayer(name: string): string | null;
   savePlayer(name: string, data: string): void;
-  loadContainers(): [number, string][];
-  saveContainer(pos: number, data: string | null): void;
+  /** Contenedores guardados por posición; Fase 8: los de cada dimensión aparte (0, el mundo normal). */
+  loadContainers(dim?: number): [number, string][];
+  saveContainer(pos: number, data: string | null, dim?: number): void;
 }
 
 export class MemoryStore implements ServerStore {
@@ -20,6 +21,8 @@ export class MemoryStore implements ServerStore {
   chunks = new Map<string, Uint8Array>();
   players = new Map<string, string>();
   containers = new Map<number, string>();
+  /** Fase 8: contenedores de las otras dimensiones ("dim:pos"). */
+  dimContainers = new Map<string, string>();
   getMeta(key: string): string | null {
     return this.meta.get(key) ?? null;
   }
@@ -41,13 +44,57 @@ export class MemoryStore implements ServerStore {
   savePlayer(name: string, data: string): void {
     this.players.set(name, data);
   }
-  loadContainers(): [number, string][] {
-    return [...this.containers.entries()];
+  loadContainers(dim = 0): [number, string][] {
+    if (!dim) return [...this.containers.entries()];
+    return dimEntries(this.dimContainers, dim);
   }
-  saveContainer(pos: number, data: string | null): void {
-    if (data === null) this.containers.delete(pos);
-    else this.containers.set(pos, data);
+  saveContainer(pos: number, data: string | null, dim = 0): void {
+    const m: Map<number | string, string> = dim ? this.dimContainers : this.containers;
+    const k = dim ? `${dim}:${pos}` : pos;
+    if (data === null) m.delete(k);
+    else m.set(k, data);
   }
+}
+
+/** Contenedores de una dimensión de un mapa "dim:pos" → dato. */
+export function dimEntries(m: Map<string, string>, dim: number): [number, string][] {
+  const prefix = `${dim}:`;
+  const out: [number, string][] = [];
+  for (const [k, v] of m) if (k.startsWith(prefix)) out.push([Number(k.slice(prefix.length)), v]);
+  return out;
+}
+
+/** Fase 8: lo guardado que comparten todas las dimensiones (el resto de `meta` va con prefijo). */
+const SHARED_META = new Set(['seed', 'time', 'difficulty', 'mode']);
+
+/**
+ * Fase 8: vista del almacenamiento para una dimensión. El mundo normal usa las claves de siempre (los
+ * mundos guardados no cambian); las demás, las mismas tablas con la dimensión delante ("1:3,-2"). Los
+ * jugadores y lo de SHARED_META son de todas.
+ */
+export function scopeStore(base: ServerStore, dim: number): ServerStore {
+  const prefix = `${dim}:`;
+  const own = (k: string) => (dim ? !k.startsWith(prefix) ? null : k.slice(prefix.length) : k.includes(':') ? null : k);
+  const metaKey = (k: string) => (dim && !SHARED_META.has(k) ? prefix + k : k);
+  const chunkKey = (k: string) => (dim ? prefix + k : k);
+  return {
+    getMeta: (k) => base.getMeta(metaKey(k)),
+    setMeta: (k, v) => base.setMeta(metaKey(k), v),
+    loadChunkEdits: (k) => base.loadChunkEdits(chunkKey(k)),
+    loadAllChunkEdits: () => {
+      const out: [string, Uint8Array][] = [];
+      for (const [k, data] of base.loadAllChunkEdits()) {
+        const key = own(k);
+        if (key !== null) out.push([key, data]);
+      }
+      return out;
+    },
+    saveChunkEdits: (k, data) => base.saveChunkEdits(chunkKey(k), data),
+    loadPlayer: (name) => base.loadPlayer(name),
+    savePlayer: (name, data) => base.savePlayer(name, data),
+    loadContainers: () => base.loadContainers(dim),
+    saveContainer: (pos, data) => base.saveContainer(pos, data, dim),
+  };
 }
 
 /**

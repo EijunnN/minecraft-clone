@@ -3,7 +3,8 @@
 import { CHUNK_SIZE, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../../shared/constants';
 import { AIR, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, isValidBlockId } from '../../shared/blocks';
 import type { WorkerRequest, WorkerResponse } from './worldWorker';
-import { TerrainGenerator } from '../../shared/world/terrain';
+import type { TerrainGenerator } from '../../shared/world/terrain';
+import { createGenerator } from '../../shared/world/generators'; // Fase 8 (dimensiones)
 
 export interface ChunkMeshHandle {
   dispose(): void;
@@ -55,6 +56,8 @@ const MAX_RADIUS = 24;
 
 export class World {
   readonly seed: number;
+  /** Fase 8: dimensión de este mundo (ver shared/dimensions.ts). */
+  readonly dim: number;
   readonly columns = new Map<string, Column>();
   /** Ediciones persistentes por chunk: índice de bloque → id. */
   private edits = new Map<string, Map<number, number>>();
@@ -75,16 +78,17 @@ export class World {
   meshedCount = 0;
   onColumnMeshed: ((col: Column) => void) | null = null;
 
-  constructor(seed: number, sink: MeshSink, workerCount: number) {
+  constructor(seed: number, sink: MeshSink, workerCount: number, dim = 0) {
     this.seed = seed;
+    this.dim = dim;
     this.sink = sink;
-    this.generator = new TerrainGenerator(seed);
+    this.generator = createGenerator(dim, seed);
     for (let i = 0; i < workerCount; i++) {
       const worker = new Worker(new URL('./worldWorker.ts', import.meta.url), { type: 'module' });
       const slot: WorkerSlot = { worker, inFlight: 0 };
       worker.onmessage = (e: MessageEvent<WorkerResponse>) => this.onWorkerMessage(slot, e.data);
       worker.onerror = (e) => console.error('Error en worker de mundo', e.message);
-      const init: WorkerRequest = { type: 'init', seed };
+      const init: WorkerRequest = { type: 'init', seed, dim };
       worker.postMessage(init);
       this.workers.push(slot);
     }

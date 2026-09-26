@@ -1,6 +1,7 @@
 // Mundo del servidor: genera los mismos chunks que los clientes (generador determinista),
 // aplica y guarda las ediciones, y mantiene mapas de altura y fuentes de luz para la simulación.
-import { TerrainGenerator } from '../world/terrain';
+import type { TerrainGenerator } from '../world/terrain';
+import { createGenerator } from '../world/generators'; // Fase 8 (dimensiones)
 import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../constants';
 import { AIR, BLOCK_EMISSION, BLOCK_LIGHT_OPACITY, BLOCK_SOLID, MOB_SPAWNER, isChest } from '../blocks';
 import type { StructureChest } from '../world/structures';
@@ -30,6 +31,8 @@ function blocksSky(id: number): boolean {
 export class WorldSim {
   readonly gen: TerrainGenerator;
   readonly seed: number;
+  /** Fase 8: dimensión de este mundo (ver shared/dimensions.ts). */
+  readonly dim: number;
   private store: ServerStore;
   private chunks = new Map<string, SimChunk>();
   private edits = new Map<string, Map<number, number>>();
@@ -53,10 +56,11 @@ export class WorldSim {
   savedInstead: (() => [number, number, number, number][]) | null = null;
   generatedCount = 0;
 
-  constructor(seed: number, store: ServerStore) {
+  constructor(seed: number, store: ServerStore, dim = 0) {
     this.seed = seed;
     this.store = store;
-    this.gen = new TerrainGenerator(seed);
+    this.dim = dim;
+    this.gen = createGenerator(dim, seed);
   }
 
   // ------------------------------------------------------------------ ediciones

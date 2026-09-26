@@ -1,8 +1,10 @@
 // Servidor multijugador en Cloudflare: un Worker enruta cada sala a un Durable Object (GameWorld)
-// que ejecuta el servidor de juego autoritativo (GameServer) a 20 ticks/s mientras haya jugadores
-// conectados, y guarda en SQLite las ediciones, los contenedores, los jugadores y los animales.
+// que ejecuta el servidor de juego autoritativo a 20 ticks/s mientras haya jugadores conectados, y
+// guarda en SQLite las ediciones, los contenedores, los jugadores y los animales. Fase 8: una sala tiene
+// varias dimensiones (Multiverse: un GameServer por dimensión, todas en el mismo objeto).
 import { DurableObject } from 'cloudflare:workers';
-import { GameServer, TICK_RATE, type Conn } from '../shared/sim/GameServer';
+import { TICK_RATE, type Conn } from '../shared/sim/GameServer';
+import { Multiverse } from '../shared/sim/Multiverse';
 import type { ServerStore } from '../shared/sim/store';
 
 export interface Env {
@@ -37,6 +39,8 @@ class SqlStore implements ServerStore {
     sql.exec(`CREATE TABLE IF NOT EXISTS chunks (key TEXT PRIMARY KEY, data BLOB NOT NULL)`);
     sql.exec(`CREATE TABLE IF NOT EXISTS players (name TEXT PRIMARY KEY, data TEXT NOT NULL) WITHOUT ROWID`);
     sql.exec(`CREATE TABLE IF NOT EXISTS containers (pos INTEGER PRIMARY KEY, data TEXT NOT NULL)`);
+    // Fase 8: los contenedores de las otras dimensiones.
+    sql.exec(`CREATE TABLE IF NOT EXISTS dim_containers (dim INTEGER NOT NULL, pos INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (dim, pos))`);
   }
 
   getMeta(key: string): string | null {
@@ -77,29 +81,40 @@ class SqlStore implements ServerStore {
     this.sql.exec(`INSERT INTO players (name, data) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET data = excluded.data`, name, data);
   }
 
-  loadContainers(): [number, string][] {
+  loadContainers(dim = 0): [number, string][] {
+    if (dim) {
+      return this.sql
+        .exec<{ pos: number; data: string }>(`SELECT pos, data FROM dim_containers WHERE dim = ?`, dim)
+        .toArray()
+        .map((r) => [Number(r.pos), r.data]);
+    }
     return this.sql
       .exec<{ pos: number; data: string }>(`SELECT pos, data FROM containers`)
       .toArray()
       .map((r) => [Number(r.pos), r.data]);
   }
 
-  saveContainer(pos: number, data: string | null): void {
+  saveContainer(pos: number, data: string | null, dim = 0): void {
+    if (dim) {
+      if (data === null) this.sql.exec(`DELETE FROM dim_containers WHERE dim = ? AND pos = ?`, dim, pos);
+      else this.sql.exec(`INSERT INTO dim_containers (dim, pos, data) VALUES (?, ?, ?) ON CONFLICT(dim, pos) DO UPDATE SET data = excluded.data`, dim, pos, data);
+      return;
+    }
     if (data === null) this.sql.exec(`DELETE FROM containers WHERE pos = ?`, pos);
     else this.sql.exec(`INSERT INTO containers (pos, data) VALUES (?, ?) ON CONFLICT(pos) DO UPDATE SET data = excluded.data`, pos, data);
   }
 }
 
 export class GameWorld extends DurableObject<Env> {
-  private gameServer: GameServer | null = null;
+  private gameServer: Multiverse | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   /**
    * El servidor del mundo se crea con la primera conexión: así un mundo nuevo puede nacer con la
    * semilla que eligió quien lo creó (si ya existe, manda la guardada).
    */
-  private get game(): GameServer {
-    return (this.gameServer ??= new GameServer(new SqlStore(this.ctx.storage.sql)));
+  private get game(): Multiverse {
+    return (this.gameServer ??= new Multiverse(new SqlStore(this.ctx.storage.sql)));
   }
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -120,7 +135,7 @@ export class GameWorld extends DurableObject<Env> {
     if (!this.gameServer) {
       const raw = new URL(request.url).searchParams.get('semilla');
       const seed = raw !== null && /^-?\d{1,10}$/.test(raw) ? Number(raw) | 0 : undefined;
-      this.gameServer = new GameServer(new SqlStore(this.ctx.storage.sql), { seed });
+      this.gameServer = new Multiverse(new SqlStore(this.ctx.storage.sql), { seed });
     }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];

@@ -1,9 +1,10 @@
 // Web Worker: generación de terreno y mallado (con iluminación) de columnas de chunk.
-import { TerrainGenerator } from '../../shared/world/terrain';
+import type { TerrainGenerator } from '../../shared/world/terrain';
+import { createGenerator } from '../../shared/world/generators'; // Fase 8 (dimensiones)
 import { Mesher } from './mesh/mesher';
 
 export type WorkerRequest =
-  | { type: 'init'; seed: number }
+  | { type: 'init'; seed: number; dim: number }
   | { type: 'gen'; id: number; cx: number; cz: number }
   | { type: 'mesh'; id: number; cx: number; cz: number; chunks: ArrayBuffer[] }
   | { type: 'spawn'; id: number };
@@ -39,7 +40,7 @@ scope.onmessage = (e) => {
   try {
     switch (msg.type) {
       case 'init':
-        gen = new TerrainGenerator(msg.seed);
+        gen = createGenerator(msg.dim, msg.seed);
         mesher.setSeed(msg.seed);
         break;
       case 'gen': {

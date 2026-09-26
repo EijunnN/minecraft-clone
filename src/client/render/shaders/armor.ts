@@ -46,7 +46,7 @@ void main() {
   col += specularGGX(N, V, L, rough, f0) * lightCol;
   float skyF = skyLightCurve(uLightLevel.x);
   vec3 bounce = uLightColor.rgb * saturate(uLightDir.y) * 0.07 * (0.6 - 0.45 * N.y);
-  vec3 amb = (ambientCube(N) * 1.6 + bounce) * skyF + blockLightColor(uLightLevel.y) + vec3(0.012, 0.013, 0.016);
+  vec3 amb = (ambientCube(N) * 1.6 + bounce) * skyF + blockLightColor(uLightLevel.y) + minAmbient();
   col += diff / PI * amb * (1.0 + uMat.z);
   // Reflejo del cielo en las placas pulidas (nada bajo tierra).
   vec3 R = reflect(-V, N);

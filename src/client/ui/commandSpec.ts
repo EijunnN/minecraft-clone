@@ -5,6 +5,8 @@ import { MOBS, MOB_TYPES } from '../../shared/mobs';
 import { ITEMS } from '../../shared/items';
 import { STRUCTURE_NAMES } from '../../shared/world/structures';
 import { ENCHANTS, ENCHANT_IDS } from '../../shared/enchantments'; // Fase 7 (encantamientos)
+import { BLOCKS } from '../../shared/blocks'; // Fase 8: /setblock y /fill
+import { allDimensions } from '../../shared/dimensions'; // Fase 8: /dimension
 
 export interface Option {
   /** Lo que se escribe. */
@@ -36,6 +38,15 @@ const underscore = (s: string) => norm(s).replace(/\s+/g, '_');
 // Las listas largas se calculan una vez, la primera vez que se piden.
 let mobOptions: Option[] | null = null;
 let itemOptions: Option[] | null = null;
+let blockOptions: Option[] | null = null;
+/** Fase 8: bloques para /setblock y /fill (los que se obtienen como objeto, más el aire). */
+const blocks = (): Option[] => (blockOptions ??= [
+  { value: 'air', label: 'Aire' },
+  ...BLOCKS.filter((b) => b && b.category !== null && !b.noItem).map((b) => ({ value: b.key, label: b.name, item: b.id })),
+]);
+const coord = (name: string, optional = false): ArgSpec => ({
+  name, optional, desc: 'Coordenada (con ~ es relativa a ti: ~, ~1, ~-2)', options: () => [{ value: '~' }],
+});
 
 const STRUCTURES: [string, string][] = [
   ['aldea', 'village'], ['puesto', 'pillager_outpost'], ['templo_del_desierto', 'desert_pyramid'],
@@ -142,6 +153,22 @@ export const COMMAND_SPECS: CommandSpec[] = [
   },
   { name: 'semilla', aliases: ['seed'], desc: 'Muestra la semilla del mundo', args: [] },
   { name: 'lista', aliases: ['list'], desc: 'Jugadores conectados', args: [] },
+  // Fase 8 (dimensiones)
+  {
+    name: 'dimension', aliases: ['dimensión'], desc: 'Te lleva a otra dimensión (a su punto de aparición o a x y z)',
+    args: [
+      { name: 'dimensión', desc: 'A dónde ir', options: () => allDimensions().map((d) => ({ value: d.key, label: d.name })) },
+      coord('x', true), coord('y', true), coord('z', true),
+    ],
+  },
+  {
+    name: 'setblock', desc: 'Pone un bloque en unas coordenadas',
+    args: [coord('x'), coord('y'), coord('z'), { name: 'bloque', desc: 'El bloque (por su clave)', options: blocks }],
+  },
+  {
+    name: 'fill', desc: 'Llena una caja con un bloque (hasta 32768)',
+    args: [coord('x1'), coord('y1'), coord('z1'), coord('x2'), coord('y2'), coord('z2'), { name: 'bloque', desc: 'El bloque (por su clave)', options: blocks }],
+  },
 ];
 
 /** Comando por su nombre o un alias (sin tildes ni mayúsculas). */

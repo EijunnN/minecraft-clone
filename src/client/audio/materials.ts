@@ -281,6 +281,15 @@ export function buildUiSound(ctx: AudioContext, kind: UiKind, destination: Audio
       }
       break;
     }
+    case 'portal': {
+      // Fase 8: el viaje por un portal: un zumbido que sube y se abre en voces desafinadas.
+      const base = [110, 164.8, 220, 277.2, 329.6];
+      for (let i = 0; i < base.length; i++) {
+        const f = base[i] * (1 + (i % 2 ? 0.006 : -0.004));
+        sources.push(playTonalBlip(ctx, { destination, now: now + i * 0.05, freq: f, freqEnd: f * 3.2, wave: i % 2 ? 'sawtooth' : 'sine', attack: 0.25, decay: 1.6, gain: i % 2 ? 0.035 : 0.09 }));
+      }
+      break;
+    }
     default:
       sources.push(playTonalBlip(ctx, { destination, now, freq: 600, wave: 'sine', attack: 0.002, decay: 0.05, gain: 0.15 }));
   }

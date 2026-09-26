@@ -558,10 +558,34 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
   árboles y plantas). Las colinas ventosas y laderas nevadas son las antiguas «montañas» y «picos
   nevados».
 
-### Fase 8 — Nether y End (XL)
+### Fase 8 — Nether y End (XL) · 🟡 en curso
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
 fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End, ciudades del End,
-élitros y shulkers; el Wither.
+élitros y shulkers; el Wither. De uno en uno:
+- ✅ **8.1 Dimensiones y el Nether básico.** Cada dimensión es un mundo aparte en la misma sala
+  (`sim/Multiverse.ts`: un servidor por dimensión con su parte del guardado; los jugadores, la semilla, la
+  hora y la dificultad son comunes) y un registro de datos (`shared/dimensions.ts`: cielo, luz, niebla,
+  clima, gravedad, aire, escala…) pensado para añadir más adelante otros sitios (el End, y lugares propios
+  como la Luna a la que se llegue en cohete). Portal del Nether (marcos de 2×3 a 21×21 encendidos con
+  cualquier fuego, se apagan al romper el marco, 4 s dentro o al momento en creativo, llegada al portal
+  más cercano o a uno nuevo con plataforma), Nether de y = 0 a 127 (rocanegra, lava a y = 31, piedra
+  luminosa, arena de alma, grava, magma, menas de cuarzo y de oro, fuegos eternos), niebla roja y luz sin
+  cielo, agua que se evapora, camas que explotan, magma que quema, brújula y reloj sin rumbo, reaparecer
+  en el mundo normal y los comandos `/dimension`, `/setblock` y `/fill`.
+- **8.2 Biomas del Nether:** bosques carmesí y distorsionado (hongos, tallos, nylium, raíces, enredaderas y
+  sus maderas), valle de almas, deltas de basalto; piedra negra, basalto, tierra de alma, luz de hongo,
+  ladrillos del Nether; partículas y sonido de cada bioma; la lava del Nether fluye más rápido.
+- **8.3 Criaturas del Nether:** piglins (trueque con oro) y piglins brutos, piglins zombificados, ghasts,
+  blazes, cubos de magma, hoglins y zoglins, striders, esqueletos wither.
+- **8.4 Estructuras del Nether:** fortalezas (generadores de blazes, verruga del Nether), bastiones (los 4
+  tipos), fósiles del Nether y portales en ruinas en el Nether.
+- **8.5 Lo que da el Nether:** netherita (escombros ancestrales, plantilla de mejora y mesa de herrería),
+  ancla de reaparición, piedra imán, faro, velocidad de alma, fogata de alma, columnas de burbujas, carga
+  de fuego, flecha espectral y lo apuntado en la fase 7.
+- **8.6 El End:** fortalezas con el portal del End (ojos de ender), la isla del dragón (pilares de
+  obsidiana, cristales del End), el dragón y el portal de salida, puertas del End, islas exteriores,
+  ciudades y barcos del End (shulkers, élitros), plantas de coro y purpur.
+- **8.7 El Wither.**
 
 ### Fase 9 — Metajuego y novedades recientes (L)
 Logros y estadísticas, modos aventura, espectador y extremo, reglas del juego, más comandos,

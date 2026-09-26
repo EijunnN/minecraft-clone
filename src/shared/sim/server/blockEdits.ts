@@ -31,6 +31,7 @@ import { enchantedBlockDrops } from '../enchantDrops';
 import { sanitizeHeldEnchants, levelIn } from '../../enchantEffects';
 import { SILK_TOUCH } from '../../enchantments';
 import { sculkXp } from '../../blocks'; // Fase 7.5 (abismo)
+import { dimensionDef } from '../../dimensions'; // Fase 8 (dimensiones)
 
 export class BlockEdits {
   /** Fase 6.5 (cobre): panal y hacha sobre los bloques de cobre. */
@@ -95,13 +96,21 @@ export class BlockEdits {
         this.beforeBreak?.(x, y, z, cur, toolId); // Fase 7 (redstone)
         // Fase 7: el hielo escarchado y las plantas anegadas dejan agua; el hielo, si tiene algo debajo.
         const below = ctx.world.getBlock(x, y - 1, z);
-        ctx.world.setBlock(x, y, z, emptyAfterPlayerBreak(cur, below, !creative, levelIn(en, SILK_TOUCH) > 0));
+        const left = emptyAfterPlayerBreak(cur, below, !creative, levelIn(en, SILK_TOUCH) > 0);
+        // Fase 8: en el Nether el hielo roto no deja agua.
+        ctx.world.setBlock(x, y, z, left === WATER && dimensionDef(ctx.dim).evaporatesWater ? AIR : left);
         ctx.entities.dropStacks(drops, x + 0.5, y + 0.3, z + 0.5);
         // Menas que sueltan su mineral: experiencia (sólo en supervivencia).
         // Fase 7.5 (abismo): el sculk sin Toque de seda también da experiencia.
         const xp = creative ? 0 : oreXp(cur, drops.map((d) => d.id), () => ctx.rand()) + (levelIn(en, SILK_TOUCH) > 0 ? 0 : sculkXp(cur));
         if (xp > 0) ctx.entities.xp.spawn(xp, x + 0.5, y + 0.3, z + 0.5);
       } else {
+        // Fase 8: en el Nether el agua que se vierte se evapora al momento.
+        if (b === WATER && dimensionDef(ctx.dim).evaporatesWater) {
+          ctx.fx('fire_extinguish', x + 0.5, y + 0.5, z + 0.5);
+          ctx.reject(s, x, y, z);
+          return;
+        }
         // Fase 7: el cubo de agua sobre un bloque que se puede anegar (conducto, corales) lo anega.
         const wet = b === WATER ? withWater(cur, true) : 0;
         if (wet) {

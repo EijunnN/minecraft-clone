@@ -24,6 +24,9 @@ layout(std140) uniform Frame {
   vec4 uWind;         // xy = desplazamiento del viento de nubes, z = fuerza del viento en plantas, w = tiempo continuo
   vec4 uQuality;      // x = tamaño del mapa de sombras, y = muestras PCF, z = pasos SSR, w = pasos volumétricos
   vec4 uNearFar;      // x = near, y = far, z = tan(fov/2), w = aspecto
+  vec4 uDim;          // Fase 8 (dimensiones): x = hay cielo (sol, luna, luz del cielo), z = densidad de su niebla
+  vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal)
+  vec4 uDimAmb;       // rgb = luz mínima de todo sin cielo (la penumbra del Nether)
 };
 `;
 
@@ -38,6 +41,8 @@ vec3 saturate(vec3 x) { return clamp(x, 0.0, 1.0); }
 vec4 saturate(vec4 x) { return clamp(x, 0.0, 1.0); }
 vec3 saturate3(vec3 x) { return clamp(x, 0.0, 1.0); }
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+/** Luz mínima (para que la oscuridad total no sea negro puro); Fase 8: la penumbra de las dimensiones sin cielo. */
+vec3 minAmbient() { return mix(vec3(0.012, 0.013, 0.016), uDimAmb.rgb, 1.0 - uDim.x); }
 // Bajo el agua abierta: luz del sol y del cielo que llega filtrada por el agua (azul verdosa).
 vec3 underwaterLight(vec3 skyUp) {
   return (uLightColor.rgb * max(uLightDir.y, 0.0) * 0.45 + skyUp * 0.8) * vec3(0.3, 0.8, 0.95) * uLightColor.w;

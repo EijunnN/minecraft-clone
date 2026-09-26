@@ -54,6 +54,7 @@ import { WHITE_WOOL, RED_WOOL, BLACK_WOOL, WOOL } from '../../shared/blocks';
 import { EF_GLINT } from '../../shared/protocol';
 import { R_MODEL, BLOCK_RENDER as F7_BLOCK_RENDER } from '../../shared/blocks';
 import { itemForBlock } from '../../shared/items';
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 
 export interface RenderSettings {
   renderScale: number;
@@ -173,6 +174,8 @@ export interface FrameState {
   guardianBeams?: GuardianBeam[];
   /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
   nausea?: number;
+  /** Fase 8: dimensión en la que está la cámara (cielo, niebla y luz; sin ella, el mundo normal). */
+  dim?: number;
   sight?: SightFog | null;
 }
 
@@ -288,7 +291,7 @@ export class Renderer {
     this.caps = caps;
     this.settings = settings;
     this.tri = new FullscreenTriangle(gl);
-    this.ubo = new UniformBuffer(gl, 156);
+    this.ubo = new UniformBuffer(gl, 168); // Fase 8: + uDim, uDimFog y uDimAmb
     this.textures = new BlockTextures(gl, caps, tex);
     this.terrain = new TerrainRenderer(gl);
     this.atmosphere = new Atmosphere(gl, this.tri);
@@ -472,7 +475,8 @@ export class Renderer {
     const moonFull = 0.5 + 0.5 * Math.cos(phase * Math.PI * 2);
     const moonIllum = SUN_ILLUMINANCE[0] * 0.009 * (0.3 + 0.7 * moonFull);
     // Luz directa atenuada por el cielo cubierto cuando llueve.
-    const fade = smooth(0.0, 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain);
+    // Fase 8: sin cielo no hay luz directa (ni sombras ni rayos de luz).
+    const fade = dimensionDef(s.dim ?? 0).sky ? smooth(0.0, 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain) : 0;
     const lc = sunUp
       ? [SUN_ILLUMINANCE[0] * T[0] * fade, SUN_ILLUMINANCE[1] * T[1] * fade, SUN_ILLUMINANCE[2] * T[2] * fade]
       : [moonIllum * 0.75 * T[0] * fade, moonIllum * 0.85 * T[1] * fade, moonIllum * T[2] * fade];
@@ -506,6 +510,12 @@ export class Renderer {
     d[150] = this.settings.ssrSteps; d[151] = this.settings.volumetricSteps;
     const fovY = (this.settings.fov * Math.PI) / 180;
     d[152] = NEAR; d[153] = FAR; d[154] = Math.tan(fovY / 2); d[155] = this.width / this.height;
+    // Fase 8: la dimensión (cielo, niebla y penumbra). La niebla se cierra antes que el borde normal.
+    const dd = dimensionDef(s.dim ?? 0);
+    const lin = (c: number) => Math.pow(c / 255, 2.2);
+    d[156] = dd.sky ? 1 : 0; d[157] = 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = 0;
+    d[160] = lin(dd.fog[0]) * 0.8; d[161] = lin(dd.fog[1]) * 0.8; d[162] = lin(dd.fog[2]) * 0.8; d[163] = 0;
+    d[164] = dd.ambient * 0.8; d[165] = dd.ambient * 0.62; d[166] = dd.ambient * 0.55; d[167] = 0;
     this.ubo.upload();
   }
 
@@ -676,7 +686,8 @@ export class Renderer {
     gl.disable(gl.DEPTH_TEST);
 
     // --- 5. Nubes y luz volumétrica ---
-    if (set.clouds) {
+    const cloudsOn = set.clouds && dimensionDef(s.dim ?? 0).sky; // Fase 8: sin cielo no hay nubes
+    if (cloudsOn) {
       this.clouds.resize(W, H, set.cloudScale);
       this.clouds.render(this.main.depth!, this.atmosphere.skyView.color, this.atmosphere.irradiance.color, set.cloudSteps, set.taa);
     }
@@ -702,7 +713,7 @@ export class Renderer {
       .tex2D('uSkyView', this.atmosphere.skyView.color)
       .tex2D('uIrradiance', this.atmosphere.irradiance.color)
       .tex2D('uFarOcean', this.atmosphere.farOcean)
-      .f1('uCloudsOn', set.clouds ? 1 : 0)
+      .f1('uCloudsOn', cloudsOn ? 1 : 0)
       .f1('uCloudBlur', set.taa ? 0 : 1)
       .f1('uVolumetricOn', volOn ? 1 : 0);
     this.tri.draw();

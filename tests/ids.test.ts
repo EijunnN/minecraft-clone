@@ -260,3 +260,14 @@ test('los ids de la fase 7.5 no cambian', () => {
   assert.deepEqual([MOB_WARDEN, MOB_GUARDIAN, MOB_ELDER_GUARDIAN, MOB_ALLAY], [70, 73, 74, 76]);
   assert.deepEqual([MOB_BAT, MOB_OCELOT, MOB_MOOSHROOM, MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE], [78, 79, 80, 81, 82, 83]);
 });
+
+// Fase 8 (Nether y End), 8.1 dimensiones: portal del Nether, menas del Nether y magma; el primer bioma del
+// Nether; las dimensiones (el registro de cada jugador guarda la suya).
+import { NETHER_PORTAL, NETHER_QUARTZ_ORE, NETHER_GOLD_ORE, MAGMA_BLOCK } from '../src/shared/blocks';
+import { BIOME_NETHER_WASTES } from '../src/shared/world/biomeIds';
+import { DIM_OVERWORLD, DIM_NETHER } from '../src/shared/dimensions';
+test('los ids de la fase 8 no cambian', () => {
+  assert.deepEqual([NETHER_PORTAL, NETHER_QUARTZ_ORE, NETHER_GOLD_ORE, MAGMA_BLOCK], [5536, 5538, 5539, 5540]);
+  assert.deepEqual([BIOME_NETHER_WASTES, DIM_OVERWORLD, DIM_NETHER], [52, 0, 1]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 5541), 536826002, 'huella de los bloques');
+});

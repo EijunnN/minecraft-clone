@@ -55,6 +55,7 @@ import { isVehicleType } from '../../shared/vehicles'; // Fase 7 (transporte)
 import { EXPERIENCE_BOTTLE } from '../../shared/items'; // Fase 7 (encantamientos)
 import { INFINITY, enchLevel } from '../../shared/enchantments';
 import { redstoneUse } from './redstoneClient'; // Fase 7 (redstone)
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
@@ -611,6 +612,13 @@ export class Interaction {
   /** Pone una fuente de agua o lava en la celda que toca (cubo o bloque de fluido). */
   private pourFluid(hit: RayHit, fluid: number, tool = 0): boolean {
     const world = this.g.world!;
+    // Fase 8: en el Nether el agua se evapora (el cubo se vacía igual; el servidor hace el siseo y el humo).
+    if (fluid === WATER && dimensionDef(world.dim).evaporatesWater) {
+      const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
+      this.g.net?.sendSet(x, y, z, WATER, tool);
+      this.g.swing(false);
+      return true;
+    }
     // Sobre un bloque que se puede anegar (conducto, corales, pepinos de mar), el agua entra en su celda.
     const wet = fluid === WATER ? withWater(hit.id, true) : 0;
     if (wet) {

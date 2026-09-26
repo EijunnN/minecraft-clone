@@ -11,6 +11,8 @@ import { remoteViews, selfView, animateHand, splitEntities, frameState, updateNa
 import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
 import { Renderer } from '../render/Renderer';
 import { World } from '../world/World';
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
+import { PortalFx } from './portalFx';
 import { Player } from './Player';
 import { Input } from './Input';
 import { raycast, type RayHit } from './raycast';
@@ -266,7 +268,7 @@ export class Game {
     for (const sg of Array.isArray(w.signs) ? w.signs : []) if (Array.isArray(sg) && sg.slice(0, 3).every(Number.isInteger)) this.signs.set(sg[0], sg[1], sg[2], sg[3]);
     this.books.onWelcome(w.banners); // Fase 6.5 (libros y estandartes)
     const cores = navigator.hardwareConcurrency || 4;
-    this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)));
+    this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
     this.world.loadEdits(w.edits);
 
@@ -295,6 +297,7 @@ export class Game {
       tick();
     });
     this.player.unstuck(this.world);
+    this.net?.send({ t: 'dimok', d: this.world.dim }); // Fase 8: dimensión montada
     ui.hideLoading();
     ui.showHud();
     this.refreshHotbar(true);
@@ -319,6 +322,75 @@ export class Game {
     window.addEventListener('beforeunload', this.onUnload);
     this.raf = requestAnimationFrame(this.frame);
     if (this.survival.dead) this.life.showDeath();
+  }
+
+  // ------------------------------------------------------------------ Fase 8: dimensiones
+
+  /** Cambiando de dimensión (hasta que se carga el mundo nuevo alrededor del jugador). */
+  changingDim = false;
+  /** Velo y distorsión dentro de un portal. */
+  readonly portalFx = new PortalFx();
+
+  /**
+   * Llega la bienvenida de otra dimensión: se cambia de mundo sin salir de la partida. El inventario y
+   * el estado del jugador siguen siendo los suyos; sólo cambian el mundo, el sitio y quién hay alrededor.
+   */
+  changeDimension(w: Welcome): void {
+    this.screen.close();
+    this.trading.screen.close();
+    this.interaction.mining = null;
+    this.interaction.use = null;
+    this.world?.dispose();
+    const cores = navigator.hardwareConcurrency || 4;
+    this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
+    this.world.renderDistance = this.cfg.settings.render.renderDistance;
+    this.world.loadEdits(w.edits);
+    this.time = w.time;
+    this.remote.clear();
+    this.ents.clear();
+    this.bobbers.clear();
+    for (const p of w.players) this.network.addRemote(p, false);
+    this.mode = w.mode;
+    this.difficulty = w.diff;
+    if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
+    this.signs.clear();
+    for (const sg of Array.isArray(w.signs) ? w.signs : []) if (Array.isArray(sg) && sg.slice(0, 3).every(Number.isInteger)) this.signs.set(sg[0], sg[1], sg[2], sg[3]);
+    this.books.onWelcome(w.banners);
+    const p = this.player;
+    const at = w.at ?? w.save?.pos;
+    if (at && at.every(Number.isFinite)) [p.x, p.y, p.z] = at;
+    p.vx = p.vy = p.vz = 0;
+    p.kx = p.kz = 0;
+    p.fallDistance = 0;
+    this.changingDim = true;
+    this.portalFx.reset();
+    this.renderer.resetTemporal();
+    this.ui.showLoading(`Entrando en ${dimensionDef(w.dim).name}…`, 0.1);
+    this.audio.playUi('portal');
+  }
+
+  /** Carga el mundo nuevo; cuando está listo alrededor del jugador, se sigue jugando. */
+  private loadNewDimension(dt: number): void {
+    const world = this.world!;
+    const p = this.player;
+    world.update(p.x, p.z, p.yaw, dt);
+    const pcx = Math.floor(p.x / CHUNK_SIZE), pcz = Math.floor(p.z / CHUNK_SIZE);
+    let ready = 0, total = 0;
+    for (let dz = -2; dz <= 2; dz++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        total++;
+        if (world.isReady(pcx + dx, pcz + dz)) ready++;
+      }
+    }
+    this.ui.showLoading(`Entrando en ${dimensionDef(world.dim).name}…`, 0.15 + 0.85 * (ready / total));
+    if (ready < total) return;
+    this.changingDim = false;
+    p.unstuck(world);
+    this.ui.hideLoading();
+    this.net?.send({ t: 'dimok', d: world.dim });
+    this.sendPos(true);
+    this.sendState(true);
+    this.refreshHotbar(true);
   }
 
   /** Aplica el estado guardado por el servidor (o prepara una aparición nueva). */
@@ -395,6 +467,7 @@ export class Game {
       if (local) void local.flush().then(() => local.dispose());
     }, 150);
     this.world?.dispose();
+    this.portalFx.dispose(); // Fase 8
     this.input.exitLock();
     this.input.dispose();
     this.ui.updateNameTags([]);
@@ -699,10 +772,17 @@ export class Game {
       this.fpsFrames = 0;
     }
 
+    // Fase 8: cambiando de dimensión, sólo se carga el mundo nuevo alrededor del jugador.
+    if (this.changingDim) {
+      this.loadNewDimension(dt);
+      return;
+    }
+
     this.handleUiKeys();
 
     // --- Jugador: mirada, cama, controles, física y pasos ---
     const { active, moved, wasGround } = this.movement.update(dt);
+    this.portalFx.update(this, dt); // Fase 8: dentro de un portal
 
     // --- Supervivencia ---
     const worldTime = worldTimeAt(this.time, Date.now() + (this.net?.serverOffset ?? 0));
