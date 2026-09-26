@@ -524,6 +524,17 @@ Fuera de la fase 7.5 (anotado para que no se pierda):
   sospechosas y la resina (que también salen en estas estructuras); el sniffer, el breeze, el
   ciénago, el crepitante y las demás criaturas de 2024–2026.
 
+### Fase 7.6 — Biomas y remates del mundo normal (L) · 🟡 en curso
+Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la fase 9), de uno en uno:
+- **Orden del código:** `GameServer.ts` y `Game.ts` en módulos (sin ganchos encadenados).
+- **Auditoría de recetas:** las recetas de Minecraft de objetos que ya existen y aún no se fabrican.
+- **Sistemas sueltos:** mesa de cartografía (ampliar, copiar y bloquear mapas), estandarte en el
+  escudo, reparar juntando dos herramientas, cabeza de esqueleto en la pared y discos que faltan.
+- **Ciudad antigua** con edificios más detallados.
+- **Los ~30 biomas que faltan** (montañas, colinas ventosas, taigas y abedulares viejos, jungla de
+  bambú y dispersa, badlands erosionadas y boscosas, manglar, bosque de flores, océanos templados y
+  profundos, costa pedregosa, cuevas como biomas…), con la selección por ruidos de Java.
+
 ### Fase 8 — Nether y End (XL)
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
 fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End, ciudades del End,
