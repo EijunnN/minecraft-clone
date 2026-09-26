@@ -22,6 +22,7 @@ import {
   isTripwire, tripwirePowered, tripwireAttached, tripwireDisarmed, tripwireWith, TRAPPED_CHEST, TRAPPED_CHEST_DOUBLE,
   LIGHTNING_ROD, rodPowered, rodWith, rodFacing, COPPER_BULB, bulbLit, bulbPowered, bulbWith, isIronOpenable,
   LIT_REDSTONE_ORE, LIT_DEEPSLATE_REDSTONE_ORE, redstoneOreLit, isWire, wirePower, REDSTONE_WIRE, mountedAttachFace, isButton, isLever,
+  wireConnections, wireDot,
 } from '../blocks/redstoneBlocks';
 import { DEEPSLATE_ORE, REDSTONE_ORE, BREWING_STAND } from '../blocks';
 import {
@@ -457,8 +458,16 @@ registerRedstone(REPEATER, {
   },
   // onPlace: cualquier cambio de estado avisa delante; recién puesto con entrada, se enciende en 1 tick (setPlacedBy).
   placed: (api, x, y, z, old, id) => {
-    updateFront(api, x, y, z, id);
-    if (!sameDiode(old, id) && old >= 0 && !diodePowered(id) && backSignal(api, x, y, z, id) > 0) api.schedule(x, y, z, 1);
+    if (sameDiode(old, id)) {
+      updateFront(api, x, y, z, id);
+      return;
+    }
+    // getStateForPlacement: nace ya bloqueado si le da de lado otro diodo (el cambio avisa delante él solo).
+    const locked = repeaterSideLocked(api, x, y, z, id);
+    if (locked !== repeaterLocked(id)) api.setBlock(x, y, z, repeaterWith(id, diodePowered(id), locked), UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE);
+    else updateFront(api, x, y, z, id);
+    // setPlacedBy: con entrada, se enciende en 1 tick.
+    if (!diodePowered(id) && backSignal(api, x, y, z, id) > 0) api.schedule(x, y, z, 1);
   },
   removed: (api, x, y, z, old, id, moved) => {
     if (!moved && !sameDiode(old, id)) updateFront(api, x, y, z, old);
@@ -829,11 +838,20 @@ registerRedstone(CHISELED_BOOKSHELF, {
 // ------------------------------------------------------------------ polvo
 
 registerRedstone(REDSTONE_WIRE, {
-  // Clic derecho en polvo suelto: cruz o punto (el punto no da potencia a los lados).
+  // Clic derecho en polvo suelto: cruz o punto (el punto no da potencia a los lados). Como en Java
+  // (updatesOnShapeChange), avisa además a los bloques que conducen por los lados cuya unión cambia.
   use: (api, x, y, z, id) => {
     const next = redstoneUseState(id, rel(api, x, y, z));
     if (next === null) return false;
+    const before = [0, 0, 0, 0], after = [0, 0, 0, 0];
+    wireConnections(rel(api, x, y, z), wireDot(id), before);
     api.setBlock(x, y, z, next);
+    wireConnections(rel(api, x, y, z), wireDot(next), after);
+    for (let d = 0; d < 4; d++) {
+      const f = HFACE[d];
+      const nx = x + FACE_X[f], nz = z + FACE_Z[f];
+      if (!before[d] !== !after[d] && isConductor(api.getBlock(nx, y, nz))) api.updateNeighbors(nx, y, nz, f ^ 1, REDSTONE_WIRE);
+    }
     return true;
   },
 });

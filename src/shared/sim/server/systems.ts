@@ -305,6 +305,7 @@ export class ServerSystems {
     const second = tickCount % TICK_RATE === 0;
     this.nature.tick();
     this.redstone.runBlockEvents();
+    this.redstone.handlingTick = false;
     ctx.entities.tick(DT);
     this.leashes.tick(DT);
     this.cauldrons.tick();

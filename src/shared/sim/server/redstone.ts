@@ -17,7 +17,7 @@
 //   y mena de redstone); proyectiles (diana, botones de madera) y rayos (pararrayos) llegan por avisos.
 // Los cambios viajan a los clientes como cualquier cambio de bloque.
 import {
-  familyBase, BLOCK_COUNT, isLightningRod, rodWith, isTrappedChest, isWoodenButton, isLitRedstoneOre, redstoneOreLit,
+  familyBase, BLOCK_COUNT, isLightningRod, rodWith, isTrappedChest, isWoodenButton, isLitRedstoneOre, redstoneOreLit, isRail,
   isTripwire, tripwireWith, tripwirePowered, tripwireAttached,
 } from '../../blocks';
 import {
@@ -223,9 +223,19 @@ export class Redstone implements RedstoneApi {
     this.updateNeighbors(x, y - 1, z);
   }
 
-  /** isHandlingTick de Java: ¿se están atendiendo los ticks programados? (el pistón lo mira). */
+  /**
+   * isHandlingTick de Java: desde que empieza el tick hasta que acaban los eventos de bloque (ticks programados,
+   * fluidos, ticks aleatorios y eventos). El pistón lo mira para recoger al instante.
+   */
+  handlingTick = false;
   get inTickPhase(): boolean {
-    return this.tickPhase;
+    return this.handlingTick || this.tickPhase;
+  }
+
+  /** affectNeighborsAfterRemoval del bloque `old` que había en (x, y, z) (el pistón lo llama aparte con lo que rompe). */
+  runRemoved(x: number, y: number, z: number, old: number, id: number, moved: boolean): void {
+    const ro = removedHandlers(old);
+    if (ro) for (const h of ro) h(this, x, y, z, old, id, moved);
   }
 
   /** updateNeighbourShapes de Java para la celda (x, y, z) con lo que hay ahora en ella (el pistón lo usa aparte). */
@@ -430,8 +440,9 @@ export class Redstone implements RedstoneApi {
     const k = posKey(x, y, z);
     const sameFamily = old > 0 && id > 0 && familyBase(old) === familyBase(id);
     if (!sameFamily) this.data.delete(k);
-    const ro = removedHandlers(old);
-    if (ro) for (const h of ro) h(this, x, y, z, old, id, moved);
+    // affectNeighborsAfterRemoval (LevelChunk.setBlockState de la 26.3): sólo si cambia el tipo de bloque (o el
+    // nuevo es un raíl) y con la opción 1 o movido por un pistón.
+    if ((!sameFamily || isRail(id)) && (flags & UPDATE_NEIGHBORS || moved)) this.runRemoved(x, y, z, old, id, moved);
     const pn = placedHandlers(id);
     if (pn) for (const h of pn) h(this, x, y, z, old, id, moved);
     const ho = changeHandlers(old), hn = changeHandlers(id);
@@ -543,8 +554,10 @@ export class Redstone implements RedstoneApi {
 
   /** Un tick entero (las pruebas y quien no reparte las fases): ticks, eventos, entidades y entidades de bloque. */
   tick(): void {
+    this.handlingTick = true;
     this.tickScheduled();
     this.runBlockEvents();
+    this.handlingTick = false;
     this.entityPhase();
     this.blockEntityPhase();
   }

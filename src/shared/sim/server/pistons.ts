@@ -242,7 +242,7 @@ export class Pistons {
         const c = toDestroy[k];
         const b = w.getBlock(c.x, c.y, c.z);
         if (b > 0) this.rules.dropOnly(c.x, c.y, c.z, b);
-        rs.setBlock(c.x, c.y, c.z, b > 0 ? this.rules.emptyAfter(b) : AIR, F_DESTROY);
+        rs.setBlock(c.x, c.y, c.z, AIR, F_DESTROY);
         old.push(b);
       }
       // Lo que se mueve (del último al primero): su destino pasa a ser un bloque en movimiento.
@@ -268,7 +268,11 @@ export class Pistons {
     }
     // Avisos: lo roto (del último al primero), lo movido (del último al primero) y la cabeza.
     let j = 0;
-    for (let k = toDestroy.length - 1; k >= 0; k--) rs.updateNeighbors(toDestroy[k].x, toDestroy[k].y, toDestroy[k].z, -1, old[j++]);
+    for (let k = toDestroy.length - 1; k >= 0; k--) {
+      const c = toDestroy[k], b = old[j++];
+      rs.runRemoved(c.x, c.y, c.z, b, AIR, false);
+      rs.updateNeighbors(c.x, c.y, c.z, -1, b);
+    }
     for (let l = toPush.length - 1; l >= 0; l--) rs.updateNeighbors(toPush[l].x, toPush[l].y, toPush[l].z, -1, old[j++]);
     if (extending) rs.updateNeighbors(hx, hy, hz, -1, PISTON_HEAD);
     // Lo que ve el cliente y las entidades que estorban.

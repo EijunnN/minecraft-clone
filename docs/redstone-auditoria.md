@@ -41,18 +41,28 @@ Java. Lo que no coincide es **el modelo de actualizaciones**, y de él dependen 
 
 ## Decisiones y lo que queda
 
-- **Versión: la 26.3.** El comportamiento se portó del código de Java que conozco (1.21.x, sobre el que se
-  construye la 26.x) y se contrastó con el índice del JAR de la 26.3 del catálogo (`implementation.json`:
-  clases y firmas de métodos, sin su código). Coincide la estructura: `affectNeighborsAfterRemoval` en vez de
-  `onRemove` (sólo cuando cambia el tipo de bloque), `CollectingNeighborUpdater` con sus avisos simples, a
-  vecinos, de forma y completos, `neighborChanged` con orientación, eventos de bloque (`blockEvent`,
-  `runBlockEvents`), `LevelTicks.willTickThisTick`, `DefaultRedstoneWireEvaluator` (el de siempre; el de los
-  «experimentos de redstone» es opcional y no está), `PistonBaseBlock.checkIfExtend`/`moveBlocks`,
-  `PistonMovingBlockEntity.finalTick`, `DiodeBlock.updateNeighborsInFront`, `ObserverBlock.startSignal`,
-  `PoweredRailBlock.findPoweredRailSignal`… Lo que el índice no dice (el cuerpo de los métodos) no está
-  comprobado contra la 26.3; hay tres pistas de cambios pequeños en la 26.x que convendría mirar con el JAR
-  de verdad: `RedstoneWireBlock.updatePowerStrength(…, shapeUpdateWiresAroundInitialPosition)` y
-  `updatesOnShapeChange`, el nuevo `ownSignal` de las potencias y `ServerLevel.updateNeighboursOnBlockSet`.
+- **Versión: la 26.3, comprobada con su código.** Primero se portó del código de Java 1.21.x y se contrastó con
+  el índice del JAR del catálogo (`implementation.json`, sólo firmas). Después se leyó el código de la 26.3:
+  el JAR oficial del servidor que publica Mojang (sin ofuscar desde la 26.1; SHA-1 33680f5f…), descompilado
+  sólo en local como referencia (nada de él está en el repositorio). Coinciden, línea a línea, el
+  `CollectingNeighborUpdater`, `Level.setBlock` (el bloque que avisa es el viejo), el orden de los avisos y
+  de las formas, `LevelTicks`, las fases de `ServerLevel.tick`, los eventos de bloque (sin repetidos), el
+  polvo (`DefaultRedstoneWireEvaluator`), antorchas, palanca, botones, placas, repetidor, comparador,
+  observador, lámpara, raíles, dispensador, puertas, trampillas, portillos, bloque musical, campana,
+  bombilla, dinamita, tolva y pistón (`checkIfExtend`, `triggerEvent`, `moveBlocks`, `PistonStructureResolver`,
+  `PistonMovingBlockEntity`). Lo que no coincidía y se corrigió al leerlo:
+  - `affectNeighborsAfterRemoval` sólo se llama si el cambio lleva la opción 1 o lo mueve un pistón, y si
+    cambia el tipo de bloque, salvo en los raíles, que lo reciben también al cambiar de estado.
+  - `isHandlingTick` (el que hace que el pistón recoja al instante) vale desde que empieza el tick hasta que
+    acaban los eventos de bloque (también en los fluidos, los ticks aleatorios y los eventos), no sólo en los
+    ticks programados.
+  - Lo que rompe un pistón se queda en aire (no en agua aunque estuviera anegado) y recibe su
+    `affectNeighborsAfterRemoval` aparte, antes de avisar.
+  - El clic derecho en el polvo (cruz o punto) avisa a los bloques que conducen por los lados cuya unión
+    cambia (`updatesOnShapeChange`).
+  - El repetidor nace ya bloqueado si le da de lado otro diodo (`getStateForPlacement`).
+  - En la 26.3 la lectura de un comparador recibe la cara por la que lee; con los bloques que hay no cambia
+    nada (cuando lleguen bloques que lean distinto según el lado, habrá que usarla).
 - **El bloque que avisa** en un cambio de bloque es el que había antes (como `Level.setBlock` de Java). Un
   efecto curioso, también en Java: al poner un bloque de redstone junto a un cruce de raíles en T no cambia
   (el aviso lo da el aire que había), sí con una palanca o una antorcha.

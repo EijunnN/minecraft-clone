@@ -78,8 +78,9 @@ function updatePoweredRail(api: RedstoneApi, x: number, y: number, z: number, id
 }
 
 /** onRemove de los raíles: en cuesta avisa arriba; los rectos (propulsor, activador, detector), también a sus vecinos y abajo. */
-function railRemoved(api: RedstoneApi, x: number, y: number, z: number, old: number, id: number, moved: boolean): void {
-  if (moved || (id > 0 && familyBase(id) === familyBase(old))) return;
+function railRemoved(api: RedstoneApi, x: number, y: number, z: number, old: number, _id: number, moved: boolean): void {
+  // (En Java se llama también cuando el raíl sólo cambia de estado: lo decide el motor.)
+  if (moved) return;
   if (isAscending(RAIL_SHAPE[old])) api.updateNeighbors(x, y + 1, z, -1, old);
   if (RAIL_KIND[old] !== RAIL_PLAIN) {
     api.updateNeighbors(x, y, z, -1, old);
