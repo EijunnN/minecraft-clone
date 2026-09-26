@@ -21,6 +21,7 @@ import { oceanFx } from './oceanFx'; // Fase 7.5 (océano)
 import { deepDarkFx, deepDarkTick } from './deepDarkFx'; // Fase 7.5 (abismo)
 import { critterFx } from './critterFx'; // Fase 7.5 (fauna)
 import { allayFx } from './allayFx'; // Fase 7.5 (mansión)
+import { netherFx, netherTick, serverVoiced, netherSteps } from './netherMobFx'; // Fase 8.3 (criaturas del Nether)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -246,6 +247,7 @@ export class Effects {
         if (mk && Math.random() < 0.5) this.g.audio.playMob(mk, 'step', p);
         break;
       default:
+        if (netherFx(this.g, kind, p, a, b)) break; // Fase 8.3 (criaturas del Nether)
         if (enchantFx(this.g, kind, p, a)) break; // Fase 7 (encantamientos)
         if (oceanFx(this.g, kind, p, a)) break; // Fase 7.5 (océano)
         if (deepDarkFx(this.g, kind, p, a, b)) break; // Fase 7.5 (abismo)
@@ -259,6 +261,7 @@ export class Effects {
   /** Voces ocasionales y pasos de las criaturas cercanas (y llamas de las que arden). */
   mobSounds(dt: number): void {
     deepDarkTick(this.g, dt); // Fase 7.5 (abismo): latido de los wardens y ambiente del Deep Dark
+    netherTick(this.g, dt); // Fase 8.3: humo del blaze, estela de las bolas de fuego, cubos de magma que caen
     const p = this.g.player;
     const now = performance.now() / 1000;
     this.heartT -= dt;
@@ -280,8 +283,13 @@ export class Effects {
       }
       if (d > 24) continue;
       const kind = (def.sound ?? def.key) as MobSoundKind;
+      // Fase 8.3: las voces de las criaturas del Nether las decide el servidor (según lo que hacen); aquí sólo los pasos.
+      const voiced = serverVoiced(e.type);
+      if (voiced && !netherSteps(e.type)) continue;
       const next = this.idleSounds.get(e.id);
-      if (next === undefined) this.idleSounds.set(e.id, now + 2 + Math.random() * 8);
+      if (voiced) {
+        // sin voz de reposo del cliente
+      } else if (next === undefined) this.idleSounds.set(e.id, now + 2 + Math.random() * 8);
       else if (now >= next) {
         this.idleSounds.set(e.id, now + 5 + Math.random() * 9);
         this.playMob(kind, 'idle', e);

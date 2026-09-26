@@ -29,11 +29,11 @@ import { CHAINMAIL_ARMOR, TURTLE_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
-import { SPAWN_EGG_DEFS, LATE_SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración)
+import { SPAWN_EGG_DEFS, LATE_SPAWN_EGG_DEFS, NETHER_SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración); 8.3: los del Nether
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
-import { SKULLS, SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones)
+import { SKULLS, ALL_SKULL_KINDS } from './blocks'; // Fase 6.5 (colecciones); 8.3: y las del Nether
 import { DISCS } from './discs'; // Fase 6.5 (colecciones)
 import { BREWING_STAND } from './blocks'; // Fase 7 (pociones)
 import { REDSTONE_WIRE, TRIPWIRE, IRON_DOOR } from './blocks'; // Fase 7 (redstone)
@@ -43,6 +43,7 @@ import { // Fase 8.2 (biomas del Nether)
   SMOOTH_BASALT,
 } from './blocks';
 import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from './blocks'; // Fase 8 (dimensiones)
+import { WARPED_FUNGUS, CRIMSON_FUNGUS } from './blocks'; // Fase 8.3 (criaturas del Nether): comida del strider y del hoglin
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -450,9 +451,9 @@ export const GLOW_INK_SAC = item('glow_ink_sac', 'Saco de tinta brillante');
 export const GLOW_ITEM_FRAME = item('glow_item_frame', 'Marco brillante');
 /** Discos de música, en el orden de DISCS (discs.ts); el título va en la descripción. */
 // Fase 7.5 (abismo): el disco 5 se registra al final (su objeto no puede ir aquí sin mover los ids de detrás).
-export const MUSIC_DISCS: readonly number[] = DISCS.filter((d) => d.key !== '5').map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
+export const MUSIC_DISCS: readonly number[] = DISCS.filter((d) => d.key !== '5' && d.key !== 'tears').map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
 // Las cabezas se llevan en el hueco del casco (sin puntos de armadura ni desgaste).
-for (const k of SKULL_KINDS) ITEMS[SKULLS[k]].armor = { slot: 0, material: 'leather', points: 0, toughness: 0, durability: 0 };
+for (const k of ALL_SKULL_KINDS) ITEMS[SKULLS[k]].armor = { slot: 0, material: 'leather', points: 0, toughness: 0, durability: 0 };
 
 // ------------------------------------------------------------------ Fase 6.5 (equipo)
 /** Mechero: enciende fuego en la cara tocada, velas y fogatas (64 usos). */
@@ -581,6 +582,19 @@ export const MUSIC_DISC_5 = item('music_disc_5', 'Disco de música', { stack: 1 
 // ------------------------------------------------------------------ Fase 8.2 (biomas del Nether)
 /** Ladrillo del Nether: sale de fundir rocanegra; cuatro hacen un bloque de ladrillos del Nether. */
 export const NETHER_BRICK = item('nether_brick', 'Ladrillo del Nether');
+// ------------------------------------------------------------------ Fase 8.3 (criaturas del Nether)
+/** Caña con hongo distorsionado: guía al strider ensillado que se monta; cada acelerón gasta 1 de sus 100 usos. */
+export const WARPED_FUNGUS_ON_A_STICK = item('warped_fungus_on_a_stick', 'Caña con hongo distorsionado', {
+  stack: 1, tool: { kind: 'carrot_stick', tier: 0, speed: 1, durability: 100, damage: 1 },
+});
+/** Carga de fuego: enciende fuego donde se usa (se gasta) y el dispensador la lanza como bola de fuego pequeña. */
+export const FIRE_CHARGE = item('fire_charge', 'Carga de fuego');
+/** Flecha espectral: lo que alcanza brilla 10 s (se ve a través de las paredes). */
+export const SPECTRAL_ARROW = item('spectral_arrow', 'Flecha espectral');
+/** Disco «Tears»: lo suelta el ghast al que mata su propia bola de fuego devuelta por un jugador. */
+export const MUSIC_DISC_TEARS = item('music_disc_tears', 'Disco de música', { stack: 1 });
+(MUSIC_DISCS as number[]).push(MUSIC_DISC_TEARS);
+for (const e of NETHER_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -798,3 +812,8 @@ smelt(NETHER_BRICKS, CRACKED_NETHER_BRICKS);
 smelt(POLISHED_BLACKSTONE_BRICKS, CRACKED_POLISHED_BLACKSTONE_BRICKS);
 smelt(BASALT, SMOOTH_BASALT);
 (CREATIVE_ITEMS as number[]).push(NETHER_BRICK);
+
+// ------------------------------------------------------------------ Fase 8.3 (criaturas del Nether)
+// El strider se cría con hongos distorsionados y el hoglin con hongos carmesíes (y los siguen).
+Object.assign(BREED_FOOD as Record<string, readonly number[]>, { strider: [WARPED_FUNGUS], hoglin: [CRIMSON_FUNGUS] });
+(CREATIVE_ITEMS as number[]).push(WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, MUSIC_DISC_TEARS, ...NETHER_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));

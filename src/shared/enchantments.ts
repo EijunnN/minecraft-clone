@@ -96,6 +96,9 @@ export const VANISHING_CURSE = ench('vanishing_curse', 'Maldición de desaparici
 // Fase 7.5 (abismo): sigilo rápido (grebas): +15 % de velocidad agachado por nivel. Sólo en los libros de las
 // ciudades antiguas: ni en la mesa, ni al azar en otros cofres, ni en el comercio.
 export const SWIFT_SNEAK = ench('swift_sneak', 'Sigilo rápido', 3, 1, [25, 25], [75, 25], 8, 'legs', { treasure: true, special: true });
+// Fase 8.3 (criaturas del Nether): velocidad de alma (botas): corre más sobre arena y tierra de alma (y no la frena
+// la arena). Sólo del trueque con los piglins (y de los bastiones): ni en la mesa, ni al azar, ni en el comercio.
+export const SOUL_SPEED = ench('soul_speed', 'Velocidad de alma', 3, 1, [10, 10], [25, 10], 8, 'feet', { treasure: true, special: true });
 
 /** Número de encantamientos registrados (el mayor id). */
 export const ENCHANT_COUNT = ENCHANTS.length - 1;
@@ -122,7 +125,7 @@ export const TOOLTIP_ORDER: readonly number[] = [
   BINDING_CURSE, VANISHING_CURSE, RIPTIDE, CHANNELING, FROST_WALKER, SHARPNESS, SMITE, BANE_OF_ARTHROPODS, IMPALING, POWER,
   PIERCING, SWEEPING_EDGE, MULTISHOT, FIRE_ASPECT, FLAME, KNOCKBACK, PUNCH, PROTECTION, BLAST_PROTECTION, FIRE_PROTECTION,
   PROJECTILE_PROTECTION, FEATHER_FALLING, FORTUNE, LOOTING, SILK_TOUCH, LUCK_OF_THE_SEA, EFFICIENCY, QUICK_CHARGE, LURE,
-  RESPIRATION, AQUA_AFFINITY, SWIFT_SNEAK, DEPTH_STRIDER, THORNS, LOYALTY, UNBREAKING, INFINITY, MENDING, // Fase 7.5: sigilo rápido
+  RESPIRATION, AQUA_AFFINITY, SOUL_SPEED, SWIFT_SNEAK, DEPTH_STRIDER, THORNS, LOYALTY, UNBREAKING, INFINITY, MENDING, // Fase 7.5: sigilo rápido; 8.3: velocidad de alma
 ];
 
 /** Nivel máximo de un encantamiento que se admite en una pila (Minecraft deja hasta 255 con comandos). */

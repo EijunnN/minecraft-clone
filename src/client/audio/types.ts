@@ -71,7 +71,19 @@ export type MobSoundKind =
   | 'ocelot'
   | 'skeleton_horse'
   | 'zombie_horse'
-  | 'allay'; // Fase 7.5 (mansión)
+  | 'allay' // Fase 7.5 (mansión)
+  // Fase 8.3 (criaturas del Nether).
+  | 'piglin'
+  | 'piglin_brute'
+  | 'zombified_piglin'
+  | 'ghast'
+  | 'blaze'
+  | 'magma_cube'
+  | 'magma_cube_small'
+  | 'hoglin'
+  | 'zoglin'
+  | 'strider'
+  | 'wither_skeleton';
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
  * (p. ej. el creeper no tiene voz de `idle`); los combos no aplicables caen a un sonido genérico

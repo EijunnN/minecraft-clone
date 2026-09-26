@@ -23,6 +23,7 @@ import { OFFHAND } from './Inventory';
 import type { Game } from './Game';
 import { sneakSpeedFactor } from '../../shared/enchantEffects'; // Fase 7.5 (abismo)
 import { SWIFT_SNEAK } from '../../shared/enchantments';
+import { SOUL_SPEED } from '../../shared/enchantments'; // Fase 8.3 (criaturas del Nether)
 
 /** Radio en el que la mesa suelta runas hacia el libro (como en Minecraft, sólo si hay un jugador cerca). */
 const GLYPH_RANGE = 16;
@@ -33,6 +34,9 @@ export class EnchantClient {
   /** Última celda en la que se pidió Paso helado (para no repetir el mensaje). */
   private frostCell = '';
   private glyphT = 0;
+  /** Fase 8.3: Velocidad de alma (espera hasta la siguiente alma y último bloque pisado). */
+  private soulT = 0;
+  private soulCell = '';
 
   constructor(private g: Game) {}
 
@@ -119,6 +123,7 @@ export class EnchantClient {
     surv.burnFactor = burnTimeFactor(this.armorSum(FIRE_PROTECTION));
     p.depthStrider = depthStriderFactor(this.armorLevel(3, DEPTH_STRIDER));
     p.sneakFactor = sneakSpeedFactor(this.armorLevel(2, SWIFT_SNEAK)); // Fase 7.5 (abismo): Sigilo rápido
+    this.soulSpeed(dt); // Fase 8.3: Velocidad de alma
     // Paso helado: en el suelo (no en el agua), cada vez que se cambia de celda.
     const frost = this.armorLevel(3, FROST_WALKER);
     if (frost > 0 && p.onGround && !p.inWater && !surv.dead && !p.flying) {
@@ -129,6 +134,35 @@ export class EnchantClient {
       }
     } else this.frostCell = '';
     this.tableGlyphs(dt);
+  }
+
+  /**
+   * Fase 8.3: Velocidad de alma. El nivel de las botas va al movimiento; corriendo sobre arena o tierra de alma salen
+   * almas (cada 5 ticks, con su sonido a veces) y, cada vez que se cambia de bloque, las botas se desgastan (un 4 %
+   * por nivel de las veces).
+   */
+  private soulSpeed(dt: number): void {
+    const g = this.g, p = g.player;
+    const lvl = this.armorLevel(3, SOUL_SPEED);
+    p.soulSpeed = lvl;
+    if (lvl <= 0 || !p.onGround || !p.soulGround || p.flying || g.survival.dead) return;
+    const moving = Math.hypot(p.vx, p.vz) > 0.2;
+    this.soulT -= dt;
+    if (moving && this.soulT <= 0) {
+      this.soulT = 0.25;
+      const fx = g.renderer.entities.pfx;
+      fx.spore(p.x + (Math.random() - 0.5) * 0.6, p.y + 0.1, p.z + (Math.random() - 0.5) * 0.6, 0.55, 0.95, 1, true);
+      if (Math.random() < 0.35) g.audio.playNetherSfx('boost', 0, [p.x, p.y, p.z]);
+    }
+    const cell = `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
+    if (cell !== this.soulCell) {
+      this.soulCell = cell;
+      if (!g.creative && Math.random() < 0.04 * lvl) {
+        const boots = g.inv.armor[3];
+        if (boots && g.inv.wearStack(boots, 1)) g.inv.armor[3] = null;
+        g.inv.changed();
+      }
+    }
   }
 
   /** Runas que vuelan de las librerías cercanas a las mesas de encantamientos que el jugador tiene al lado. */

@@ -36,6 +36,7 @@ const LABELS: Record<string, [RGB, RGB, LabelStyle]> = {
   wait: [[70, 150, 226], [206, 232, 252], 'ring'],
   otherside: [[46, 104, 150], [240, 196, 80], 'quarters'],
   '5': [[30, 62, 70], [104, 226, 232], 'ring'], // Fase 7.5 (abismo): verde del sculk con el brillo del eco
+  tears: [[226, 236, 242], [110, 170, 226], 'dots'], // Fase 8.3 (criaturas del Nether): blanco con lágrimas azules
 };
 
 function discSprite(key: string): SpriteDef {

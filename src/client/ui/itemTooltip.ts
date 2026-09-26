@@ -98,8 +98,9 @@ export function itemTooltipHtml(s: ItemStack): string {
   if (s.id === DISC_FRAGMENT_5) lines.push('<span class="tt-dim">Disco de música - 5</span>');
   if (s.id === RECOVERY_COMPASS) lines.push('<span class="tt-dim">Apunta a donde moriste por última vez</span>');
   const skull = skullKind(s.id);
-  if (skull && skull !== 'player') {
-    const who = { zombie: 'los zombis', skeleton: 'los esqueletos', creeper: 'los creepers' }[skull];
+  // Fase 8.3: la cabeza de piglin engaña a los piglins y a los piglins brutos; el cráneo wither, a nadie.
+  if (skull && skull !== 'player' && skull !== 'wither_skeleton') {
+    const who = { zombie: 'los zombis', skeleton: 'los esqueletos', creeper: 'los creepers', piglin: 'los piglins' }[skull];
     lines.push(`<span class="tt-dim">Puesta: ${who} te ven a la mitad de distancia</span>`);
   }
   // Fase 6.5 (remate): lo que lleva el saco.

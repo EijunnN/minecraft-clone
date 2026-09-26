@@ -50,7 +50,8 @@ import { SILK_TOUCH } from '../../shared/enchantments';
 import { materialsUse } from './materialsInteraction'; // Fase 6.5 (materiales)
 import { collectionUse } from './collectionInteraction'; // Fase 6.5 (colecciones)
 import { potionUse, drinkPotion, hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
-import { TIPPED_ARROW } from '../../shared/items';
+import { TIPPED_ARROW, SPECTRAL_ARROW } from '../../shared/items';
+import { SPECTRAL_ARROW_TYPE } from '../../shared/potions'; // Fase 8.3: la flecha espectral
 import { isVehicleType } from '../../shared/vehicles'; // Fase 7 (transporte)
 import { EXPERIENCE_BOTTLE } from '../../shared/items'; // Fase 7 (encantamientos)
 import { INFINITY, enchLevel } from '../../shared/enchantments';
@@ -585,7 +586,7 @@ export class Interaction {
     if (ap === null) return;
     this.wearHeld(1);
     const p = this.g.player;
-    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f, ...en, ...(ap >= 0 ? { ap } : {}) });
+    this.g.net?.send({ t: 'shoot', p: [p.x + dir[0] * 0.3, p.eyeY - 0.1, p.z + dir[2] * 0.3], d: [dir[0], dir[1], dir[2]], f, ...en, ...(ap !== -1 ? { ap } : {}) }); // Fase 8.3: −2 la espectral
     this.g.swing(false);
   }
 
@@ -855,7 +856,7 @@ export class Interaction {
       // Fase 6.5 (equipo): también los tridentes clavados.
       if ((e.type !== ENT_ITEM && e.type !== ENT_ARROW && e.type !== ENT_TRIDENT) || !(e.flags & EF_PICKABLE) || e.gone) continue;
       if (Math.abs(e.x - p.x) > 1.3 || Math.abs(e.z - p.z) > 1.3 || e.y < p.y - 0.8 || e.y > p.y + 2.3) continue;
-      const id = e.type === ENT_ARROW ? ((e.potion ?? -1) >= 0 ? TIPPED_ARROW : ARROW) : e.type === ENT_TRIDENT ? TRIDENT : e.item; // Fase 7: flechas con efecto
+      const id = e.type === ENT_ARROW ? (e.potion === SPECTRAL_ARROW_TYPE ? SPECTRAL_ARROW : (e.potion ?? -1) >= 0 ? TIPPED_ARROW : ARROW) : e.type === ENT_TRIDENT ? TRIDENT : e.item; // Fase 7: flechas con efecto; 8.3: espectral
       if (this.g.inv.room({ id, count: 1 }) <= 0) continue;
       const last = this.pickupAsk.get(e.id) ?? 0;
       if (now - last < 0.5) continue;

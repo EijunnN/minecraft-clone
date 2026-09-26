@@ -14,6 +14,7 @@ import { buildWildlifeSound } from './wildlife'; // Fase 6 (fauna)
 import { buildGuardianSound } from './oceanSounds'; // Fase 7.5 (océano)
 import { buildWardenSound } from './deepDarkSounds'; // Fase 7.5 (abismo)
 import { buildCritterSound } from './critterSounds'; // Fase 7.5 (fauna)
+import { buildNetherSound } from './netherMobSounds'; // Fase 8.3 (criaturas del Nether)
 import { buildAllaySound } from './allaySounds'; // Fase 7.5 (mansión)
 
 /** Paso ligero/pesado según el tamaño de la criatura: ruido grave con cuerpo tonal opcional. */
@@ -480,6 +481,8 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
       // Fase 6 (monstruos): bruja, slime, phantom y lepisma; (fauna): zorro, cabra, oso polar, conejo, lobo,
       // abeja, panda, loro y armadillo.
       {
+        const nether = buildNetherSound(ctx, noise, kind, event, destination, now); // Fase 8.3 (criaturas del Nether)
+        if (nether.length) return nether;
         const guardian = buildGuardianSound(ctx, noise, kind, event, destination, now); // Fase 7.5 (océano)
         if (guardian.length || kind === 'guardian' || kind === 'elder_guardian') return guardian;
         if (kind === 'warden') return buildWardenSound(ctx, noise, kind, event, destination, now); // Fase 7.5 (abismo)

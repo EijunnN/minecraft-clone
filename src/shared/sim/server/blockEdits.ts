@@ -28,6 +28,7 @@ import { useDecor } from './decorUse'; // Fase 6.5 (decoración)
 import { isWaterlogged, emptyAfterPlayerBreak, withWater, WATER } from '../../blocks'; // Fase 6.5 (océano y plantas) y 7
 // Fase 7 (encantamientos): Toque de seda y Fortuna.
 import { enchantedBlockDrops } from '../enchantDrops';
+import { isGuardedByPiglins } from '../../netherMobs'; // Fase 8.3 (criaturas del Nether)
 import { sanitizeHeldEnchants, levelIn } from '../../enchantEffects';
 import { SILK_TOUCH } from '../../enchantments';
 import { sculkXp } from '../../blocks'; // Fase 7.5 (abismo)
@@ -94,6 +95,8 @@ export class BlockEdits {
         const en = toolId ? sanitizeHeldEnchants(toolId, msg.en) : []; // Fase 7 (encantamientos)
         const drops = !creative && (!BLOCK_FLUID[cur] || wet) ? enchantedBlockDrops(cur, toolId, en, () => ctx.rand()) : [];
         this.beforeBreak?.(x, y, z, cur, toolId); // Fase 7 (redstone)
+        // Fase 8.3: romper oro, cofres o barriles enfada a los piglins que estén a 16 bloques (lo vean o no).
+        if (isGuardedByPiglins(cur)) ctx.entities.mobs.nether.piglins.angerNearby(s.id, s.p[0], s.p[1], s.p[2], false);
         // Fase 7: el hielo escarchado y las plantas anegadas dejan agua; el hielo, si tiene algo debajo.
         const below = ctx.world.getBlock(x, y - 1, z);
         const left = emptyAfterPlayerBreak(cur, below, !creative, levelIn(en, SILK_TOUCH) > 0);

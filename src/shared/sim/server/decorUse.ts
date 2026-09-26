@@ -37,6 +37,7 @@ export function useSpawnEgg(ctx: ServerContext, item: number, x: number, y: numb
   while (!roomFor(ctx, x, sy, z, h) && tries++ < 4) sy++;
   if (!roomFor(ctx, x, sy, z, h)) return false;
   const e = ctx.entities.spawnMob(type, x + 0.5, sy + 0.01, z + 0.5);
+  if (e) ctx.entities.mobs.nether.finalizeSpawn(e, 'egg'); // Fase 8.3: armas de los piglins, tamaño del cubo de magma, jinetes…
   return !!e;
 }
 

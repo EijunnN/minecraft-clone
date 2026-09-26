@@ -16,6 +16,7 @@ import {
 } from '../../mobs';
 import { EF_INVISIBLE } from '../../potions';
 import { EFFECT_GLOWING, EFFECT_WITHER, EFFECT_LEVITATION, EF_GLOWING, witherInterval } from '../../effects'; // Fase 7 (efectos)
+import { MOB_WITHER_SKELETON } from '../../netherMobs'; // Fase 8.3 (criaturas del Nether)
 import type { Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -57,6 +58,7 @@ export class MobEffects {
       return;
     }
     if (isUndead(e.type) && (id === EFFECT_POISON || id === EFFECT_REGENERATION)) return;
+    if (id === EFFECT_WITHER && e.type === MOB_WITHER_SKELETON) return; // Fase 8.3: el esqueleto wither no se marchita
     if (!(seconds > 0)) return;
     seconds = Math.min(MAX_EFFECT_SECONDS, seconds);
     const list = (e.effects ??= new Map());

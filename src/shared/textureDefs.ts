@@ -382,8 +382,11 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   { name: 'frogspawn', sss: 0.4, cutout: true },
   // Fase 6.5 (colecciones): caras de las cabezas (como skullTexture en blocks/collections.ts), tocadiscos y
   // marco brillante.
-  ...['zombie', 'skeleton', 'creeper', 'player'].flatMap((k) =>
+  // Fase 8.3 (criaturas del Nether): cráneo de esqueleto wither y cabeza de piglin (con hocico y orejas).
+  ...['zombie', 'skeleton', 'creeper', 'player', 'wither_skeleton', 'piglin'].flatMap((k) =>
     ['right', 'left', 'top', 'bottom', 'back', 'front'].map((f): TextureDef => ({ name: `${k}_head_${f}` }))),
+  { name: 'piglin_head_snout' },
+  { name: 'piglin_head_ear' },
   { name: 'jukebox_side' },
   { name: 'jukebox_top' },
   { name: 'jukebox_bottom' },

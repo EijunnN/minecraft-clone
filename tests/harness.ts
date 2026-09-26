@@ -53,7 +53,8 @@ export interface Client {
   pos(x: number, y: number, z: number, s?: number): void;
 }
 
-export function makeServer(seed = 12345, store = new MemoryStore()): Harness {
+/** `dim`: Fase 8.3, la dimensión del servidor (el Nether para las criaturas del Nether). */
+export function makeServer(seed = 12345, store = new MemoryStore(), dim?: number): Harness {
   const clock = { now: 1_000_000 };
   // Azar con semilla: las pruebas salen siempre igual (con Math.random algunas fallaban de vez en cuando).
   let r = (seed ^ 0x9e3779b9) >>> 0;
@@ -63,7 +64,7 @@ export function makeServer(seed = 12345, store = new MemoryStore()): Harness {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const gs = new GameServer(store, { seed, now: () => clock.now, flushSeconds: 5, rand });
+  const gs = new GameServer(store, { seed, now: () => clock.now, flushSeconds: 5, rand, ...(dim !== undefined ? { dim } : {}) });
   const clients: Client[] = [];
   const h: Harness = {
     store,

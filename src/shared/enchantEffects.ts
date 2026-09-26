@@ -25,7 +25,8 @@ export function sanitizeHeldEnchants(item: number, raw: unknown): EnchList {
 // ------------------------------------------------------------------ criaturas sensibles
 
 /** No muertos (Castigo), artrópodos (Perdición de los artrópodos) y acuáticos (Empalamiento). */
-const UNDEAD = new Set(['zombie', 'husk', 'skeleton', 'stray', 'drowned', 'phantom', 'zombie_villager', 'wither_skeleton', 'zombie_horse', 'skeleton_horse']);
+// Fase 8.3: el piglin zombificado y el zoglin (etiqueta zombies).
+const UNDEAD = new Set(['zombie', 'husk', 'skeleton', 'stray', 'drowned', 'phantom', 'zombie_villager', 'wither_skeleton', 'zombie_horse', 'skeleton_horse', 'zombified_piglin', 'zoglin']);
 const ARTHROPOD = new Set(['spider', 'cave_spider', 'silverfish', 'bee', 'endermite']);
 const AQUATIC = new Set(['turtle', 'axolotl', 'guardian', 'elder_guardian', 'cod', 'pufferfish', 'salmon', 'tropical_fish', 'dolphin', 'squid', 'glow_squid', 'tadpole']);
 

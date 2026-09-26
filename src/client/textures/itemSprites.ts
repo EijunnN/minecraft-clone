@@ -29,6 +29,7 @@ import { ENCHANT_SPRITES } from './enchantSprites'; // Fase 7 (encantamientos)
 import { REDSTONE_SPRITES } from './redstoneSprites'; // Fase 7 (redstone)
 import { MECHANISM_SPRITES } from './mechanismSprites'; // Fase 7 (mecanismos)
 import { DEEP_DARK_SPRITES } from './deepDarkSprites'; // Fase 7.5 (abismo)
+import { NETHER_MOB_SPRITES } from './netherMobSprites'; // Fase 8.3 (criaturas del Nether)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2301,6 +2302,8 @@ Object.assign(SPRITES, MECHANISM_SPRITES);
 Object.assign(SPRITES, DEEP_DARK_SPRITES);
 // Fase 8.2 (biomas del Nether): el ladrillo del Nether (el del ladrillo con los colores del Nether).
 SPRITES.nether_brick = { rows: SPRITES.brick.rows, inks: ramp([104, 50, 58], [78, 36, 44], [60, 27, 33], [44, 19, 24], [20, 8, 10]) };
+// Fase 8.3 (criaturas del Nether): caña con hongo distorsionado, carga de fuego y flecha espectral.
+Object.assign(SPRITES, NETHER_MOB_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

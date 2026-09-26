@@ -18,6 +18,9 @@ import {
   ITEMS, ARROW, TIPPED_ARROW, SNOWBALL, EGG, SPLASH_POTION, LINGERING_POTION, EXPERIENCE_BOTTLE, FIREWORK_ROCKET, BUCKET,
   WATER_BUCKET, LAVA_BUCKET, POWDER_SNOW_BUCKET, BONE_MEAL, FLINT_AND_STEEL, SHEARS, type ItemStack,
 } from '../../items';
+import { SPECTRAL_ARROW, FIRE_CHARGE } from '../../items'; // Fase 8.3 (criaturas del Nether)
+import { SPECTRAL_ARROW_TYPE } from '../../potions';
+import { ENT_SMALL_FIREBALL } from '../../netherMobs';
 import { MOB_SHEEP } from '../../mobs';
 import { ENT_ARMOR_STAND } from '../../armorStands';
 import { STATE_DEAD } from '../../protocol';
@@ -190,10 +193,18 @@ export class Dispensers {
       return 'ok';
     };
     // Proyectiles.
-    if (id === ARROW || id === TIPPED_ARROW) {
+    if (id === ARROW || id === TIPPED_ARROW || id === SPECTRAL_ARROW) {
       const [vx, vy, vz] = this.shot(f, 1.1, 6);
       const a = ents.spawnArrow(px, py, pz, vx, vy, vz, 0, 2);
       if (id === TIPPED_ARROW) a.arrowPotion = stack.dmg ?? 0;
+      if (id === SPECTRAL_ARROW) a.arrowPotion = SPECTRAL_ARROW_TYPE; // Fase 8.3
+      return shoot();
+    }
+    // Fase 8.3: la carga de fuego sale como una bola de fuego pequeña (con un poco de dispersión).
+    if (id === FIRE_CHARGE) {
+      const g = () => (this.ctx.rand() + this.ctx.rand() + this.ctx.rand() - 1.5) * 0.05;
+      ents.mobs.nether.flyers.spawnFireball(ENT_SMALL_FIREBALL, px, py, pz, FACE_X[f] + g(), FACE_Y[f] + g(), FACE_Z[f] + g(), 0);
+      ctx.fx('fire_charge_shoot', px, py, pz);
       return shoot();
     }
     if (id === SNOWBALL || id === EGG) {

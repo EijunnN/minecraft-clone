@@ -35,6 +35,8 @@ import { MOB_ALLAY } from '../../shared/allay'; // Fase 7.5 (mansión)
 import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
 import { pushPrimedTnt } from '../game/mechanismsClient';
 import { TIPPED_ARROW } from '../../shared/items'; // Fase 7 (pociones)
+import { FIRE_CHARGE, SPECTRAL_ARROW } from '../../shared/items'; // Fase 8.3 (criaturas del Nether)
+import { ENT_LARGE_FIREBALL, ENT_SMALL_FIREBALL, isNetherMob, gearMain, gearOff } from '../../shared/netherMobs';
 // Fase 6.5 (decoración): cuadros y marcos.
 import { isHangingType } from '../../shared/paintings';
 import { pushHangingDraws } from './hangingDraws';
@@ -905,7 +907,7 @@ export class Renderer {
         }
       } else if (e.type === ENT_ARROW) {
         // Fase 7 (pociones): las flechas con efecto llevan la punta de su color.
-        const model = (e.potion ?? -1) >= 0 ? this.items.model(TIPPED_ARROW, e.potion) : this.items.model(ARROW);
+        const model = e.potion === -2 ? this.items.model(SPECTRAL_ARROW) : (e.potion ?? -1) >= 0 ? this.items.model(TIPPED_ARROW, e.potion) : this.items.model(ARROW); // Fase 8.3: la espectral
         if (!model) continue;
         const m = mat4.create();
         mat4.translate(m, m, [rx, ry, rz]);
@@ -915,6 +917,17 @@ export class Renderer {
         mat4.rotateZ(m, m, -Math.PI / 4);
         mat4.scale(m, m, [0.7, 0.7, 0.7]);
         out.push({ model, m, light: lightOf(e.x, e.y, e.z) });
+      } else if (e.type === ENT_LARGE_FIREBALL || e.type === ENT_SMALL_FIREBALL) {
+        // Fase 8.3: bola de fuego: el sprite de la carga de fuego de cara a la cámara (grande × 3, pequeña × 0,75), con toda la luz.
+        const model = this.items.model(FIRE_CHARGE);
+        if (!model) continue;
+        const big = e.type === ENT_LARGE_FIREBALL;
+        const m = mat4.create();
+        mat4.translate(m, m, [rx, ry + (big ? 0.5 : 0.16), rz]);
+        mat4.rotateY(m, m, Math.atan2(-rx, -rz));
+        const k = big ? 0.9 : 0.225;
+        mat4.scale(m, m, [k, k, k]);
+        out.push({ model, m, light: [1, 1] });
       } else if (e.type === ENT_THROWN && e.item > 0) {
         // Huevo (o poción: Fase 7) en vuelo: el sprite de cara a la cámara.
         const model = this.items.model(e.item, e.dmg);
@@ -1055,6 +1068,22 @@ export class Renderer {
     const list: ItemDraw[] = [];
     for (const e of s.mobs) {
       if (e.deathT >= 0) continue;
+      // Fase 8.3: lo que llevan los piglins y los esqueletos wither en cada mano (el oro que admiran, a la izquierda).
+      if (isNetherMob(e.type)) {
+        for (const left of [false, true]) {
+          const id = left ? gearOff(e.gear) : gearMain(e.gear);
+          const model = id ? this.items.model(id) : null;
+          const hand = model ? this.mobs.netherHandMatrix(e, s.camX, s.camY, s.camZ, s.time, left) : null;
+          if (!model || !hand) continue;
+          const m = mat4.clone(hand);
+          mat4.rotateX(m, m, -Math.PI / 2);
+          mat4.rotateY(m, m, Math.PI / 2);
+          mat4.rotateZ(m, m, Math.PI / 4);
+          mat4.scale(m, m, [0.8, 0.8, 0.8]);
+          list.push({ model, m, light: lightOf(e.x, e.y + 1, e.z) });
+        }
+        continue;
+      }
       const hand = this.mobs.handMatrix(e, s.camX, s.camY, s.camZ, s.time);
       if (!hand) continue;
       // Fase 7.5 (mansión): el alay lleva su objeto delante, pequeño y de frente.

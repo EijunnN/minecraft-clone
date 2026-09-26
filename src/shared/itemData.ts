@@ -7,7 +7,7 @@ import { BANNER_PATTERNS, MAX_BANNER_LAYERS, isBannerItem, type BannerLayer } fr
 // Fase 7 (encantamientos): encantamientos, libros encantados, nombres del yunque y coste de trabajo previo.
 import { ENCHANTED_BOOK } from './items';
 import { sanitizeEnchList, isEnchantable } from './enchantments';
-import { isPotionType } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta
+import { isPotionType, SPECTRAL_ARROW_TYPE } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta; 8.3: la espectral
 // Fase 7.5 (océano): mapas del tesoro y de explorador.
 import { FILLED_MAP, SHIELD } from './items';
 import { sanitizeStructureMap, STRUCTURE_MAPS, type StructureMapData } from './structureMapData';
@@ -132,7 +132,7 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
   }
   if (id === CROSSBOW_CHARGED) {
     const ap = Number(r.ap);
-    return r.ap !== undefined && isPotionType(ap) ? { ap } : undefined;
+    return r.ap !== undefined && (isPotionType(ap) || ap === SPECTRAL_ARROW_TYPE) ? { ap } : undefined; // Fase 8.3: o la espectral
   }
   // Fase 7.5 (océano): sólo los mapas resueltos (con objetivo) viajan y se guardan. Fase 7.6: escala y bloqueo.
   if (id === FILLED_MAP) {
@@ -193,7 +193,7 @@ export function stackName(s: ItemStack): string {
 export function loadCrossbow(s: ItemStack, ap: number): ItemStack {
   const data = s.data ? cloneItemData(s.data) : {};
   delete data.ap;
-  if (ap >= 0) data.ap = ap;
+  if (ap >= 0 || ap === SPECTRAL_ARROW_TYPE) data.ap = ap; // Fase 8.3: la flecha espectral también
   const out: ItemStack = { ...s, id: CROSSBOW_CHARGED, count: 1 };
   if (Object.keys(data).length) out.data = data;
   else delete out.data;

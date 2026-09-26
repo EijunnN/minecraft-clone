@@ -26,21 +26,30 @@ import { isDeepDark } from '../../world/deepDark'; // Fase 7.5 (abismo)
 import {
   critterWorldTick, critterPassiveFor, critterFloor, CRITTER_GROUPS, biomeWithoutMonsters, structureMonster,
 } from './critters';
-import { DIM_OVERWORLD } from '../../dimensions'; // Fase 8 (dimensiones)
+import { DIM_OVERWORLD, DIM_NETHER } from '../../dimensions'; // Fase 8 (dimensiones)
+import { NetherSpawner } from './netherSpawner'; // Fase 8.3 (criaturas del Nether)
 
 export class Spawner {
   private spawnTimer = 0;
   private passiveTimer = 3;
   private squidTimer = 5;
+  /** Fase 8.3 (criaturas del Nether): la aparición natural del Nether (NaturalSpawner). */
+  readonly nether: NetherSpawner;
 
-  constructor(private m: Entities) {}
+  constructor(private m: Entities) {
+    this.nether = new NetherSpawner(m);
+  }
 
   spawnTick(dt: number, players: PlayerView[]): void {
     this.spawnTimer -= dt;
     this.passiveTimer -= dt;
     this.squidTimer -= dt;
     if (players.length === 0) return;
-    // Fase 8: fuera del mundo normal no sale nada de lo de aquí (las criaturas del Nether llegan después).
+    // Fase 8: fuera del mundo normal no sale nada de lo de aquí. Fase 8.3: en el Nether, su propia aparición.
+    if (this.m.host.world.dim === DIM_NETHER) {
+      this.nether.tick(players);
+      return;
+    }
     if (this.m.host.world.dim !== DIM_OVERWORLD) return;
     faunaWorldTick(this.m, dt, players); // Fase 6 (fauna): abejas y nidos
     critterWorldTick(this.m, dt, players); // Fase 7.5 (fauna): murciélagos en las cuevas

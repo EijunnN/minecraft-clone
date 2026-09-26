@@ -220,3 +220,8 @@ export * from './netherBlocks';
 import { NETHER_BIOME_INVENTORY } from './netherBiomeBlocks';
 export * from './netherBiomeBlocks';
 (INVENTORY_ORDER as number[]).push(...NETHER_BIOME_INVENTORY);
+// Fase 8.3 (criaturas del Nether): cráneo de esqueleto wither y cabeza de piglin (registrados los últimos: ids
+// nuevos) y su sitio en el inventario creativo.
+import { NETHER_MOB_INVENTORY } from './netherMobBlocks';
+export * from './netherMobBlocks';
+(INVENTORY_ORDER as number[]).push(...NETHER_MOB_INVENTORY);

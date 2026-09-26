@@ -3,6 +3,8 @@
 // escalones bajos (losas, escaleras) y trepar por escaleras de mano.
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluidHeight } from '../../shared/blocks';
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
+import { isSoulGround } from '../../shared/blocks'; // Fase 8.3: Velocidad de alma
+import { SOUL_SPEED_BASE, SOUL_SPEED_PER_LEVEL } from '../../shared/netherMobs';
 import { moveBox, boxBlocked } from '../../shared/collide';
 import { scaffoldClimb, scaffoldFloor } from '../../shared/scaffoldPhysics'; // Fase 6.5 (decoración)
 import { // Fase 6.5 (materiales): hielo, slime y nieve polvo
@@ -68,6 +70,9 @@ export class Player {
   depthStrider = 0;
   /** Fase 7.5 (abismo): velocidad agachado o gateando respecto a la de andar (Sigilo rápido la sube). */
   sneakFactor = 0.3;
+  /** Fase 8.3: nivel de Velocidad de alma de las botas (0 sin ella) y si lo último que pisó era arena o tierra de alma. */
+  soulSpeed = 0;
+  soulGround = false;
   /** Distancia horizontal recorrida en el suelo (para pasos y balanceo). */
   walkDistance = 0;
   /** 0..1: cuánto se está moviendo (para animaciones). */
@@ -280,7 +285,13 @@ export class Player {
       const under = this.onGround ? blockUnder(world, this.x, this.y, this.z) : 0;
       // Fase 7.5 (abismo): agachado y gateando, al 30 % de andar (más con Sigilo rápido).
       const slowWalk = 4.32 * this.sneakFactor;
-      const speed = (this.pose === 'crawl' ? Math.max(CRAWL_SPEED, slowWalk) : this.sneaking ? Math.max(1.31, slowWalk) : this.sprinting ? 5.61 : 4.32) * this.slow * groundSpeed(under);
+      // Fase 8.3: con Velocidad de alma, sobre arena o tierra de alma (y en el aire tras pisarlas) no frena y corre más
+      // (+0,0405 de velocidad, +0,0105 por nivel, sobre los 0,1 del jugador).
+      if (this.onGround) this.soulGround = isSoulGround(under);
+      const soul = this.soulSpeed > 0 && this.soulGround && !this.flying;
+      const soulBoost = soul ? (0.1 + SOUL_SPEED_BASE + SOUL_SPEED_PER_LEVEL * (this.soulSpeed - 1)) / 0.1 : 1;
+      const speed = (this.pose === 'crawl' ? Math.max(CRAWL_SPEED, slowWalk) : this.sneaking ? Math.max(1.31, slowWalk) : this.sprinting ? 5.61 : 4.32) * this.slow *
+        (soul ? soulBoost : groundSpeed(under));
       const k = 1 - Math.exp(-dt * (this.onGround ? 16 * groundGrip(under) : 3.2));
       this.vx += (wx * speed - this.vx) * k;
       this.vz += (wz * speed - this.vz) * k;

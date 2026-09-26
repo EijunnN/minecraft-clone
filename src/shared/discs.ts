@@ -26,6 +26,7 @@ export const DISCS: readonly DiscDef[] = [
   { key: 'wait', title: 'wait', seconds: 160 },
   { key: 'otherside', title: 'otherside', seconds: 134 },
   { key: '5', title: '5', seconds: 178 }, // Fase 7.5 (abismo): de nueve fragmentos de las ciudades antiguas
+  { key: 'tears', title: 'Tears', seconds: 175 }, // Fase 8.3 (criaturas del Nether): del ghast muerto por su propia bola de fuego
 ];
 
 /** Índice del disco por su clave (-1 si no existe). */

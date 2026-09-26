@@ -12,10 +12,10 @@ import type { Interaction } from './interaction';
 import type { Game } from './Game';
 import type { Use } from './gameTypes';
 import {
-  ITEMS, SHEARS, FLINT_AND_STEEL, CROSSBOW, CROSSBOW_CHARGED, TRIDENT, GOAT_HORN, FIREWORK_ROCKET, CARROT_ON_A_STICK,
+  ITEMS, SHEARS, FLINT_AND_STEEL, CROSSBOW, CROSSBOW_CHARGED, TRIDENT, GOAT_HORN, FIREWORK_ROCKET, CARROT_ON_A_STICK, WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE,
   WOLF_ARMOR, HORSE_ARMOR, type ItemStack,
 } from '../../shared/items';
-import { MOB_HORSE, MOB_WOLF, MOB_PIG } from '../../shared/mobs';
+import { MOB_HORSE, MOB_WOLF, MOB_PIG, MOB_STRIDER } from '../../shared/mobs';
 import { EF_TAMED, EF_BABY } from '../../shared/protocol';
 import { CROSSBOW_CHARGE, TRIDENT_MIN_CHARGE, GOAT_HORN_COOLDOWN } from '../../shared/equipment';
 import { hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
@@ -68,6 +68,7 @@ export function equipmentUse(
   if (!held) return false;
   switch (heldId) {
     case FLINT_AND_STEEL:
+    case FIRE_CHARGE: // Fase 8.3: la carga de fuego también enciende (y se gasta)
       if (!hit) return false;
       ask(ia, g, heldId, (q) => g.net?.send({ t: 'ignite', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], q }));
       g.swing(true);
@@ -103,9 +104,10 @@ export function equipmentUse(
       if (!g.creative) g.inv.consume(g.selected, 1);
       g.swing(false);
       return true;
-    case CARROT_ON_A_STICK: {
+    case CARROT_ON_A_STICK:
+    case WARPED_FUNGUS_ON_A_STICK: { // Fase 8.3: la del strider
       const mount = g.riding.active ? g.ents.list.get(g.riding.entityId) : undefined;
-      if (mount?.type === MOB_PIG) {
+      if (mount?.type === (heldId === CARROT_ON_A_STICK ? MOB_PIG : MOB_STRIDER)) {
         ask(ia, g, heldId, (q) => g.net?.send({ t: 'boost', q }));
         g.swing(false);
       }
@@ -193,7 +195,7 @@ export const EQUIPMENT_WEARLESS = ['crossbow', 'lighter', 'carrot_stick', 'body_
 /** ¿Es un objeto del equipo que usa el clic derecho? (para que la mano secundaria no se adelante). */
 export function equipmentUses(id: number): boolean {
   return id === FLINT_AND_STEEL || id === CROSSBOW || id === CROSSBOW_CHARGED || id === TRIDENT || id === GOAT_HORN ||
-    id === FIREWORK_ROCKET || id === CARROT_ON_A_STICK || ITEMS[id]?.tool?.kind === 'body_armor';
+    id === FIREWORK_ROCKET || id === CARROT_ON_A_STICK || id === WARPED_FUNGUS_ON_A_STICK || id === FIRE_CHARGE || ITEMS[id]?.tool?.kind === 'body_armor';
 }
 
 // ------------------------------------------------------------------ Fase 7 (encantamientos)

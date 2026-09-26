@@ -24,6 +24,7 @@ import { isBrewingStand, brewingStandMask, brewingStandWith } from '../../blocks
 import { brewTick, brewBottleMask, BREW_INGREDIENT, BREW_FUEL } from '../../brewing';
 import { mechanismSlots } from '../../blocks'; // Fase 7 (mecanismos)
 import { resolveStructureMaps } from '../../structureMaps'; // Fase 7.5 (océano)
+import { isGuardedByPiglins } from '../../netherMobs'; // Fase 8.3 (criaturas del Nether)
 
 /** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
 interface View {
@@ -184,6 +185,8 @@ export class ContainerSystem {
     s.container = k;
     this.notifyViewers(k); // Fase 7 (redstone)
     this.sendView(k, s);
+    // Fase 8.3: abrir un cofre, un barril o una caja de shulker (o el cofre de una vagoneta) delante de los piglins los enfada.
+    if (vc || isGuardedByPiglins(this.ctx.world.getBlock(x, y, z))) this.ctx.entities.mobs.nether.piglins.angerNearby(s.id, s.p[0], s.p[1], s.p[2], true);
   }
 
   onOp(s: Session, msg: Extract<ClientMsg, { t: 'cclick' | 'cput' | 'ctake' }>): void {

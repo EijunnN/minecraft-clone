@@ -24,6 +24,8 @@ import { animateWarden, wardenPartScale, wardenRoot } from './wardenAnim'; // Fa
 import { critterAnimate, critterPart, critterRoot } from './critterPose'; // Fase 7.5 (fauna)
 import { animateAllay, allayRoot, ALLAY_HOLD } from './allayPose'; // Fase 7.5 (mansión)
 import { MOB_ALLAY } from '../../shared/allay';
+import { netherAnimate, netherPartOffset, netherRoot, netherVariant } from './netherMobPose'; // Fase 8.3 (criaturas del Nether)
+import { isNetherMob, MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_ZOMBIFIED_PIGLIN, MOB_WITHER_SKELETON } from '../../shared/netherMobs';
 
 export interface MobTexture {
   width: number;
@@ -59,6 +61,8 @@ export class MobRenderer {
   /** Fase 6: variant = pelaje (monturas) o profesión (aldeanos); una textura por especie y variante. */
   private texSource: (id: number, variant?: number) => MobTexture | null;
   private bones = new Float32Array(MAX_BONES * 16);
+  /** Fase 8.3: desplazamiento de la parte que se está colocando (varas del blaze, rodajas del cubo de magma…). */
+  private off = [0, 0, 0];
   /** Fase 6.5 (colecciones): fotogramas del aura del creeper cargado. */
   private auraSkins: WebGLTexture[] = [];
   private model = mat4.create();
@@ -87,9 +91,10 @@ export class MobRenderer {
     const names = def.parts.map((p) => p.name);
     const parents = def.parts.map((p) => (p.parent ? names.indexOf(p.parent) : -1));
     def.parts.forEach((part, bi) => {
-      const [x0, y0, z0] = part.from.map((v) => (v - inflate) * P);
+      const g = inflate + (part.grow ?? 0); // Fase 8.3: la silla del strider crece medio píxel sin cambiar su UV
+      const [x0, y0, z0] = part.from.map((v) => (v - g) * P);
       const [w, h, d] = part.size;
-      const x1 = x0 + (w + 2 * inflate) * P, y1 = y0 + (h + 2 * inflate) * P, z1 = z0 + (d + 2 * inflate) * P;
+      const x1 = x0 + (w + 2 * g) * P, y1 = y0 + (h + 2 * g) * P, z1 = z0 + (d + 2 * g) * P;
       const faces = boxFaces(part.uv[0], part.uv[1], w, h, d);
       const corners: number[][][] = [
         [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]],
@@ -165,6 +170,7 @@ export class MobRenderer {
   /** Rotaciones de animación por parte: [x, y, z] añadidas a la de reposo. */
   private animate(def: MobDef, e: ClientEntity, time: number, name: string, out: number[]): void {
     out[0] = out[1] = out[2] = 0;
+    if (netherAnimate(def, e, time, name, out)) return; // Fase 8.3 (criaturas del Nether)
     if (animateVehicle(def, e, time, name, out)) return; // Fase 7 (transporte): remos
     if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
     if (animateGuardian(def, e, time, name, out)) return; // Fase 7.5 (océano)
@@ -272,6 +278,10 @@ export class MobRenderer {
       const parent = mesh.parents[i];
       if (parent >= 0) mat4.copy(m, mats[parent]);
       mat4.translate(m, m, [part.pivot[0] * P, part.pivot[1] * P, part.pivot[2] * P]);
+      if (isNetherMob(def.id)) {
+        netherPartOffset(def, e, time, part.name, this.off); // Fase 8.3
+        mat4.translate(m, m, [this.off[0] * P, this.off[1] * P, this.off[2] * P]);
+      }
       this.animate(def, e, time, part.name, rot);
       mountPartAnim(def, e, time, part.name, rot); // Fase 6 (monturas)
       const rest = part.rot ?? [0, 0, 0];
@@ -317,7 +327,8 @@ export class MobRenderer {
     wardenRoot(def, e, m, time); // Fase 7.5 (abismo): el warden sale del suelo o se hunde
     allayRoot(def, e, m, time); // Fase 7.5 (mansión): el alay flota y baila
     const k = monsterRoot(def, e, m); // Fase 6 (monstruos): picado del phantom, slime que se estira
-    mat4.scale(m, m, [s * k[0], s * k[1], s * k[2]]);
+    const nk = netherRoot(def, e, m, time); // Fase 8.3: tiritona y cubo de magma que se aplasta
+    mat4.scale(m, m, [s * k[0] * nk[0], s * k[1] * nk[1], s * k[2] * nk[2]]);
     sitRoot(def, e.flags, m); // Fase 6 (gólems/domesticar)
     return m;
   }
@@ -340,10 +351,10 @@ export class MobRenderer {
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
       const hurt = !vehicle && (e.hurtT < 0.35 || e.deathT >= 0);
-      const light = lightAt(e);
+      const light: [number, number] = def.fullBright ? [1, 1] : lightAt(e); // Fase 8.3: el blaze y el cubo de magma brillan
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : e.variant || mobVariant(e)))
+      p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : e.variant || mobVariant(e) || netherVariant(e)))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
@@ -481,6 +492,26 @@ export class MobRenderer {
       gl.enable(gl.CULL_FACE);
       gl.bindVertexArray(null);
     }
+  }
+
+  /**
+   * Fase 8.3: matriz de la mano derecha (o izquierda) de un piglin, piglin bruto, piglin zombificado o esqueleto
+   * wither (ItemInHandLayer: en la punta del brazo, un píxel hacia fuera), para dibujar lo que lleva.
+   */
+  netherHandMatrix(e: ClientEntity, camX: number, camY: number, camZ: number, time: number, left: boolean): mat4 | null {
+    const def = MOBS[e.type];
+    if (!def || (def.id !== MOB_PIGLIN && def.id !== MOB_PIGLIN_BRUTE && def.id !== MOB_ZOMBIFIED_PIGLIN && def.id !== MOB_WITHER_SKELETON)) return null;
+    const mesh = this.mesh(def);
+    this.pose(def, mesh, e, time);
+    const i = mesh.names.indexOf(left ? 'armL' : 'armR');
+    if (i < 0) return null;
+    const root = mat4.clone(this.rootMatrix(def, e, camX, camY, camZ, time));
+    const bone = mat4.clone(this.bones.subarray(i * 16, i * 16 + 16) as unknown as mat4);
+    const out = mat4.create();
+    mat4.multiply(out, root, bone);
+    const thin = def.id === MOB_WITHER_SKELETON;
+    mat4.translate(out, out, [(left ? -1 : 1) * (thin ? 0 : 1) * P, -9 * P, -1 * P]);
+    return out;
   }
 
   /** Matriz (relativa a la cámara) de la mano derecha de un esqueleto, para dibujar su arco. */

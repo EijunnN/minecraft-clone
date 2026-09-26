@@ -39,6 +39,9 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
   // Los golpes a cuadros, marcos, soportes, barcas y vagonetas los atiende su sistema.
   attack: route<'attack'>(1, (h, s, m) => {
     const e = Number(m.e);
+    // Fase 8.3: un golpe a una bola de fuego del ghast la devuelve hacia donde mira el jugador.
+    const fb = h.ctx.entities.list.get(e);
+    if (fb && Math.hypot(fb.x - s.p[0], fb.y - s.p[1], fb.z - s.p[2]) < 7 && h.ctx.entities.mobs.nether.flyers.deflect(fb, s.id, s.r[0], s.r[1])) return;
     if (!h.sys.hangings.onAttack(s, e) && !h.sys.stands.onAttack(s, e) && !h.sys.transport.onAttack(s, e, Number(m.item))) h.sys.actions.onAttack(s, m);
   }),
   pickup: route<'pickup'>(0.5, (h, s, m) => h.sys.actions.onPickup(s, Number(m.e))),

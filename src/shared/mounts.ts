@@ -2,6 +2,7 @@
 // lleva silla, si se guía, velocidad y salto) y los pelajes de caballos y llamas.
 import { MOB_PIG, MOB_HORSE, MOB_DONKEY, MOB_MULE, MOB_LLAMA, MOB_CAMEL } from './mobs';
 import { MOB_TRADER_LLAMA, MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE } from './critters'; // Fase 7.5 (fauna)
+import { MOB_STRIDER } from './netherMobs'; // Fase 8.3 (criaturas del Nether)
 
 export interface MountDef {
   /** Altura del asiento (donde apoya la cadera el jinete) sobre los pies de la montura, en bloques. */
@@ -35,6 +36,9 @@ export const MOUNTS: Readonly<Record<number, MountDef>> = {
   [MOB_TRADER_LLAMA]: { seat: 1.22, tameable: true, saddle: false, steer: false, speed: [0, 0], jump: [0, 0], chargeJump: false, variants: 4 },
   [MOB_SKELETON_HORSE]: { seat: 1.38, tameable: true, saddle: true, steer: true, speed: [8.5, 8.5], jump: [9.5, 15], chargeJump: true, variants: 1, underwater: true },
   [MOB_ZOMBIE_HORSE]: { seat: 1.38, tameable: true, saddle: true, steer: true, speed: [8.5, 8.5], jump: [9.5, 15], chargeJump: true, variants: 1 },
+  // Fase 8.3: el strider, como el cerdo: con silla se monta y lo guía el servidor (con la caña con hongo distorsionado).
+  // Asiento: el pasajero a la altura del strider (1,7) menos el enganche del jugador (0,6), más la cadera.
+  [MOB_STRIDER]: { seat: 1.775, tameable: false, saddle: true, steer: false, speed: [0, 0], jump: [0, 0], chargeJump: false, variants: 1 },
 };
 
 export function mountDef(type: number): MountDef | undefined {

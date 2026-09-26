@@ -19,6 +19,8 @@
 //   otherside enérgico: bajo de corcheas, bombo a negras, arpegios rápidos y un solo.
 //   5         (Fase 7.5) de las profundidades: bordón y ecos que rebotan, un latido que se acelera, pasos y
 //             un piano frigio que al final se queda solo.
+//   tears     (Fase 8.3) triste y suspendido, como el llanto de un ghast: colchón de cuerdas en menor, un pulso
+//             grave y lento, gotas de campana (lágrimas), un piano que pregunta y una voz ondulante que responde.
 import { DISCS } from '../../shared/discs';
 
 export type Inst =
@@ -597,9 +599,40 @@ const five: Composer = (seconds, rng) => {
   return s.song();
 };
 
+/** tears: triste y suspendido, del Nether. */
+const tears: Composer = (seconds, rng) => {
+  const s = new Score(rng, 50, 'minor', 68, 4, seconds);
+  const total = s.bars;
+  const prog = [0, 5, 3, 4, 0, 5, 6, 4];
+  // Colchón de cuerdas y un pulso grave (dos negras por compás) desde el principio.
+  s.pads(0, total, prog, 'strings', -1, 0.07);
+  for (let b = 0; b < total; b++) {
+    const d = prog[b % prog.length];
+    s.note(b * 4, 1.6, 'bass', s.deg(d, -2), 0.32);
+    s.note(b * 4 + 2, 1.4, 'bass', s.deg(d, -2), 0.22);
+  }
+  // Lágrimas: gotas de campana que caen de vez en cuando y a veces rebotan.
+  for (let t = rng.range(4, 8); t < seconds - 6; t += rng.range(5, 10)) {
+    const f = mtof(s.deg(rng.pick([0, 2, 4, 6]), 2));
+    s.at(t, 0.8, 'drip', f, 0.14);
+    if (rng.chance(0.4)) s.at(t + 0.35, 0.8, 'bell', f / 2, 0.08);
+  }
+  // El piano pregunta (compases pares) y la voz ondulante responde (impares), a partir del cuarto compás.
+  const ask = s.motif(8, 5, 2);
+  const answer = s.motif(8, 4, 1);
+  for (let bar = 4; bar < total - 4; bar += 8) {
+    s.melody(bar, Math.min(4, total - 4 - bar), prog, ask, 8, 'piano', 0, 0.3, 4, 1.2);
+    s.melody(bar + 4, Math.min(4, total - 4 - bar - 4), prog, answer, 8, 'woozy', 0, 0.16, 6, 1.4);
+  }
+  // Final: sólo el colchón que se apaga en la tónica.
+  s.at(seconds - 5, 4.5, 'pad', mtof(s.deg(0, -1)), 0.2);
+  return s.song();
+};
+
 const COMPOSERS: Readonly<Record<string, Composer>> = {
   '13': thirteen, cat, blocks, chirp, far, mall, mellohi, stal, strad, ward, '11': eleven, wait, otherside,
   '5': five, // Fase 7.5 (abismo)
+  tears, // Fase 8.3 (criaturas del Nether)
 };
 
 const cache = new Map<number, Song>();

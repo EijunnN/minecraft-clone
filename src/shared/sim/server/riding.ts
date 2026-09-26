@@ -4,7 +4,7 @@
 // (el cerdo con silla, la llama) o, sin domar, tira al jinete hasta que se deja domar. Todos los
 // jugadores reciben 'ride' con cada cambio (y los que entran, los que ya hay).
 import { STATE_DEAD, type ClientMsg, type ServerMsg } from '../../protocol';
-import { MOB_PIG } from '../../mobs';
+import { MOB_PIG, MOB_STRIDER } from '../../mobs';
 import { MOUNTS } from '../../mounts';
 import { WORLD_LIMIT, VOID_Y } from '../../constants';
 import { boxCollides } from '../physics';
@@ -47,7 +47,7 @@ export class Riding {
     const e = ctx.entities.list.get(Number(msg.e));
     const md = e ? MOUNTS[e.type] : undefined;
     const ok = !!e && !!md && !!e.ai && !e.dead && !(s.s & STATE_DEAD) && !e.rider && !((e.growAge ?? 0) > 0) &&
-      (e.type !== MOB_PIG || !!e.saddled) &&
+      ((e.type !== MOB_PIG && e.type !== MOB_STRIDER) || !!e.saddled) && // Fase 8.3: el strider, también con silla
       (ctx.local || Math.hypot(e.x - s.p[0], e.y - s.p[1], e.z - s.p[2]) <= MOUNT_REACH);
     if (!ok || !e || !md) {
       // Rechazado: el cliente deja de esperar (si ya montaba algo, sigue montado).

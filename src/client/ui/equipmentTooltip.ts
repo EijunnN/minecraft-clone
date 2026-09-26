@@ -2,7 +2,7 @@
 // el vuelo de los fuegos artificiales, la tonada del cuerno y la armadura de los caballos.
 import {
   CROSSBOW, CROSSBOW_CHARGED, TRIDENT, FLINT_AND_STEEL, GOAT_HORN, FIREWORK_ROCKET, FIREWORK_STAR, CARROT_ON_A_STICK, TURTLE_HELMET,
-  WOLF_ARMOR, HORSE_ARMOR, type ItemStack,
+  WOLF_ARMOR, HORSE_ARMOR, WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, type ItemStack,
 } from '../../shared/items';
 import { DYE_COLORS, COLOR_NAMES, CONDUIT } from '../../shared/blocks';
 import { HORSE_ARMOR_POINTS, fireworkFlight, fireworkColors, colorList, hornTune } from '../../shared/equipment';
@@ -21,7 +21,7 @@ export function equipmentTooltip(s: ItemStack): string[] {
     case CROSSBOW_CHARGED:
       out.push(dim('Cargada: clic derecho para disparar'));
       // Fase 7 (remate): la flecha con efecto que lleva cargada.
-      if (s.data?.ap !== undefined) out.push(dim(`Proyectil: ${potionName('arrow', s.data.ap)}`));
+      if (s.data?.ap !== undefined) out.push(dim(`Proyectil: ${s.data.ap === -2 ? 'Flecha espectral' : potionName('arrow', s.data.ap)}`)); // Fase 8.3
       break;
     case TRIDENT:
       out.push(dim('Mantén el clic derecho y suelta para lanzarlo'));
@@ -34,6 +34,16 @@ export function equipmentTooltip(s: ItemStack): string[] {
       break;
     case CARROT_ON_A_STICK:
       out.push(dim('Guía al cerdo ensillado que montas (clic derecho: acelerón)'));
+      break;
+    // Fase 8.3 (criaturas del Nether).
+    case WARPED_FUNGUS_ON_A_STICK:
+      out.push(dim('Guía al strider ensillado que montas (clic derecho: acelerón)'));
+      break;
+    case FIRE_CHARGE:
+      out.push(dim('Clic derecho: enciende fuego (se gasta)'));
+      break;
+    case SPECTRAL_ARROW:
+      out.push(dim('Lo que alcanza brilla durante 10 s'));
       break;
     case TURTLE_HELMET:
       out.push(dim('Respiración acuática al sacar la cabeza del agua'));

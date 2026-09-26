@@ -765,3 +765,11 @@ import { NETHER_BRICK, NETHER_WART as NW } from './items';
   shape(['S', 'S'], { S: SLABS.nether_brick }, CHISELED_NETHER_BRICKS);
   shape(['BW', 'WB'], { B: NETHER_BRICK, W: NW }, RED_NETHER_BRICKS);
 }
+
+// ------------------------------------------------------------------ Fase 8.3 (criaturas del Nether)
+// Caña con hongo distorsionado, carga de fuego (pólvora, polvo de blaze y carbón: 3) y flecha espectral (2).
+import { WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, GUNPOWDER as GP, ARROW as AR } from './items';
+import { WARPED_FUNGUS } from './blocks';
+shape(['R ', ' F'], { R: FISHING_ROD, F: WARPED_FUNGUS }, WARPED_FUNGUS_ON_A_STICK);
+mix([GP, BLAZE_POWDER, FUEL_COAL], FIRE_CHARGE, 3);
+shape([' G ', 'GAG', ' G '], { G: GLOWSTONE_DUST, A: AR }, SPECTRAL_ARROW, 2);

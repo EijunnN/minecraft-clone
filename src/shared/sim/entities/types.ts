@@ -28,6 +28,9 @@ export interface PlayerView {
   hp?: number;
   /** Fase 7 (efectos): buceando (los delfines que no están enfadados le dan Gracia del delfín). */
   swimming?: boolean;
+  /** Fase 8.3 (criaturas del Nether): armadura puesta [cabeza, pecho, piernas, pies] (el oro calma a los piglins) y mano secundaria. */
+  armor?: readonly number[];
+  offhand?: number;
 }
 
 export interface EntityHost {
@@ -61,6 +64,8 @@ export interface EntityHost {
    * (diana, botones de madera).
    */
   projectileHit?(kind: 'arrow' | 'trident' | 'thrown', bx: number, by: number, bz: number, px: number, py: number, pz: number, fire?: boolean): void; // Fase 7 (mecanismos): fire, flecha en llamas
+  /** Fase 8.3 (criaturas del Nether): enciende fuego en la celda (bolas de fuego); true si prendió. */
+  igniteBlock?(x: number, y: number, z: number): boolean;
 }
 
 /** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */
@@ -247,6 +252,11 @@ export interface Entity extends Body {
    * de la mansión, alays): no desaparece (ni lejos de los jugadores ni al reciclar animales) y se guarda.
    */
   persist?: boolean;
+  // Fase 8.3 (criaturas del Nether)
+  /** Criatura sobre la que va montada (el piglin zombificado sobre su strider, el strider cría, el piglin cría). */
+  mountId?: number;
+  /** Inventario del piglin (8 huecos: pepitas y lo que admiró y no se puso). */
+  pinv?: ItemStack[];
   /** Bit de estado para los clientes: 1 herido reciente, 2 ardiendo, 4 muerto, 8 enfadado, 16 disparando/mecha. */
   flags: number;
 }

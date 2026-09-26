@@ -7,7 +7,7 @@
 import { N, clamp, pixelNoise, scale, type Generator, type RGB, type Tex } from './texCore';
 import { OAK_PLANKS } from './genWood';
 import { generateMobTexture, type MobTexture } from './mobTextures';
-import { MOBS, boxFaces, MOB_ZOMBIE, MOB_SKELETON, MOB_CREEPER } from '../../shared/mobs';
+import { MOBS, boxFaces, MOB_ZOMBIE, MOB_SKELETON, MOB_CREEPER, MOB_WITHER_SKELETON, MOB_PIGLIN } from '../../shared/mobs';
 import { SKULL_FACES, skullTexture, type SkullFace, type SkullKind } from '../../shared/blocks';
 
 /** Una cara de 8×8 (fila 0 arriba). */
@@ -81,12 +81,74 @@ function headLayer(face: () => Face8): Generator {
   };
 }
 
-const HEAD_SOURCES: Record<SkullKind, (face: SkullFace) => Face8> = {
+const HEAD_SOURCES: Record<Exclude<SkullKind, 'piglin'>, (face: SkullFace) => Face8> = {
   zombie: (f) => mobHeadFace(MOB_ZOMBIE, f),
   skeleton: (f) => mobHeadFace(MOB_SKELETON, f),
   creeper: (f) => mobHeadFace(MOB_CREEPER, f),
   player: playerHeadFace,
+  wither_skeleton: (f) => mobHeadFace(MOB_WITHER_SKELETON, f), // Fase 8.3 (criaturas del Nether)
 };
+
+// ------------------------------------------------------------------ Fase 8.3: cabeza de piglin
+
+/**
+ * Una cara de la cabeza del piglin a su tamaño (10 × 8 delante, detrás, arriba y abajo; 8 × 8 a los lados), sacada
+ * de la textura del piglin y centrada en la capa (como la toma la caja de 10 de ancho de la cabeza de piglin).
+ */
+function piglinHeadLayer(face: SkullFace): Generator {
+  return (t: Tex) => {
+    let tex = mobCache.get(MOB_PIGLIN);
+    if (!tex) mobCache.set(MOB_PIGLIN, (tex = generateMobTexture(MOB_PIGLIN)));
+    const head = MOBS[MOB_PIGLIN].parts.find((p) => p.name === 'head')!;
+    const [w, h, d] = head.size;
+    const [u, v, fw, fh] = boxFaces(head.uv[0], head.uv[1], w, h, d)[MOB_FACE[face]];
+    const px: RGB[] = [];
+    const avg = [0, 0, 0];
+    for (let j = 0; j < fh; j++) {
+      for (let i = 0; i < fw; i++) {
+        const si = face === 'top' ? fw - 1 - i : i, sj = face === 'top' ? fh - 1 - j : j;
+        const o = ((v + sj) * tex.width + u + si) * 4;
+        const c: RGB = [tex.rgba[o], tex.rgba[o + 1], tex.rgba[o + 2]];
+        px.push(c);
+        for (let k = 0; k < 3; k++) avg[k] += c[k] / (fw * fh);
+      }
+    }
+    const x0 = (16 - fw) >> 1, y0 = (16 - fh) >> 1;
+    const noise = pixelNoise(t.rng());
+    t.tiling = false;
+    for (let i = 0; i < N; i++) {
+      const x = i & 15, y = i >> 4;
+      const inside = x >= x0 && x < x0 + fw && y >= y0 && y < y0 + fh;
+      t.setI(i, inside ? px[(y - y0) * fw + (x - x0)] : scale([avg[0], avg[1], avg[2]], 0.92 + noise[i] * 0.16));
+      t.height[i] = 1;
+      t.smooth[i] = 45;
+    }
+  };
+}
+
+/** Hocico de la cabeza de piglin: rosado, con las fosas y, a los lados, los colmillos. */
+function piglinSnout(t: Tex): void {
+  const noise = pixelNoise(t.rng());
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    let c: RGB = scale([240, 172, 150], 0.94 + noise[i] * 0.1);
+    if (y === 10 && (x === 6 || x === 9)) c = [120, 64, 56];
+    if ((x === 5 || x === 10) && (y === 10 || y === 11)) c = [238, 228, 198];
+    t.setI(i, c);
+    t.height[i] = 1;
+    t.smooth[i] = 40;
+  }
+}
+
+/** Oreja de la cabeza de piglin: la piel, algo más clara. */
+function piglinEar(t: Tex): void {
+  const noise = pixelNoise(t.rng());
+  for (let i = 0; i < N; i++) {
+    t.setI(i, scale([226, 166, 130], 0.9 + noise[i] * 0.16));
+    t.height[i] = 1;
+    t.smooth[i] = 40;
+  }
+}
 
 // ------------------------------------------------------------------ tocadiscos
 
@@ -158,8 +220,11 @@ function glowItemFrame(t: Tex): void {
 }
 
 export const COLLECTION_GENERATORS: Record<string, Generator> = {
-  ...Object.fromEntries((Object.keys(HEAD_SOURCES) as SkullKind[]).flatMap((kind) =>
+  ...Object.fromEntries((Object.keys(HEAD_SOURCES) as Exclude<SkullKind, 'piglin'>[]).flatMap((kind) =>
     SKULL_FACES.map((f) => [skullTexture(kind, f), headLayer(() => HEAD_SOURCES[kind](f))]))),
+  ...Object.fromEntries(SKULL_FACES.map((f) => [skullTexture('piglin', f), piglinHeadLayer(f)])), // Fase 8.3
+  piglin_head_snout: piglinSnout,
+  piglin_head_ear: piglinEar,
   jukebox_side: jukeboxSide,
   jukebox_top: jukeboxTop,
   jukebox_bottom: jukeboxBottom,

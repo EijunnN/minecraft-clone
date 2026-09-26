@@ -170,7 +170,7 @@ export class Inventory {
   }
 
   /** Suma desgaste a una pila; true si llegó a su durabilidad (se rompe). */
-  private wearStack(s: ItemStack, amount: number): boolean {
+  wearStack(s: ItemStack, amount: number): boolean {
     const dur = durabilityOf(s.id);
     if (dur <= 0) return false;
     // Fase 7 (encantamientos): Irrompibilidad se libra de cada punto de desgaste con su probabilidad.

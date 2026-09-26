@@ -8,6 +8,8 @@ import type { MobDef } from '../../shared/mobs';
 import { boxFaces, MOB_HORSE, MOB_WOLF } from '../../shared/mobs';
 import { HORSE_ARMOR, WOLF_ARMOR } from '../../shared/items';
 import { helmetTexture } from './critterTextures'; // Fase 7.5 (fauna)
+import { netherGearTexture } from './netherMobTextures'; // Fase 8.3 (criaturas del Nether)
+import { isNetherMob } from '../../shared/netherMobs';
 
 type RGB = readonly [number, number, number];
 
@@ -40,6 +42,7 @@ function hash(x: number, y: number, s: number): number {
 
 /** Textura de la armadura `gear` para la criatura `def` (null si no le va). */
 export function gearTexture(def: MobDef, gear: number): GearTexture | null {
+  if (isNetherMob(def.id)) return netherGearTexture(def, gear); // Fase 8.3: la armadura de oro de los piglins
   const helmet = helmetTexture(def, gear); // Fase 7.5 (fauna): el casco del jinete esqueleto
   if (helmet) return helmet;
   let ramp: readonly RGB[] | null = null;

@@ -28,6 +28,14 @@ Objects). Pensado para PC (teclado y ratón).
   evapora, las camas explotan y la brújula y el reloj giran sin rumbo. Maderas carmesí y distorsionada,
   piedra negra, basalto y ladrillos del Nether con todas sus formas. Cada dimensión es un mundo aparte
   (su guardado, sus criaturas y sus sistemas); al morir allí se vuelve al mundo normal.
+- **Criaturas del Nether**: **piglins** que admiran el oro y lo truecan (con la tabla de Java), se
+  enfadan si no llevas nada de oro o si tocas sus cofres, cazan hoglins y bailan al ganar; **piglins
+  brutos**; **piglins zombificados** neutrales que se enfadan en grupo; **ghasts** cuyas bolas de fuego
+  se devuelven de un golpe; **blazes**; **cubos de magma** que se dividen; **hoglins** que embisten y
+  lanzan por los aires (y se crían con hongos carmesíes) y **zoglins**; **striders** que caminan sobre
+  la lava y se montan con silla y una caña con hongo distorsionado; y **esqueletos wither**. Los piglins
+  y hoglins que salen del Nether se zombifican. Con ellos llegan la carga de fuego, la flecha espectral,
+  la velocidad de alma, el disco «Tears», el cráneo de esqueleto wither y la cabeza de piglin.
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus
@@ -331,10 +339,10 @@ preocupaciones.
 
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
-- 62 tipos de criatura (no las ~86 de Minecraft): sin criaturas del Nether y el End, ni jefes, ni las
-  de 2024–2026 (sniffer, breeze, creaking…).
-- Sin Nether ni End: los ingredientes de pociones que vienen de allí (verruga, polvo de blaze…)
-  sólo se consiguen en creativo.
+- 72 tipos de criatura (no las ~86 de Minecraft): sin criaturas del End, ni jefes, ni las de
+  2024–2026 (sniffer, breeze, creaking…).
+- Sin End, y el Nether aún no tiene sus estructuras (fortalezas, bastiones): la verruga del Nether
+  sólo se consigue en creativo.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores

@@ -7,8 +7,8 @@
 //   acelera un rato (y la caña se gasta).
 // - Armaduras de caballo y de lobo (clic derecho sobre el animal): ver entities/mobGear.ts.
 import { STATE_DEAD, STATE_SNEAK, type ClientMsg } from '../../protocol';
-import { MOB_PIG } from '../../mobs';
-import { TRIDENT, FIREWORK_ROCKET, CARROT_ON_A_STICK, ITEMS } from '../../items';
+import { MOB_PIG, MOB_STRIDER, FUNGUS_STICK_WEAR } from '../../mobs';
+import { TRIDENT, FIREWORK_ROCKET, CARROT_ON_A_STICK, WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, ITEMS } from '../../items';
 import {
   TRIDENT_SPEED, GOAT_HORN_COOLDOWN, GOAT_HORN_RANGE, GOAT_HORN_TUNES, CARROT_BOOST_SECONDS, CARROT_BOOST_WEAR, PIG_STEER_SPEED,
   PIG_BOOST_SPEED,
@@ -45,9 +45,11 @@ export class Equipment {
       return;
     }
     const lit = ctx.asActor(s.id, () => this.fire.lightBlock(x, y, z) || this.fire.ignite(x + n[0], y + n[1], z + n[2]));
-    if (lit) ctx.fx('ignite', x + 0.5 + n[0] * 0.5, y + 0.5 + n[1] * 0.5, z + 0.5 + n[2] * 0.5);
+    // Fase 8.3: con la carga de fuego se gasta una (y suena como la bola de fuego); el mechero se desgasta.
+    const charge = s.h === FIRE_CHARGE;
+    if (lit) ctx.fx(charge ? 'fire_charge_use' : 'ignite', x + 0.5 + n[0] * 0.5, y + 0.5 + n[1] * 0.5, z + 0.5 + n[2] * 0.5);
     else ctx.reject(s, x + n[0], y + n[1], z + n[2]);
-    ctx.send(s, { t: 'ires', q, ok: lit, ...(lit && s.mode !== 'c' ? { wear: 1 } : {}) });
+    ctx.send(s, { t: 'ires', q, ok: lit, ...(lit && s.mode !== 'c' ? (charge ? { take: 1 } : { wear: 1 }) : {}) });
   }
 
   /** Lanzar un tridente o soltar un cohete; false si el objeto no es de éstos. */
@@ -109,6 +111,14 @@ export class Equipment {
   onBoost(s: Session, msg: Extract<ClientMsg, { t: 'boost' }>): void {
     const ctx = this.ctx;
     const q = Number(msg.q) | 0;
+    // Fase 8.3: el strider con la caña con hongo distorsionado (ItemBasedSteering: 140–980 ticks, un uso).
+    const strider = this.riddenStrider(s);
+    if (strider) {
+      const ok = s.h === WARPED_FUNGUS_ON_A_STICK && ctx.entities.mobs.nether.beasts.boost(strider);
+      if (ok) ctx.fx('strider_boost', strider.x, strider.y + 1, strider.z);
+      ctx.send(s, { t: 'ires', q, ok, ...(ok && s.mode !== 'c' ? { wear: FUNGUS_STICK_WEAR } : {}) });
+      return;
+    }
     const pig = this.ridden(s);
     if (!pig || (this.boosts.get(pig.id) ?? 0) > 0) {
       ctx.send(s, { t: 'ires', q, ok: false });
@@ -117,6 +127,13 @@ export class Equipment {
     this.boosts.set(pig.id, CARROT_BOOST_SECONDS);
     ctx.fx('pig_boost', pig.x, pig.y + 0.6, pig.z);
     ctx.send(s, { t: 'ires', q, ok: true, ...(s.mode !== 'c' ? { wear: CARROT_BOOST_WEAR } : {}) });
+  }
+
+  /** Fase 8.3: strider ensillado que monta el jugador, o null. */
+  private riddenStrider(s: Session): Entity | null {
+    const id = this.riding.mountOf(s.id);
+    const e = id !== undefined ? this.ctx.entities.list.get(id) : undefined;
+    return e && e.type === MOB_STRIDER && e.saddled && !e.dead && e.rider === s.id ? e : null;
   }
 
   /** Cerdo ensillado que monta el jugador, o null. */
@@ -138,6 +155,17 @@ export class Equipment {
     const ctx = this.ctx;
     const now = new Set<number>();
     for (const s of ctx.sessions()) {
+      // Fase 8.3: el strider va hacia donde mira quien lo monta con la caña con hongo distorsionado.
+      if (s.joined && s.h === WARPED_FUNGUS_ON_A_STICK) {
+        const st = this.riddenStrider(s);
+        if (st) {
+          now.add(st.id);
+          const yaw = s.r[0];
+          st.leashTo = [st.x - Math.sin(yaw) * 4, st.y + 0.5, st.z - Math.cos(yaw) * 4];
+          st.steerSpeed = ctx.entities.mobs.nether.beasts.boostFactor(st);
+        }
+        continue;
+      }
       if (!s.joined || s.h !== CARROT_ON_A_STICK) continue;
       const pig = this.ridden(s);
       if (!pig) continue;

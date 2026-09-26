@@ -16,7 +16,7 @@ import { REACH_CREATIVE, REACH_SURVIVAL } from './gameTypes';
 import { PF, SPRITE } from '../render/particles/ParticleSystem';
 import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, isWaterlogged } from '../../shared/blocks';
 import {
-  ARROW, TIPPED_ARROW, GLASS_BOTTLE, POTION, SPLASH_POTION, LINGERING_POTION, type ItemStack,
+  ARROW, TIPPED_ARROW, GLASS_BOTTLE, POTION, SPLASH_POTION, LINGERING_POTION, SPECTRAL_ARROW, type ItemStack,
 } from '../../shared/items';
 import { EFFECTS, jumpBoostVelocity, unpackColor, packColor } from '../../shared/effects';
 import { ENT_ARROW, MOBS } from '../../shared/mobs';
@@ -24,6 +24,7 @@ import { EF_PICKABLE } from '../../shared/protocol';
 import {
   ENT_EFFECT_CLOUD, EF_INVISIBLE, STATE_INVISIBLE, potionEffects, potionColor, potionStack, potionType, PT_WATER, potionKind,
 } from '../../shared/potions';
+import { SPECTRAL_ARROW_TYPE } from '../../shared/potions'; // Fase 8.3 (criaturas del Nether)
 
 type RGB = readonly [number, number, number];
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -266,7 +267,7 @@ export function drinkPotion(g: Game, ia: Interaction, slot: number, item: number
 
 /** ¿Tiene alguna flecha (normal o con efecto)? */
 export function hasArrows(g: Game): boolean {
-  return g.inv.count(ARROW) + g.inv.count(TIPPED_ARROW) > 0;
+  return g.inv.count(ARROW) + g.inv.count(TIPPED_ARROW) + g.inv.count(SPECTRAL_ARROW) > 0; // Fase 8.3: y espectrales
 }
 
 /**
@@ -278,8 +279,8 @@ export function takeArrow(g: Game, infinity = false): number | null {
   const order = [OFFHAND, g.selected, ...Array.from({ length: INV_SIZE }, (_, i) => i)];
   for (const i of order) {
     const s = g.inv.get(i);
-    if (!s || (s.id !== ARROW && s.id !== TIPPED_ARROW)) continue;
-    const type = s.id === TIPPED_ARROW ? potionType(s) : -1;
+    if (!s || (s.id !== ARROW && s.id !== TIPPED_ARROW && s.id !== SPECTRAL_ARROW)) continue;
+    const type = s.id === TIPPED_ARROW ? potionType(s) : s.id === SPECTRAL_ARROW ? SPECTRAL_ARROW_TYPE : -1; // Fase 8.3
     if (!g.creative && !(infinity && s.id === ARROW)) g.inv.consume(i, 1);
     return type;
   }

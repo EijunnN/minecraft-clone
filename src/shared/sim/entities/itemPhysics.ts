@@ -8,7 +8,8 @@ import { FLAME_SECONDS } from '../../enchantEffects'; // Fase 7 (encantamientos)
 import { moveBody, boxCollides } from '../physics';
 import { GRAVITY, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
-import { potionStack } from '../../potions'; // Fase 7 (pociones): flechas con efecto
+import { potionStack, SPECTRAL_ARROW_TYPE } from '../../potions'; // Fase 7 (pociones): flechas con efecto; 8.3: la espectral
+import { SPECTRAL_ARROW } from '../../items';
 
 export class ItemPhysics {
   private itemGrid = new Map<string, Entity[]>();
@@ -99,6 +100,7 @@ export class ItemPhysics {
       if (!e.stuck || typeof e.shooter !== 'string' || e.noPickup) return null; // Fase 7: Infinidad
       if (Math.hypot(e.x - p.x, e.y - (p.y + 0.9), e.z - p.z) > 3.5) return null;
       this.m.remove(e.id, p.id);
+      if (e.arrowPotion === SPECTRAL_ARROW_TYPE) return { id: SPECTRAL_ARROW, count: 1 }; // Fase 8.3
       return e.arrowPotion !== undefined ? potionStack('arrow', e.arrowPotion) : { id: ARROW, count: 1 }; // Fase 7 (pociones)
     }
     if (e.type !== ENT_ITEM || !e.stack) return null;

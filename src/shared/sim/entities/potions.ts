@@ -11,6 +11,8 @@ import { EFFECTS, EFFECT_INSTANT_DAMAGE, instantHarm, packColor } from '../../ef
 import {
   potionKind, potionType, potionEffects, potionColor, isPotionType, isInstantPotion, PT_WATER, ENT_EFFECT_CLOUD, type PotionKind,
 } from '../../potions';
+import { SPECTRAL_ARROW_TYPE, SPECTRAL_GLOW_SECONDS } from '../../potions'; // Fase 8.3: la flecha espectral
+import { EFFECT_GLOWING } from '../../effects';
 import type { Entity, PlayerView } from './types';
 import type { Entities } from './Entities';
 
@@ -159,6 +161,12 @@ export class PotionLife {
   /** Una flecha con efecto acierta a una criatura o a un jugador. */
   tippedHit(arrow: Entity, mob: Entity | null, player: PlayerView | null): void {
     const type = arrow.arrowPotion;
+    // Fase 8.3: la flecha espectral da Brillo 10 s a lo que alcanza.
+    if (type === SPECTRAL_ARROW_TYPE) {
+      if (mob) this.m.effects.add(mob, EFFECT_GLOWING, SPECTRAL_GLOW_SECONDS, 0, 1, arrow.shooter ?? null);
+      if (player) this.m.host.effectPlayer?.(player.id, EFFECT_GLOWING, SPECTRAL_GLOW_SECONDS, 0);
+      return;
+    }
     if (type === undefined || !isPotionType(type)) return;
     if (mob) this.onMob(mob, type, 'arrow', 1, 1, arrow.shooter ?? null);
     if (player) this.onPlayer(player, type, 'arrow', 1, 1, arrow.shooter ?? null);

@@ -55,10 +55,17 @@ export class LifeCycle {
   onHurt(amount: number, k: [number, number, number], cause: string): void {
     this.leaveBed(true);
     if (this.g.survival.dead || (this.g.creative && cause !== 'kill')) return;
+    // Fase 8.3: sólo un empujón, sin daño (el hoglin y el zoglin lanzan por los aires lo que embisten).
+    if (cause === 'push') {
+      if (Array.isArray(k) && k.every(Number.isFinite)) this.g.player.impulse(k[0], k[1], k[2]);
+      return;
+    }
     // Escudo levantado: bloquea golpes, flechas y explosiones que llegan de frente.
     // Fase 7.5 (abismo): el estampido sónico del warden atraviesa el escudo.
     if (cause !== 'kill' && cause !== 'sonic_boom' && Array.isArray(k) && k.every(Number.isFinite) && this.g.interaction.blockHit(amount, k)) return;
     const dmg = this.g.survival.damage(amount, cause, cause === 'kill');
+    // Fase 8.3: la bola de fuego del blaze prende 5 s a quien alcanza.
+    if (cause === 'small_fireball' && !this.g.creative) this.g.survival.fire = Math.max(this.g.survival.fire, 5);
     if (dmg <= 0) return;
     faunaOnHurt(this.g, cause); // Fase 6 (fauna): veneno de las abejas
     if (Array.isArray(k) && k.every(Number.isFinite)) {

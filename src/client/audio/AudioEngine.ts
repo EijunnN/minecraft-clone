@@ -32,6 +32,7 @@ import {
   buildPlayerHurt,
 } from './combat';
 import { buildMobSound } from './creatures';
+import { buildNetherVoice, buildNetherSfx } from './netherMobSounds'; // Fase 8.3 (criaturas del Nether)
 import { buildLevelUp, buildXpOrb } from './experienceSounds';
 import { FluidAmbience } from './fluidAmbience';
 import { Heartbeat } from './heartbeat';
@@ -263,13 +264,22 @@ export class AudioEngine {
     pos: Vec3,
     build: (ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number) => AudioScheduledSourceNode[],
     wetLevel = 0.35,
+    volume = 1,
   ): void {
     const ctx = this.ctx;
     const noise = this.noise;
     if (!ctx || !noise) return;
-    if (!isWithinRange(this.listenerPos, pos)) return;
+    // Fase 8.3: los sonidos fuertes (volumen de Java > 1, como el ghast) se oyen más lejos (16 bloques por unidad).
+    if (volume > 1) {
+      const d = Math.hypot(this.listenerPos[0] - pos[0], this.listenerPos[1] - pos[1], this.listenerPos[2] - pos[2]);
+      if (d > Math.min(96, 16 * volume)) return;
+    } else if (!isWithinRange(this.listenerPos, pos)) return;
     const now = ctx.currentTime;
     const panner = createPanner(ctx, pos);
+    if (volume > 1) {
+      panner.refDistance *= volume;
+      panner.maxDistance = Math.min(96, 16 * volume);
+    }
     const dry = ctx.createGain();
     dry.gain.value = 1;
     const wet = ctx.createGain();
@@ -340,6 +350,19 @@ export class AudioEngine {
   }
 
   // --- Criaturas (modo supervivencia) ---
+
+  /**
+   * Fase 8.3 (criaturas del Nether): voz con variante (enfadado, celoso, huyendo…) que decide el servidor. `volume`:
+   * el volumen de Java (el ghast, 5: se oye a 80 bloques).
+   */
+  playNetherVoice(kind: MobSoundKind, variant: number, pos: Vec3, volume = 1): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildNetherVoice(ctx, noise, kind, variant, dest, now), 0.35, volume));
+  }
+
+  /** Fase 8.3: sonidos sueltos del Nether (ballesta del piglin, bolas de fuego, conversión, acelerón del strider). */
+  playNetherSfx(what: string, a: number, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildNetherSfx(ctx, noise, what, a, dest, now)));
+  }
 
   /** Sonido de una criatura en `pos` para el `kind`/`event` dados. */
   playMob(kind: MobSoundKind, event: MobSoundEvent, pos: Vec3): void {

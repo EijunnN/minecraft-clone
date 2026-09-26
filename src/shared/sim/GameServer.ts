@@ -278,6 +278,7 @@ export class GameServer {
         for (const s of this.sessions.values()) if (s.id === id && s.joined) this.send(s, { t: 'xp', n });
       },
       // Fase 7 (redstone): proyectiles que se clavan (diana, botones de madera).
+      igniteBlock: (x, y, z) => this.sys?.fire.ignite(x, y, z) ?? false, // Fase 8.3: bolas de fuego
       projectileHit: (kind, bx, by, bz, px, py, pz, fire) => {
         this.sys?.redstone.projectileHit(kind, bx, by, bz, px, py, pz);
         this.sys?.mechanisms.projectileHit(kind, bx, by, bz, !!fire); // Fase 7 (mecanismos): flechas en llamas y dinamita
@@ -302,6 +303,7 @@ export class GameServer {
         id: s.id, name: s.name, x: s.p[0], y: s.p[1], z: s.p[2], alive: !(s.s & STATE_DEAD), creative: s.mode === 'c',
         lookingAt: s.lookUntil > now ? s.lookAt : -1, held: s.h,
         head: s.a[0], // Fase 6.5 (colecciones)
+        armor: s.a, offhand: s.o, // Fase 8.3 (criaturas del Nether): el oro que calma a los piglins y lo que atrae al strider
         ...potionView(s), // Fase 7 (pociones): invisible, armadura, efectos y vida
       });
     }

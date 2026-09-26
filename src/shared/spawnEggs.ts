@@ -74,7 +74,8 @@ export const SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
 ];
 
 /** Criaturas sin huevo propio: los slimes pequeños salen al dividirse y los colmillos, del evocador. */
-export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime_small', 'evoker_fangs']);
+// Fase 8.3: los cubos de magma mediano y pequeño tampoco (el huevo del cubo de magma elige el tamaño al azar).
+export const NO_SPAWN_EGG: ReadonlySet<string> = new Set(['slime_medium', 'slime_small', 'evoker_fangs', 'magma_cube_medium', 'magma_cube_small']);
 
 /**
  * Fase 7.5: huevos de las criaturas nuevas. Van en otra lista porque sus objetos se registran al final de
@@ -92,4 +93,18 @@ export const LATE_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('skeleton_horse', 'caballo esqueleto', [104, 104, 79], [229, 229, 216]),
   egg('zombie_horse', 'caballo zombi', [49, 82, 52], [151, 194, 132]),
   egg('allay', 'alay', [0, 218, 255], [0, 173, 255]), // Fase 7.5 (mansión)
+];
+
+/** Fase 8.3 (criaturas del Nether): huevos de las criaturas del Nether (se registran al final de items.ts). */
+export const NETHER_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
+  egg('piglin', 'piglin', [153, 93, 59], [249, 243, 164]),
+  egg('piglin_brute', 'piglin bruto', [89, 40, 5], [249, 243, 164]),
+  egg('zombified_piglin', 'piglin zombificado', [234, 147, 147], [76, 112, 48]),
+  egg('ghast', 'ghast', [249, 249, 249], [188, 188, 188]),
+  egg('blaze', 'blaze', [246, 178, 0], [255, 249, 127]),
+  egg('magma_cube', 'cubo de magma', [52, 0, 0], [252, 252, 0]),
+  egg('hoglin', 'hoglin', [198, 131, 101], [95, 102, 102]),
+  egg('zoglin', 'zoglin', [198, 131, 101], [230, 230, 230]),
+  egg('strider', 'strider', [156, 61, 62], [77, 73, 77]),
+  egg('wither_skeleton', 'esqueleto wither', [20, 20, 20], [71, 77, 77]),
 ];

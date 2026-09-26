@@ -1,33 +1,53 @@
 // Búsqueda de caminos A* para criaturas terrestres sobre la rejilla de bloques.
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_WALKTHROUGH, BLOCK_TALL } from '../blocks';
 import { DIRT_PATH } from '../blocks'; // Fase 6.5 (materiales)
+import { isFire, SOUL_FIRE, familyBase } from '../blocks'; // Fase 8.3 (criaturas del Nether)
 import type { BlockGetter } from './physics';
 import { posKey } from './posKey';
 
 export type PathNode = [number, number, number];
 
-function passable(w: BlockGetter, x: number, y: number, z: number): boolean {
+/**
+ * Fase 8.3 (criaturas del Nether): opciones de la búsqueda, como las penalizaciones de camino de Java.
+ * - lavaFloor: la superficie de la lava también sirve de suelo (el strider camina por encima).
+ * - avoidFire: no cruza el fuego y evita pasar a su lado (los piglins: FIRE −1, FIRE_IN_NEIGHBOR 16).
+ * - cost: coste extra de pisar la celda (x, y, z) (Infinity: no se pisa).
+ */
+export interface PathOpts {
+  lavaFloor?: boolean;
+  avoidFire?: boolean;
+  cost?: (x: number, y: number, z: number) => number;
+}
+
+/** Fuego (normal o de alma) en esa celda. */
+function fireAt(w: BlockGetter, x: number, y: number, z: number): boolean {
+  const b = w.getBlock(x, y, z);
+  return b > 0 && (isFire(b) || familyBase(b) === SOUL_FIRE);
+}
+
+function passable(w: BlockGetter, x: number, y: number, z: number, opts?: PathOpts): boolean {
   const b = w.getBlock(x, y, z);
   if (b < 0) return false;
   if (BLOCK_FLUID[b] === 2) return false; // evitar la lava
+  if (opts?.avoidFire && fireAt(w, x, y, z)) return false;
   if (BLOCK_SOLID[b] === 1 && BLOCK_WALKTHROUGH[b] === 0) return false;
   // Las vallas miden 1,5: la celda de encima tampoco se puede cruzar.
   const below = w.getBlock(x, y - 1, z);
   return below < 0 || BLOCK_TALL[below] === 0;
 }
 
-function floorAt(w: BlockGetter, x: number, y: number, z: number): boolean {
+function floorAt(w: BlockGetter, x: number, y: number, z: number, opts?: PathOpts): boolean {
   const b = w.getBlock(x, y - 1, z);
   if (b < 0) return false;
   if (BLOCK_SOLID[b] === 1) return BLOCK_WALKTHROUGH[b] === 0 && BLOCK_TALL[b] === 0;
-  // Nadando: la superficie del agua también sirve.
-  return BLOCK_FLUID[b] === 1;
+  // Nadando: la superficie del agua también sirve (Fase 8.3: y la de la lava para el strider).
+  return BLOCK_FLUID[b] === 1 || (!!opts?.lavaFloor && BLOCK_FLUID[b] === 2);
 }
 
 /** ¿Puede estar de pie una criatura de `h` bloques de alto con los pies en (x, y, z)? */
-export function standable(w: BlockGetter, x: number, y: number, z: number, h: number): boolean {
-  for (let i = 0; i < h; i++) if (!passable(w, x, y + i, z)) return false;
-  return floorAt(w, x, y, z);
+export function standable(w: BlockGetter, x: number, y: number, z: number, h: number, opts?: PathOpts): boolean {
+  for (let i = 0; i < h; i++) if (!passable(w, x, y + i, z, opts)) return false;
+  return floorAt(w, x, y, z, opts);
 }
 
 class Heap {
@@ -83,7 +103,7 @@ const DIRS: [number, number, number][] = [
  * dentro del presupuesto devuelve el camino al nodo explorado más cercano.
  */
 export function findPath(
-  w: BlockGetter, sx: number, sy: number, sz: number, tx: number, ty: number, tz: number, h: number, budget = 400,
+  w: BlockGetter, sx: number, sy: number, sz: number, tx: number, ty: number, tz: number, h: number, budget = 400, opts?: PathOpts,
 ): PathNode[] | null {
   const start = posKey(sx, sy, sz);
   const goal = posKey(tx, ty, tz);
@@ -110,17 +130,17 @@ export function findPath(
     for (const [dx, dz, cost] of DIRS) {
       const nx = cx + dx, nz = cz + dz;
       // Diagonales sólo si ambos lados están libres (no cortar esquinas).
-      if (dx !== 0 && dz !== 0 && (!passable(w, cx + dx, cy, cz) || !passable(w, cx, cy, cz + dz) || !passable(w, cx + dx, cy + h - 1, cz) || !passable(w, cx, cy + h - 1, cz + dz))) continue;
+      if (dx !== 0 && dz !== 0 && (!passable(w, cx + dx, cy, cz, opts) || !passable(w, cx, cy, cz + dz, opts) || !passable(w, cx + dx, cy + h - 1, cz, opts) || !passable(w, cx, cy + h - 1, cz + dz, opts))) continue;
       let ny = -999;
       let extra = 0;
-      if (standable(w, nx, cy, nz, h)) ny = cy;
-      else if (standable(w, nx, cy + 1, nz, h) && passable(w, cx, cy + h, cz)) {
+      if (standable(w, nx, cy, nz, h, opts)) ny = cy;
+      else if (standable(w, nx, cy + 1, nz, h, opts) && passable(w, cx, cy + h, cz, opts)) {
         ny = cy + 1;
         extra = 0.6;
       } else {
         for (let d = 1; d <= 3; d++) {
-          if (!passable(w, nx, cy - d + h - 1, nz)) break;
-          if (standable(w, nx, cy - d, nz, h)) {
+          if (!passable(w, nx, cy - d + h - 1, nz, opts)) break;
+          if (standable(w, nx, cy - d, nz, h, opts)) {
             ny = cy - d;
             extra = d * 0.3;
             break;
@@ -129,6 +149,14 @@ export function findPath(
       }
       if (ny === -999) continue;
       const nb = w.getBlock(nx, ny, nz);
+      if (opts) {
+        if (opts.avoidFire && (fireAt(w, nx + 1, ny, nz) || fireAt(w, nx - 1, ny, nz) || fireAt(w, nx, ny, nz + 1) || fireAt(w, nx, ny, nz - 1))) extra += 16;
+        if (opts.cost) {
+          const c = opts.cost(nx, ny, nz);
+          if (c === Infinity) continue;
+          extra += c;
+        }
+      }
       if (nb > 0 && BLOCK_FLUID[nb] === 1) extra += 1.5;
       // Fase 6.5 (materiales): las criaturas prefieren los caminos de tierra (pisarlos cuesta algo menos).
       else if (w.getBlock(nx, ny - 1, nz) === DIRT_PATH) extra -= cost * 0.3;

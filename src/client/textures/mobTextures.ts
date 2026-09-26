@@ -27,6 +27,7 @@ import { OCEAN_PAINTERS } from './oceanMobTextures'; // Fase 7.5 (océano)
 import { WARDEN_PAINTERS } from './wardenTextures'; // Fase 7.5 (abismo)
 import { critterTexture } from './critterTextures'; // Fase 7.5 (fauna)
 import { ALLAY_PAINTERS } from './allayTextures'; // Fase 7.5 (mansión)
+import { netherTexture } from './netherMobTextures'; // Fase 8.3 (criaturas del Nether)
 
 export interface MobTexture {
   width: number;
@@ -1525,6 +1526,8 @@ export function generateMobTexture(mobId: number, variant = 0): MobTexture {
   // Fase 7.5 (fauna): murciélago, ocelote, champiñaca (roja o marrón), llama de comerciante y caballos no muertos.
   const critter = critterTexture(mobId, variant);
   if (critter) return critter;
+  const nether = netherTexture(mobId, variant); // Fase 8.3 (criaturas del Nether)
+  if (nether) return nether;
   const mob = MOBS[mobId];
   // Fase 6 (aldeanos): el aldeano y el comerciante se pintan según su profesión (villagerTextures.ts).
   if (mob && isVillagerType(mobId)) return paintMob(mobId, villagerPainter(mobId, variant));

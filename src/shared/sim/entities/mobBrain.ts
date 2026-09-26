@@ -21,6 +21,7 @@ import { GuardianAI } from './guardians'; // Fase 7.5 (océano)
 // Fase 7.5 (fauna): murciélagos, ocelotes, llamas de comerciante, caballos no muertos y jinetes esqueleto.
 import { critterTick, critterFlags, isFeline, isLlamaLike } from './critters';
 import { wearsHelmet, sinksInWater } from './skeletonTrap';
+import { NetherAI } from './netherMobs'; // Fase 8.3 (criaturas del Nether)
 
 export class MobBrain {
   /** Fase 6 (monstruos). */
@@ -31,12 +32,15 @@ export class MobBrain {
   readonly warden: WardenAI;
   /** Fase 7.5 (océano): guardianes y guardianes ancianos. */
   readonly guardians: GuardianAI;
+  /** Fase 8.3 (criaturas del Nether): piglins, ghast, blaze, cubos de magma, hoglin, zoglin, strider y esqueleto wither. */
+  readonly nether: NetherAI;
 
   constructor(private m: Entities) {
     this.monsters = new MonsterAI(m, this);
     this.illagers = new IllagerAI(m, this);
     this.warden = new WardenAI(m, this);
     this.guardians = new GuardianAI(m, this);
+    this.nether = new NetherAI(m, this);
   }
 
   nearestPlayer(e: Entity, players: PlayerView[], max: number, needLos: boolean): PlayerView | null {
@@ -74,7 +78,11 @@ export class MobBrain {
     if (this.warden.tick(e, dt, players)) return; // Fase 7.5 (abismo): el warden lo decide todo solo
     // Ambiente: sol, lava, fuego, caída, vacío.
     if (def.burnsInSun && !wearsHelmet(e) && this.isSunlit(e)) e.fire = Math.max(e.fire, 2); // Fase 7.5: el casco protege
-    if (e.inLava) {
+    if (def.fireImmune) {
+      // Fase 8.3: a las criaturas del Nether no les hacen nada el fuego ni la lava (y no se las ve arder).
+      e.fire = 0;
+      e.burnAcc = 0;
+    } else if (e.inLava) {
       e.fire = 7;
       e.burnAcc += dt * 8;
     }
@@ -116,6 +124,7 @@ export class MobBrain {
     // Fase 6 (aldeanos): oficio, reposición, puertas y huida de los zombis.
     if (isVillagerType(e.type)) this.m.villagers.tick(e, dt);
     if (e.dead || !this.m.list.has(e.id)) return;
+    if (this.nether.tick(e, dt, players)) return; // Fase 8.3 (criaturas del Nether): lo deciden todo solas
     // Fase 7.5 (mansión): el alay vuela, recoge objetos y baila.
     if (this.m.allays.tick(e, dt, players)) {
       if (!e.dead && this.m.list.has(e.id)) {

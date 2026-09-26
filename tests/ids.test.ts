@@ -290,3 +290,26 @@ test('los ids de la fase 8.2 no cambian', () => {
   assert.deepEqual([BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS], [53, 54, 55, 56]);
   assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 5541, 5950), 3919161501, 'huella de los bloques');
 });
+
+// Fase 8.3 (criaturas del Nether): cráneo de esqueleto wither y cabeza de piglin; caña con hongo distorsionado,
+// carga de fuego, flecha espectral, disco «Tears» y los huevos; velocidad de alma y las criaturas del Nether.
+import { SKULLS } from '../src/shared/blocks';
+import { WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, MUSIC_DISC_TEARS } from '../src/shared/items';
+import { SOUL_SPEED } from '../src/shared/enchantments';
+import {
+  MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_ZOMBIFIED_PIGLIN, MOB_GHAST, MOB_BLAZE, MOB_MAGMA_CUBE, MOB_MAGMA_CUBE_MEDIUM,
+  MOB_MAGMA_CUBE_SMALL, MOB_HOGLIN, MOB_ZOGLIN, MOB_STRIDER, MOB_WITHER_SKELETON, ENT_LARGE_FIREBALL, ENT_SMALL_FIREBALL,
+} from '../src/shared/netherMobs';
+test('los ids de la fase 8.3 no cambian', () => {
+  assert.deepEqual([SKULLS.wither_skeleton, SKULLS.piglin], [5950, 5970]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 5950, 5990), 154072549, 'huella de los bloques');
+  assert.deepEqual([WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, MUSIC_DISC_TEARS, SPAWN_EGGS.piglin, SPAWN_EGGS.wither_skeleton], [614, 615, 616, 617, 618, 627]);
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 613, 628), 3729579747, 'huella de los objetos');
+  assert.equal(SOUL_SPEED, 39);
+  assert.equal(keyPrint(ENCHANTS.map((e) => e?.key), 0, 40), 3433229987, 'huella de los encantamientos');
+  assert.deepEqual(
+    [MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_ZOMBIFIED_PIGLIN, MOB_GHAST, MOB_BLAZE, MOB_MAGMA_CUBE, MOB_MAGMA_CUBE_MEDIUM, MOB_MAGMA_CUBE_SMALL, MOB_HOGLIN, MOB_ZOGLIN, MOB_STRIDER, MOB_WITHER_SKELETON],
+    [84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+  );
+  assert.deepEqual([ENT_LARGE_FIREBALL, ENT_SMALL_FIREBALL], [121, 122]);
+});

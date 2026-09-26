@@ -104,6 +104,7 @@ export class Entities {
 
   constructor(host: EntityHost) {
     this.host = host;
+    this.mobs.nether.flyers.register(); // Fase 8.3: el tick de las bolas de fuego
   }
 
   get w(): WorldSim {
@@ -273,6 +274,8 @@ export class Entities {
     if (this.allays.immune(e, attacker)) return false; // Fase 7.5 (mansión): su jugador no hiere al alay
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
     amount = horsemanAbsorb(e, amount); // Fase 7.5 (fauna): el casco del jinete esqueleto
+    amount = this.mobs.nether.absorb(e, amount); // Fase 8.3: la armadura del cubo de magma y el oro de los piglins
+    knock *= 1 - this.mobs.nether.knockbackResistance(e); // Fase 8.3: el hoglin y el zoglin apenas retroceden
     amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
     e.health -= amount;
     e.invuln = 0.5;
@@ -304,6 +307,7 @@ export class Entities {
     this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
     this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
     this.mobs.warden.onDamaged(e, attacker); // Fase 7.5 (abismo): el warden se enfada (y no retrocede)
+    this.mobs.nether.onDamaged(e, attacker); // Fase 8.3 (criaturas del Nether)
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.killer = attacker; // Fase 6.5 (colecciones)
@@ -343,6 +347,7 @@ export class Entities {
     if (drops) critterKilled(this, e); // Fase 7.5 (fauna): equipo del jinete esqueleto (antes de que se lo quite gear)
     if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
     if (drops) this.mobs.guardians.onKilled(e); // Fase 7.5 (océano): botín de los guardianes
+    if (drops) this.mobs.nether.onKilled(e, this.killer); // Fase 8.3 (criaturas del Nether): equipo, varas, cráneos, cubos que se dividen
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -443,7 +448,7 @@ export class Entities {
       else if (this.custom.has(e.type)) this.custom.get(e.type)!(e, dt); // Fase 7 (mecanismos): dinamita encendida
       else this.mobs.mobTick(e, dt, players);
     }
-    this.separate(active.filter((e) => !e.dead && this.list.has(e.id)));
+    this.separate(active.filter((e) => !e.dead && this.list.has(e.id) && e.mountId === undefined)); // Fase 8.3: los jinetes van encima
     this.spawner.spawnTick(dt, players);
     this.aquatic.spawnTick(dt, players); // Fase 6 (acuáticos).
   }
@@ -501,6 +506,8 @@ export class Entities {
       // Fase 7.5 (fauna): confianza del ocelote, color de la champiñaca, trampa del caballo esqueleto…
       const crit = critterSave(e);
       if (crit) (row as unknown[]).push(crit);
+      const nether = this.mobs.nether.save(e); // Fase 8.3 (criaturas del Nether): equipo e inventario del piglin
+      if (nether) (row as unknown[]).push(nether);
       out.push(row);
     }
     return JSON.stringify(out);
@@ -534,6 +541,7 @@ export class Entities {
         if ((row as unknown[]).some((c) => !!c && typeof c === 'object' && 'keep' in (c as object))) e.persist = true; // Fase 7.5 (océano)
         if (Array.isArray(row)) critterRestore(e, row as unknown[]); // Fase 7.5 (fauna)
         if (Array.isArray(row)) this.allays.restore(e, row as unknown[]); // Fase 7.5 (mansión): el alay
+        if (Array.isArray(row)) this.mobs.nether.restore(e, row as unknown[]); // Fase 8.3 (criaturas del Nether)
       }
     } catch {
       /* ignorar */
@@ -559,6 +567,9 @@ export class Entities {
     // Fase 6 (gólems/domesticar): domesticar, sentar, curar gólems.
     const r = this.companions.interact(e, item, creative, who);
     if (r) return r;
+    // Fase 8.3 (criaturas del Nether): oro para el piglin, hongo carmesí para el hoglin.
+    const nether = this.mobs.nether.interact(e, item, creative, who);
+    if (nether) return nether;
     // Fase 6 (acuáticos): cubo de agua sobre un pez, un ajolote o un renacuajo.
     return this.dolphinGuide.feed(e, item) ?? this.aquatic.interact(e, item) ?? this.animals.interact(e, item, creative); // Fase 7.5: delfines
   }

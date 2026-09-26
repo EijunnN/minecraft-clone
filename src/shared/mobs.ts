@@ -28,6 +28,9 @@ export * from './critters';
 // Fase 7.5 (mansión): el alay (id 76).
 import { ALLAY_DEF } from './allay';
 export { MOB_ALLAY } from './allay';
+// Fase 8.3 (criaturas del Nether): piglins, ghast, blaze, cubos de magma, hoglin, zoglin, strider y esqueleto wither (ids 84–95).
+import { netherMobs } from './netherMobs';
+export * from './netherMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -104,6 +107,8 @@ export interface ModelPart {
   uv: [number, number];
   /** Rotación de reposo (radianes, orden X, Y, Z). */
   rot?: [number, number, number];
+  /** Fase 8.3: píxeles que crece la caja por cada lado sin cambiar su UV (CubeDeformation de Java: la silla del strider). */
+  grow?: number;
 }
 
 export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creeper' | 'spider' | 'chicken' | 'enderman' | 'squid'
@@ -118,7 +123,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'illager' | 'vex' | 'ravager' | 'fangs' // Fase 6 (asaltos)
   | 'warden' // Fase 7.5 (abismo)
   | 'guardian' // Fase 7.5 (océano)
-  | 'allay'; // Fase 7.5 (mansión)
+  | 'allay' // Fase 7.5 (mansión)
+  | 'piglin' | 'ghast' | 'blaze' | 'magma' | 'hoglin' | 'strider' | 'wither_skeleton'; // Fase 8.3 (criaturas del Nether)
 
 export interface MobDef {
   id: number;
@@ -152,6 +158,12 @@ export interface MobDef {
   inert?: boolean;
   /** Fase 7.5 (océano): experiencia al matarla (si no, 5 los monstruos y 1–3 los animales). */
   xp?: number;
+  /** Fase 8.3: experiencia de la cría (si no, ninguna): la del piglin zombificado y la del hoglin. */
+  babyXp?: number;
+  /** Fase 8.3: no le hacen daño el fuego ni la lava y no se le ve arder (las criaturas del Nether). */
+  fireImmune?: boolean;
+  /** Fase 8.3: se dibuja con toda la luz (blaze y cubo de magma, como getBlockLightLevel 15 en Java). */
+  fullBright?: boolean;
 }
 
 const quadLegs = (h: number, xs: number, zs: [number, number], uv: [number, number], w = 4): ModelPart[] => [
@@ -649,6 +661,7 @@ for (const d of OCEAN_MOBS) mob(d); // Fase 7.5 (océano)
 // Fase 7.5 (fauna): definiciones en critters.ts (reutilizan los modelos del gato, la vaca, la llama y el caballo).
 for (const d of critterMobs(MOBS, { cat: MOB_CAT, cow: MOB_COW, llama: MOB_LLAMA, horse: MOB_HORSE })) mob(d);
 mob(ALLAY_DEF); // Fase 7.5 (mansión)
+for (const d of netherMobs()) mob(d); // Fase 8.3 (criaturas del Nether)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

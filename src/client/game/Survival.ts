@@ -59,6 +59,12 @@ export function deathMessage(cause: DamageCause): string {
     guardian_laser: 'fue fulminado por el láser de un guardián', guardian_thorns: 'murió pinchado por un guardián',
     // Fase 7.5 (abismo)
     warden: 'fue destrozado por un warden', sonic_boom: 'fue aniquilado por un chillido cargado sónicamente',
+    // Fase 8.3 (criaturas del Nether)
+    piglin: 'fue asesinado por un piglin', piglin_brute: 'fue asesinado por un piglin bruto',
+    zombified_piglin: 'fue asesinado por un piglin zombificado', blaze: 'fue asesinado por un blaze',
+    magma_cube: 'fue aplastado por un cubo de magma', hoglin: 'fue asesinado por un hoglin', zoglin: 'fue asesinado por un zoglin',
+    wither_skeleton: 'fue asesinado por un esqueleto wither', fireball: 'fue alcanzado por una bola de fuego',
+    small_fireball: 'fue alcanzado por una bola de fuego',
   };
   switch (cause) {
     case 'fall': return 'cayó desde muy alto';

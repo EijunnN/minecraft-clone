@@ -9,15 +9,20 @@
 import { family, familyBase, stateOf, stateProps, L, R_MODEL } from './registry';
 import { mbox, rotateFlat, DIR_X, DIR_Z, type ModelBox } from '../blockModels';
 
-/** Tipos de cabeza (el orden es el del inventario creativo). */
+/** Tipos de cabeza de la fase 6.5 (el orden es el del inventario creativo). */
 export const SKULL_KINDS = ['zombie', 'skeleton', 'creeper', 'player'] as const;
-export type SkullKind = (typeof SKULL_KINDS)[number];
+/** Fase 8.3 (criaturas del Nether): el cráneo de esqueleto wither y la cabeza de piglin (registrados al final). */
+export type SkullKind = (typeof SKULL_KINDS)[number] | 'wither_skeleton' | 'piglin';
+/** Todos los tipos de cabeza registrados (los de la fase 6.5 y los que se añaden después con registerSkull). */
+export const ALL_SKULL_KINDS: SkullKind[] = [];
 
 const SKULL_NAMES: Readonly<Record<SkullKind, string>> = {
   zombie: 'Cabeza de zombi',
   skeleton: 'Cráneo de esqueleto',
   creeper: 'Cabeza de creeper',
   player: 'Cabeza de jugador',
+  wither_skeleton: 'Cráneo de esqueleto wither',
+  piglin: 'Cabeza de piglin',
 };
 
 /** Caras de una cabeza (su derecha es +X cuando mira al norte, −Z). */
@@ -29,8 +34,8 @@ export function skullTexture(kind: SkullKind, face: SkullFace): string {
   return `${kind}_head_${face}`;
 }
 
-/** Nombres de todas las texturas de las cabezas (para textureDefs). */
-export const SKULL_TEXTURES: readonly string[] = SKULL_KINDS.flatMap((k) => SKULL_FACES.map((f) => skullTexture(k, f)));
+/** Nombres de todas las texturas de las cabezas (para textureDefs; Fase 8.3: registerSkull añade las nuevas). */
+export const SKULL_TEXTURES: string[] = [];
 
 /** El cubo de la cabeza, centrado en el bloque, mirando al norte (caras +X, −X, +Y, −Y, +Z, −Z). */
 function skullBoxes(kind: SkullKind): ModelBox[] {
@@ -50,18 +55,26 @@ export const SKULL_WALL_OF: Record<number, number> = {};
 const POSE: (readonly number[] | undefined)[] = [];
 const KIND_OF = new Map<number, SkullKind>();
 
-for (const kind of SKULL_KINDS) {
+/**
+ * Registra un tipo de cabeza (en el suelo y en la pared). `boxes`: el modelo mirando al norte y centrado en el
+ * bloque (el cubo de 8×8×8 si no se da; la cabeza de piglin es más ancha y tiene hocico y orejas).
+ * Fase 8.3: las cabezas nuevas se registran al final (blocks/netherMobBlocks.ts), así no mueven ningún id.
+ */
+export function registerSkull(kind: SkullKind, boxes: ModelBox[] = skullBoxes(kind), halfWidth = 4): void {
+  ALL_SKULL_KINDS.push(kind);
+  SKULL_TEXTURES.push(...SKULL_FACES.map((f) => skullTexture(kind, f)));
   const common = {
     render: R_MODEL, solid: true, opaque: false, lightOpacity: 0, hardness: 1, sound: 'stone' as const,
-    all: skullTexture(kind, 'left'), itemModel: skullBoxes(kind),
+    all: skullTexture(kind, 'left'), itemModel: boxes,
   };
-  const floorBox = [4 / 16, 0, 4 / 16, 12 / 16, 8 / 16, 12 / 16];
+  const lo = (8 - halfWidth) / 16, hi = (8 + halfWidth) / 16;
+  const floorBox = [lo, 0, 4 / 16, hi, 8 / 16, 12 / 16];
   SKULLS[kind] = family(`${kind}_head`, SKULL_NAMES[kind], [['rot', 16]], () => ({
-    ...common, category: 'decoracion', model: skullBoxes(kind), selection: floorBox, collision: floorBox,
+    ...common, category: 'decoracion', model: boxes, selection: floorBox, collision: floorBox,
   }));
   WALL_SKULLS[kind] = family(`${kind}_wall_head`, SKULL_NAMES[kind], [['facing', 4]], (st) => {
-    const box = rotateFlat([4 / 16, 4 / 16, 8 / 16, 12 / 16, 12 / 16, 1], st.facing);
-    return { ...common, category: null, model: skullBoxes(kind), selection: box, collision: box, wall: st.facing, base: SKULLS[kind] };
+    const box = rotateFlat([lo, 4 / 16, 8 / 16, hi, 12 / 16, 1], st.facing);
+    return { ...common, category: null, model: boxes, selection: box, collision: box, wall: st.facing, base: SKULLS[kind] };
   });
   SKULL_WALL_OF[SKULLS[kind]] = WALL_SKULLS[kind];
   for (let r = 0; r < 16; r++) {
@@ -76,6 +89,8 @@ for (const kind of SKULL_KINDS) {
     KIND_OF.set(WALL_SKULLS[kind] + f, kind);
   }
 }
+
+for (const kind of SKULL_KINDS) registerSkull(kind);
 
 /** Giro y desplazamiento con los que el mallador dibuja una cabeza (undefined si no lo es). */
 export function skullPose(id: number): readonly number[] | undefined {

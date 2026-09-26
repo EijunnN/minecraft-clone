@@ -584,13 +584,33 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   y enredaderas. Niebla de cada bioma (mezclada como CubicSampler), sus partículas (esporas, ceniza y
   ceniza blanca, con la física de Java), su sonido (bucle, sonidos sueltos y «mood») y su música. La lava
   del Nether baja de 1 en 1 (llega a 7 bloques), busca huecos a 4 y se actualiza cada 10 ticks.
-- **8.3 Criaturas del Nether:** piglins (trueque con oro) y piglins brutos, piglins zombificados, ghasts,
-  blazes, cubos de magma, hoglins y zoglins, striders, esqueletos wither.
+- ✅ **8.3 Criaturas del Nether:** las doce criaturas portadas de las clases de la 26.3, con sus modelos
+  (medidas de los modelos del cliente de Java), texturas, animaciones, sonidos y la aparición natural del
+  Nether (NaturalSpawner: topes de 70 monstruos y 10 animales por cada 289 chunks, grupos, reglas de cada
+  criatura y el coste de aparición del valle de almas y del bosque distorsionado). Piglin con su cerebro
+  por actividades (admirar el oro, luchar, huir, celebrar, montar, pasear): trueque con lingotes (la tabla
+  de la 26.3), se enfada si no llevas oro, si abres cofres o rompes oro delante suyo o si le hieres (y avisa
+  a los suyos), caza hoglins, huye de los zombificados y de las cosas de alma, coge pepitas, oro, chuletas y
+  equipo mejor, ballesta o espada de oro y armadura de oro al 10 %. Piglin bruto (hacha de oro, ataca a
+  cualquier jugador). Piglin zombificado neutral que se enfada 20–39 s y avisa. Ghast que flota, avisa y
+  dispara; su bola de fuego explota y se puede devolver de un golpe (y si le mata, suelta el disco «Tears»).
+  Blaze que cae despacio, sube hacia su presa y lanza ráfagas de tres bolas pequeñas. Cubos de magma de
+  tres tamaños que saltan y se dividen. Hoglin (embiste y lanza por los aires, huye de los piglins si le
+  superan, le espantan el hongo distorsionado y los portales, cría con hongos carmesíes) y zoglin (ataca a
+  todo). Strider que camina sobre la lava, tiene frío fuera, cría con hongos distorsionados y se monta con
+  silla y la caña con hongo distorsionado (con acelerones); a veces sale con jinete. Esqueleto wither
+  (espada de piedra, Marchitamiento, persigue a los piglins). Fuera del Nether, piglins y hoglins se
+  convierten en zombificados a los 300 ticks. Objetos nuevos: caña con hongo distorsionado, carga de fuego
+  (enciende y la lanza el dispensador), flecha espectral (Brillo 10 s), velocidad de alma, disco «Tears»,
+  cráneo de esqueleto wither y cabeza de piglin. Pendiente para la fase 9: la lanza de oro (los piglins y
+  los zombificados que la llevarían sacan espada de oro) y el ghast seco del trueque (llega con el ghast
+  feliz); los blazes, esqueletos wither y brutos salen en sus estructuras (8.4).
 - **8.4 Estructuras del Nether:** fortalezas (generadores de blazes, verruga del Nether), bastiones (los 4
   tipos), fósiles del Nether y portales en ruinas en el Nether.
 - **8.5 Lo que da el Nether:** netherita (escombros ancestrales, plantilla de mejora y mesa de herrería),
-  ancla de reaparición, piedra imán, faro, velocidad de alma, fogata de alma, columnas de burbujas, carga
-  de fuego, flecha espectral y lo apuntado en la fase 7.
+  ancla de reaparición, piedra imán, faro, fogata de alma, columnas de burbujas y lo apuntado en la fase 7
+  (la velocidad de alma, la carga de fuego y la flecha espectral llegaron con la 8.3, porque las da el
+  trueque).
 - **8.6 El End:** fortalezas con el portal del End (ojos de ender), la isla del dragón (pilares de
   obsidiana, cristales del End), el dragón y el portal de salida, puertas del End, islas exteriores,
   ciudades y barcos del End (shulkers, élitros), plantas de coro y purpur.

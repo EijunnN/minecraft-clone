@@ -74,7 +74,8 @@ const rnd = (rand: Rand, a: number, b: number) => a + Math.floor(rand() * (b - a
 /** Criatura matada por un jugador: hostiles 5, animales 1–3, crías 0. */
 export function mobXp(type: number, baby: boolean, rand: Rand = Math.random): number {
   const def = MOBS[type];
-  if (!def || baby) return 0;
+  if (!def) return 0;
+  if (baby) return def.babyXp ?? 0; // Fase 8.3: el piglin zombificado y el hoglin crías sí dan
   if (def.xp !== undefined) return def.xp; // Fase 7.5 (océano; fauna: el murciélago, 0)
   return def.hostile ? 5 : rnd(rand, 1, 3);
 }

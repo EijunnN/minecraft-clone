@@ -18,6 +18,14 @@ import { BREWING_STAND } from './blocks';
 import { MOBS, MOB_WITCH } from './mobs';
 import { ARMOR_BYPASS } from './armor';
 
+/**
+ * Fase 8.3 (criaturas del Nether): «tipo» de la flecha espectral (va donde el tipo de las flechas con efecto:
+ * −1 es la normal): lo que alcanza brilla 10 s.
+ */
+export const SPECTRAL_ARROW_TYPE = -2;
+/** Segundos de Brillo de la flecha espectral. */
+export const SPECTRAL_GLOW_SECONDS = 10;
+
 /** Entidad de la nube de efecto que deja una poción persistente al romperse. */
 export const ENT_EFFECT_CLOUD = 150;
 /** Bit de estado de las criaturas invisibles (no se dibuja su cuerpo). Los bits 22..25 son del brillo. */

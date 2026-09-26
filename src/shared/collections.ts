@@ -5,7 +5,7 @@
 // - Llevar puesta la cabeza de una especie hace que esa especie te vea a la mitad de distancia.
 import { SKULLS, type SkullKind } from './blocks';
 import { MUSIC_DISCS } from './items';
-import { MOB_ZOMBIE, MOB_SKELETON, MOB_STRAY, MOB_CREEPER } from './mobs';
+import { MOB_ZOMBIE, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_WITHER_SKELETON, MOB_PIGLIN, MOB_PIGLIN_BRUTE } from './mobs';
 import { DISCS } from './discs';
 import { EF_FAUNA_A } from './fauna';
 
@@ -21,12 +21,20 @@ export const MOB_SKULL: Readonly<Record<number, SkullKind>> = {
   [MOB_ZOMBIE]: 'zombie',
   [MOB_SKELETON]: 'skeleton',
   [MOB_CREEPER]: 'creeper',
+  // Fase 8.3 (criaturas del Nether): el esqueleto wither y el piglin (el piglin bruto no suelta nada).
+  [MOB_WITHER_SKELETON]: 'wither_skeleton',
+  [MOB_PIGLIN]: 'piglin',
 };
 
-/** ¿La cabeza del hueco del casco (`helmet`) disimula al jugador ante esta especie? */
+/**
+ * ¿La cabeza del hueco del casco (`helmet`) disimula al jugador ante esta especie? (LivingEntity.getVisibilityPercent:
+ * zombi, esqueleto, creeper y la de piglin ante piglins y piglins brutos; el cráneo wither no disimula).
+ */
 export function skullDisguises(helmet: number, mobType: number): boolean {
+  if (helmet <= 0) return false;
+  if (mobType === MOB_PIGLIN || mobType === MOB_PIGLIN_BRUTE) return helmet === SKULLS.piglin;
   const k = MOB_SKULL[mobType];
-  return !!k && helmet > 0 && helmet === SKULLS[k];
+  return !!k && k !== 'wither_skeleton' && helmet === SKULLS[k];
 }
 
 /** Esqueletos cuyas flechas hacen soltar un disco al creeper que matan. */
@@ -44,7 +52,8 @@ export function isMusicDisc(id: number): boolean {
 }
 
 /** Discos que puede soltar un creeper (todos menos otherside, que sólo sale en los cofres). */
-export const CREEPER_DISCS: readonly number[] = MUSIC_DISCS.filter((_, i) => DISCS[i].key !== 'otherside' && DISCS[i].key !== '5'); // Fase 7.5 (abismo): el 5, tampoco
+// Fase 7.5 (abismo): el 5, tampoco; Fase 8.3: ni Tears (lo suelta el ghast). La etiqueta creeper_drop_music_discs.
+export const CREEPER_DISCS: readonly number[] = MUSIC_DISCS.filter((_, i) => DISCS[i].key !== 'otherside' && DISCS[i].key !== '5' && DISCS[i].key !== 'tears');
 
 /** Título de un disco para la descripción (null si no es un disco). */
 export function discTitle(id: number): string | null {

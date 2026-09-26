@@ -209,6 +209,8 @@ export class Commands {
         const mob = found ? ctx.entities.spawnMob(def.id, tx + 0.5, y, tz + 0.5) : ctx.entities.spawnMob(def.id, s.p[0], s.p[1] + 0.1, s.p[2]);
         // Fase 6.5 (colecciones): /invocar creeper cargado.
         if (mob && def.id === MOB_CREEPER && norm(args[1] ?? '') === 'cargado') mob.charged = true;
+        // Fase 8.3: como /summon, con su equipo al aparecer (armas de los piglins, tamaño del cubo de magma, jinetes…).
+        if (mob) ctx.entities.mobs.nether.finalizeSpawn(mob, 'egg');
         return;
       }
       case 'give':

@@ -7,7 +7,7 @@ import { sanitizeStack } from '../../containers';
 import type { PlayerView } from '../entities';
 import { CROSSBOW_SPEED, CROSSBOW_ARROW_DAMAGE } from '../../equipment'; // Fase 6.5 (equipo)
 import { SPLASH_POTION, LINGERING_POTION } from '../../items'; // Fase 7 (pociones)
-import { isPotionType } from '../../potions';
+import { isPotionType, SPECTRAL_ARROW_TYPE } from '../../potions';
 
 /** Fase 7 (pociones): velocidad (bloques/s) y ángulo hacia arriba con que salen las pociones lanzadas. */
 const POTION_THROW_SPEED = 10;
@@ -97,7 +97,7 @@ export class PlayerActions {
     const arrows = shootArrows(ctx, s, p, [d[0] / len, d[1] / len, d[2] / len], speed, crossbow ? CROSSBOW_ARROW_DAMAGE : 2, crossbow, msg.en);
     // Fase 7 (pociones): flecha con efecto (el tipo de poción que lleva); Infinidad no vale con ellas.
     const ap = Number(msg.ap);
-    if (msg.ap !== undefined && isPotionType(ap)) {
+    if (msg.ap !== undefined && (isPotionType(ap) || ap === SPECTRAL_ARROW_TYPE)) { // Fase 8.3: o la flecha espectral
       for (const a of arrows) a.arrowPotion = ap;
       if (arrows[0]) arrows[0].noPickup = false;
     }
