@@ -562,7 +562,7 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
 fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End, ciudades del End,
 élitros y shulkers; el Wither. De uno en uno:
-- ✅ **8.1 Dimensiones y el Nether básico.** Cada dimensión es un mundo aparte en la misma sala
+- ✅ **8.1 Dimensiones, portal del Nether y los desiertos del Nether** (el primer bioma; el resto del Nether va en 8.2–8.5). Cada dimensión es un mundo aparte en la misma sala
   (`sim/Multiverse.ts`: un servidor por dimensión con su parte del guardado; los jugadores, la semilla, la
   hora y la dificultad son comunes) y un registro de datos (`shared/dimensions.ts`: cielo, luz, niebla,
   clima, gravedad, aire, escala…) pensado para añadir más adelante otros sitios (el End, y lugares propios
