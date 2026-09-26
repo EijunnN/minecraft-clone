@@ -338,6 +338,7 @@ escala de resolución.
 src/
   shared/          Bloques, objetos, criaturas, recetas, contenedores, protocolo y generación del mundo
     sim/           Servidor de juego: fluidos, criaturas (IA, A*), física, objetos, hornos, guardado
+      server/      Sistemas del servidor (systems.ts los crea y conecta; messageRouter.ts reparte los mensajes)
   server/          Worker + Durable Object (GameWorld) con almacenamiento SQLite
   client/
     world/         Iluminación y mallado (Web Workers), gestión de chunks
