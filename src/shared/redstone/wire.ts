@@ -68,6 +68,15 @@ export function hashSetOrder(x: number, y: number, z: number, out: number[] = or
   return out;
 }
 
+/**
+ * Orden en que Java recorre las claves de un HashMap<BlockPos> que nunca pasó de 12 (16 cubos): por cubo y,
+ * dentro de cada cubo, por orden de inserción (quitar claves no cambia el orden de las que quedan). `cells`,
+ * las que quedan, en el orden en que se metieron. Lo usa el pistón para las celdas que vacía.
+ */
+export function javaHashMapOrder<T extends { x: number; y: number; z: number }>(cells: readonly T[]): T[] {
+  return cells.map((c, i) => ({ c, b: bucketOf(javaPosHash(c.x, c.y, c.z)), i })).sort((a, b) => a.b - b.b || a.i - b.i).map((e) => e.c);
+}
+
 /** updatePowerStrength de Java: recalcula el cable y, si cambia, avisa en el orden del HashSet. */
 export function updateWirePower(api: RedstoneApi, x: number, y: number, z: number, id: number): void {
   const target = wireTarget(api, x, y, z);

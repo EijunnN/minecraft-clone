@@ -104,6 +104,16 @@ export class BlockRules {
     }
   }
 
+  /** Suelta lo que suelta el bloque sin quitarlo (el pistón lo quita después, con sus opciones). */
+  dropOnly(x: number, y: number, z: number, id: number): void {
+    if (!this.silentDrops) this.ctx.entities.dropStacks(blockDrops(id, 0, () => this.ctx.rand()), x + 0.5, y + 0.3, z + 0.5);
+  }
+
+  /** Lo que queda al romper el bloque (agua si estaba anegado). */
+  emptyAfter(id: number): number {
+    return emptyAfterBreak(id);
+  }
+
   breakWithDrops(x: number, y: number, z: number, id: number): void {
     this.ctx.world.setBlock(x, y, z, emptyAfterBreak(id)); // Fase 6.5: las plantas anegadas dejan agua
     if (!this.silentDrops) this.ctx.entities.dropStacks(blockDrops(id, 0, () => this.ctx.rand()), x + 0.5, y + 0.3, z + 0.5);

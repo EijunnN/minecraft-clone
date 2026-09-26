@@ -2,12 +2,10 @@
 // - Cada tolva pasa un objeto a lo que tiene en el pico (contenedores, hornos, soporte para pociones, otras
 //   tolvas, compostador, tocadiscos, estantería cincelada, vagonetas con cofre o con tolva) y coge uno del
 //   contenedor de encima o los objetos tirados encima (si no hay un bloque entero tapándola). Si movió algo,
-//   espera 8 ticks (su propia espera, la cooldownTime de Minecraft: 2,5 objetos por segundo); la que recibe
-//   de otra estando vacía espera 7, así que lo que entra no sigue en el mismo tick y una fila de tolvas va a
-//   2,5 objetos por segundo.
-// - En Minecraft una tolva sin espera lo intenta cada tick. Aquí sólo se miran las que pueden tener algo que
-//   hacer: las que acaban su espera y las que despierta algo (un cambio de bloque a su lado, lo que guarda
-//   lo de encima o lo del pico, un objeto tirado encima o una vagoneta al lado). Las demás duermen.
+//   espera 8 ticks (su cooldownTime: 2,5 objetos por segundo). La que recibe de otra estando vacía espera 8, o
+//   7 si ya le tocó en este tick (8 − 1, como en Java): una fila de tolvas va a 2,5 objetos por segundo.
+// - Como en Java (auditoría de la redstone), es una entidad de bloque: cada tick, en el orden en que se
+//   cargaron o se pusieron, baja su espera y, si no le queda, prueba a mover.
 // - Con potencia de redstone se bloquean (ni pasan ni cogen nada).
 // - Un comparador lee lo llenas que están (y las de los dispensadores y soltadores).
 // Las vagonetas con tolva usan lo mismo (sim/server/mechanismCarts.ts).
@@ -54,129 +52,94 @@ registerRedstone([HOPPER, DISPENSER, DROPPER], {
 const isHopper = (id: number) => id > 0 && familyBase(id) === HOPPER;
 
 export class Hoppers {
-  /** Tolvas cargadas. */
-  private all = new Set<number>();
-  /** Las que probarán a mover algo en el próximo tick. */
-  private awake = new Set<number>();
-  /** Tick en que acaba la espera de las que la tienen, y las que la acaban en cada tick. */
-  private until = new Map<number, number>();
-  private timers = new Map<number, number[]>();
+  /** Tolvas cargadas, en el orden de las entidades de bloque de Java: su espera y el tick en que les tocó. */
+  private all = new Map<number, { cooldown: number; ticked: number }>();
 
   constructor(private ctx: ServerContext, rs: Redstone, private inv: Inventories) {
     SYSTEMS.set(rs, this);
   }
 
-  /** Tolvas despiertas (para las pruebas). */
-  get awakeCount(): number {
-    return this.awake.size;
+  /** Tolvas que esperan (para las pruebas). */
+  get coolingCount(): number {
+    let n = 0;
+    for (const h of this.all.values()) if (h.cooldown > 0) n++;
+    return n;
   }
 
-  /** La tolva de (x, y, z) mirará en el próximo tick si tiene algo que hacer. */
+  /** Compatibilidad: todas miran cada tick (como en Java), no hay que despertarlas. */
   wake(x: number, y: number, z: number): void {
-    const k = posKey(x, y, z);
-    this.all.add(k);
-    this.awake.add(k);
+    this.add(posKey(x, y, z));
+  }
+
+  private add(k: number): void {
+    if (!this.all.has(k)) this.all.set(k, { cooldown: -1, ticked: -1 });
   }
 
   /** Cambió el bloque de (x, y, z): una tolva que se pone (o se carga su chunk) o que se quita. */
   changed(x: number, y: number, z: number, id: number): void {
-    if (isHopper(id)) this.wake(x, y, z);
-    else this.forget(posKey(x, y, z));
+    if (isHopper(id)) this.add(posKey(x, y, z));
+    else this.all.delete(posKey(x, y, z));
   }
 
-  private forget(k: number): void {
-    this.all.delete(k);
-    this.awake.delete(k);
-    this.until.delete(k);
-  }
-
-  /** Despierta a la tolva de (x, y, z), si la hay. */
-  private poke(x: number, y: number, z: number): void {
-    const k = posKey(x, y, z);
-    if (this.all.has(k)) this.awake.add(k);
+  /** Compatibilidad: cambió lo que guarda (x, y, z) (ya no hace falta despertar a nadie). */
+  contentsChanged(x: number, y: number, z: number): void {
+    void x;
+    void y;
+    void z;
   }
 
   /**
-   * Cambió lo que guarda (x, y, z) (un contenedor, o hay una vagoneta ahí): despiertan ella misma, si es una
-   * tolva, la de debajo (coge de encima) y las que tienen el pico hacia ella.
+   * Fase de entidades: un objeto que cae dentro de una tolva sin espera la hace mover en el acto (entityInside
+   * de Java, antes de su tick).
    */
-  contentsChanged(x: number, y: number, z: number): void {
+  itemsInside(): void {
     if (this.all.size === 0) return;
-    this.poke(x, y, z);
-    for (let f = 0; f < 6; f++) {
-      const nx = x + FACE_X[f], ny = y + FACE_Y[f], nz = z + FACE_Z[f];
-      if (!this.all.has(posKey(nx, ny, nz))) continue;
-      if (f === DOWN || hopperOutFace(this.ctx.world.getBlock(nx, ny, nz)) === (f ^ 1)) this.poke(nx, ny, nz);
+    const now = this.ctx.tickCount;
+    for (const e of this.ctx.entities.list.values()) {
+      if (e.dead || e.type !== ENT_ITEM) continue;
+      const k = posKey(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z));
+      const h = this.all.get(k);
+      if (h && h.cooldown <= 0) this.run(k, h, now);
     }
   }
 
-  /** La tolva `k` espera `ticks` antes de volver a mover nada. */
-  private cool(k: number, now: number, ticks: number): void {
-    const due = now + ticks;
-    this.until.set(k, due);
-    const l = this.timers.get(due);
-    if (l) l.push(k);
-    else this.timers.set(due, [k]);
-  }
-
-  /** Cada tick: las que acaban su espera y las despiertas mueven lo que puedan. */
+  /** Fase de entidades de bloque: cada tolva, en su orden (pushItemsTick de Java). */
   tick(): void {
     if (this.all.size === 0) return;
     const now = this.ctx.tickCount;
-    const due = this.timers.get(now);
-    if (due) {
-      this.timers.delete(now);
-      for (const k of due) this.awake.add(k);
-    }
-    this.watchEntities();
-    if (this.awake.size === 0) return;
-    const list = [...this.awake];
-    this.awake.clear();
-    for (const k of list) this.run(k, now);
-  }
-
-  /** Objetos tirados encima de una tolva y vagonetas con cofre o con tolva a su lado: la despiertan. */
-  private watchEntities(): void {
-    for (const e of this.ctx.entities.list.values()) {
-      if (e.dead) continue;
-      if (e.type === ENT_ITEM) {
-        // Lo que coge una tolva: de 11/16 de su altura hasta 2 bloques por encima (ver pull).
-        const x = Math.floor(e.x), z = Math.floor(e.z);
-        for (let y = Math.ceil(e.y - 2); y <= Math.floor(e.y - 11 / 16); y++) this.poke(x, y, z);
-      } else if (e.type === ENT_CHEST_MINECART || e.type === ENT_HOPPER_MINECART) {
-        this.contentsChanged(Math.floor(e.x), Math.floor(e.y + 0.3), Math.floor(e.z));
-      }
+    for (const [k, h] of [...this.all]) {
+      if (this.all.get(k) !== h) continue;
+      h.cooldown--;
+      h.ticked = now;
+      if (h.cooldown > 0) continue;
+      h.cooldown = 0;
+      this.run(k, h, now);
     }
   }
 
-  /** La tolva `k`, si no espera ni está bloqueada: pasa un objeto y coge otro. Si movió algo, espera. */
-  private run(k: number, now: number): void {
+  /** tryMoveItems de Java: si no está bloqueada, pasa un objeto y coge otro; si movió algo, espera 8. */
+  private run(k: number, h: { cooldown: number; ticked: number }, now: number): void {
     const x = keyX(k), y = keyY(k), z = keyZ(k);
     const id = this.ctx.world.getBlock(x, y, z);
     if (!isHopper(id)) {
       // Quitada o sin cargar (al cargarse su chunk se apunta otra vez).
-      this.forget(k);
+      this.all.delete(k);
       return;
     }
     if (hopperLocked(id)) return;
-    const u = this.until.get(k);
-    if (u !== undefined) {
-      if (u > now) return;
-      this.until.delete(k);
-    }
     const self = this.inv.open(x, y, z);
     if (!self) return;
     let moved = false;
-    if (!isEmpty(self.state)) moved = this.push(x, y, z, id, self, now);
+    if (!isEmpty(self.state)) moved = this.push(x, y, z, id, self, now, h);
     if (!isFull(self.state)) moved = this.pull(x, y, z, self) || moved;
-    if (moved) this.cool(k, now, HOPPER_COOLDOWN);
+    if (moved) h.cooldown = HOPPER_COOLDOWN;
   }
 
   /**
    * Pasa un objeto (el del primer hueco que quepa) a lo que tiene en el pico. Una tolva vacía que lo recibe
    * espera 7 ticks (Minecraft: 8 menos el tick que ya lleva), así que no lo pasa en el mismo tick.
    */
-  private push(x: number, y: number, z: number, id: number, self: Opened, now: number): boolean {
+  private push(x: number, y: number, z: number, id: number, self: Opened, now: number, h: { cooldown: number; ticked: number }): boolean {
     const out = hopperOutFace(id);
     const tx = x + FACE_X[out], ty = y + FACE_Y[out], tz = z + FACE_Z[out];
     if (!this.inv.hasInventory(tx, ty, tz)) return false;
@@ -189,11 +152,14 @@ export class Hoppers {
       if (!this.inv.insertOne(tx, ty, tz, out ^ 1, s)) continue;
       c.slots[i] = s.count > 1 ? { ...s, count: s.count - 1 } : null;
       self.done();
+      // La que lo recibe estando vacía espera 8, o 7 si ya le tocó en este tick (tryMoveInItem de Java).
       if (wasEmpty) {
         const tk = posKey(tx, ty, tz);
-        this.all.add(tk);
-        this.cool(tk, now, HOPPER_COOLDOWN - 1);
+        this.add(tk);
+        const t = this.all.get(tk)!;
+        if (t.cooldown <= 8) t.cooldown = HOPPER_COOLDOWN - (t.ticked >= h.ticked ? 1 : 0);
       }
+      void now;
       return true;
     }
     return false;

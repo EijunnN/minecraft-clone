@@ -12,7 +12,7 @@ import {
   MOB_SPAWNER, CONDUIT, DAYLIGHT_DETECTOR, CHISELED_BOOKSHELF, isAnvil, isContainer, isSign, isBanner, isBeeHome, isJukebox,
   isDoor, isBed, isCake, isCrop, isGlazedTerracotta, isPiston, pistonExtended, isPistonHead, isMovingBlock,
 } from './blocks';
-import { FACE_X, FACE_Y, FACE_Z } from './redstone/api';
+import { FACE_X, FACE_Y, FACE_Z, JAVA_DIRECTIONS } from './redstone/api';
 import { MIN_Y, MAX_Y } from './constants';
 import { posKey } from './sim/posKey';
 
@@ -184,10 +184,10 @@ export function resolvePush(
     }
   };
 
-  /** Los vecinos de lado de un bloque pegajoso que se pegan a él también se mueven. */
+  /** Los vecinos de lado de un bloque pegajoso que se pegan a él también se mueven (en el orden de Direction.values()). */
   const addBranches = (c: Cell): boolean => {
     const id = idOf(c);
-    for (let d = 0; d < 6; d++) {
+    for (const d of JAVA_DIRECTIONS) {
       if (d >> 1 === dir >> 1) continue;
       const n = at(c, d, 1);
       if (canStick(idOf(n), id) && !addLine(n, d)) return false;

@@ -9,7 +9,7 @@ tolvas, dispensadores…) sin tocar el motor.
 | --- | --- |
 | `src/shared/redstone/api.ts` | Caras, la `RedstoneApi` que ofrece el motor y el registro (`registerRedstone`, `setConductor`). |
 | `src/shared/redstone/signals.ts` | Consultas de potencia puras (fuerte, débil, la que llega por una cara). |
-| `src/shared/redstone/wire.ts` | El polvo: resuelve una red entera de una vez. |
+| `src/shared/redstone/wire.ts` | El polvo, cable a cable como en Java (y el orden de `HashSet`/`HashMap<BlockPos>` de Java). |
 | `src/shared/redstone/components.ts` | Lo que hace cada componente (antorchas, repetidores, comparadores, placas…). |
 | `src/shared/redstone/rails.ts` | Raíles propulsores, activadores, detectores y cruces en T. |
 | `src/shared/redstone/use.ts` | El clic derecho sobre componentes, como función pura (la usan cliente y servidor). |
@@ -27,9 +27,27 @@ Importar `src/shared/redstone` registra todos los componentes.
   luminosa, bloque de redstone, cofres) recibe la potencia fuerte de sus vecinos y la da a todo lo que
   tenga alrededor. El polvo cuenta como fuerte hacia el bloque al que apunta, pero ese bloque no
   alimenta a otro polvo (la «potencia débil» de Minecraft).
-- Nada recorre el mundo: todo va por **avisos locales** (cada cambio de bloque avisa a sus seis
-  vecinos y, si es un emisor, a los vecinos de los conductores de al lado) y **ticks programados**
-  (un montón ordenado por tick, prioridad y orden de llegada; uno por posición).
+- Nada recorre el mundo: todo va por **avisos locales** y **ticks programados**, con el modelo de
+  actualizaciones de Minecraft Java (auditoría: `docs/redstone-auditoria.md`):
+  - Cada cambio de bloque, dentro de su `setBlock`: `removed` (onRemove) del bloque viejo y `placed`
+    (onPlace) del nuevo; luego, con la opción 1, aviso a los seis vecinos (`updateNeighborsAt`, en el orden
+    oeste, este, abajo, arriba, norte, sur; el bloque que avisa es el viejo) y a los comparadores si el
+    bloque tiene lectura; y, salvo con la opción 16, las actualizaciones de forma de los vecinos (`shape`,
+    en el orden oeste, este, norte, sur, abajo, arriba).
+  - `setBlock(x, y, z, id, flags)` lleva las opciones de Java: `UPDATE_ALL` (3, por defecto),
+    `UPDATE_CLIENTS` (2: cambia sin avisar a los vecinos, como el repetidor, la lámpara o la tolva),
+    `UPDATE_KNOWN_SHAPE` (16: sin formas) y `UPDATE_MOVE_BY_PISTON` (64).
+  - Los avisos se atienden como el `CollectingNeighborUpdater` de Java: en profundidad (lo que provoca un
+    aviso se atiende antes de seguir con el siguiente) y con su tope (un millón encadenados).
+  - Cada componente avisa a quien avisa en Java: la antorcha a los vecinos de sus seis vecinos; la palanca y
+    los botones a sus vecinos y a los del bloque en el que se apoyan; las placas a los suyos y a los del de
+    debajo; el repetidor, el comparador y el observador sólo al bloque de delante y a los vecinos de ese…
+  - Ticks programados: un montón ordenado por (tick, prioridad, orden de llegada), uno por posición; los
+    que vencen se recogen al empezar su fase y `willTickNow` es el `willTickThisTick` de Java.
+  - Eventos de bloque (`api.blockEvent`, `event`): los pistones no se mueven al recibir el aviso; apuntan
+    un evento que se atiende en su fase.
+  - Fases del tick, las de Java: ticks programados → fluidos → ticks aleatorios → eventos de bloque →
+    entidades (lo que se pisa) → entidades de bloque (bloques en movimiento, tolvas, sensores de luz).
 - Los cambios viajan a los clientes como cualquier cambio de bloque: el estado de cada componente
   (encendido, potencia del polvo, retardo…) está en su id de bloque.
 - Lo que no cabe en el estado (salida de un comparador, mirones de un cofre trampa, si una puerta ya
@@ -48,12 +66,15 @@ registerRedstone(MI_BLOQUE, {
     strong: (v, x, y, z, id, face) => (encendido(id) && face === DOWN ? 15 : 0), // opcional
     connects: (id, face) => true, // opcional: ¿se une el polvo a él por ese lado?
   },
-  // ESCUCHA: algo cambió a su alrededor (sx, sy, sz: quién provocó el aviso).
-  neighbor: (api, x, y, z, id, sx, sy, sz) => {
-    if (api.isPowered(x, y, z) !== encendido(id)) api.schedule(x, y, z, 2);
+  // ESCUCHA (neighborChanged): algo cambió a su alrededor (sx, sy, sz: dónde; src: el bloque que avisa).
+  neighbor: (api, x, y, z, id, sx, sy, sz, src) => {
+    if (api.isPowered(x, y, z) !== encendido(id) && !api.willTickNow(x, y, z)) api.schedule(x, y, z, 2);
   },
-  // Tick programado que vence.
-  tick: (api, x, y, z, id) => api.setBlock(x, y, z, conEncendido(id, api.isPowered(x, y, z))),
+  // Tick programado que vence: cambia (con las opciones que use en Java) y avisa a quien avise en Java.
+  tick: (api, x, y, z, id) => {
+    api.setBlock(x, y, z, conEncendido(id, api.isPowered(x, y, z)));
+    api.updateNeighbors(x, y - 1, z, -1, id); // p. ej. también a los vecinos del bloque de debajo
+  },
 });
 ```
 
@@ -62,7 +83,10 @@ Todo lo demás es opcional:
 | Campo | Cuándo se llama |
 | --- | --- |
 | `emitter` | Cada vez que alguien pregunta cuánta potencia da (tiene que ser puro y barato). |
-| `neighbor` | Un vecino cambió o le llegó un aviso (se acumulan: varios registros suman oyentes). |
+| `neighbor` | neighborChanged: le llegó un aviso (se acumulan: varios registros suman oyentes). |
+| `placed` / `removed` | onPlace / onRemove: el bloque cambió (dentro del setBlock, antes de los avisos); `moved` si lo movió un pistón. |
+| `shape` | updateShape: cambió el vecino de una cara; devuelve el estado nuevo (el observador, el bloqueo del repetidor). |
+| `event` | triggerEvent: un evento de bloque apuntado con `api.blockEvent` (pistones). |
 | `tick` | Vence un tick programado con `api.schedule` (si el bloque sigue siendo de la misma familia). |
 | `changed` | El bloque se puso, se quitó o cambió de estado; con `old = -1`, al cargar su chunk (entonces sólo anotar y programar, sin cambiar bloques). |
 | `analog` | Lo que lee un comparador de él (0..15). |
@@ -93,27 +117,31 @@ funciones puras de `signals.ts` con cualquier `RedstoneView` (`getBlock` y `getD
 ```ts
 api.schedule(x, y, z, 4, PRIORITY_HIGH); // dentro de 4 ticks de juego; si ya hay uno ahí, no hace nada
 api.isScheduled(x, y, z);
-api.updateNeighbors(x, y, z);            // avisa a los seis vecinos
-api.outputChanged(x, y, z);              // cambió lo que emite sin cambiar el bloque (comparador)
+api.willTickNow(x, y, z);                // willTickThisTick de Java
+api.updateNeighbors(x, y, z, except, src); // updateNeighborsAt (salvo la cara `except`), avisando como `src`
+api.updateAt(x, y, z, fx, fy, fz, src);  // neighborChanged sobre un solo bloque
+api.blockEvent(x, y, z, a, b);           // evento de bloque (se atiende en su fase)
+api.stateTouched(x, y, z, flags);        // cambió una propiedad que va en el dato de posición: avisos y formas
+api.outputChanged(x, y, z);              // cofre trampa, sensor de sculk: sus vecinos y los de debajo
 api.analogChanged(x, y, z);              // cambió lo que lee un comparador (contenido de un cofre)
 ```
 
 Un tick de redstone son 2 ticks de juego. Las prioridades son las de Minecraft (más baja, antes):
 `PRIORITY_EXTREMELY_HIGH` … `PRIORITY_NORMAL`.
 
-## Ejemplo: un observador sencillo
+## Ejemplo: el observador (como el de Java)
 
 ```ts
 registerRedstone(OBSERVER, {
-  emitter: { weak: (_v, _x, _y, _z, id, face) => (on(id) && face === back(id) ? 15 : 0),
-             strong: (_v, _x, _y, _z, id, face) => (on(id) && face === back(id) ? 15 : 0) },
-  neighbor: (api, x, y, z, id, sx, sy, sz) => {
-    // Sólo le importa lo que cambia delante.
-    if (esDelante(id, x, y, z, sx, sy, sz) && !api.isScheduled(x, y, z)) api.schedule(x, y, z, 2);
+  // updateShape: lo que cambia delante de su cara programa el pulso.
+  shape: (api, x, y, z, id, face) => {
+    if (face === facingOf(id) && !on(id) && !api.isScheduled(x, y, z)) api.schedule(x, y, z, 2);
+    return id;
   },
   tick: (api, x, y, z, id) => {
-    api.setBlock(x, y, z, conOn(id, !on(id)));
+    api.setBlock(x, y, z, conOn(id, !on(id)), UPDATE_CLIENTS); // cambia sin avisar…
     if (!on(id)) api.schedule(x, y, z, 2); // pulso de 2 ticks
+    avisarDetras(api, x, y, z, id); // …y avisa al bloque de detrás y a los vecinos de ese
   },
 });
 ```
@@ -130,10 +158,11 @@ registerRedstone(OBSERVER, {
 
 ## Rendimiento
 
-- Los avisos se atienden en cola, sin recursión, con un tope por tick (200 000); los ticks
-  programados, con el tope de Minecraft (65 536).
-- El polvo resuelve su red entera en una pasada (cubos de potencia de 15 a 1) y no se vuelve a
-  resolver mientras sólo cambie la potencia de otros polvos: una línea de 15 se enciende o se apaga con
-  15 cambios de bloque, no con cientos de avisos.
-- La prueba de rendimiento (`tests/redstone.test.ts`) mueve una rejilla de 40×40 de polvo y diez
-  relojes a la vez por debajo de 8 ms por tick.
+- Los avisos se atienden sin recursión (una pila, como Java), con el tope de Java (un millón
+  encadenados); los ticks programados, con el tope de Minecraft (65 536).
+- El polvo va cable a cable como en Java: cada cambio avisa a los vecinos de siete posiciones, así que una
+  red grande da muchos avisos (como en Java). La prueba de rendimiento (`tests/redstone.test.ts`) mueve una
+  rejilla de 40×40 de polvo y diez relojes a la vez: unos 4,5 ms por tick.
+- Lo que depende del orden de Java se comprueba contra Java de verdad: `tools/JavaHashOrder.java` genera
+  `tests/fixtures/javaHashOrder.json` (el orden de `HashSet` y `HashMap<BlockPos>`) y
+  `tests/redstoneJava.test.ts` lo compara.

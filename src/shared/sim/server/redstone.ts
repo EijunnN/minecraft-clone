@@ -223,6 +223,22 @@ export class Redstone implements RedstoneApi {
     this.updateNeighbors(x, y - 1, z);
   }
 
+  /** isHandlingTick de Java: ¿se están atendiendo los ticks programados? (el pistón lo mira). */
+  get inTickPhase(): boolean {
+    return this.tickPhase;
+  }
+
+  /** updateNeighbourShapes de Java para la celda (x, y, z) con lo que hay ahora en ella (el pistón lo usa aparte). */
+  updateShapesAround(x: number, y: number, z: number, flags: number): void {
+    const id = this.getBlock(x, y, z);
+    const sf = flags & ~33;
+    for (const f of SHAPE_ORDER) {
+      const nx = x + FACE_X[f], ny = y + FACE_Y[f], nz = z + FACE_Z[f];
+      if (!shapeHandler(this.getBlock(nx, ny, nz))) continue;
+      this.addAndRun({ k: 2, x: nx, y: ny, z: nz, fx: x, fy: y, fz: z, src: id, i: 0, skip: -1, face: f ^ 1, nid: id, flags: sf });
+    }
+  }
+
   stateTouched(x: number, y: number, z: number, flags = UPDATE_ALL): void {
     this.afterChange(x, y, z, this.getBlock(x, y, z), flags);
   }

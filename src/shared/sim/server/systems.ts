@@ -295,11 +295,16 @@ export class ServerSystems {
     if (kind === 'note') this.allays?.heardNote(x, y, z); // los alays lo oyen
   }
 
-  /** Un tick de todos los sistemas (sin la carga de chunks ni los fluidos, que van antes). */
+  /**
+   * Un tick de todos los sistemas (sin la carga de chunks, los ticks programados de la redstone ni los fluidos,
+   * que van antes). Auditoría de la redstone: en el orden de las fases de Java: ticks aleatorios → eventos de
+   * bloque → entidades → entidades de bloque.
+   */
   tick(tickCount: number): void {
     const ctx = this.ctx;
     const second = tickCount % TICK_RATE === 0;
     this.nature.tick();
+    this.redstone.runBlockEvents();
     ctx.entities.tick(DT);
     this.leashes.tick(DT);
     this.cauldrons.tick();
@@ -328,8 +333,9 @@ export class ServerSystems {
     this.bells.tick(DT);
     this.equipment.tick();
     this.enchantWork.tick();
-    this.redstone.tick();
-    this.mechanisms.tick(); // después de la redstone (los pulsos cortos llegan antes)
+    this.redstone.entityPhase(); // placas, cuerda y mena pisadas
+    this.redstone.blockEntityPhase(); // sensores de luz solar
+    this.mechanisms.tick(); // bloques en movimiento, tolvas y vagonetas con dinamita
     this.deepDark.tick();
     this.monuments.tick();
     this.portals.tick(); // Fase 8

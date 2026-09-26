@@ -317,7 +317,7 @@ test('tolvas: entre dos cofres, al horno, bloqueadas con potencia y leídas por 
   assert.equal(wirePower(get(x + 2, by, cz)), 3);
 });
 
-test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las que no tienen nada que hacer duermen', () => {
+test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra si ya le tocó en el tick), en su orden', () => {
   const { h, bx, by, bz, set } = lab();
   const inv = h.gs.sys.mechanisms.inventories;
   const hoppers = h.gs.sys.mechanisms.hoppers;
@@ -333,7 +333,7 @@ test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las qu
   set(x + 1, by, z, stateOf(HOPPER, { facing: 2 }));
   set(x + 2, by, z, CHEST);
   h.tick(4);
-  assert.equal(hoppers.awakeCount, 0, 'sin nada que hacer, duermen');
+  assert.equal(hoppers.coolingCount, 0, 'sin nada que hacer, ninguna espera');
   fill(x, by, z, 2);
   h.tick(1);
   assert.deepEqual([count(x, by, z), count(x + 1, by, z)], [1, 1], 'A pasa uno en el acto');
@@ -347,7 +347,7 @@ test('tolvas: cada una con su espera (8 ticks; 7 la que recibe de otra) y las qu
   h.tick(7);
   assert.equal(count(x + 2, by, z), 2);
   h.tick(10);
-  assert.equal(hoppers.awakeCount, 0, 'y vuelven a dormir');
+  assert.equal(hoppers.coolingCount, 0, 'y ya no esperan');
   // Cada una a su ritmo: una fila de 4 tolvas desde un cofre lleno, 2,5 objetos por segundo.
   const z2 = z + 3;
   set(x, by + 1, z2, CHEST);

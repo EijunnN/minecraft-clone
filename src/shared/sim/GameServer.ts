@@ -664,6 +664,8 @@ export class GameServer {
     this.tickCount++;
     const now = this.now();
     this.loadChunks(now);
+    // Fases de Java: ticks programados de los bloques, fluidos y luego lo demás (ServerSystems.tick).
+    this.sys.redstone.tickScheduled();
     this.fluids.step(this.fluidWorld);
     this.sys.tick(this.tickCount);
     this.flushQueue();

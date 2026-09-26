@@ -123,6 +123,7 @@ export class Mechanisms {
    * (y los comparadores se enteran en el acto, como en Minecraft) y explotan las vagonetas.
    */
   tick(): void {
+    this.hoppers.itemsInside(); // (fase de entidades) lo que cae dentro de una tolva
     this.pistons.tick();
     this.hoppers.tick();
     this.d.redstone.flush();
