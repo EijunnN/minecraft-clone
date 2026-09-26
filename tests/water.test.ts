@@ -1,13 +1,15 @@
 // Agua del generador: como es quieta, nunca debe quedar al lado ni encima de un hueco (se vería una
-// pared o un techo de agua colgando en el aire), tampoco entre dos chunks.
+// pared o un techo de agua colgando en el aire), tampoco entre dos chunks ni donde pasa una mina
+// abandonada (isInInvalidLocation de Java: un tramo que toca un líquido no se pone).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { AIR, BLOCK_FLUID } from '../src/shared/blocks';
-import { MIN_Y, SEA_LEVEL, blockIndex } from '../src/shared/constants';
+import { MIN_Y, MAX_Y, blockIndex } from '../src/shared/constants';
 
 test('agua generada: sin paredes ni techos de agua sobre el aire', () => {
-  for (const [seed, cx0, cz0] of [[12345, -14, -14], [777, 0, 0]] as const) {
+  // Las dos últimas zonas tienen minas que antes cruzaban acuíferos (una en una cueva frondosa).
+  for (const [seed, cx0, cz0] of [[12345, -14, -14], [777, 0, 0], [12345, 0, 3], [12345, 16, 24]] as const) {
     const gen = new TerrainGenerator(seed);
     const N = 6;
     const chunks = new Map<string, Uint16Array>();
@@ -21,7 +23,7 @@ test('agua generada: sin paredes ni techos de agua sobre el aire', () => {
     const where: string[] = [];
     for (let x = 0; x < N * 16; x++) {
       for (let z = 0; z < N * 16; z++) {
-        for (let y = MIN_Y + 1; y < SEA_LEVEL; y++) {
+        for (let y = MIN_Y + 1; y < MAX_Y; y++) {
           if (at(x, y, z) !== AIR) continue;
           cells++;
           if (water(at(x, y + 1, z)) || water(at(x + 1, y, z)) || water(at(x - 1, y, z)) || water(at(x, y, z + 1)) || water(at(x, y, z - 1))) {

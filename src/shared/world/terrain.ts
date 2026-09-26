@@ -513,29 +513,32 @@ export class TerrainGenerator {
    * vecino, calculada con las mismas reglas) se vuelve roca. Sólo cambia el lado del aire, así que los
    * dos chunks coinciden sin tener que generarse juntos.
    */
+  private waterColumns = new Map<string, { h: number; amp: number; top: number; ceiling: number; aquifer: number; ice: boolean }>();
+
+  /**
+   * ¿Deja el generador agua en (x, y, z)? (mar sobre el fondo o cueva inundada del acuífero). Sirve para saber
+   * qué hay al otro lado del borde de un chunk sin generarlo.
+   */
+  generatedWaterAt(x: number, y: number, z: number): boolean {
+    const k = `${x},${z}`;
+    let c = this.waterColumns.get(k);
+    if (!c) {
+      if (this.waterColumns.size > 4096) this.waterColumns.clear();
+      const inf = this.columnInfo(x, z, { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 });
+      const top = this.surfaceAt(x, z, inf);
+      c = {
+        h: inf.height, amp: inf.amp, top, ceiling: this.caveCeiling(x, z, top), aquifer: this.aquiferLevel(x, z, top),
+        ice: inf.temp < -0.58,
+      };
+      this.waterColumns.set(k, c);
+    }
+    if (c.top < SEA_LEVEL - 1 && y > c.top) return y < SEA_LEVEL && !(c.ice && y === SEA_LEVEL - 1);
+    if (y > c.aquifer || y > c.ceiling || y <= MIN_Y + 10) return false;
+    return this.solidAt(x, y, z, c.h, c.amp) && this.caveAt(x, y, z);
+  }
+
   private sealGeneratedWater(blocks: Uint16Array, x0: number, z0: number): void {
-    const columns = new Map<number, { h: number; amp: number; top: number; ceiling: number; aquifer: number; ice: boolean }>();
-    const column = (x: number, z: number) => {
-      const k = (x - x0 + 1) * 18 + (z - z0 + 1);
-      let c = columns.get(k);
-      if (!c) {
-        const inf = this.columnInfo(x, z, { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 });
-        const top = this.surfaceAt(x, z, inf);
-        c = {
-          h: inf.height, amp: inf.amp, top, ceiling: this.caveCeiling(x, z, top), aquifer: this.aquiferLevel(x, z, top),
-          ice: inf.temp < -0.58,
-        };
-        columns.set(k, c);
-      }
-      return c;
-    };
-    // ¿Hay agua generada en una celda de fuera del chunk? (mar sobre el fondo o cueva inundada del acuífero)
-    const waterOutside = (x: number, y: number, z: number): boolean => {
-      const c = column(x, z);
-      if (c.top < SEA_LEVEL - 1 && y > c.top) return !(c.ice && y === SEA_LEVEL - 1);
-      if (y > c.aquifer || y > c.ceiling || y <= MIN_Y + 10) return false;
-      return this.solidAt(x, y, z, c.h, c.amp) && this.caveAt(x, y, z);
-    };
+    const waterOutside = (x: number, y: number, z: number) => this.generatedWaterAt(x, y, z);
     for (let y = MIN_Y + 1; y < SEA_LEVEL; y++) {
       for (let lz = 0; lz < 16; lz++) {
         for (let lx = 0; lx < 16; lx++) {

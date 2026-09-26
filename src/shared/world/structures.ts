@@ -27,6 +27,7 @@ import { OCEAN_STRUCTURES, OCEAN_STRUCTURE_NAMES } from './oceanStructures'; // 
 // Fase 7.5 (fauna): cabañas de bruja y fósiles.
 import { buildSwampHut, swampHutSite, SWAMP_HUT_RADIUS, SWAMP_HUT_SALT } from './swampHut';
 import { buildFossil, fossilSite, FOSSIL_RADIUS } from './fossils';
+import { isDeepDark } from './deepDark'; // el Deep Dark bloquea las minas (mineshaft_blocking)
 import { buildMansion, mansionSite, MANSION_RADIUS } from './mansion'; // Fase 7.5 (mansión)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
@@ -299,7 +300,7 @@ export function placeStructures(
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
   const c = new Canvas(blocks, x0, z0, chests, villagers, mobs);
   placeDungeon(gen, c, cx, cz, tops);
-  for (const m of mineshaftsNear(gen, cx, cz)) buildMineshaft(c, m, tops);
+  for (const m of mineshaftsNear(gen, cx, cz)) buildMineshaft(c, m, tops, gen);
   for (const t of GRID) {
     const r0 = Math.floor((x0 - t.radius) / 16 / t.spacing), r1 = Math.floor((x0 + 15 + t.radius) / 16 / t.spacing);
     const q0 = Math.floor((z0 - t.radius) / 16 / t.spacing), q1 = Math.floor((z0 + 15 + t.radius) / 16 / t.spacing);
@@ -510,7 +511,44 @@ function mineshaftsNear(gen: TerrainGenerator, cx: number, cz: number): Mineshaf
   return out;
 }
 
-function buildMineshaft(c: Canvas, m: Mineshaft, tops: Int16Array): void {
+/**
+ * isInInvalidLocation de las minas de Java (MineShaftPiece): un tramo no se pone en el chunk si su caja,
+ * ampliada un bloque y recortada al chunk, toca un líquido por cualquiera de sus seis caras (o si está en el
+ * Deep Dark, el bioma que las bloquea). Así nunca abre un hueco junto al agua o la lava, que se quedarían
+ * colgando. Además de lo que hace Java, mira también la fila de celdas del chunk vecino que da a la caja
+ * (con el agua que deja el generador): en Java esa agua del otro lado del borde se queda como una pared.
+ */
+function mineshaftPieceBlocked(c: Canvas, gen: TerrainGenerator, p: Corridor, top: number): boolean {
+  const liquid = (x: number, y: number, z: number) => {
+    const b = c.get(x, y, z);
+    return b > 0 && BLOCK_FLUID[b] > 0;
+  };
+  const X0 = c.x0, X1 = c.x0 + 15, Z0 = c.z0, Z1 = c.z0 + 15;
+  const x0 = Math.max(p.x0 - 1, X0), x1 = Math.min(p.x1 + 1, X1);
+  const z0 = Math.max(p.z0 - 1, Z0), z1 = Math.min(p.z1 + 1, Z1);
+  const y0 = p.y - 1, y1 = p.y + top + 1;
+  if (isDeepDark(gen, (x0 + x1) >> 1, (y0 + y1) >> 1, (z0 + z1) >> 1)) return true;
+  for (let x = x0; x <= x1; x++) {
+    for (let z = z0; z <= z1; z++) if (liquid(x, y0, z) || liquid(x, y1, z)) return true;
+  }
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y <= y1; y++) if (liquid(x, y, z0) || liquid(x, y, z1)) return true;
+  }
+  for (let z = z0; z <= z1; z++) {
+    for (let y = y0; y <= y1; y++) if (liquid(x0, y, z) || liquid(x1, y, z)) return true;
+  }
+  // Al otro lado de los bordes del chunk que cruza la caja.
+  const outside = (x: number, y: number, z: number) => gen.generatedWaterAt(x, y, z);
+  for (let y = y0; y <= y1; y++) {
+    if (p.x0 - 1 < X0) for (let z = z0; z <= z1; z++) if (outside(X0 - 1, y, z)) return true;
+    if (p.x1 + 1 > X1) for (let z = z0; z <= z1; z++) if (outside(X1 + 1, y, z)) return true;
+    if (p.z0 - 1 < Z0) for (let x = x0; x <= x1; x++) if (outside(x, y, Z0 - 1)) return true;
+    if (p.z1 + 1 > Z1) for (let x = x0; x <= x1; x++) if (outside(x, y, Z1 + 1)) return true;
+  }
+  return false;
+}
+
+function buildMineshaft(c: Canvas, m: Mineshaft, tops: Int16Array, gen: TerrainGenerator): void {
   const fence = FENCES.oak;
   const underground = (x: number, z: number, y: number) => {
     if (!c.inside(x, y, z)) return false;
@@ -519,12 +557,13 @@ function buildMineshaft(c: Canvas, m: Mineshaft, tops: Int16Array): void {
   for (const p of m.pieces) {
     if (p.x1 < c.x0 || p.x0 > c.x0 + 15 || p.z1 < c.z0 || p.z0 > c.z0 + 15) continue;
     const top = p.axis === 2 && p.seed !== 0 ? 3 : 2;
+    if (mineshaftPieceBlocked(c, gen, p, top)) continue;
     for (let z = p.z0; z <= p.z1; z++) {
       for (let x = p.x0; x <= p.x1; x++) {
         if (!underground(x, z, p.y)) continue;
         for (let dy = 0; dy <= top; dy++) {
-          const b = c.get(x, p.y + dy, z);
-          if (b > 0 && BLOCK_FLUID[b]) continue;
+          // Como el generateBox de Java, deja aire todo lo de dentro (un líquido ahí dentro, sin tocar las
+          // caras, es una bolsa suelta).
           const k = hash3(x, p.y + dy, z, p.seed);
           // Telarañas en los rincones de arriba.
           c.set(x, p.y + dy, z, dy === top && p.axis !== 2 && k % 23 === 0 ? COBWEB : AIR);
