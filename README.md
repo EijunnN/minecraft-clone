@@ -14,8 +14,14 @@ Objects). Pensado para PC (teclado y ratón).
   bayas luminosas, de goteo con estalactitas, inundadas), lagos de lava, geodas de amatista y las ocho
   menas de Minecraft (también en pizarra profunda por debajo de 0).
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
-  templos del desierto y de la jungla, naufragios, portales en ruinas, iglús y pozos del desierto. Sus
-  cofres traen botín propio de cada estructura; `/localizar` indica dónde está la más cercana.
+  templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
+  cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus
+  guardianes, la mansión del bosque con sus illagers y alays presos, y la ciudad antigua en el Deep
+  Dark. Sus cofres traen el botín de Minecraft; `/localizar` indica dónde está la más cercana y el
+  cartógrafo vende mapas de explorador.
+- **Deep Dark**: bajo las montañas, con sculk que se extiende al morir algo cerca, sensores que oyen
+  las vibraciones (y dan señal de redstone), chilladores y el *warden*, que sale del suelo, huele,
+  persigue lo que oye y lanza su estampido sónico.
 - **Clima**: lluvia, nieve y tormentas con rayos (destello, trueno y daño). En las zonas frías la nieve
   se acumula en capas y el agua se congela; junto a la luz se derriten.
 - **Mapas y brújula**: un mapa vacío se convierte en el mapa de la zona (128×128 bloques) y se ve al
@@ -41,12 +47,13 @@ Objects). Pensado para PC (teclado y ratón).
 - **Inventario y fabricación**: inventario de 36 ranuras con fabricación 2×2, mesa de trabajo 3×3,
   cofres y hornos compartidos entre jugadores. Clic, clic derecho, mayúsculas + clic, teclas 1–9 y Q
   funcionan como en Minecraft.
-- **52 criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: animales de
+- **62 criaturas** con IA, búsqueda de caminos (A*), animaciones y sonidos propios: animales de
   granja y salvajes (zorros, cabras, osos polares, conejos, lobos, pandas, loros, armadillos y abejas
   con sus nidos y su miel), criaturas acuáticas (peces, delfines, tortugas, ajolotes, ranas y calamar
-  brillante) y monstruos (zombis, esqueletos, creepers, arañas, endermen, ahogados, brujas, slimes,
-  fantasmas, lepismas y aldeanos zombi). Los monstruos aparecen en la oscuridad y los no muertos
-  arden al sol.
+  brillante, guardianes) y monstruos (zombis, esqueletos, creepers, arañas, endermen, ahogados, brujas,
+  slimes, fantasmas, lepismas y aldeanos zombi). También murciélagos, ocelotes, champiñacas, alays,
+  llamas de comerciante y caballos esqueleto (la trampa del rayo) y zombi. Los monstruos aparecen en la
+  oscuridad y los no muertos arden al sol.
 - **Aldeas y comercio**: aldeanos con 12 profesiones según su bloque de trabajo, que pasean de día y
   vuelven a casa de noche; clic derecho abre el comercio en esmeraldas, con 5 niveles. Vendedor
   ambulante y gólem de hierro protector.
@@ -174,6 +181,9 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Calderos con agua, lava y nieve polvo, cabezas de criaturas y bloques nuevos de noche](docs/screenshots/cauldrons.png) | ![Barcas en el agua y vagonetas sobre raíles, con una poción en la mano](docs/screenshots/transport.png) |
 | ![Mesa de encantamientos rodeada de librerías, con una espada encantada](docs/screenshots/enchanting.png) | ![Palanca, polvo de redstone y repetidor que encienden una lámpara de noche](docs/screenshots/redstone.png) |
 | ![Pistón extendido empujando una fila de piedra, con tolva, dispensador y observador](docs/screenshots/pistons.png) | ![Dinamita explotando en cadena junto a un pistón](docs/screenshots/tnt.png) |
+| ![Monumento oceánico visto desde la superficie, con sus faroles marinos](docs/screenshots/monument.png) | ![Guardianes nadando junto al monumento](docs/screenshots/guardians.png) |
+| ![Mansión del bosque entre los árboles del bosque oscuro](docs/screenshots/mansion.png) | ![Caballo esqueleto, champiñaca, llama de comerciante y caballo zombi](docs/screenshots/critters.png) |
+| ![Ciudad antigua en el Deep Dark, con el sculk que brilla](docs/screenshots/ancient_city.png) | ![El warden en la ciudad antigua](docs/screenshots/warden.png) |
 
 ## Controles
 
@@ -304,9 +314,10 @@ preocupaciones.
 
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
-- 52 tipos de criatura (no las ~80 de Minecraft): sin criaturas del Nether y el End, ni jefes.
+- 62 tipos de criatura (no las ~86 de Minecraft): sin criaturas del Nether y el End, ni jefes, ni las
+  de 2024–2026 (sniffer, breeze, creaking…).
 - Sin Nether ni End: los ingredientes de pociones que vienen de allí (verruga, polvo de blaze…)
-  sólo se consiguen en creativo. Tampoco hay todavía Deep Dark, monumentos oceánicos ni mansiones.
+  sólo se consiguen en creativo.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores

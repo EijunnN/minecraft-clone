@@ -494,7 +494,7 @@ Fuera de la fase 7 (anotado para que no se pierda):
   estallido de viento), las lanzas y los encantamientos que se añadan con ellas; las pociones de las
   cámaras de desafío (supuración, tejido, infestación y carga de viento) y sus efectos.
 
-### Fase 7.5 — Estructuras y criaturas del mundo normal (XL) · 🟡 en curso
+### Fase 7.5 — Estructuras y criaturas del mundo normal (XL) · ✅ hecha
 Lo del mundo normal que no tenía fase y que depende de la fase 7 (su botín son libros encantados y el
 sculk da señales de redstone), y las criaturas y estructuras del mundo normal que quedaban sueltas:
 - **Deep Dark:** el bioma, el sculk (bloque, venas, catalizador, sensor y sensor calibrado,
@@ -512,6 +512,17 @@ sculk da señales de redstone), y las criaturas y estructuras del mundo normal q
   explorador del cartógrafo (bosque y océano).
 - **Criaturas sueltas:** murciélago, ocelote, champiñaca, llama de comerciante, caballos esqueleto
   (trampa del rayo) y zombi; cabaña de bruja (bruja y gato negro) y fósiles.
+
+Hecho: todo lo anterior, con vibraciones enganchadas a la redstone (`docs/vibraciones.md`), mapas de
+estructura (del tesoro y de explorador, que buscan hasta 100 regiones como en Java) y criaturas de
+estructura que no desaparecen y se guardan. La niebla lejana bajo tierra ya es oscura.
+
+Fuera de la fase 7.5 (anotado para que no se pierda):
+- **Fase 8:** la fogata de alma, el bloque de magma y las columnas de burbujas (arena de alma y magma
+  bajo el agua).
+- **Fase 9:** los adornos de armadura (marea, costa, vigía, silencio, vex…), la arena y la grava
+  sospechosas y la resina (que también salen en estas estructuras); el sniffer, el breeze, el
+  ciénago, el crepitante y las demás criaturas de 2024–2026.
 
 ### Fase 8 — Nether y End (XL)
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
