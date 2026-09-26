@@ -251,6 +251,8 @@ export const BLOCK_OPAQUE = new Uint8Array(MAX_BLOCK_ID);
 export const BLOCK_AO = new Uint8Array(MAX_BLOCK_ID);
 export const BLOCK_LIGHT_OPACITY = new Uint8Array(MAX_BLOCK_ID);
 export const BLOCK_EMISSION = new Uint8Array(MAX_BLOCK_ID);
+/** Fase 8 (entorno del Nether): luz de alma (fuego, antorchas, faroles y fogatas de alma): alumbra en turquesa. */
+export const BLOCK_SOUL_LIGHT = new Uint8Array(MAX_BLOCK_ID);
 export const BLOCK_REPLACEABLE = new Uint8Array(MAX_BLOCK_ID);
 /** Capa de textura para cada cara: índice = id * 6 + cara. */
 export const BLOCK_TEX = new Uint16Array(MAX_BLOCK_ID * 6);
@@ -310,6 +312,7 @@ export function finalizeBlocks(kindOf: ReadonlyMap<number, number>): void {
     BLOCK_AO[b.id] = b.opaque || (b.render === R_CUTOUT && b.lightOpacity > 0) ? 1 : 0;
     BLOCK_LIGHT_OPACITY[b.id] = b.lightOpacity;
     BLOCK_EMISSION[b.id] = b.emission;
+    BLOCK_SOUL_LIGHT[b.id] = b.emission > 0 && b.key.startsWith('soul_') ? 1 : 0;
     BLOCK_REPLACEABLE[b.id] = b.replaceable ? 1 : 0;
     for (let f = 0; f < 6; f++) BLOCK_TEX[b.id * 6 + f] = b.render === R_NONE ? 0 : textureLayer(b.tex[f]);
     BLOCK_TEXROT[b.id] = b.texRot ?? 0;

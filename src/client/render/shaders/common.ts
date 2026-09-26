@@ -24,7 +24,7 @@ layout(std140) uniform Frame {
   vec4 uWind;         // xy = desplazamiento del viento de nubes, z = fuerza del viento en plantas, w = tiempo continuo
   vec4 uQuality;      // x = tamaño del mapa de sombras, y = muestras PCF, z = pasos SSR, w = pasos volumétricos
   vec4 uNearFar;      // x = near, y = far, z = tan(fov/2), w = aspecto
-  vec4 uDim;          // Fase 8 (dimensiones): x = hay cielo (sol, luna, luz del cielo), z = densidad de su niebla
+  vec4 uDim;          // Fase 8 (dimensiones): x = hay cielo (sol, luna, luz del cielo), y = altura de su mar de lava (0: no), z = densidad de su niebla
   vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal)
   vec4 uDimAmb;       // rgb = luz mínima de todo sin cielo (la penumbra del Nether)
 };
@@ -43,6 +43,17 @@ vec3 saturate3(vec3 x) { return clamp(x, 0.0, 1.0); }
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 /** Luz mínima (para que la oscuridad total no sea negro puro); Fase 8: la penumbra de las dimensiones sin cielo. */
 vec3 minAmbient() { return mix(vec3(0.012, 0.013, 0.016), uDimAmb.rgb, 1.0 - uDim.x); }
+/**
+ * Fase 8 (entorno del Nether): la luz de fondo sin cielo según la cara y la altura: la penumbra del bioma, algo más
+ * por arriba que por los lados, y el resplandor del mar de lava que sube desde abajo (más cerca de su altura y en
+ * las caras que miran hacia abajo: los techos y los salientes se tiñen de naranja).
+ */
+vec3 minAmbientAt(vec3 n, float y) {
+  if (uDim.x > 0.5) return vec3(0.012, 0.013, 0.016);
+  vec3 a = uDimAmb.rgb * (0.8 + 0.2 * n.y);
+  if (uDim.y > 0.0) a += vec3(1.0, 0.36, 0.09) * 0.06 * exp(-max(y - uDim.y, 0.0) / 22.0) * (0.55 - 0.45 * n.y);
+  return a;
+}
 // Bajo el agua abierta: luz del sol y del cielo que llega filtrada por el agua (azul verdosa).
 vec3 underwaterLight(vec3 skyUp) {
   return (uLightColor.rgb * max(uLightDir.y, 0.0) * 0.45 + skyUp * 0.8) * vec3(0.3, 0.8, 0.95) * uLightColor.w;
@@ -157,5 +168,18 @@ vec3 blockLightColor(float level) {
   float l = level * level;
   float i = l * l * 3.2 + l * 0.35;
   return vec3(1.0, 0.58, 0.28) * i;
+}
+/**
+ * Fase 8 (entorno del Nether): luz de bloque con su tono. Sin luz del cielo, ese canal lleva la luz de alma: donde
+ * manda ella (fuego, antorchas y faroles de alma), la luz es turquesa en vez de naranja (Java la pinta igual).
+ */
+vec3 blockLightTinted(float level, float soul) {
+  vec3 c = blockLightColor(level);
+  if (uDim.x > 0.5 || soul <= 0.0) return c;
+  float share = smoothstep(level - 0.2, level, soul);
+  // Más suave con la distancia que la naranja (llega más lejos) y algo más fuerte: el suelo de alrededor se tiñe.
+  float s2 = soul * soul;
+  vec3 soulC = vec3(0.26, 0.76, 1.0) * (s2 * s2 * 3.6 + s2 * 0.9);
+  return mix(c, soulC, share);
 }
 `;

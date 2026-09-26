@@ -34,7 +34,7 @@ export function pushEquipmentDraws(
     mat4.rotateY(m, m, Math.atan2(-rx, -rz));
     mat4.rotateZ(m, m, Math.PI / 4);
     mat4.scale(m, m, [0.55, 0.55, 0.55]);
-    out.push({ model, m, light: [1, 1] });
+    out.push({ model, m, light: [0, 1] });
     return true;
   }
   return false;

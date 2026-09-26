@@ -46,7 +46,7 @@ void main() {
   col += specularGGX(N, V, L, rough, f0) * lightCol;
   float skyF = skyLightCurve(uLightLevel.x);
   vec3 bounce = uLightColor.rgb * saturate(uLightDir.y) * 0.07 * (0.6 - 0.45 * N.y);
-  vec3 amb = (ambientCube(N) * 1.6 + bounce) * skyF + blockLightColor(uLightLevel.y) + minAmbient();
+  vec3 amb = (ambientCube(N) * 1.6 + bounce) * skyF + blockLightTinted(uLightLevel.y, uLightLevel.x) + minAmbientAt(N, vRel.y + uCamPos.y); // Fase 8 (entorno del Nether)
   col += diff / PI * amb * (1.0 + uMat.z);
   // Reflejo del cielo en las placas pulidas (nada bajo tierra).
   vec3 R = reflect(-V, N);

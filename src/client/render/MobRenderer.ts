@@ -351,7 +351,7 @@ export class MobRenderer {
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
       const hurt = !vehicle && (e.hurtT < 0.35 || e.deathT >= 0);
-      const light: [number, number] = def.fullBright ? [1, 1] : lightAt(e); // Fase 8.3: el blaze y el cubo de magma brillan
+      const light: [number, number] = def.fullBright ? [0, 1] : lightAt(e); // Fase 8.3: el blaze y el cubo de magma brillan
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
       p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : e.variant || mobVariant(e) || netherVariant(e)))

@@ -16,6 +16,41 @@ float fogOpticalDepth(vec3 rd, float dist) {
   if (abs(dy) < 1e-3 || y0 < 62.0) return a * dist;
   return a * dist * (1.0 - exp(-k * dy)) / (k * dy);
 }
+
+// Fase 8 (entorno del Nether): uDim.y = altura del mar de lava de la dimensión (0 si no tiene).
+/** Integral de exp(-(y - L) / h) a lo largo del rayo (la capa que se espesa junto al mar de lava). */
+float seaLayer(vec3 rd, float dist, float h) {
+  float e0 = exp(-max(uCamPos.y - uDim.y, -3.0) / h);
+  float k = rd.y / h;
+  if (abs(k * dist) < 1e-3) return e0 * dist;
+  return e0 * (1.0 - exp(-k * dist)) / k;
+}
+/** Espesor óptico de la niebla sin cielo: la del bioma, más densa en los 10 bloques de encima de la lava. */
+float netherFogDepth(vec3 rd, float dist) {
+  float d = uDim.z;
+  // Como en Java, la niebla empieza a unos bloques de la cámara (el 5 % de la distancia de visión).
+  float clear = uFog.w * 0.054;
+  if (uDim.y <= 0.0) return d * max(dist - clear, 0.0);
+  return d * (0.62 * max(dist - clear, 0.0) + 1.15 * seaLayer(rd, dist, 10.0));
+}
+/** Color de la niebla sin cielo a la altura y: la del bioma, encendida desde abajo por el mar de lava. */
+vec3 netherFogColor(float y, float rdy) {
+  vec3 base = uDimFog.rgb;
+  if (uDim.y <= 0.0) return base;
+  float glow = exp(-max(y - uDim.y, 0.0) / 16.0);
+  vec3 c = base * (0.5 + 0.95 * glow) + vec3(1.0, 0.34, 0.07) * (luma(base) * 0.9 + 0.0035) * glow;
+  // Hacia arriba, la oscuridad del techo; hacia abajo, el resplandor.
+  return c * mix(1.18, 0.62, smoothstep(-0.35, 0.6, rdy));
+}
+/** Camino que recorre el rayo dentro de la capa de aire caliente (2,5 bloques sobre la lava). */
+float heatPath(vec3 rd, float dist) {
+  if (uDim.y <= 0.0) return 0.0;
+  float lo = uDim.y, hi = uDim.y + 2.5, y0 = uCamPos.y;
+  if (abs(rd.y) < 1e-4) return y0 >= lo && y0 <= hi ? dist : 0.0;
+  float t1 = (lo - y0) / rd.y, t2 = (hi - y0) / rd.y;
+  float a = max(min(t1, t2), 0.0), b = min(max(t1, t2), dist);
+  return max(b - a, 0.0);
+}
 `;
 
 export const VOLUMETRIC_FS = /* glsl */ `
@@ -91,21 +126,38 @@ vec3 skyAt(vec3 rd) {
 }
 
 void main() {
-  vec3 col = texture(uScene, vUV).rgb;
   float depth = texture(uDepth, vUV).r;
   vec3 rel = relFromDepth(vUV, depth);
   float dist = length(rel);
   vec3 rd = rel / max(dist, 1e-5);
   bool sky = depth >= 1.0;
   bool under = uMisc.z > 0.5;
+  bool dark = !under && uDim.x < 0.5;
+  // Fase 8 (entorno del Nether): calima sobre el mar de lava: el aire caliente de la capa de encima ondula lo
+  // que se ve a través de ella (más cuanto más camino recorre el rayo dentro de la capa).
+  vec2 suv = vUV;
+  if (dark) {
+    float hot = heatPath(rd, sky ? 400.0 : dist);
+    if (hot > 0.0) {
+      float t = uWind.w;
+      vec3 wp = uCamPos.xyz + rd * min(sky ? 400.0 : dist, 64.0);
+      vec2 wob = vec2(sin(wp.x * 1.7 + t * 3.1) + sin(wp.z * 2.3 - t * 2.3), cos(wp.z * 1.9 + t * 2.7) + sin(wp.x * 1.1 + t * 1.9));
+      suv += wob * 0.0009 * saturate(hot / 6.0);
+    }
+  }
+  vec3 col = texture(uScene, suv).rgb;
   float eyeSky = uMisc.w;
   vec3 ambUp = texelFetch(uIrradiance, ivec2(2, 0), 0).rgb;
-  if (!under && uDim.x < 0.5) {
-    // Fase 8: dimensión sin cielo (el Nether): una niebla espesa de su color y ese mismo fondo.
-    if (sky) col = uDimFog.rgb;
+  if (dark) {
+    // Fase 8: dimensión sin cielo (el Nether): la niebla de su bioma, más espesa y encendida junto al mar de
+    // lava (la luz de la lava la ilumina desde abajo) y más oscura hacia el techo; el fondo, un degradado.
+    float far = sky ? 1.0 / max(uDim.z, 1e-4) : dist;
+    float yEnd = uCamPos.y + rd.y * min(far, 160.0);
+    vec3 fogCol = netherFogColor(0.5 * (uCamPos.y + yEnd), rd.y);
+    if (sky) col = fogCol;
     else {
-      col = mix(col, uDimFog.rgb, 1.0 - exp(-dist * uDim.z));
-      col = mix(col, uDimFog.rgb, smoothstep(uFog.z, uFog.w, length(rel.xz)));
+      col = mix(col, fogCol, 1.0 - exp(-netherFogDepth(rd, dist)));
+      col = mix(col, fogCol, smoothstep(uFog.z, uFog.w, length(rel.xz)));
     }
   } else if (!under) {
     if (!sky) {
@@ -369,7 +421,7 @@ void main() {
   // Visión nocturna (desplazamiento de Purkinje): menos saturación y tono azulado en la oscuridad.
   float l = luma(c);
   float scot = smoothstep(0.06, 0.002, l);
-  c = mix(c, vec3(l) * vec3(0.72, 0.88, 1.18), scot * 0.55);
+  c = mix(c, vec3(l) * vec3(0.72, 0.88, 1.18), scot * 0.55 * uDim.x); // Fase 8: en el Nether lo oscuro no se vuelve azul
   c = aces(c);
   float lc = luma(c);
   c = mix(vec3(lc), c, uSaturation);

@@ -104,7 +104,7 @@ void main() {
     // Luz del cielo (según la luz del cielo del bloque), de antorchas y algo de sol directo.
     vec3 up = texelFetch(uIrradiance, ivec2(2, 0), 0).rgb;
     float sky = vLight.x * uDim.x; // Fase 8: sin cielo no hay luz del cielo
-    vec3 lt = up * sky * sky + blockLightColor(vLight.y) + uLightColor.rgb * 0.3 * smoothstep(0.55, 1.0, sky) + minAmbient();
+    vec3 lt = up * sky * sky + blockLightTinted(vLight.y, vLight.x) + uLightColor.rgb * 0.3 * smoothstep(0.55, 1.0, sky) + minAmbient();
     lt += underwaterLight(up);
     col = albedo / PI * lt;
   }

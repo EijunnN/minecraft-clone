@@ -843,7 +843,7 @@ export class Game {
         const b = world.getBlock(x, y, z);
         return b > 0 ? BLOCK_FLUID[b] : 0;
       },
-      light: (x, y, z) => world.getLight(x, y, z),
+      light: (x, y, z) => world.renderLight(x, y, z), // Fase 8: con la luz de alma
     };
     ps.update(dt);
     this.ambient.update(dt);

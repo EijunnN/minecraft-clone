@@ -62,7 +62,7 @@ void main() {
   // Luz del cielo algo desaturada: las superficies blancas (lana) no deben volverse azules.
   vec3 ac = ambientCube(N);
   ac = mix(vec3(dot(ac, vec3(0.2126, 0.7152, 0.0722))), ac, 0.55);
-  vec3 amb = (ac * 1.6 + bounce) * skyLightCurve(uLightLevel.x) + blockLightColor(uLightLevel.y) + minAmbient();
+  vec3 amb = (ac * 1.6 + bounce) * skyLightCurve(uLightLevel.x) + blockLightTinted(uLightLevel.y, uLightLevel.x) + minAmbientAt(N, vRel.y + uCamPos.y); // Fase 8 (entorno del Nether)
   col += albedo / PI * amb;
   col *= uTint;
   if (emissive) col = max(col, albedo * 2.5);

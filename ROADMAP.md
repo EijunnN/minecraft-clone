@@ -613,6 +613,12 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   cráneo de esqueleto wither y cabeza de piglin. Pendiente para la fase 9: la lanza de oro (los piglins y
   los zombificados que la llevarían sacan espada de oro) y el ghast seco del trueque (llega con el ghast
   feliz); los blazes, esqueletos wither y brutos salen en sus estructuras (8.4).
+- ✅ **Entorno del Nether (por encima de Java):** la niebla tiene altura (más espesa y encendida junto al mar de
+  lava, que la ilumina desde abajo, y oscura hacia el techo) y el fondo es un degradado; el aire caliente ondula
+  sobre la lava; la lava brilla en naranja en vez de quemarse a blanco; techos y salientes se tiñen con el
+  resplandor del mar de lava; la penumbra es direccional y deja leer lo oscuro (arena de alma, basalto); lo oscuro
+  ya no se vuelve azul; suben pavesas del mar de lava; y la luz de alma (fuego, antorchas y faroles de alma) alumbra
+  en turquesa, por su propio canal de luz (en Java toda la luz de bloque es del mismo color).
 - **8.4 Estructuras del Nether:** fortalezas (generadores de blazes, verruga del Nether), bastiones (los 4
   tipos), fósiles del Nether y portales en ruinas en el Nether.
 - **8.5 Lo que da el Nether:** netherita (escombros ancestrales, plantilla de mejora y mesa de herrería),

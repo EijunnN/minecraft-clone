@@ -18,6 +18,8 @@ import { WATER, BLOCK_WATERLOGGED } from '../../../shared/blocks'; // Fase 6.5 (
 import { skullPose } from '../../../shared/blocks'; // Fase 6.5 (colecciones)
 import { R_RAIL, RAIL_SHAPE } from '../../../shared/blocks'; // Fase 7 (transporte)
 import { DIR_X, DIR_Z } from '../../../shared/blockModels';
+import { BLOCK_SOUL_LIGHT } from '../../../shared/blocks'; // Fase 8 (entorno del Nether)
+import { dimensionDef } from '../../../shared/dimensions';
 import { hash2, MIN_Y, WORLD_HEIGHT, CHUNK_VOLUME } from '../../../shared/constants';
 
 const W = 48; // ancho del volumen de trabajo (3 chunks)
@@ -122,12 +124,22 @@ export class Mesher {
   }
 
   /**
+   * Fase 8 (entorno del Nether): en las dimensiones sin luz del cielo, su canal (4 bits por vértice y en la luz
+   * del chunk) lleva la luz de alma, que el shader pinta en turquesa.
+   */
+  private soulChannel = false;
+  setDim(dim: number): void {
+    this.soulChannel = !dimensionDef(dim).skyLight;
+  }
+
+  /**
    * chunks: 9 columnas en orden (dz+1)*3 + (dx+1), cada una Uint16Array(CHUNK_VOLUME) con el índice
    * de blockIndex (fila = y − MIN_Y). Dentro del mallador las alturas son filas de columna.
    */
   mesh(chunks: Uint16Array[], cx: number, cz: number): MeshResult {
     const top = this.fillVolume(chunks);
-    this.computeSkyLight(top);
+    if (this.soulChannel) this.computeBlockLight(top, this.sky, true);
+    else this.computeSkyLight(top);
     this.computeBlockLight(top);
     return this.buildMesh(top, cx, cz);
   }
@@ -255,9 +267,9 @@ export class Mesher {
     return tail;
   }
 
-  private computeBlockLight(topRow: number): void {
+  /** Luz de bloque (o, con `soul`, sólo la de los bloques de alma) por BFS desde lo que emite. */
+  private computeBlockLight(topRow: number, blk = this.blk, soul = false): void {
     const vox = this.vox;
-    const blk = this.blk;
     const q = this.queue;
     let head = 0;
     let tail = 0;
@@ -265,7 +277,7 @@ export class Mesher {
     blk.fill(0, 0, end);
     for (let i = SY; i < end; i++) {
       const e = BLOCK_EMISSION[vox[i]];
-      if (e > 0) {
+      if (e > 0 && (!soul || BLOCK_SOUL_LIGHT[vox[i]])) {
         blk[i] = e;
         q[tail++ & QUEUE_MASK] = i;
       }
@@ -360,7 +372,7 @@ export class Mesher {
       }
     }
     // Por encima de la fila de trabajo todo es cielo abierto.
-    for (let y = Math.max(0, topRow); y < WORLD_HEIGHT; y++) light.fill(0xf0, y << 8, (y + 1) << 8);
+    for (let y = Math.max(0, topRow); y < WORLD_HEIGHT; y++) light.fill(this.soulChannel ? 0 : 0xf0, y << 8, (y + 1) << 8);
 
     return {
       opaque: this.opaque.result(),

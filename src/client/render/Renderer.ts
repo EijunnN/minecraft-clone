@@ -517,13 +517,16 @@ export class Renderer {
     // Fase 8: la dimensión (cielo, niebla y penumbra). La niebla se cierra antes que el borde normal.
     const dd = dimensionDef(s.dim ?? 0);
     const lin = (c: number) => Math.pow(c / 255, 2.2);
-    d[156] = dd.sky ? 1 : 0; d[157] = 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = 0;
+    d[156] = dd.sky ? 1 : 0; d[157] = dd.lavaSea ?? 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = 0;
     // Fase 8.2: la niebla es la del bioma (mezclada con los de alrededor) y la penumbra toma su tono.
     const fog = s.fog ?? dd.fog;
     d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = 0;
     const top = Math.max(fog[0], fog[1], fog[2], 1);
     const hue = (c: number) => 0.55 + 0.45 * (c / top);
-    d[164] = dd.ambient * 0.8 * hue(fog[0]); d[165] = dd.ambient * 0.8 * hue(fog[1]); d[166] = dd.ambient * 0.8 * hue(fog[2]); d[167] = 0;
+    // Fase 8 (entorno del Nether): una penumbra algo más clara, para que lo oscuro (arena de alma, basalto) se lea
+    // contra la niebla en vez de quedar en silueta negra.
+    const amb = dd.ambient * 1.25;
+    d[164] = amb * hue(fog[0]); d[165] = amb * hue(fog[1]); d[166] = amb * hue(fog[2]); d[167] = 0;
     this.ubo.upload();
   }
 
@@ -927,7 +930,7 @@ export class Renderer {
         mat4.rotateY(m, m, Math.atan2(-rx, -rz));
         const k = big ? 0.9 : 0.225;
         mat4.scale(m, m, [k, k, k]);
-        out.push({ model, m, light: [1, 1] });
+        out.push({ model, m, light: [0, 1] });
       } else if (e.type === ENT_THROWN && e.item > 0) {
         // Huevo (o poción: Fase 7) en vuelo: el sprite de cara a la cámara.
         const model = this.items.model(e.item, e.dmg);
@@ -1093,7 +1096,7 @@ export class Renderer {
         const m = mat4.clone(hand);
         const k = model.flat ? 0.34 : 0.2;
         mat4.scale(m, m, [k, k, k]);
-        list.push({ model, m, light: [1, 1] });
+        list.push({ model, m, light: [0, 1] });
         continue;
       }
       const m = mat4.clone(hand);

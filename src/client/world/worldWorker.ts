@@ -42,6 +42,7 @@ scope.onmessage = (e) => {
       case 'init':
         gen = createGenerator(msg.dim, msg.seed);
         mesher.setSeed(msg.seed);
+        mesher.setDim(msg.dim); // Fase 8 (entorno del Nether): luz de alma
         break;
       case 'gen': {
         if (!gen) throw new Error('worker sin inicializar');

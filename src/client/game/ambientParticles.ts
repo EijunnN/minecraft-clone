@@ -18,6 +18,7 @@ import { COPPER_TORCH, COPPER_WALL_TORCH } from '../../shared/blocks'; // Fase 6
 import { plantParticles } from './plantParticles'; // Fase 6.5 (océano y plantas)
 import { isFire } from '../../shared/blocks'; // Fase 6.5 (equipo)
 import { redstoneTorchTip, redstoneAmbient, dustMote } from './redstoneClient'; // Fase 7 (redstone)
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (entorno del Nether)
 
 type P3 = [number, number, number];
 
@@ -130,6 +131,8 @@ export class AmbientParticles {
       fx.spore(p.x + Math.cos(a) * d, p.eyeY + (Math.random() - 0.5) * 4, p.z + Math.sin(a) * d, 0.55, 0.7, 0.8);
     }
     this.fireflies(dt, px, py, pz);
+    const sea = dimensionDef(world.dim).lavaSea;
+    if (sea !== undefined) this.heatEmbers(dt, px, py, pz, sea); // Fase 8 (entorno del Nether)
     this.rain(dt, px, py, pz);
   }
 
@@ -189,6 +192,24 @@ export class AmbientParticles {
   }
 
   /** Luciérnagas en las noches despejadas, sobre la hierba y a cielo abierto. */
+  /**
+   * Fase 8 (entorno del Nether): pavesas que suben del mar de lava a la vista (hasta 28 bloques alrededor, si el
+   * jugador no está muy lejos de su altura) y flotan por la caverna.
+   */
+  private heatEmbers(dt: number, px: number, py: number, pz: number, sea: number): void {
+    if (Math.abs(py - sea) > 48) return;
+    const world = this.g.world!;
+    const fx = this.g.renderer.entities.pfx;
+    const ly = Math.floor(sea);
+    const tries = Math.min(40, Math.round(dt * 60));
+    for (let i = 0; i < tries; i++) {
+      const x = px + Math.floor((Math.random() * 2 - 1) * 28), z = pz + Math.floor((Math.random() * 2 - 1) * 28);
+      const b = world.getBlock(x, ly, z);
+      if (b <= 0 || BLOCK_FLUID[b] !== 2 || world.getBlock(x, ly + 1, z) !== 0) continue;
+      fx.heatEmber(x + Math.random(), sea + 0.1 + Math.random() * 0.6, z + Math.random());
+    }
+  }
+
   private fireflies(dt: number, px: number, py: number, pz: number): void {
     const g = this.g;
     if (g.renderer.sunDir[1] > -0.08 || Math.random() > dt * 1.6) return;

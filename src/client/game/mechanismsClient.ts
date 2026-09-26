@@ -174,7 +174,7 @@ export function pushPrimedTnt(out: ItemDraw[], e: ClientEntity, items: ItemRende
   mat4.translate(m, m, [rx, ry + 0.49, rz]);
   mat4.scale(m, m, [0.98 * s, 0.98 * s, 0.98 * s]);
   const light = lightOf(e.x, e.y + 0.5, e.z);
-  if (flash) out.push({ model: items.textureCube('snow'), m, light: [1, 1], tint: [1.25, 1.25, 1.25] });
+  if (flash) out.push({ model: items.textureCube('snow'), m, light: [0, 1], tint: [1.25, 1.25, 1.25] });
   else out.push({ model: items.blockModel(e.item), m, light });
 }
 

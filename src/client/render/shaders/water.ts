@@ -173,7 +173,7 @@ void main() {
   float shadow = uLightColor.r + uLightColor.g + uLightColor.b > 1e-4 ? sampleShadow(sc, gl_FragCoord.xy, 1.5) : 0.0;
   vec3 lightCol = uLightColor.rgb * shadow * cloudShadow(vWorld);
   float skyF = skyLightCurve(vLight.x);
-  vec3 ambient = ambientCube(vec3(0.0, 1.0, 0.0)) * skyF + blockLightColor(vLight.y);
+  vec3 ambient = ambientCube(vec3(0.0, 1.0, 0.0)) * skyF + blockLightTinted(vLight.y, vLight.x);
 
   vec3 color;
   if (isWater) {

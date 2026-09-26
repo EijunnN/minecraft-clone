@@ -1,5 +1,6 @@
 // Mundo en el hilo principal: almacena columnas de chunk, planifica generación/mallado en
 // un pool de Web Workers y aplica las ediciones (locales y de la red).
+import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (entorno del Nether)
 import { CHUNK_SIZE, MIN_Y, MAX_Y, blockIndex, chunkKey, indexY } from '../../shared/constants';
 import { AIR, BLOCK_LIGHT_OPACITY, BLOCK_EMISSION, isValidBlockId } from '../../shared/blocks';
 import type { WorkerRequest, WorkerResponse } from './worldWorker';
@@ -81,6 +82,7 @@ export class World {
   constructor(seed: number, sink: MeshSink, workerCount: number, dim = 0) {
     this.seed = seed;
     this.dim = dim;
+    this.soulChannel = !dimensionDef(dim).skyLight;
     this.sink = sink;
     this.generator = createGenerator(dim, seed);
     for (let i = 0; i < workerCount; i++) {
@@ -118,14 +120,24 @@ export class World {
     return col.blocks[blockIndex(x - cx * CHUNK_SIZE, y, z - cz * CHUNK_SIZE)];
   }
 
-  /** Luz empaquetada (cielo << 4 | bloque); 0xf0 si no hay datos. */
+  /**
+   * Luz empaquetada (cielo << 4 | bloque); 0xf0 si no hay datos. Fase 8 (entorno del Nether): sin luz del cielo, el
+   * cielo es 0 (su canal lleva la luz de alma, que sólo sirve para dibujar: ver renderLight).
+   */
   getLight(x: number, y: number, z: number): number {
-    if (y >= MAX_Y) return 0xf0;
+    const l = this.renderLight(x, y, z);
+    return this.soulChannel ? l & 15 : l;
+  }
+
+  /** Fase 8 (entorno del Nether): luz para dibujar: sin luz del cielo, (alma << 4 | bloque). */
+  private readonly soulChannel: boolean;
+  renderLight(x: number, y: number, z: number): number {
+    if (y >= MAX_Y) return this.soulChannel ? 0 : 0xf0;
     if (y < MIN_Y) return 0;
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
     const col = this.columns.get(chunkKey(cx, cz));
-    if (!col || !col.light) return 0xf0;
+    if (!col || !col.light) return this.soulChannel ? 0 : 0xf0;
     return col.light[blockIndex(x - cx * CHUNK_SIZE, y, z - cz * CHUNK_SIZE)];
   }
 

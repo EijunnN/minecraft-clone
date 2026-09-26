@@ -38,7 +38,7 @@ vec3 windOffset(TerrainVertex v, vec3 world) {
   float wave = v.props.g;
   if (wave < 0.5) return vec3(0.0);
   float t = uCamPos.w;
-  float strength = uWind.z * smoothstep(0.35, 0.9, v.sky);
+  float strength = uWind.z * smoothstep(0.35, 0.9, v.sky) * uDim.x; // Fase 8: sin cielo, ese canal es la luz de alma
   if (strength <= 0.0) return vec3(0.0);
   if (wave < 1.5) {
     // Hojas: vaivén suave coherente entre bloques vecinos (depende sólo de la posición).
@@ -354,8 +354,8 @@ void main() {
   // Parpadeo sutil de las llamas (varía en el espacio para que cada antorcha sea distinta).
   float ft = uCamPos.w * 7.0 + dot(floor(vWorld * 0.25), vec3(1.7, 3.1, 2.3));
   float flicker = 0.93 + 0.05 * sin(ft) + 0.03 * sin(ft * 2.37 + 1.3);
-  vec3 blockE = blockLightColor(vLight.y) * flicker;
-  vec3 minAmb = minAmbient();
+  vec3 blockE = blockLightTinted(vLight.y, vLight.x) * flicker;
+  vec3 minAmb = minAmbientAt(n, vWorld.y); // Fase 8 (entorno del Nether)
   vec3 ambient = (metal ? albedo * 0.25 : albedo) / PI * (amb + blockE + minAmb) * ao;
   // Reflejo especular del cielo en materiales pulidos.
   vec3 R = reflect(-V, n);
@@ -365,8 +365,11 @@ void main() {
   vec3 envSpec = Fa * skyRefl * skyF * sq(1.0 - rough) * ao;
 
   vec3 color = diffuse + spec + trans + ambient + envSpec;
-  color += albedo * emission * 6.0;
-  if (special == 2) color += albedo * mix(1.6, 5.0, uDim.x); // Fase 8: sin cielo la exposición sube: la lava, menos
+  // Fase 8 (entorno del Nether): sin cielo la exposición sube mucho y lo que brilla se quemaba a blanco: la emisión
+  // es menor y la de la lava va en un naranja más hondo (al cuadrado), con sus vetas claras aún encendidas.
+  vec3 emitCol = special == 2 && uDim.x < 0.5 ? albedo * albedo : albedo;
+  color += emitCol * emission * mix(1.2, 6.0, uDim.x);
+  if (special == 2) color += albedo * 5.0 * uDim.x;
   outColor = vec4(color, 1.0);
 }
 `;

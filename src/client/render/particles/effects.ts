@@ -139,6 +139,16 @@ export class ParticleFx {
     });
   }
 
+  /** Fase 8 (entorno del Nether): pavesa que sube despacio del mar de lava, oscila con el aire caliente y se apaga. */
+  heatEmber(x: number, y: number, z: number): void {
+    const hot = Math.random();
+    this.ps.spawn({
+      x, y, z, vx: rnd(-0.25, 0.25), vy: rnd(0.35, 0.9), vz: rnd(-0.25, 0.25), life: rnd(4, 8), size: rnd(0.03, 0.06), size1: 0.01,
+      sprite: SPRITE.glow, r: 3 + hot * 1.5, g: 0.9 + hot * 0.8, b: 0.15 + hot * 0.2, drag: 0.35, wind: 0.25,
+      flags: PF.EMISSIVE | PF.DRIFT | PF.BLINK | PF.FADE_IN,
+    });
+  }
+
   /** Espora flotante (micelio, cuevas frondosas…). */
   spore(x: number, y: number, z: number, r: number, g: number, b: number, emissive = false): void {
     this.ps.spawn({

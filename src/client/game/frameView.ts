@@ -44,7 +44,7 @@ export function remoteViews(g: Game, dt: number): RemotePlayerView[] {
     if (rp.state & STATE_DEAD) continue;
     const v = rp.view;
     v.invisible = (rp.state & STATE_INVISIBLE) !== 0; // Fase 7 (remate): del invisible sólo se ve lo que lleva puesto
-    const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
+    const l = world.renderLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z)); // Fase 8: con la luz de alma
     v.light = [(l >> 4) / 15, (l & 15) / 15];
     views.push(v);
   }
@@ -112,7 +112,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
   const settings = g.cfg.settings;
   const { camX, camY, camZ, yaw, pitch } = f.cam;
   const lightOf = (x: number, y: number, z: number): [number, number] => {
-    const l = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
+    const l = world.renderLight(Math.floor(x), Math.floor(y), Math.floor(z));
     return [(l >> 4) / 15, (l & 15) / 15];
   };
   const bobPh = p.walkDistance * Math.PI * 0.62;
@@ -165,7 +165,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     crack,
     mobs: f.mobs,
     drops: f.drops,
-    lightAt: (x, y, z) => world.getLight(x, y, z),
+    lightAt: (x, y, z) => world.renderLight(x, y, z),
     handSwing: g.swingT >= 0 ? g.swingT : 0,
     handBob: settings.viewBobbing ? [Math.sin(bobPh) * 0.018 * p.walkAmount, -Math.abs(Math.cos(bobPh)) * 0.022 * p.walkAmount] : [0, 0],
     handEquip: g.equipT,
