@@ -396,7 +396,9 @@ export class BeastAI {
       }
     }
     if (!best || bd < 5) return false;
-    this.ai.goTo(e, best.x, best.y, best.z, sp, 5, undefined, true);
+    // La cría de strider sigue al adulto también por encima de la lava.
+    if (type === MOB_STRIDER) this.goStrider(e, [best.x, best.y, best.z], sp, 5);
+    else this.ai.goTo(e, best.x, best.y, best.z, sp, 5, undefined, true);
     return true;
   }
 
@@ -550,8 +552,12 @@ export class BeastAI {
     return true;
   }
 
-  private goStrider(e: Entity, to: [number, number, number], s: number): boolean {
-    if (Math.hypot(to[0] - e.x, to[2] - e.z) < 1) return true;
+  private goStrider(e: Entity, to: [number, number, number], s: number, near = 1): boolean {
+    // Al llegar también se mueve (sin avanzar): la gravedad y la lava se aplican en cada tick, como travel en Java.
+    if (Math.hypot(to[0] - e.x, to[2] - e.z) < near) {
+      this.walkStrider(e, 0, 0, 0, false);
+      return true;
+    }
     const [dx, dz, jump] = this.ai.steerTo(e, to[0], to[1], to[2], { lavaFloor: true }, true);
     this.walkStrider(e, dx, dz, s, jump);
     this.ai.face(e, e.x + dx, e.z + dz);
@@ -565,6 +571,7 @@ export class BeastAI {
   private walkStrider(e: Entity, dx: number, dz: number, s: number, jump: boolean): void {
     const w = this.m.w;
     const inLava = e.inLava;
+    const before = e.y;
     e.inLava = false;
     this.ai.walk(e, dx, dz, s, jump);
     const bx = Math.floor(e.x), by = Math.floor(e.y), bz = Math.floor(e.z);
@@ -572,7 +579,13 @@ export class BeastAI {
     const lava = (id: number) => id > 0 && BLOCK_FLUID[id] === 2;
     if (lava(here) && !lava(above)) {
       const surface = by + 0.5;
-      if (e.y < surface - 0.2) e.vy = (e.vy * DT * 0.5 + 0.05) / DT;
+      // Venía de encima (LiquidBlock.STABLE_SHAPE es colisión si está por encima): se posa sin hundirse.
+      if (before >= surface - 1e-3 && e.y < surface) {
+        e.y = surface;
+        e.vy = 0;
+        e.onGround = true;
+        e.fallStart = e.y;
+      } else if (e.y < surface - 0.2) e.vy = (e.vy * DT * 0.5 + 0.05) / DT;
       else if (e.y < surface) {
         e.y = surface;
         e.vy = 0;

@@ -8,7 +8,7 @@ Generado a partir del catálogo que exportó el usuario (datos del juego). Solo 
 | Objetos | 1658 | 1279 | 379 |
 | Criaturas (vivas) | 86 | 70 | 16 |
 | Biomas | 67 | 58 | 9 |
-| Recetas | 2042 | 828 | — |
+| Recetas | 2042 | 985 | — |
 
 ## Criaturas que faltan
 

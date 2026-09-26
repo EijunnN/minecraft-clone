@@ -6,21 +6,23 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 
 ## 1. Resumen
 
+Estado al terminar la fase 8.3 (2026-09-26). Los recuentos salen de `docs/cobertura.md`, que cruza el
+catálogo exportado de la 26.3 con el registro del juego.
+
 | | Minecraft 26.3 | VoxelCraft hoy |
 | --- | --- | --- |
-| Dimensiones | 3 (Mundo normal, Nether, End) | 1 |
-| Biomas | 66 (56 del mundo normal, 5 del Nether, 5 del End) | 23 |
-| Estructuras | 22 (más 10 elementos decorativos: geodas, mazmorras, fósiles…) | 6 (y 3 elementos decorativos) |
-| Criaturas | más de 80, incluidos 2 jefes | 52 |
-| Bloques | ~1.290 contando colores y variantes | ~850 (ver `docs/cobertura.md`) |
-| Objetos | ~1.650 | ~1.050 (bloques incluidos) |
-| Recetas | más de 2.000 | ~790 |
-| Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319) |
-| Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | supervivencia, fluidos, criaturas, cofres y hornos, clima, comercio, domesticar y montar |
+| Dimensiones | 3 (Mundo normal, Nether, End) | 🟡 2 (Mundo normal y Nether) |
+| Biomas | 67 (53 del mundo normal, 3 de cueva y el Deep Dark, 5 del Nether, 5 del End y el vacío) | 🟡 58 (faltan el jardín pálido, el bosque moteado, las cuevas de azufre, el End y el vacío) |
+| Estructuras | 22 (más elementos decorativos: geodas, mazmorras, fósiles…) | 🟡 14 del mundo normal (y 4 elementos decorativos); las del Nether y el End están por hacer |
+| Criaturas | 86 vivas, incluidos 2 jefes | 🟡 70 |
+| Bloques | 1.286 | 🟡 ~1.020 |
+| Objetos | 1.658 | 🟡 ~1.280 (bloques incluidos) |
+| Recetas | 2.042 | 🟡 985 (las demás usan objetos que aún no existen) |
+| Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319); el Nether, 128 |
+| Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | 🟡 todos salvo logros y estadísticas, libro de recetas, modos aventura/espectador/extremo y reglas del juego (fase 9) |
 
-Lo que ya tenemos cubre el bucle básico (talar, fabricar, minar, fundir, comer, sobrevivir a la
-noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **contenido** y
-**sistemas**, y buena parte depende de tres cambios de base del motor (sección 3).
+El mundo normal está completo salvo lo de 2024–2026 (fase 9). Lo que queda es el resto de la fase 8
+(estructuras del Nether, netherita, el End y el Wither) y el metajuego de la fase 9.
 
 ## 2. Inventario por áreas
 
@@ -30,17 +32,17 @@ noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **c
 | --- | --- | --- |
 | Mundo infinito procedural, determinista por semilla | sí | ✅ |
 | Altura -64 a 320, capa de pizarra profunda (deepslate) por debajo de 0 | sí | ✅ |
-| Biomas de superficie | llanura, llanura de girasoles, bosque, bosque de flores, abedular (y antiguo), bosque oscuro, jardín pálido, taiga (y antigua de pinos y de abetos), taiga nevada, arboleda, prado, cerezal, bosque moteado (26.3), sabana (y meseta y ventosa), desierto, badlands (3), jungla (3), pantano, manglar, colinas ventosas (3), llanura nevada, picos de hielo, laderas nevadas, picos (3), costa pedregosa, playas, ríos, champiñonal | 🟡 (llanura, bosque, abedular, bosque oscuro, taiga, nevado, picos de hielo, pradera, cerezal, desierto, badlands, sabana, jungla, pantano, champiñonal, montañas, picos nevados, playa) |
-| Océanos | cálido, templado, frío, helado, normal y sus versiones profundas | 🟡 (normal, cálido, frío, helado y profundo) |
-| Biomas de cueva | cuevas frondosas, cuevas de goteo, oscuridad profunda, cuevas de azufre (26.2) | 🟡 (frondosas y de goteo) |
+| Biomas de superficie | los 53 del mundo normal, con el jardín pálido y el bosque moteado (26.3) | 🟡 todos salvo el jardín pálido y el bosque moteado (fase 9) |
+| Océanos | cálido, templado, frío, helado, normal y sus versiones profundas | ✅ |
+| Biomas de cueva | cuevas frondosas, cuevas de goteo, Deep Dark, cuevas de azufre (26.2) | 🟡 todos salvo las cuevas de azufre (fase 9) |
 | Cuevas | "queso", "espagueti", "fideos", acuíferos, lagos de lava subterráneos | 🟡 (queso, espaguetis, acuíferos y lagos de lava) |
-| Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, restos antiguos | ✅ (las 8 del mundo normal, con sus versiones de pizarra profunda) |
-| Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea | 🟡 (roble, abedul, abeto, jungla —también gigante—, acacia, roble oscuro, cerezo y champiñones gigantes) |
+| Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, escombros ancestrales | 🟡 todas salvo los escombros ancestrales (8.5) |
+| Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea, hongos gigantes del Nether | 🟡 todos salvo el álamo; el roble pálido crece del brote, pero su bioma es de la fase 9 |
 | Clima | lluvia, nieve, tormentas con rayos; la nieve se acumula y el agua se congela | ✅ |
 | Ciclo día/noche, fases lunares | sí | ✅ |
-| Fluidos (agua y lava que fluyen, obsidiana, roca) | sí | ✅ |
+| Fluidos (agua y lava que fluyen, obsidiana, roca) | sí | ✅ (también la lava rápida del Nether) |
 | Gravedad (arena, grava), soporte de plantas, caída de hojas, crecimiento | sí | ✅ |
-| Propagación del fuego, fuego en bloques | sí | ❌ |
+| Propagación del fuego, fuego en bloques | sí | ✅ |
 
 ### 2.2 Estructuras
 
@@ -51,23 +53,25 @@ noche) y en gráficos supera al juego original. Lo que falta es, sobre todo, **c
 Elementos decorativos: geoda de amatista, mazmorra con generador de monstruos, fósil, pozo del
 desierto, cofre de bonificación, plataformas y pilares del End.
 
-**VoxelCraft (fase 5)** 🟡: templo del desierto, templo de la jungla, iglú (con sótano la mitad de
-las veces), mina abandonada, portal en ruinas y naufragio; y geodas, mazmorras con generador y pozos
-del desierto. Todas con cofres de botín (tablas propias) y localizables con `/localizar`.
+**VoxelCraft** 🟡: del mundo normal, todas salvo la fortaleza (8.6), las cámaras de desafío, las ruinas
+de senderos y el campamento abandonado (fase 9); geodas, mazmorras, fósiles y pozos del desierto. Todas
+con los cofres de botín de Minecraft y localizables con `/localizar`. Las del Nether son la fase 8.4 y
+las del End, la 8.6.
 
 ### 2.3 Criaturas
 
-| Tipo | Minecraft | En VoxelCraft |
+| Tipo | Minecraft | Falta en VoxelCraft |
 | --- | --- | --- |
-| Pasivas | alay, armadillo, ajolote, murciélago, camello, gato, pollo, bacalao, gólem de cobre, vaca, burro, rana, calamar brillante, ghast feliz, caballo, champiñaca, mula, ocelote, loro, cerdo, conejo, salmón, oveja, sniffer, gólem de nieve, calamar, strider, cubo de azufre (26.2), renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante, caballo esqueleto, caballo zombi | cerdo, vaca, oveja, gallina, calamar, armadillo, ajolote, camello, gato, bacalao, burro, rana, calamar brillante, caballo, mula, loro, conejo, salmón, gólem de nieve, renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante |
-| Neutrales | abeja, araña de cueva, delfín, enderman, zorro, cabra, gólem de hierro, llama, nautilo, panda, piglin, oso polar, pez globo, araña, llama de comerciante, lobo, piglin zombificado | araña, enderman, abeja, araña de cueva, delfín, zorro, cabra, gólem de hierro, llama, panda, oso polar, pez globo, lobo |
-| Hostiles | blaze, bogged, breeze, creaking, creeper, ahogado, guardián y guardián anciano, endermita, evocador, ghast, hoglin, zombi momificado (husk), cubo de magma, parched (1.21.11), fantasma, piglin bruto, saqueador, devastador, shulker, lepisma, esqueleto, slime, esqueleto errante (stray), vex, vindicador, warden, bruja, esqueleto del Wither, zoglin, zombi, aldeano zombi; monturas de monstruos: nautilo zombi y camello momificado (1.21.11) | zombi, zombi momificado, esqueleto, esqueleto errante, creeper, ahogado, fantasma, lepisma, slime, bruja, aldeano zombi |
-| Jefes | dragón del End, Wither | — |
+| Pasivas | alay, armadillo, ajolote, murciélago, camello, gato, pollo, bacalao, gólem de cobre, vaca, burro, rana, calamar brillante, ghast feliz, caballo, champiñaca, mula, ocelote, loro, cerdo, conejo, salmón, oveja, sniffer, gólem de nieve, calamar, strider, cubo de azufre (26.2), renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante, caballo esqueleto, caballo zombi | gólem de cobre, ghast feliz, sniffer y cubo de azufre (fase 9) |
+| Neutrales | abeja, araña de cueva, delfín, enderman, zorro, cabra, gólem de hierro, llama, nautilo, panda, piglin, oso polar, pez globo, araña, llama de comerciante, lobo, piglin zombificado | nautilo (fase 9) |
+| Hostiles | blaze, ciénago (bogged), breeze, crepitante (creaking), creeper, ahogado, guardián y guardián anciano, endermita, evocador, ghast, hoglin, zombi momificado (husk), cubo de magma, momificado (parched), fantasma, piglin bruto, saqueador, devastador, shulker, lepisma, esqueleto, slime, esqueleto errante (stray), vex, vindicador, warden, bruja, esqueleto del Wither, zoglin, zombi, aldeano zombi; monturas de monstruos: nautilo zombi y camello momificado | endermita y shulker (8.6); ciénago, breeze, crepitante, momificado, nautilo zombi y camello momificado (fase 9) |
+| Jefes | dragón del End, Wither | los dos (8.6 y 8.7) |
 
-Mecánicas de criaturas que faltan: domesticar loros y llamas, arnés del ghast feliz, correas,
-variantes por bioma (cerdo, vaca y pollo de clima frío y cálido), criaturas con armadura y objetos en
-la mano. Ya hay crías, cría con comida, domesticar lobos, gatos y caballos, montar con silla,
-esquilar, ordeñar, huevos y generadores de monstruos.
+Ya hay crías, cría con comida, domesticar lobos, gatos, caballos y llamas, montar (caballos, cerdos y
+striders), esquilar, ordeñar, huevos, generadores de monstruos, criaturas con objetos en la mano
+(ahogados, illagers, piglins, esqueletos wither) y con armadura (piglins) y conversiones (ahogado, aldeano zombi, bruja,
+piglins zombificados). Falta: domesticar loros, curar aldeanos zombi, las variantes por clima del cerdo,
+la vaca y el pollo, la armadura al azar de zombis y esqueletos y el arnés del ghast feliz (fase 9).
 
 ### 2.4 Supervivencia y combate
 
@@ -76,12 +80,12 @@ esquilar, ordeñar, huevos y generadores de monstruos.
 | Vida, hambre, saturación, agotamiento, regeneración, inanición | ✅ |
 | Aire, ahogamiento, caída, lava, fuego, vacío, asfixia | ✅ |
 | Muerte, pérdida del inventario y reaparición | ✅ (en la cama o en el punto de aparición del mundo) |
-| Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (8 colores, los de la lana que hay; falta la de paja) |
-| Experiencia (orbes, niveles) | ✅ (aún no se gasta: faltan encantamientos y yunque) |
-| Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre) y adornos de armadura | 🟡 (cuero, hierro, oro y diamante) |
-| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | 🟡 (escudo, críticos y enfriamiento por arma; falta el barrido) |
-| Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (espada, hacha, arco, ballesta y tridente) |
-| Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (33 efectos con sus mecánicas, iconos y `/efecto`; faltan los de las cámaras de desafío y los presagios de 1.21, fase 9) |
+| Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (los 16 colores; falta la de paja, fase 9) |
+| Experiencia (orbes, niveles) | ✅ (se gasta en la mesa de encantamientos y el yunque) |
+| Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre, caparazón de tortuga) y adornos de armadura | 🟡 (todas salvo la netherita, 8.5; faltan los adornos, fase 9) |
+| Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | ✅ |
+| Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (faltan la maza y la lanza, fase 9) |
+| Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (33 efectos con sus mecánicas, iconos y `/efecto`; faltan los de las cámaras de desafío, fase 9) |
 | Modos: supervivencia, creativo, aventura, espectador, extremo (hardcore) | 🟡 (supervivencia y creativo) |
 | Dificultad pacífica, fácil, normal y difícil | ✅ |
 
@@ -90,40 +94,39 @@ esquilar, ordeñar, huevos y generadores de monstruos.
 | Elemento | Estado |
 | --- | --- |
 | Herramientas de madera, piedra, hierro, oro y diamante (pico, hacha, pala, espada) | ✅ |
-| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | 🟡 (azadas y caña de pescar) |
-| Tijeras | ✅ (hojas y ovejas) |
+| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | 🟡 (todo salvo la netherita, 8.5) |
+| Tijeras | ✅ |
 | Cubos de agua y lava | ✅ |
-| Cubos de leche, de peces, de ajolote, de nieve polvo, de cubo de azufre | 🟡 (leche) |
-| Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, rienda, silla | 🟡 (brújula y mapas) |
+| Cubos de leche, de peces, de ajolote, de renacuajo, de nieve polvo, de cubo de azufre | 🟡 (todos salvo el de cubo de azufre, fase 9) |
+| Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, correa, silla | ✅ (y la brújula de recuperación) |
 | Mesa de trabajo 3×3 e inventario 2×2 | ✅ |
-| Recetas | 🟡 (~50 de más de 1.000) |
-| Libro de recetas | ❌ |
-| Horno | ✅ |
-| Ahumador, alto horno, fogata | ✅ |
-| Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (cortapiedras) |
-| Cofre | ✅ (también doble) |
-| Barril, caja de shulker, cofre de ender, tolva, saco (bundle), cofre de cobre, estantería | ❌ |
+| Recetas | 🟡 (985 de 2.042; las que faltan usan objetos que aún no existen) |
+| Libro de recetas | ❌ (fase 9) |
+| Horno, ahumador, alto horno, fogata | ✅ |
+| Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (todos salvo el crafter, fase 9; la mesa de herrería mejora a netherita en la 8.5) |
+| Cofre, barril, tolva, saco (bundle), estantería cincelada | ✅ (también cofre doble y cofre trampa) |
+| Caja de shulker, cofre de ender, cofre de cobre, estante (shelf) | ❌ (8.6 y fase 9) |
 
 ### 2.6 Agricultura y ganadería
 
 | Elemento | Estado |
 | --- | --- |
 | Brotes que crecen, caña de azúcar y cactus que crecen, hierba que se extiende | ✅ |
-| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | 🟡 (trigo, zanahoria, patata, remolacha, calabaza y sandía) |
+| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | 🟡 (todos salvo la flor de coro, 8.6) |
 | Azada, tierra de cultivo e hidratación | ✅ |
 | Polvo de hueso, compostador | ✅ |
-| Pan, tarta, galletas, sopas | 🟡 (pan, tarta y patata asada) |
+| Pan, tarta, galletas, sopas y estofados | ✅ |
 | Reproducción de animales, crías, pesca, apicultura (miel) | ✅ |
 
 ### 2.7 Aldeanos, comercio y asaltos
 
 Aldeas, 13 profesiones con bloques de trabajo, comercio con esmeraldas y niveles, gólem de hierro
 protector, vendedor ambulante, curar aldeanos zombi, asaltos con saqueadores, vindicadores,
-evocadores y devastadores, y la bandera de mal presagio. **VoxelCraft: 🟡** aldeas con aldeanos,
-12 profesiones con sus bloques de trabajo, comercio con esmeraldas en 5 niveles, gólem de hierro,
-vendedor ambulante, aldeanos zombi (sin curarlos todavía), puestos de saqueadores, patrullas con
-capitán, Mal presagio y asaltos por oleadas con saqueadores, vindicadores, evocadores, vex,
-devastadores y brujas; Héroe de la aldea (rebajas). Falta la campana de la aldea.
+evocadores y devastadores, y la bandera de mal presagio. **VoxelCraft: 🟡** aldeas de 5 estilos con
+aldeanos, 12 profesiones con sus bloques de trabajo, comercio con esmeraldas en 5 niveles, gólem de
+hierro, vendedor ambulante con sus llamas, campana, aldeanos zombi, puestos de saqueadores, patrullas
+con capitán, Mal presagio y asaltos por oleadas con saqueadores, vindicadores, evocadores, vex,
+devastadores y brujas; Héroe de la aldea (rebajas). Falta curar a los aldeanos zombi.
 
 ### 2.8 Redstone
 
@@ -131,51 +134,56 @@ Polvo de redstone, antorchas, repetidores, comparadores, palancas, botones, plac
 pistones y pistones pegajosos, observadores, tolvas, dispensadores, soltadores, lámparas, TNT,
 detector de luz solar, bloque musical, raíles y vagonetas (con cofre, tolva, TNT), puertas,
 trampillas, puertas de valla, sensores de sculk, bombillas de cobre y fabricador automático.
-**VoxelCraft:** ✅ todo salvo el sculk (fase 7.5) y el crafteador (fase 9). Ver `docs/redstone.md` y
-`docs/mecanismos.md`.
+**VoxelCraft:** ✅ todo salvo el fabricador automático (fase 9) y los botones y placas de piedra negra
+pulida (8.5). Comprobado contra el código de la 26.3: ver `docs/redstone.md`,
+`docs/redstone-auditoria.md`, `docs/mecanismos.md` y `docs/vibraciones.md`.
 
 ### 2.9 Encantamientos y pociones
 
 Mesa de encantamientos con librerías, libros encantados, yunque, afiladora, ~40 encantamientos,
 soporte para pociones, verruga del Nether, más de 30 efectos de estado, pociones arrojadizas y
-persistentes, flechas con efecto. **VoxelCraft:** ✅ (37 encantamientos, 42 pociones, 33 efectos);
-faltan los encantamientos del Nether, del Deep Dark y de la maza y las pociones de 1.21 (fases 7.5, 8 y 9).
+persistentes, flechas con efecto. **VoxelCraft:** ✅ (39 encantamientos, 42 pociones, 33 efectos,
+flecha espectral); faltan los encantamientos de la maza y la lanza y las pociones de las cámaras de
+desafío (fase 9). La verruga del Nether sólo se consigue en creativo hasta las fortalezas (8.4).
 
 ### 2.10 Transporte y exploración
 
 | Elemento | Estado |
 | --- | --- |
-| Caballos, burros, mulas, camellos, cerdos y striders montables; nautilo bajo el agua; ghast feliz volador | ❌ |
+| Caballos, burros, mulas, camellos, cerdos y striders montables; nautilo bajo el agua; ghast feliz volador | 🟡 (todos salvo el nautilo y el ghast feliz, fase 9) |
 | Barcas (y con cofre, balsas de bambú), vagonetas y raíles | ✅ |
-| Élitros y cohetes, perla de ender (teletransporte al lanzarla) | ❌ |
-| Arqueología (cepillo, arena sospechosa, vasijas decoradas) | ❌ |
-| Mapas y brújulas, barra de localización | 🟡 (mapas y brújula) |
-| Logros (advancements) y estadísticas | ❌ |
+| Cohetes de fuegos artificiales | ✅ |
+| Élitros, perla de ender (teletransporte al lanzarla), ojo de ender | ❌ (8.6) |
+| Arqueología (cepillo, arena sospechosa, vasijas decoradas) | 🟡 (el cepillo y las vasijas; faltan la arena y la grava sospechosas, fase 9) |
+| Mapas y brújulas, barra de localización | 🟡 (mapas, de explorador y del tesoro, y brújulas; falta la barra de localización) |
+| Logros (advancements) y estadísticas | ❌ (fase 9) |
 
 ### 2.11 Nether y End
 
-Portal de obsidiana, 5 biomas del Nether (páramos, valle de almas, bosques carmesí y distorsionado,
+Portal de obsidiana, 5 biomas del Nether (desiertos, valle de almas, bosques carmesí y distorsionado,
 deltas de basalto), fortalezas y bastiones, piglins y trueque con oro, netherita. En el End: ojos de
 ender para encontrar la fortaleza, el portal del End, combate contra el dragón, islas exteriores,
-ciudades del End, élitros y shulkers. **VoxelCraft: nada** ❌.
+ciudades del End, élitros y shulkers. **VoxelCraft: 🟡** el portal, los 5 biomas del Nether portados
+de la 26.3 y sus criaturas con el trueque (8.1–8.3). Faltan las estructuras del Nether (8.4), la
+netherita y lo que da el Nether (8.5), el End (8.6) y el Wither (8.7).
 
 ### 2.12 Bloques de construcción y decoración
 
 Minecraft tiene familias completas por material: bloque, escaleras, losa, muro, valla, puerta,
 trampilla, botón, placa de presión, cartel y cartel colgante (para cada madera y cada piedra), 16
 colores de lana, alfombra, cristal y paneles, terracota esmaltada, hormigón, velas y camas, además
-de faroles, cadenas, macetas, marcos, cuadros, estandartes, cabezas, cojines (26.3)… VoxelCraft
-tiene ~70 bloques cúbicos y, desde la fase 3, losas y escaleras (8 materiales), vallas, portillos,
-puertas, trampillas (3 maderas), escaleras de mano, paneles de cristal, antorchas en la pared y cama;
-en la fase 4, muros (8 piedras), carteles (3 maderas, de pie y en la pared) y camas de 8 colores.
-**Las formas no cúbicas son la mayor carencia visual al construir.**
+de faroles, cadenas, macetas, marcos, cuadros, estandartes, cabezas, cojines (26.3)… **VoxelCraft:
+🟡** todas las familias del mundo normal (las 10 maderas, todas las piedras, cobre, los 16 colores) y
+las del Nether hasta ahora (maderas carmesí y distorsionada, piedra negra, basalto, ladrillos del
+Nether); faltan los botones y placas de piedra negra pulida (8.5), el purpur y la piedra del End
+(8.6) y los cojines (fase 9). Ver `docs/cobertura.md`.
 
 ### 2.13 Multijugador, interfaz y opciones
 
 | Elemento | Estado |
 | --- | --- |
 | Invitar amigos con un enlace, hasta 16 por mundo, chat, lista de jugadores | ✅ (Minecraft añadió lista de amigos en 26.2) |
-| Comandos | 🟡 (10 de ~80: `/time`, `/tp`, `/modo`, `/dificultad`, `/invocar`, `/dar`, `/matar`…) |
+| Comandos | 🟡 (19 de ~80: `/time`, `/tp`, `/modo`, `/dificultad`, `/invocar`, `/dar`, `/efecto`, `/matar`, `/localizar`, `/encantar`, `/experiencia`, `/dimension`, `/setblock`, `/fill`…) |
 | Operadores y permisos (quién puede usar `/modo` o `/dar`) | ❌ |
 | Aspecto personalizado del jugador (skins) | 🟡 (color de camiseta) |
 | Objeto en la mano y armadura visibles en otros jugadores | ✅ |
@@ -206,7 +214,7 @@ El estilo visual de las pantallas puede ser moderno; lo que cuenta es que funcio
 | --- | --- |
 | Velocidad de ataque propia de cada arma (espada 1,6, hacha 0,8, pico 1,2, pala 1, azada según material) | ✅ (y el daño de Minecraft por arma) |
 | Indicador de recarga del ataque bajo la mira | ✅ |
-| El hacha deja el escudo del rival inútil unos segundos | — (sólo importa con PvP o vindicadores, que aún no hay) |
+| El hacha deja el escudo del rival inútil unos segundos | ❌ (ya importa: los vindicadores y los piglins brutos llevan hacha) |
 | Inclinación de la cámara hacia el lado del golpe | ✅ |
 
 **Movimiento y cuerpo**
@@ -244,14 +252,14 @@ Casi todo lo que falta depende de estas bases. Conviene hacerlas antes que el co
 2. ✅ **Modelos de bloque no cúbicos.** Escaleras, losas, vallas, muros, puertas, camas, paneles,
    carteles, antorchas en la pared, cofres con tapa… Necesita un sistema de modelos por estado (cajas
    con UV) en el mallado y cajas de colisión por estado en la física y el trazado de rayos.
-3. **Dimensiones.** Varios mundos por sala (normal, Nether, End), cada uno con su generador, su cielo
+3. ✅ **Dimensiones.** Varios mundos por sala (normal, Nether, End), cada uno con su generador, su cielo
    y su iluminación, y portales entre ellos.
 4. ✅ **Estructuras.** Constructores deterministas que cada chunk dibuja por su parte (rejilla de
    regiones para las de superficie, piezas encadenadas para las minas) y tablas de botín para sus
    cofres, que el servidor llena la primera vez que genera el chunk.
-5. **Entidades más completas.** Equipamiento, montar, domesticar, crías, objetos arrojadizos y
+5. ✅ **Entidades más completas.** Equipamiento, montar, domesticar, crías, objetos arrojadizos y
    efectos de estado, con criaturas definidas por datos en lugar de código.
-6. **Redstone en el servidor.** Actualizaciones de bloques vecinos, ticks programados y propagación de
+6. ✅ **Redstone en el servidor.** Actualizaciones de bloques vecinos, ticks programados y propagación de
    señal, con cuidado del coste de CPU del Durable Object.
 7. **Autoridad del servidor sobre inventario y vida**, si el juego se abre a desconocidos (hoy se
    confía en el navegador de cada jugador).

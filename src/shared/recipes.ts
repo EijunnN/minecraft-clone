@@ -546,8 +546,10 @@ export function matchRecipe(grid: readonly number[], size: number): RecipeMatch 
   return null;
 }
 
-/** Número de recetas (para pruebas). */
-export const RECIPE_COUNT = shaped.length + shapeless.length;
+/** Número de recetas (para la cobertura; cuenta también las que se registran más abajo). */
+export function recipeCount(): number {
+  return shaped.length + shapeless.length;
+}
 
 // Fase 6.5 (libros y estandartes): libro y pluma (libro, saco de tinta y pluma) y diseños de estandarte
 // (papel y un objeto). Los objetos que aquí no existen se cambian por otros del tema: cráneo de wither → hueso, manzana de oro encantada → manzana dorada; el globo, que en

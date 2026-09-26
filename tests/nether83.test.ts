@@ -260,6 +260,28 @@ test('servidor: el strider camina sobre la lava (medio bloque hundido) y fuera t
   assert.ok(E.mobs.nether.beasts.bstate(cold).cold, 'en la piedra, frío');
 });
 
+test('servidor: el strider que cae sobre lava honda se posa a media altura, no flota ni salta al pasear', () => {
+  const h = makeServer(8399, undefined, DIM_NETHER);
+  const W = h.gs.world;
+  arena(W, 0, 80, 0, 20, 10);
+  for (let dx = -20; dx <= 20; dx++) for (let dz = -20; dz <= 20; dz++) for (let y = 70; y < 80; y++) W.setBlock(dx, y, dz, LAVA);
+  h.join('Mirón', 'c').pos(0.5, 88, -18.5);
+  const E = h.gs.entities;
+  // Encima de la lava que tiene debajo: antes «llegaba» a ella cada tick sin moverse y se quedaba en el aire.
+  const s = E.spawnMob(MOB_STRIDER, 0.5, 81, 0.5)!;
+  h.tick(60);
+  assert.ok(Math.abs(s.y - 79.5) < 1e-6, `posado en la lava: y = ${s.y}`);
+  let lo = 99, hi = 0;
+  for (let i = 0; i < 1200; i++) {
+    h.tick(1);
+    if (Math.max(Math.abs(s.x), Math.abs(s.z)) < 18) {
+      lo = Math.min(lo, s.y);
+      hi = Math.max(hi, s.y);
+    }
+  }
+  assert.ok(lo > 79.49 && hi < 79.51, `a media altura mientras pasea: y de ${lo} a ${hi}`);
+});
+
 test('servidor: el esqueleto wither ataca a los piglins y les da Marchitamiento', () => {
   const h = makeServer(8308, undefined, DIM_NETHER);
   arena(h.gs.world, 8, 100, 8, 10);

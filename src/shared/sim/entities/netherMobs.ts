@@ -408,7 +408,9 @@ export class NetherAI {
       }
       const ndx = node[0] + 0.5 - e.x, ndz = node[2] + 0.5 - e.z;
       const d = Math.hypot(ndx, ndz) || 1;
-      return [ndx / d, ndz / d, node[1] > Math.floor(e.y + 0.01) || (e.hitWall && e.onGround)];
+      // Salta sólo si el nodo queda más alto que un escalón (MoveControl: dy > maxUpStep); el strider a media
+      // altura sobre la lava tiene sus nodos 0,5 más arriba y no salta.
+      return [ndx / d, ndz / d, node[1] - e.y > 0.6 || (e.hitWall && e.onGround)];
     }
     return this.direct(e, x, z);
   }

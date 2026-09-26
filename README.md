@@ -207,6 +207,10 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Monumento oceánico visto desde la superficie, con sus faroles marinos](docs/screenshots/monument.png) | ![Guardianes nadando junto al monumento](docs/screenshots/guardians.png) |
 | ![Mansión del bosque entre los árboles del bosque oscuro](docs/screenshots/mansion.png) | ![Caballo esqueleto, champiñaca, llama de comerciante y caballo zombi](docs/screenshots/critters.png) |
 | ![Ciudad antigua en el Deep Dark, con el sculk que brilla](docs/screenshots/ancient_city.png) | ![El warden en la ciudad antigua](docs/screenshots/warden.png) |
+| ![Portal del Nether encendido en los desiertos del Nether](docs/screenshots/nether_portal.png) | ![Hoglins y un piglin en el bosque carmesí](docs/screenshots/crimson_forest.png) |
+| ![Bosque distorsionado con sus hongos gigantes y un enderman](docs/screenshots/warped_forest.png) | ![Un ghast sobre el valle de almas, con esqueletos](docs/screenshots/soul_sand_valley.png) |
+| ![Cubos de magma saltando en los deltas de basalto](docs/screenshots/basalt_deltas.png) | ![Strider con un piglin zombificado de jinete, por el mar de lava](docs/screenshots/strider.png) |
+| ![Piglin admirando el lingote de oro del trueque](docs/screenshots/barter.png) | ![Blaze, esqueleto wither y piglin bruto peleando](docs/screenshots/nether_mobs.png) |
 
 ## Controles
 
@@ -339,8 +343,8 @@ preocupaciones.
 
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
-- 72 tipos de criatura (no las ~86 de Minecraft): sin criaturas del End, ni jefes, ni las de
-  2024–2026 (sniffer, breeze, creaking…).
+- 70 de las 86 criaturas de Minecraft: faltan las del End, los jefes y las de 2024–2026 (sniffer,
+  breeze, creaking…).
 - Sin End, y el Nether aún no tiene sus estructuras (fortalezas, bastiones): la verruga del Nether
   sólo se consigue en creativo.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
