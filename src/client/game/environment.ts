@@ -1,12 +1,45 @@
-// Entorno alrededor del jugador: lluvia (mapa de alturas para no mojar bajo techo) y océano lejano
-// del horizonte.
+// Entorno alrededor del jugador: el cielo y el clima de cada frame (hora, nubes, bruma, nieve), la
+// lluvia (mapa de alturas para no mojar bajo techo) y el océano lejano del horizonte.
 import { AIR, BLOCK_RENDER, R_CROSS, R_TORCH } from '../../shared/blocks';
 import { CHUNK_SIZE, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex } from '../../shared/constants';
 import { rainAt } from '../../shared/weather';
+import { BIOME_MUSHROOM_FIELDS } from '../../shared/world/biomeIds';
 import type { Game } from './Game';
+
+/** El cielo y el clima de un frame. */
+export interface SkyState {
+  day: number;
+  /** Fracción del día (0 amanecer… 1). */
+  dayTime: number;
+  sunHeight: number;
+  cloudCoverage: number;
+  mist: number;
+  /** En el sitio del jugador nieva en vez de llover. */
+  snow: boolean;
+}
 
 export class Environment {
   constructor(private g: Game) {}
+
+  /** Cielo y clima en `worldTime` con lluvia `rain`; también refresca el horizonte y el mapa de lluvia. */
+  sky(dt: number, worldTime: number, rain: number): SkyState {
+    const p = this.g.player;
+    this.farTimer -= dt;
+    if (this.farTimer <= 0 || Math.hypot(p.x - this.farPos[0], p.z - this.farPos[1]) > 48) this.updateFarOcean();
+    const day = Math.floor(worldTime);
+    const dayTime = worldTime - day;
+    const sunHeight = Math.sin(dayTime * Math.PI * 2);
+    const baseCoverage = 0.27 + 0.1 * Math.sin(worldTime * 2.3 + 1.3) + 0.06 * Math.sin(worldTime * 5.9 + 0.4);
+    const coverage = baseCoverage + (0.86 - baseCoverage) * Math.min(1, rain * 1.5);
+    const dawn = Math.exp(-Math.pow(((dayTime + 0.5) % 1) - 0.5, 2) / 0.0035);
+    const mist = 0.0022 + 0.011 * dawn + (sunHeight < 0 ? 0.002 : 0) + rain * 0.006;
+    const climate = this.g.world!.generator.columnInfo(Math.floor(p.x), Math.floor(p.z));
+    const snow = (climate.temp < -0.5 || climate.height > 150) && climate.biome !== BIOME_MUSHROOM_FIELDS;
+    this.rainMapTimer -= dt;
+    if (rain > 0.01 && this.rainMapTimer <= 0) this.updateRainMap();
+    const cloudCoverage = (window as unknown as { __cloudCov?: number }).__cloudCov ?? Math.max(0.1, Math.min(0.9, coverage));
+    return { day, dayTime, sunHeight, cloudCoverage, mist, snow };
+  }
 
   rainMapTimer = 0;
   rainHeights = new Float32Array(64 * 64);

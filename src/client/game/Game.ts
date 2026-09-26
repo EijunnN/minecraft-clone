@@ -1,11 +1,15 @@
-// Bucle principal del juego: arranque, entrada, movimiento, cámara, supervivencia y el estado que se
-// dibuja cada frame. El resto vive en controladores: interaction (minar, colocar, usar, comer...),
-// lifeCycle (daño, muerte, cama), serverEvents (mensajes del servidor), effects (sonidos y
-// partículas) y environment (lluvia y océano lejano).
+// Bucle principal del juego: arranque, entrada, red y el orden de cada frame. El resto vive en
+// controladores: movement (mirada, controles y física), cameraRig (cámara y lente), interaction
+// (minar, colocar, usar, comer...), lifeCycle (daño, muerte, cama), serverEvents (mensajes del
+// servidor), effects (sonidos y partículas), environment (cielo, lluvia y océano lejano), hudView
+// (barras del HUD) y frameView (lo que se dibuja).
 import { Navigation } from './navigation';
+import { Movement } from './movement';
+import { CameraRig } from './cameraRig';
+import { updateHud } from './hudView';
+import { remoteViews, selfView, animateHand, splitEntities, frameState, updateNameTags, debugText } from './frameView';
 import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
-import { guardianBeams } from './guardianBeams'; // Fase 7.5 (océano)
-import { Renderer, type FrameState } from '../render/Renderer';
+import { Renderer } from '../render/Renderer';
 import { World } from '../world/World';
 import { Player } from './Player';
 import { Input } from './Input';
@@ -18,41 +22,31 @@ import { InventoryScreen, type ScreenKind } from '../ui/InventoryScreen';
 import type { Settings } from './settings';
 import type { GeneratedTextures } from '../textures/generateTextures';
 import { AudioEngine } from '../audio/AudioEngine';
-import { OFFHAND, Inventory, HOTBAR } from './Inventory';
+import { Inventory, HOTBAR } from './Inventory';
 import { Survival } from './Survival';
-import { ClientEntities, type ClientEntity } from './ClientEntities';
-import { AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_FLUID, DEFAULT_HOTBAR, WATER, R_CROSS, DIRT, isFarmland, R_CROP } from '../../shared/blocks';
+import { ClientEntities } from './ClientEntities';
+import { BLOCK_RENDER, BLOCK_SOLID, BLOCK_FLUID, DEFAULT_HOTBAR, WATER, R_CROSS, R_CROP } from '../../shared/blocks';
 import { AmbientParticles } from './ambientParticles';
-import { ITEMS, maxStack, type ItemStack } from '../../shared/items';
-import { MOBS } from '../../shared/mobs';
+import { maxStack, type ItemStack } from '../../shared/items';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
 import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
-import { TerrainGenerator, BIOME_NAMES, BIOME_MUSHROOM_FIELDS } from '../../shared/world/terrain';
-import type { RemotePlayerView } from '../render/EntityRenderer';
 import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTypes';
 import { Interaction } from './interaction';
 import { Experience } from './experience';
 import { StatusEffects } from './statusEffects';
-import { fishingLines } from './fishingLines';
 import { useLook } from './equipmentInteraction'; // Fase 6.5 (equipo)
 import { equipmentFrame } from './equipmentLife';
-// Fase 7 (pociones): física de los efectos, remolinos, nubes, invisibles y nombres de las pociones.
-import { potionPhysics, potionPosState, potionFrame, handPotionTypes } from './potionClient';
-import { effectsPhysics, effectsPosState, effectsView } from './effectsClient'; // Fase 7 (efectos)
-import { stackName, EF_INVISIBLE, STATE_INVISIBLE } from '../../shared/potions';
+// Fase 7 (pociones): remolinos, nubes, invisibles y nombres de las pociones.
+import { potionPosState, potionFrame, handPotionTypes } from './potionClient';
+import { effectsPosState } from './effectsClient'; // Fase 7 (efectos)
+import { stackName } from '../../shared/potions';
 import type { Use } from './gameTypes';
-import { leashLines } from './leashLines'; // Fase 6.5 (remate)
 import { NamePrompt } from '../ui/NamePrompt'; // Fase 6.5 (remate)
 import { BooksClient } from './booksClient'; // Fase 6.5 (libros y estandartes)
 import { MAX_NAME } from '../../shared/nameTags';
 import { SignTexts } from './signs';
 import { SignEditor } from '../ui/SignEditor';
-import { renderArmorBar } from '../ui/armorBar';
-import { renderXpBar } from '../ui/xpBar';
-import { renderEffectsHud } from '../ui/effectsHud';
-import { renderAttackIndicator } from '../ui/attackIndicator';
-import { EFFECT_POISON, EFFECT_HUNGER } from '../../shared/effects';
-import { EFFECT_WITHER, MAX_HEALTH_CAP } from '../../shared/effects'; // Fase 7 (efectos)
+import { MAX_HEALTH_CAP } from '../../shared/effects'; // Fase 7 (efectos)
 import { Effects } from './effects';
 import { LifeCycle } from './lifeCycle';
 import { ServerEvents } from './serverEvents';
@@ -60,21 +54,13 @@ import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
 import { VehicleClient } from './vehicleClient'; // Fase 7 (transporte)
 import { vehicleFrame } from './vehicleFx';
-import { isVehicleType } from '../../shared/vehicles';
 import { Trading } from './trading'; // Fase 6 (aldeanos)
-import { renderRaidBar, type RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
-// Fase 6.5 (decoración): catalejo, reloj y rayo contra cuadros y marcos.
-import { renderDecorHud } from '../ui/decorHud';
-import { renderFrostHud } from '../ui/frostHud'; // Fase 6.5 (materiales)
-import { Freezing } from './freezing'; // Fase 6.5 (materiales)
-import { raycastHangings } from './decorInteraction';
-import { CLOCK } from '../../shared/items';
+import type { RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
+import { raycastHangings } from './decorInteraction'; // Fase 6.5 (decoración): cuadros y marcos
 // Fase 7 (encantamientos)
 import { EnchantClient } from './enchantClient';
 import { EnchantBooks } from './enchantBooks';
 import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
-import { hasGlint } from '../../shared/enchantments';
-import { isDeepDark } from '../../shared/world/deepDark'; // Fase 7.5 (abismo)
 
 export interface GameConfig {
   room: string;
@@ -92,11 +78,6 @@ export interface GameConfig {
   renderer: Renderer;
 }
 
-function srgbToLin(v: number): number {
-  const c = v / 255;
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
 /** Bits de estado del objeto que se está usando (para animarlo en los demás jugadores). */
 function useState(use: Use | null): number {
   const kind = useLook(use).kind; // Fase 6.5 (equipo): la ballesta y el tridente, como el arco
@@ -105,6 +86,8 @@ function useState(use: Use | null): number {
 
 export class Game {
   readonly interaction = new Interaction(this);
+  readonly movement = new Movement(this);
+  readonly camera = new CameraRig(this);
   readonly effects = new Effects(this);
   readonly nav = new Navigation(this);
   readonly life = new LifeCycle(this);
@@ -131,16 +114,14 @@ export class Game {
   player = new Player();
   net: Net | null = null;
   private local: LocalServer | null = null;
-  private offline = false;
+  offline = false;
   remote = new Map<string, RemotePlayer>();
   /** Inclinación de la cámara al recibir un golpe (se endereza sola). */
   hurtRoll = 0;
   /** Captura de pantalla pedida (F2): se toma justo después de dibujar. */
   private wantShot = false;
   /** Agacharse y correr fijos (ajuste de alternar). */
-  private sneakOn = false;
   private keysSig = '';
-  private sprintOn = false;
   /** Flotadores de pesca fuera: jugador → entidad. */
   readonly bobbers = new Map<string, number>();
   /** Texto de los carteles y su editor. */
@@ -165,22 +146,17 @@ export class Game {
   private lastFrame = 0;
   hit: RayHit | null = null;
   swingT = -1;
-  private equipT = 0;
+  equipT = 0;
   private lastSent = 0;
   private lastSentKey = '';
-  private debug = false;
-  private hudHidden = false;
-  private thirdPerson = 0;
-  private eyeSky = 1;
-  private fovCurrent = 75;
-  private stepDist = 0;
-  private fps = 0;
+  debug = false;
+  hudHidden = false;
+  fps = 0;
   private fpsAcc = 0;
   private fpsFrames = 0;
-  private playing = false;
+  playing = false;
   private lastTabDown = false;
   private statusText: string | null = null;
-  private tmpGrass = [0, 0, 0];
   private onQuitCb: (() => void) | null = null;
 
   // --- Supervivencia ---
@@ -395,7 +371,7 @@ export class Game {
     }
   };
 
-  private anyScreenOpen(): boolean {
+  anyScreenOpen(): boolean {
     return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen() ||
       this.signEditor.isOpen() || this.trading.isOpen() || this.namePrompt.isOpen() || this.books.isOpen(); // Fase 6 (aldeanos): + comercio
   }
@@ -682,7 +658,7 @@ export class Game {
         }
         if (input.wasPressed('F3')) this.debug = !this.debug;
         if (input.wasPressed('F2')) this.wantShot = true;
-        if (input.wasPressed(k.perspective)) this.thirdPerson = (this.thirdPerson + 1) % 3;
+        if (input.wasPressed(k.perspective)) this.camera.thirdPerson = (this.camera.thirdPerson + 1) % 3;
         for (let i = 0; i < 9; i++) {
           if (input.wasPressed('Digit' + (i + 1))) this.selectSlot(i);
         }
@@ -723,87 +699,8 @@ export class Game {
 
     this.handleUiKeys();
 
-    // --- Cámara ---
-    if (input.locked && !surv.dead) {
-      const sens = 0.0022 * settings.sensitivity * (this.interaction.use?.kind === 'spyglass' ? 0.2 : 1); // Fase 6.5: catalejo
-      p.yaw -= input.dx * sens;
-      p.pitch -= input.dy * sens * (settings.invertY ? -1 : 1);
-      p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch));
-    }
-
-    // --- Cama: la pantalla se oscurece; Mayús para levantarse ---
-    if (this.life.sleeping) {
-      this.life.sleeping.t += dt;
-      ui.setSleep(Math.min(0.9, this.life.sleeping.t / 5));
-      if (input.locked && !ui.isChatOpen() && input.wasPressed(settings.keys.sneak)) this.life.leaveBed(true);
-    }
-
-    // --- Movimiento ---
-    const active = input.locked && !ui.isChatOpen() && !surv.dead && !this.life.sleeping;
-    const k = settings.keys;
-    // Agacharse y correr fijos: una pulsación los activa y otra los quita.
-    if (active && settings.toggleSneak && input.wasPressed(k.sneak)) this.sneakOn = !this.sneakOn;
-    if (active && settings.toggleSprint && input.wasPressed(k.sprint)) this.sprintOn = !this.sprintOn;
-    if (!settings.toggleSneak) this.sneakOn = false;
-    if (!settings.toggleSprint) this.sprintOn = false;
-    if (active && this.creative && input.wasDoubleTapped(k.jump)) {
-      p.flying = !p.flying;
-      if (p.flying) p.vy = 0;
-    }
-    if (!this.creative) p.flying = false;
-    if (active && input.wasDoubleTapped(k.forward) && (this.creative || surv.canSprint())) p.sprinting = true;
-    if (!this.creative && !surv.canSprint()) p.sprinting = false;
-    // Usar un objeto frena mucho; los efectos Velocidad y Lentitud multiplican.
-    p.usingItem = !!this.interaction.use;
-    p.slow = (this.interaction.use ? 0.25 : 1) * this.statusEffects.speed;
-    potionPhysics(this); // Fase 7 (pociones): Supersalto y Caída lenta
-    effectsPhysics(this); // Fase 7 (efectos): Levitación, Gracia del delfín, Ceguera y Salud mejorada
-    p.leatherBoots = ITEMS[this.inv.armor[3]?.id ?? 0]?.armor?.material === 'leather'; // Fase 6.5 (materiales): nieve polvo
-    world.renderDistance = settings.render.renderDistance;
-    const wasInWater = p.inWater;
-    const wasGround = p.onGround;
-    const ox = p.x, oz = p.z;
-    const controls = {
-      forward: active && input.isDown(k.forward),
-      back: active && input.isDown(k.back),
-      left: active && input.isDown(k.left),
-      right: active && input.isDown(k.right),
-      jump: active && (input.isDown(k.jump) || input.wasPressed(k.jump)),
-      sneak: active && (settings.toggleSneak ? this.sneakOn : input.isDown(k.sneak)),
-      sprint: active && (settings.toggleSprint ? this.sprintOn : input.isDown(k.sprint)) && (this.creative || surv.canSprint()),
-    };
-    // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
-    // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
-    this.vehicles.collidePlayer(dt); // Fase 7 (remate): barcas sólidas y vagonetas que apartan
-    if (!this.riding.update(dt, controls, active) && !this.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
-    this.mechanisms.update(); // Fase 7 (mecanismos): los bloques que empujan los pistones apartan al jugador
-    const moved = this.riding.active || this.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz); // montado no se gasta hambre (fase 6)
-    // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
-    if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
-      const bx = Math.floor(p.x), by = Math.floor(p.y - 0.05), bz = Math.floor(p.z);
-      if (isFarmland(world.getBlock(bx, by, bz))) {
-        world.setBlock(bx, by, bz, DIRT);
-        this.net?.send({ t: 'trample', x: bx, y: by, z: bz });
-      }
-    }
-
-    // Sonidos de pasos y aterrizaje.
-    const below = world.getBlock(Math.floor(p.x), Math.floor(p.y - 0.2), Math.floor(p.z));
-    const groundMat = below > 0 ? BLOCKS[below].sound : 'stone';
-    if (p.onGround && !p.sneaking) {
-      this.stepDist += p.walkAmount * dt * 4.3;
-      if (this.stepDist > 1.8) {
-        this.stepDist = 0;
-        this.audio.playStep(groundMat, [p.x, p.y, p.z], p.sprinting ? 0.8 : 0.6);
-      }
-    }
-    if (p.justLanded && p.landedSpeed < -7) this.audio.playLand(groundMat, [p.x, p.y, p.z], Math.min(1, (-p.landedSpeed - 7) / 15));
-    if (p.inWater && !wasInWater && p.justEnteredWater) {
-      this.audio.playSplash([p.x, p.y, p.z], Math.min(1, -p.vy / 10 + 0.3));
-      // Chapuzón: salpicadura en la superficie y burbujas.
-      this.renderer.entities.pfx.splash(p.x, p.y + 0.4, p.z, Math.min(24, 6 + Math.round(-p.vy * 1.5)));
-      this.renderer.entities.pfx.bubbles(p.x, p.y, p.z, 6, 0.4);
-    }
+    // --- Jugador: mirada, cama, controles, física y pasos ---
+    const { active, moved, wasGround } = this.movement.update(dt);
 
     // --- Supervivencia ---
     const worldTime = worldTimeAt(this.time, Date.now() + (this.net?.serverOffset ?? 0));
@@ -814,7 +711,7 @@ export class Game {
     this.life.tickSurvival(dt, moved, wasGround, rain);
     this.audio.setHeartbeat(!this.creative && !surv.dead && surv.health <= 6 ? (7 - surv.health) / 6 : 0);
 
-    // --- Interacción ---
+    // --- Interacción: a qué bloque o entidad se apunta ---
     const eyeX = p.x, eyeY = p.eyeY, eyeZ = p.z;
     const cp = Math.cos(p.pitch);
     const dir = [-Math.sin(p.yaw) * cp, Math.sin(p.pitch), -Math.cos(p.yaw) * cp];
@@ -849,20 +746,8 @@ export class Game {
       this.interaction.checkEndermanLook(eyeX, eyeY, eyeZ, dir);
     }
     this.effects.mobSounds(dt);
-    const views: RemotePlayerView[] = [];
-    const tags: { id: string; name: string; pos: [number, number] | null }[] = [];
-    for (const rp of this.remote.values()) {
-      rp.update(dt);
-      this.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
-      this.vehicles.placeRemote(rp.id, rp.view); // Fase 7 (transporte): en su barca o vagoneta
-      if (rp.state & STATE_DEAD) continue;
-      const v = rp.view;
-      v.invisible = (rp.state & STATE_INVISIBLE) !== 0; // Fase 7 (remate): del invisible sólo se ve lo que lleva puesto
-      const l = world.getLight(Math.floor(v.x), Math.floor(v.y + 0.5), Math.floor(v.z));
-      v.light = [(l >> 4) / 15, (l & 15) / 15];
-      views.push(v);
-    }
-    // Partículas: física contra el mundo y emisores ambientales (hojas, antorchas, goteo…).
+    const views = remoteViews(this, dt);
+    // Partículas: física contra el mundo y emisores ambientales (hojas, antorchas, goteo...).
     const ps = this.renderer.entities.particles;
     ps.world = {
       solid: (x, y, z) => {
@@ -893,213 +778,20 @@ export class Game {
       this.sendState(false);
     }
     this.refreshHotbar();
-    const fx = this.statusEffects;
-    ui.setSurvival(
-      !this.creative && !surv.dead, surv.health, surv.food, surv.air, surv.hurtTime < 0.3, surv.absorption,
-      fx.has(EFFECT_POISON), fx.has(EFFECT_HUNGER), surv.maxHealth, fx.has(EFFECT_WITHER), // Fase 7 (efectos)
-    );
-    renderEffectsHud(fx, !surv.dead && !this.hudHidden);
-    renderRaidBar(this.raid, !this.hudHidden); // Fase 6 (asaltos)
-    renderDecorHud(this.interaction.use?.kind === 'spyglass', this.heldId === CLOCK || this.inv.offhand?.id === CLOCK ? worldTime : null,
-      !surv.dead && !this.hudHidden); // Fase 6.5 (decoración)
-    renderFrostHud(this.life.freezing.fraction, Freezing.eyesInPowder(this), !surv.dead && !this.hudHidden); // Fase 6.5 (materiales)
-    renderAttackIndicator(this.interaction.attackCharge(), !surv.dead && !this.hudHidden && !this.anyScreenOpen());
-    renderArmorBar(this.inv.armorPoints(), !this.creative && !surv.dead);
-    renderXpBar(this.xp, !this.creative && !surv.dead);
+    updateHud(this, worldTime);
 
-    // --- Horizonte lejano ---
-    this.environment.farTimer -= dt;
-    if (this.environment.farTimer <= 0 || Math.hypot(p.x - this.environment.farPos[0], p.z - this.environment.farPos[1]) > 48) this.environment.updateFarOcean();
+    // --- Cielo, luz en el ojo, cámara y lente ---
+    const sky = this.environment.sky(dt, worldTime, rain);
+    const eye = this.camera.eyeLight(dt);
+    const cam = this.camera.place(dt, dir);
+    if (this.camera.thirdPerson > 0) views.push(selfView(this, eye));
+    this.camera.lens(dt);
 
-    // --- Tiempo y clima ---
-    const day = Math.floor(worldTime);
-    const dayTime = worldTime - day;
-    const sunHeight = Math.sin(dayTime * Math.PI * 2);
-    const baseCoverage = 0.27 + 0.1 * Math.sin(worldTime * 2.3 + 1.3) + 0.06 * Math.sin(worldTime * 5.9 + 0.4);
-    const coverage = baseCoverage + (0.86 - baseCoverage) * Math.min(1, rain * 1.5);
-    const dawn = Math.exp(-Math.pow(((dayTime + 0.5) % 1) - 0.5, 2) / 0.0035);
-    const mist = 0.0022 + 0.011 * dawn + (sunHeight < 0 ? 0.002 : 0) + rain * 0.006;
-    const climate = world.generator.columnInfo(Math.floor(p.x), Math.floor(p.z));
-    const snow = (climate.temp < -0.5 || climate.height > 150) && climate.biome !== BIOME_MUSHROOM_FIELDS;
-    this.environment.rainMapTimer -= dt;
-    if (rain > 0.01 && this.environment.rainMapTimer <= 0) this.environment.updateRainMap();
-
-    // --- Luz en el ojo y exposición al cielo ---
-    const le = world.getLight(Math.floor(eyeX), Math.floor(eyeY), Math.floor(eyeZ));
-    const skyAtEye = (le >> 4) / 15;
-    this.eyeSky += (skyAtEye - this.eyeSky) * (1 - Math.exp(-dt * 1.5));
-    const underwater = p.eyeInWater;
-    // Bajo el agua abierta al cielo, la luz del sol llega filtrada (menos cuanto más hondo): la usan la
-    // mano y las partículas, que si no sólo verían la luz del cielo del bloque (se apaga a pocos bloques).
-    let waterLight = 0;
-    if (underwater) {
-      const ex = Math.floor(eyeX), ez = Math.floor(eyeZ);
-      let y = Math.floor(eyeY), depth = 0;
-      for (; depth < 64; depth++, y++) {
-        const b = world.getBlock(ex, y, ez);
-        if (b <= 0 || BLOCK_FLUID[b] !== 1) break;
-      }
-      if (world.getBlock(ex, y, ez) === AIR && world.getLight(ex, y, ez) >> 4 >= 14) waterLight = Math.exp(-0.07 * depth);
-    }
-
-    // --- Cámara (primera/tercera persona) ---
-    let camX = eyeX, camY = eyeY, camZ = eyeZ;
-    let yaw = p.yaw, pitch = p.pitch;
-    if (surv.dead) camY = p.y + 0.3;
-    else if (this.life.sleeping) camY = p.y + 0.2;
-    if (settings.viewBobbing && this.thirdPerson === 0) {
-      const ph = p.walkDistance * Math.PI * 0.62;
-      camY += -Math.abs(Math.cos(ph)) * 0.06 * p.walkAmount;
-      camX += Math.cos(p.yaw) * Math.sin(ph) * 0.035 * p.walkAmount;
-      camZ += -Math.sin(p.yaw) * Math.sin(ph) * 0.035 * p.walkAmount;
-    }
-    // Sacudida al recibir daño o por una explosión cercana.
-    if (this.shake > 0) {
-      const t = performance.now() / 1000;
-      pitch += Math.sin(t * 41) * 0.03 * this.shake;
-      yaw += Math.sin(t * 33 + 1) * 0.03 * this.shake;
-      this.shake = Math.max(0, this.shake - dt * 2.5);
-    }
-    if (this.thirdPerson > 0) {
-      const back = this.thirdPerson === 1 ? 1 : -1;
-      const want = 4;
-      const hit = raycast(eyeX, eyeY, eyeZ, -dir[0] * back, -dir[1] * back, -dir[2] * back, want, (x, y, z) => {
-        const b = world.getBlock(x, y, z);
-        return b > 0 && BLOCK_SOLID[b] ? b : AIR;
-      });
-      const d = hit ? Math.max(0.3, hit.dist - 0.25) : want;
-      camX = eyeX - dir[0] * back * d;
-      camY = eyeY - dir[1] * back * d;
-      camZ = eyeZ - dir[2] * back * d;
-      if (back < 0) {
-        yaw += Math.PI;
-        pitch = -pitch;
-      }
-      views.push({
-        id: '__self', name: this.cfg.name, shirt: this.cfg.shirt, x: p.x, y: p.y, z: p.z,
-        bodyYaw: p.yaw, headYaw: p.yaw, pitch: p.pitch, walkPhase: p.walkDistance * 2.2, walkAmount: p.walkAmount,
-        swing: this.swingT >= 0 ? this.swingT : 0, sneaking: p.sneaking, sleeping: !!this.life.sleeping, prone: p.pose !== 'stand', held: this.heldId, offhand: this.inv.offhand?.id ?? 0,
-        heldDmg: handPotionTypes(this).hp, offhandDmg: handPotionTypes(this).op, // Fase 7 (remate)
-        use: ((k) => (k === 'none' ? null : k))(useLook(this.interaction.use).kind), light: [skyAtEye, (le & 15) / 15],
-        armor: this.inv.armorIds(),
-        riding: this.riding.active || this.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
-        glint: this.enchant.glintBits(), // Fase 7 (encantamientos)
-        invisible: this.statusEffects.invisible, // Fase 7 (remate): sin cuerpo, pero con la armadura y lo de las manos
-        glowing: this.statusEffects.glowing, // Fase 7 (efectos)
-      });
-    }
-
-    // FOV dinámico al correr/volar y al tensar el arco.
-    const baseFov = settings.render.fov;
-    const bowZoom = this.interaction.use?.kind === 'bow' ? 1 - Math.min(1, this.interaction.use.t) * 0.15 : 1;
-    const spyZoom = this.interaction.use?.kind === 'spyglass' ? 0.1 : 1; // Fase 6.5 (decoración): catalejo
-    const targetFov = baseFov * (p.sprinting ? 1.12 : 1) * (p.flying && p.sprinting ? 1.05 : 1) * bowZoom * spyZoom;
-    this.fovCurrent += (targetFov - this.fovCurrent) * (1 - Math.exp(-dt * 8));
-    // Resolución dinámica: si el rendimiento cae de forma sostenida, bajar la escala interna.
-    if (settings.render.renderScale !== this.lastUserScale) {
-      this.lastUserScale = settings.render.renderScale;
-      this.autoScale = 1;
-      this.slowTime = 0;
-    }
-    if (this.playing && document.visibilityState === 'visible') {
-      this.slowTime = dt > 1 / 33 ? this.slowTime + dt : Math.max(0, this.slowTime - dt * 0.5);
-      if (this.slowTime > 3 && settings.render.renderScale * this.autoScale > 0.55) {
-        this.autoScale = Math.max(0.5 / settings.render.renderScale, this.autoScale - 0.12);
-        this.slowTime = 0;
-        ui.toast('Resolución reducida automáticamente para mantener la fluidez');
-      }
-    }
-    this.renderer.settings = { ...settings.render, fov: this.fovCurrent, renderScale: settings.render.renderScale * this.autoScale };
-
-    // Animaciones de la mano.
-    if (this.swingT >= 0) {
-      this.swingT += dt / 0.28;
-      if (this.swingT >= 1) this.swingT = this.interaction.mining ? 0 : -1;
-    }
-    this.equipT = Math.max(0, this.equipT - dt / 0.18);
-    const bobPh = p.walkDistance * Math.PI * 0.62;
-    const gen = world.generator;
-    const inf = gen.columnInfo(Math.floor(p.x), Math.floor(p.z));
-    TerrainGenerator.biomeGrass(inf, this.tmpGrass);
-
-    // Entidades a dibujar.
-    const mobs: ClientEntity[] = [];
-    const drops: ClientEntity[] = [];
-    for (const e of this.ents.list.values()) {
-      // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
-      // lo que llevan (lo decide MobRenderer).
-      if (MOBS[e.type] || isVehicleType(e.type)) mobs.push(e);
-      else drops.push(e);
-    }
-    const m = this.interaction.mining;
-    let crack: FrameState['crack'] = null;
-    if (m && m.progress > 0) {
-      const h = this.hit;
-      const box = h && h.x === m.x && h.y === m.y && h.z === m.z ? h.box : undefined;
-      crack = { x: m.x, y: m.y, z: m.z, stage: Math.min(9, Math.floor(m.progress * 10)), box };
-    }
-
+    // --- Dibujar ---
+    animateHand(this, dt);
+    const { mobs, drops } = splitEntities(this);
     this.renderer.entities.lightDir = this.renderer.sunDir[1] >= 0 ? this.renderer.sunDir : this.renderer.sunDir.map((v) => -v);
-    const use = this.interaction.use;
-    const mainUse = use && use.slot !== OFFHAND ? use : null;
-    const offUse = use && use.slot === OFFHAND ? use : null;
-    const localRod = {
-      cam: [camX, camY, camZ] as [number, number, number], yaw, pitch, firstPerson: this.thirdPerson === 0,
-      feet: [p.x, p.y, p.z] as [number, number, number], bodyYaw: p.yaw,
-    };
-    const state: FrameState = {
-      camX, camY, camZ, yaw, pitch, roll: this.hurtRoll,
-      time: performance.now() / 1000,
-      dt,
-      dayTime,
-      day,
-      underwater,
-      waterLight,
-      eyeSkyExposure: this.eyeSky,
-      rain,
-      nightVision: this.statusEffects.nightVision,
-      snow,
-      cloudCoverage: (window as unknown as { __cloudCov?: number }).__cloudCov ?? Math.max(0.1, Math.min(0.9, coverage)),
-      mist,
-      selection: this.hit && !this.hudHidden && !target ? { x: this.hit.x, y: this.hit.y, z: this.hit.z, box: this.hit.box } : null,
-      heldItem: surv.dead ? 0 : this.heldId,
-      heldDmg: this.heldStack?.dmg ?? 0, // Fase 7 (pociones): color de la poción
-      offhandDmg: this.inv.offhand?.dmg ?? 0,
-      handUse: useLook(mainUse).amount, // Fase 6.5 (equipo): con la ballesta y el tridente
-      handUseKind: useLook(mainUse).kind,
-      offhandItem: surv.dead ? 0 : this.inv.offhand?.id ?? 0,
-      heldGlint: hasGlint(this.heldStack), // Fase 7 (encantamientos)
-      offhandGlint: hasGlint(this.inv.offhand),
-      enchantBooks: this.enchantBooks.draws(this.renderer.items, camX, camY, camZ, (x, y, z) => {
-        const l = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
-        return [(l >> 4) / 15, (l & 15) / 15];
-      }),
-      movingBlocks: this.mechanisms.draws(this.renderer.items, camX, camY, camZ, (x, y, z) => { // Fase 7 (mecanismos)
-        const l = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
-        return [(l >> 4) / 15, (l & 15) / 15];
-      }),
-      offhandUseKind: offUse ? (offUse.kind === 'block' ? 'block' : 'eat') : 'none',
-      offhandUse: offUse ? (offUse.kind === 'block' ? offUse.t : offUse.t / 1.6) : 0,
-      crack,
-      mobs,
-      drops,
-      lightAt: (x, y, z) => world.getLight(x, y, z),
-      handSwing: this.swingT >= 0 ? this.swingT : 0,
-      handBob: settings.viewBobbing ? [Math.sin(bobPh) * 0.018 * p.walkAmount, -Math.abs(Math.cos(bobPh)) * 0.022 * p.walkAmount] : [0, 0],
-      handEquip: this.equipT,
-      lightAtEye: [skyAtEye, (le & 15) / 15],
-      grassTint: [srgbToLin(this.tmpGrass[0]), srgbToLin(this.tmpGrass[1]), srgbToLin(this.tmpGrass[2])],
-      players: views,
-      signs: this.signs.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ),
-      banners: this.books.banners.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ), // Fase 6.5 (libros y estandartes)
-      bolts: this.bolts,
-      guardianBeams: guardianBeams(this), // Fase 7.5 (océano)
-      fishLines: fishingLines(this.bobbers, this.ents.list, this.net?.id ?? null, localRod, views),
-      leashes: leashLines(this.ents.list, this.net?.id ?? null, localRod, views), // Fase 6.5 (remate)
-      showHand: this.thirdPerson === 0 && !this.hudHidden && this.interaction.use?.kind !== 'spyglass',
-      ...effectsView(this, dt), // Fase 7 (efectos): náuseas, ceguera y oscuridad
-    };
-    this.renderer.render(state);
+    this.renderer.render(frameState(this, { dt, cam, eye, sky, rain, views, mobs, drops, target }));
     this.hurtRoll *= Math.exp(-dt * 5);
     this.nav.update();
     // Rayos: envejecen y se retiran; el destello blanco de la pantalla se apaga rápido.
@@ -1118,28 +810,12 @@ export class Game {
       this.wantShot = false;
       this.saveScreenshot();
     }
-
-    // Etiquetas de nombre.
-    for (const rp of this.remote.values()) {
-      const v = rp.view;
-      const d = Math.hypot(v.x - camX, v.y - camY, v.z - camZ);
-      const visible = d < 72 && !this.hudHidden && !(rp.state & (STATE_DEAD | STATE_INVISIBLE)); // Fase 7: sin nombre si es invisible
-      tags.push({ id: rp.id, name: rp.name, pos: visible ? this.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null });
-    }
-    // Fase 6.5 (remate): criaturas con nombre (etiqueta), hasta 16 bloques.
-    for (const e of this.ents.list.values()) {
-      if (!e.name || e.gone || e.deathT >= 0) continue;
-      const def = MOBS[e.type];
-      const d = Math.hypot(e.x - camX, e.y - camY, e.z - camZ);
-      const visible = d < 16 && !this.hudHidden && !!def;
-      tags.push({ id: `m${e.id}`, name: e.name, pos: visible ? this.renderer.project(e.x, e.y + (def?.height ?? 1) + 0.35, e.z) : null });
-    }
-    ui.updateNameTags(tags);
+    updateNameTags(this, cam);
     this.renderer.entities.prune(new Set(views.map((v) => v.id)));
 
-    // Audio.
+    // --- Audio ---
     const fwd: [number, number, number] = [dir[0], dir[1], dir[2]];
-    this.audio.setListener([camX, camY, camZ], fwd, [0, 1, 0]);
+    this.audio.setListener([cam.camX, cam.camY, cam.camZ], fwd, [0, 1, 0]);
     let waterNear = 0;
     if (p.y < SEA_LEVEL + 6) {
       for (const [ox2, oz2] of [[4, 0], [-4, 0], [0, 4], [0, -4], [0, 0]]) {
@@ -1152,42 +828,19 @@ export class Game {
       this.effects.updateFluidSound();
     }
     this.audio.update(dt, {
-      sunHeight,
-      skyExposure: this.eyeSky,
-      underwater,
+      sunHeight: sky.sunHeight,
+      skyExposure: this.camera.eyeSky,
+      underwater: eye.underwater,
       waterProximity: waterNear,
-      altitude: camY,
-      rain: snow ? 0 : rain * Math.min(1, this.eyeSky * 1.3),
+      altitude: cam.camY,
+      rain: sky.snow ? 0 : rain * Math.min(1, this.camera.eyeSky * 1.3),
     });
 
-    // Depuración.
-    if (this.debug) {
-      // Fase 7.5 (abismo): el Deep Dark es un bioma de cueva (depende también de la altura).
-      const biome = isDeepDark(gen, Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)) ? 'Deep Dark' : BIOME_NAMES[gen.biomeAt(Math.floor(p.x), Math.floor(p.z))];
-      const hours = Math.floor(((dayTime * 24 + 6) % 24));
-      const mins = Math.floor(((dayTime * 24 * 60) % 60));
-      const r = this.renderer;
-      ui.setDebug(
-        `VoxelCraft · ${this.fps.toFixed(0)} FPS\n` +
-        `XYZ: ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}\n` +
-        `Chunk: ${Math.floor(p.x / 16)}, ${Math.floor(p.z / 16)} · Bioma: ${biome}\n` +
-        `Hora: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} · Día ${day + 1}\n` +
-        `Luz: cielo ${le >> 4} · bloque ${le & 15}\n` +
-        `Chunks: ${world.meshedCount} mallados · ${r.stats.drawCalls} draws · ${(r.stats.quads / 1000).toFixed(0)}k caras\n` +
-        `Entidades: ${mobs.length} criaturas · ${drops.length} objetos\n` +
-        `Modo: ${this.creative ? 'creativo' : 'supervivencia'} · ${this.offline ? 'sin conexión' : `ping ${Math.round(this.net?.latency ?? 0)} ms · ${this.remote.size + 1} jugadores`}\n` +
-        (this.hit ? `Mirando: ${BLOCKS[this.hit.id].name} (${this.hit.x}, ${this.hit.y}, ${this.hit.z})\n` : '') +
-        (target ? `Criatura: ${MOBS[target.type]?.name ?? 'transporte'}\n` : '') + // Fase 7: también barcas y vagonetas
-        `GPU: ${r.caps.renderer}`,
-      );
-    } else ui.setDebug(null);
+    ui.setDebug(this.debug ? debugText(this, eye, sky, { mobs: mobs.length, drops: drops.length }, target) : null);
   }
 
   // ------------------------------------------------------------------ interacción
 
-  private autoScale = 1;
-  private lastUserScale = -1;
-  private slowTime = 0;
   private openChat(prefill: string): void {
     this.input.gameKeys = false;
     this.input.releaseAll();
