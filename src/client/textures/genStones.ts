@@ -25,7 +25,7 @@ function meanColor(t: Tex): RGB {
 }
 
 /** Acerca cada píxel al color medio (`k` = cuánto contraste queda) y alisa el relieve. */
-function soften(t: Tex, k: number, smoothAdd: number): void {
+export function soften(t: Tex, k: number, smoothAdd: number): void {
   const m = meanColor(t);
   for (let i = 0; i < N; i++) {
     t.setI(i, mix(m, t.getI(i), k));
@@ -35,7 +35,7 @@ function soften(t: Tex, k: number, smoothAdd: number): void {
 }
 
 /** Bisel de un rectángulo [x0, x1] × [y0, y1]: arriba/izquierda más claro, abajo/derecha más oscuro. */
-function bevel(t: Tex, x0: number, y0: number, x1: number, y1: number, light = 1.1, dark = 0.84): void {
+export function bevel(t: Tex, x0: number, y0: number, x1: number, y1: number, light = 1.1, dark = 0.84): void {
   for (let x = x0; x <= x1; x++) {
     const a = idx(x, y0), b = idx(x, y1);
     t.setI(a, scale(t.getI(a), light));
@@ -53,7 +53,7 @@ function bevel(t: Tex, x0: number, y0: number, x1: number, y1: number, light = 1
 }
 
 /** Piedra pulida: el dibujo de la piedra con menos contraste, más lisa y con un bisel en el borde. */
-function polished(base: Generator, k = 0.5): Generator {
+export function polished(base: Generator, k = 0.5): Generator {
   return (t) => {
     base(t);
     soften(t, k, 40);
@@ -62,7 +62,7 @@ function polished(base: Generator, k = 0.5): Generator {
   };
 }
 
-interface BrickOpts {
+export interface BrickOpts {
   /** Alto de cada hilada (la última fila es la junta). */
   courseH: number;
   /** Ancho de cada ladrillo (la última columna es la junta). */
@@ -76,7 +76,7 @@ interface BrickOpts {
 }
 
 /** Junta de ladrillos o azulejos sobre el dibujo que ya hay (cada pieza, con su tono y su bisel). */
-function brickOverlay(t: Tex, o: BrickOpts): void {
+export function brickOverlay(t: Tex, o: BrickOpts): void {
   const r = t.rng('bricks');
   const tone: number[] = [];
   for (let k = 0; k < 64; k++) tone.push(1 + r.range(-o.shade, o.shade));
@@ -104,7 +104,7 @@ function brickOverlay(t: Tex, o: BrickOpts): void {
 }
 
 /** Grietas: caminos oscuros y hundidos que bajan en zigzag. */
-function cracks(t: Tex, count: number, dark: number): void {
+export function cracks(t: Tex, count: number, dark: number): void {
   const r = t.rng('cracks');
   for (let k = 0; k < count; k++) {
     let x = r.int(0, 15), y = r.int(0, 15);
@@ -122,7 +122,7 @@ function cracks(t: Tex, count: number, dark: number): void {
 }
 
 /** Talla: los '#' se hunden y oscurecen; los '+' se levantan y aclaran (centrado en la textura). */
-function carve(t: Tex, rows: readonly string[], dark = 0.72, light = 1.1): void {
+export function carve(t: Tex, rows: readonly string[], dark = 0.72, light = 1.1): void {
   const h = rows.length, w = rows[0].length;
   const ox = Math.floor((16 - w) / 2), oy = Math.floor((16 - h) / 2);
   for (let y = 0; y < h; y++) {

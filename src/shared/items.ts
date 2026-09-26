@@ -38,6 +38,10 @@ import { DISCS } from './discs'; // Fase 6.5 (colecciones)
 import { BREWING_STAND } from './blocks'; // Fase 7 (pociones)
 import { REDSTONE_WIRE, TRIPWIRE, IRON_DOOR } from './blocks'; // Fase 7 (redstone)
 import { HOPPER } from './blocks'; // Fase 7 (mecanismos)
+import { // Fase 8.2 (biomas del Nether)
+  isNetherWood, NETHERRACK, NETHER_BRICKS, CRACKED_NETHER_BRICKS, POLISHED_BLACKSTONE_BRICKS, CRACKED_POLISHED_BLACKSTONE_BRICKS, BASALT,
+  SMOOTH_BASALT,
+} from './blocks';
 import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from './blocks'; // Fase 8 (dimensiones)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
@@ -574,6 +578,9 @@ export const RECOVERY_COMPASS = item('recovery_compass', 'Brújula de recuperaci
 export const DISC_FRAGMENT_5 = item('disc_fragment_5', 'Fragmento de disco');
 export const MUSIC_DISC_5 = item('music_disc_5', 'Disco de música', { stack: 1 });
 (MUSIC_DISCS as number[]).push(MUSIC_DISC_5);
+// ------------------------------------------------------------------ Fase 8.2 (biomas del Nether)
+/** Ladrillo del Nether: sale de fundir rocanegra; cuatro hacen un bloque de ladrillos del Nether. */
+export const NETHER_BRICK = item('nether_brick', 'Ladrillo del Nether');
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -782,3 +789,12 @@ Object.assign(BREED_FOOD as Record<string, readonly number[]>, { ocelot: [COD, S
 // Las menas del Nether se funden como las demás (sacadas con Toque de seda).
 smelt(NETHER_QUARTZ_ORE, QUARTZ);
 smelt(NETHER_GOLD_ORE, GOLD_INGOT);
+
+// ------------------------------------------------------------------ Fase 8.2 (biomas del Nether)
+// La madera del Nether no arde: ni sus tablones, tallos, formas ni carteles sirven de combustible.
+for (const it of ITEMS) if (it && isNetherWood(it.key)) delete it.fuel;
+smelt(NETHERRACK, NETHER_BRICK);
+smelt(NETHER_BRICKS, CRACKED_NETHER_BRICKS);
+smelt(POLISHED_BLACKSTONE_BRICKS, CRACKED_POLISHED_BLACKSTONE_BRICKS);
+smelt(BASALT, SMOOTH_BASALT);
+(CREATIVE_ITEMS as number[]).push(NETHER_BRICK);

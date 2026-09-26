@@ -572,9 +572,18 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   luminosa, arena de alma, grava, magma, menas de cuarzo y de oro, fuegos eternos), niebla roja y luz sin
   cielo, agua que se evapora, camas que explotan, magma que quema, brújula y reloj sin rumbo, reaparecer
   en el mundo normal y los comandos `/dimension`, `/setblock` y `/fill`.
-- **8.2 Biomas del Nether:** bosques carmesí y distorsionado (hongos, tallos, nylium, raíces, enredaderas y
-  sus maderas), valle de almas, deltas de basalto; piedra negra, basalto, tierra de alma, luz de hongo,
-  ladrillos del Nether; partículas y sonido de cada bioma; la lava del Nether fluye más rápido.
+- ✅ **8.2 Biomas del Nether:** el terreno del Nether portado de la 26.3 (old_blended_noise interpolado,
+  mar de lava hasta y = 31, carver de cuevas), los biomas por parámetros (desiertos, valle de almas,
+  bosque carmesí, bosque distorsionado y deltas de basalto; de columna, como en la 26.3) con sus reglas de
+  superficie y todas sus features (hongos gigantes, vegetación, enredaderas, verrugas del techo, pilares
+  y columnas de basalto, deltas, manchas de basalto y piedra negra, manantiales de lava que corren al
+  cargar, fuego y fuego de alma, piedra luminosa, setas y menas con el algoritmo de Java). Bloques:
+  maderas carmesí y distorsionada con todas sus formas (no arden), necelio, hongos, raíces, brotes,
+  enredaderas (punta que crece y tallo), verrugas, luz de hongo, basalto, piedra negra y sus formas,
+  ladrillos del Nether (valla que sólo se une a las suyas); polvo de hueso en necelio, rocanegra, hongos
+  y enredaderas. Niebla de cada bioma (mezclada como CubicSampler), sus partículas (esporas, ceniza y
+  ceniza blanca, con la física de Java), su sonido (bucle, sonidos sueltos y «mood») y su música. La lava
+  del Nether baja de 1 en 1 (llega a 7 bloques), busca huecos a 4 y se actualiza cada 10 ticks.
 - **8.3 Criaturas del Nether:** piglins (trueque con oro) y piglins brutos, piglins zombificados, ghasts,
   blazes, cubos de magma, hoglins y zoglins, striders, esqueletos wither.
 - **8.4 Estructuras del Nether:** fortalezas (generadores de blazes, verruga del Nether), bastiones (los 4

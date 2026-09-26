@@ -18,11 +18,16 @@ Objects). Pensado para PC (teclado y ratón).
   Dark), lagos de lava, geodas de amatista y las ocho menas de Minecraft (también en pizarra profunda
   por debajo de 0).
 - **Dimensiones** (fase 8, en curso): el **Nether**, al que se llega por un portal de obsidiana
-  encendido con fuego (4 s dentro; 1 bloque allí son 8 aquí). Cavernas de rocanegra entre un suelo y un
-  techo de lecho de roca, mar de lava, piedra luminosa, arena de alma, grava, magma que quema y menas de
-  cuarzo y de oro; niebla roja y penumbra sin cielo. El agua se evapora, las camas explotan y la
-  brújula y el reloj giran sin rumbo. Cada dimensión es un mundo aparte (su guardado, sus criaturas y sus
-  sistemas); al morir allí se vuelve al mundo normal.
+  encendido con fuego (4 s dentro; 1 bloque allí son 8 aquí). Su terreno, sus biomas y su decoración
+  están portados de Java 26.3: cavernas enormes de rocanegra entre un suelo y un techo de lecho de roca,
+  mar de lava, túneles, y los cinco biomas —desiertos del Nether, **bosque carmesí** y **bosque
+  distorsionado** (hongos gigantes, necelio, raíces, brotes, enredaderas lloronas y retorcidas, luz de
+  hongo), **valle de almas** (arena y tierra de alma, pilares de basalto, fuego de alma) y **deltas de
+  basalto** (columnas de basalto, piedra negra, charcas de lava con borde de magma)—, cada uno con su
+  niebla, sus partículas, su sonido y su música. La lava corre más rápido y más lejos, el agua se
+  evapora, las camas explotan y la brújula y el reloj giran sin rumbo. Maderas carmesí y distorsionada,
+  piedra negra, basalto y ladrillos del Nether con todas sus formas. Cada dimensión es un mundo aparte
+  (su guardado, sus criaturas y sus sistemas); al morir allí se vuelve al mundo normal.
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus

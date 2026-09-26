@@ -38,6 +38,8 @@ export interface DimensionDef {
   breathable: boolean;
   /** ¿Se evapora el agua que se vierte? */
   evaporatesWater: boolean;
+  /** Fase 8.2: ¿corre la lava rápido? (FAST_LAVA de Java: avanza 7 bloques y se actualiza cada 10 ticks). */
+  fastLava: boolean;
   /** ¿Se puede dormir? (si no, la cama explota). */
   beds: boolean;
   /** ¿Se puede reaparecer aquí al morir? (si no, se vuelve al mundo normal). */
@@ -49,12 +51,12 @@ export interface DimensionDef {
 const DEFS: DimensionDef[] = [
   {
     id: DIM_OVERWORLD, key: 'overworld', name: 'Mundo normal', scale: 1, skyLight: true, sky: true, weather: true,
-    ambient: 0, fog: [192, 216, 255], fogDistance: 1, gravity: 1, breathable: true, evaporatesWater: false,
+    ambient: 0, fog: [192, 216, 255], fogDistance: 1, gravity: 1, breathable: true, evaporatesWater: false, fastLava: false,
     beds: true, respawn: true, compass: true,
   },
   {
     id: DIM_NETHER, key: 'nether', name: 'El Nether', scale: 8, skyLight: false, sky: false, weather: false,
-    ambient: 0.1, fog: [51, 8, 8], fogDistance: 0.5, gravity: 1, breathable: true, evaporatesWater: true,
+    ambient: 0.1, fog: [51, 8, 8], fogDistance: 0.5, gravity: 1, breathable: true, evaporatesWater: true, fastLava: true,
     beds: false, respawn: false, compass: false,
   },
 ];

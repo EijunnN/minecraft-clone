@@ -1,57 +1,75 @@
-// Fase 8 (dimensiones): generador del Nether. Como en Minecraft, ocupa de y = 0 a y = 127: suelo y techo de
-// lecho de roca, cavernas enormes de rocanegra (densidad 3D con el suelo y el techo que suben y bajan), un
-// mar de lava hasta y = 31, playas de arena de alma y de grava junto a la lava, magma, piedra luminosa que
-// cuelga del techo, menas de cuarzo y de oro y fuegos que arden solos sobre la rocanegra.
-// Por debajo de y = 0 todo es lecho de roca (no se ve y así no hay caras que dibujar) y por encima del
-// techo, aire. Hereda de TerrainGenerator para que el resto del juego lo use igual (bioma, aparición…).
-import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
-import {
-  AIR, BEDROCK, NETHERRACK, LAVA, GLOWSTONE, SOUL_SAND, GRAVEL, FIRE, NETHER_QUARTZ_ORE, NETHER_GOLD_ORE, MAGMA_BLOCK,
-} from '../blocks';
-import { Simplex } from './noise';
+// Fase 8 (dimensiones) y 8.2 (biomas del Nether): generador del Nether. Como en Minecraft, ocupa de y = 0 a
+// y = 127. El terreno, los biomas y la superficie están en netherTerrain.ts (portados de la 26.3) y la
+// decoración (menas, manantiales, fuego, piedra luminosa, hongos gigantes, enredaderas, deltas, columnas y
+// pilares de basalto…) en netherFeatures.ts.
+//
+// Como en Java, la decoración de un chunk puede pasar a sus vecinos (la región de 3×3): cada chunk se
+// decora una vez, sobre los chunks base de alrededor, y lo que pone se guarda; un chunk es su base más lo
+// que ponen en él las decoraciones de los nueve chunks de su alrededor, siempre en el mismo orden. Así dos
+// chunks vecinos coinciden aunque se generen por separado (en el servidor y en cada hilo del cliente).
+// Por debajo de y = 0 todo es lecho de roca (no se ve y así no hay caras que dibujar) y por encima, aire.
+// Hereda de TerrainGenerator para que el resto del juego lo use igual (bioma, aparición…).
+import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, hash2 } from '../constants';
+import { AIR, BEDROCK, LAVA } from '../blocks';
 import { TerrainGenerator, type ColumnInfo, type GenResult } from './terrain';
-import { BIOME_NETHER_WASTES } from './biomeIds';
+import { NetherTerrain, NETHER_HEIGHT, baseIndex } from './netherTerrain';
+import { decorateNetherChunk, type FeatureLevel } from './netherFeatures';
+import { NoiseRandom } from './javaNoise';
 
 /** Nivel del mar de lava (la lava llena el aire con y ≤ LAVA_LEVEL). */
 export const NETHER_LAVA_LEVEL = 31;
 /** Techo de lecho de roca (la última fila; por encima, aire). */
 export const NETHER_ROOF = 127;
 
+/** Lo que pone la decoración de un chunk: x, y, z, id, … y los fluidos que deben correr: x, y, z, … */
+interface Decoration {
+  writes: Int32Array;
+  ticks: Int32Array;
+}
+
+/** Caché LRU sencilla (un Map conserva el orden de inserción). */
+class Lru<V> {
+  private m = new Map<number, V>();
+  constructor(private readonly max: number) {}
+  get(k: number, make: () => V): V {
+    let v = this.m.get(k);
+    if (v !== undefined) {
+      this.m.delete(k);
+      this.m.set(k, v);
+      return v;
+    }
+    v = make();
+    this.m.set(k, v);
+    if (this.m.size > this.max) this.m.delete(this.m.keys().next().value as number);
+    return v;
+  }
+}
+
+const chunkKey = (cx: number, cz: number) => (cx + 32768) * 65536 + (cz + 32768);
+
 export class NetherGenerator extends TerrainGenerator {
-  private nA: Simplex;
-  private nB: Simplex;
-  private nFloor: Simplex;
-  private nCeil: Simplex;
-  private nPatch: Simplex;
-  private nGravel: Simplex;
+  private readonly terrain: NetherTerrain;
+  private readonly bases = new Lru<Uint16Array>(96);
+  private readonly decorations = new Lru<Decoration>(48);
 
   constructor(seed: number) {
     super(seed);
-    this.nA = new Simplex((seed ^ 0x4e7e1) | 0);
-    this.nB = new Simplex((seed ^ 0x4e7e2) | 0);
-    this.nFloor = new Simplex((seed ^ 0x4e7e3) | 0);
-    this.nCeil = new Simplex((seed ^ 0x4e7e4) | 0);
-    this.nPatch = new Simplex((seed ^ 0x4e7e5) | 0);
-    this.nGravel = new Simplex((seed ^ 0x4e7e6) | 0);
+    this.terrain = new NetherTerrain(seed);
   }
 
   override columnInfo(x: number, z: number, out: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 }): ColumnInfo {
-    void x;
-    void z;
     out.height = NETHER_LAVA_LEVEL + 1;
     out.amp = 0;
     out.temp = 2; // no hay nieve ni hielo
     out.humid = 0;
     out.mount = 0;
     out.cont = 0;
-    out.biome = BIOME_NETHER_WASTES;
+    out.biome = this.terrain.biomeAt(x, z);
     return out;
   }
 
   override biomeAt(x: number, z: number): number {
-    void x;
-    void z;
-    return BIOME_NETHER_WASTES;
+    return this.terrain.biomeAt(x, z);
   }
 
   override caveBiomeAt(x: number, z: number): number {
@@ -64,40 +82,67 @@ export class NetherGenerator extends TerrainGenerator {
     return this.floorAt(x, z);
   }
 
-  /** ¿Hay rocanegra en (x, y, z)? (sin el lecho de roca). */
-  private solid(x: number, y: number, z: number, floor: number, ceil: number): boolean {
-    let d = this.nA.noise3(x / 64, y / 32, z / 64) * 0.7 + this.nB.noise3(x / 22, y / 14, z / 22) * 0.3 - 0.12;
-    if (y < floor) d += (floor - y) * 0.09;
-    if (y > ceil) d += (y - ceil) * 0.09;
-    return d > 0;
+  /** Chunk base (terreno y superficie, sin decorar). */
+  private base(cx: number, cz: number): Uint16Array {
+    return this.bases.get(chunkKey(cx, cz), () => this.terrain.baseChunk(cx, cz));
   }
 
-  private floorLevel(x: number, z: number): number {
-    return 30 + this.nFloor.noise2(x / 96, z / 96) * 14;
+  /** Bloque base en (x, y, z) (-1 fuera del alto del Nether). */
+  private baseAt(x: number, y: number, z: number): number {
+    if (y < 0 || y >= NETHER_HEIGHT) return -1;
+    return this.base(x >> 4, z >> 4)[baseIndex(x & 15, y, z & 15)];
   }
 
-  private ceilLevel(x: number, z: number): number {
-    return 104 + this.nCeil.noise2(x / 80, z / 80) * 12;
+  /** Decora el chunk (ocx, ocz) sobre la base de alrededor y guarda lo que pone. */
+  private decoration(ocx: number, ocz: number): Decoration {
+    return this.decorations.get(chunkKey(ocx, ocz), () => {
+      // Región de 3×3 chunks: sus bases, lo que se escribe encima (-1: nada) y el bioma de cada columna.
+      const x0 = (ocx - 1) * 16, z0 = (ocz - 1) * 16;
+      const bases: Uint16Array[] = [];
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) bases.push(this.base(ocx - 1 + i, ocz - 1 + j));
+      const written = new Int32Array(48 * NETHER_HEIGHT * 48).fill(-1);
+      const biomes = new Int16Array(48 * 48).fill(-1);
+      const ticks: number[] = [];
+      const cell = (rx: number, y: number, rz: number) => (y * 48 + rz) * 48 + rx;
+      const level: FeatureLevel = {
+        get: (x, y, z) => {
+          const rx = x - x0, rz = z - z0;
+          if (y < 0 || y >= NETHER_HEIGHT) return -1;
+          if (rx < 0 || rx >= 48 || rz < 0 || rz >= 48) return this.baseAt(x, y, z);
+          const w = written[cell(rx, y, rz)];
+          return w >= 0 ? w : bases[(rz >> 4) * 3 + (rx >> 4)][baseIndex(rx & 15, y, rz & 15)];
+        },
+        set: (x, y, z, id) => {
+          const rx = x - x0, rz = z - z0;
+          if (rx >= 0 && rx < 48 && rz >= 0 && rz < 48 && y >= 0 && y < NETHER_HEIGHT) written[cell(rx, y, rz)] = id;
+        },
+        biome: (x, z) => {
+          const rx = x - x0, rz = z - z0;
+          if (rx < 0 || rx >= 48 || rz < 0 || rz >= 48) return this.terrain.biomeAt(x, z);
+          const k = rz * 48 + rx;
+          if (biomes[k] < 0) biomes[k] = this.terrain.biomeAt(x, z);
+          return biomes[k];
+        },
+        fluidTick: (x, y, z) => {
+          if (x >= x0 && x < x0 + 48 && z >= z0 && z < z0 + 48) ticks.push(x, y, z);
+        },
+      };
+      decorateNetherChunk(level, ocx, ocz, (step, index) => new NoiseRandom(hash2(ocx * 31 + step, ocz * 17 + index * 131, this.seed ^ 0xdec0)));
+      const out: number[] = [];
+      for (let k = 0; k < written.length; k++) {
+        if (written[k] < 0) continue;
+        const rx = k % 48, rz = Math.floor(k / 48) % 48, y = Math.floor(k / 2304);
+        out.push(x0 + rx, y, z0 + rz, written[k]);
+      }
+      return { writes: Int32Array.from(out), ticks: Int32Array.from(ticks) };
+    });
   }
 
-  private bedrock(x: number, y: number, z: number): boolean {
-    if (y <= 0 || y >= NETHER_ROOF) return true;
-    const r = hashToFloat(hash3(x, y, z, this.seed ^ 0xbed0));
-    if (y <= 4) return r < (5 - y) / 5;
-    if (y >= NETHER_ROOF - 4) return r < (y - (NETHER_ROOF - 5)) / 5;
-    return false;
-  }
-
-  /** Primer suelo firme con dos de aire encima por encima de la lava, o -1. */
+  /** Primer suelo firme con dos de aire encima por encima de la lava, o -1 (en el terreno base). */
   private floorAt(x: number, z: number): number {
-    const floor = this.floorLevel(x, z), ceil = this.ceilLevel(x, z);
-    let prev = this.solid(x, NETHER_LAVA_LEVEL + 1, z, floor, ceil);
-    let a1 = this.solid(x, NETHER_LAVA_LEVEL + 2, z, floor, ceil);
     for (let y = NETHER_LAVA_LEVEL + 1; y < NETHER_ROOF - 6; y++) {
-      const a2 = this.solid(x, y + 2, z, floor, ceil);
-      if (prev && !a1 && !a2) return y;
-      prev = a1;
-      a1 = a2;
+      const b = this.baseAt(x, y, z);
+      if (b !== AIR && b !== LAVA && this.baseAt(x, y + 1, z) === AIR && this.baseAt(x, y + 2, z) === AIR) return y;
     }
     return -1;
   }
@@ -118,103 +163,42 @@ export class NetherGenerator extends TerrainGenerator {
   override generate(cx: number, cz: number): GenResult {
     const blocks = new Uint16Array(CHUNK_VOLUME);
     const heights = new Int16Array(CHUNK_SIZE * CHUNK_SIZE);
+    const base = this.base(cx, cz);
     const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
-    const seed = this.seed;
-    const at = (lx: number, y: number, lz: number) => blocks[blockIndex(lx, y, lz)];
-    const put = (lx: number, y: number, lz: number, id: number) => {
-      blocks[blockIndex(lx, y, lz)] = id;
-    };
-
-    // --- 1. Lecho de roca, rocanegra y lava ---
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
-        const wx = x0 + lx, wz = z0 + lz;
-        const floor = this.floorLevel(wx, wz), ceil = this.ceilLevel(wx, wz);
-        for (let y = MIN_Y; y < 0; y++) put(lx, y, lz, BEDROCK);
-        for (let y = 0; y <= NETHER_ROOF; y++) {
-          if (this.bedrock(wx, y, wz)) put(lx, y, lz, BEDROCK);
-          else if (this.solid(wx, y, wz, floor, ceil)) put(lx, y, lz, NETHERRACK);
-          else if (y <= NETHER_LAVA_LEVEL) put(lx, y, lz, LAVA);
+        for (let y = MIN_Y; y < 0; y++) blocks[blockIndex(lx, y, lz)] = BEDROCK;
+        for (let y = 0; y < NETHER_HEIGHT; y++) blocks[blockIndex(lx, y, lz)] = base[baseIndex(lx, y, lz)];
+      }
+    }
+    // Lo que ponen en este chunk las decoraciones de los nueve de alrededor (siempre en este orden).
+    const fluidTicks: number[] = [];
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const d = this.decoration(cx + dx, cz + dz);
+        const w = d.writes;
+        for (let i = 0; i < w.length; i += 4) {
+          const lx = w[i] - x0, lz = w[i + 2] - z0;
+          if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) blocks[blockIndex(lx, w[i + 1], lz)] = w[i + 3];
+        }
+        const t = d.ticks;
+        for (let i = 0; i < t.length; i += 3) {
+          const lx = t[i] - x0, lz = t[i + 2] - z0;
+          if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) fluidTicks.push(t[i], t[i + 1], t[i + 2]);
         }
       }
     }
-
-    // --- 2. Suelos: arena de alma y grava junto a la lava, magma, fuegos ---
-    for (let lz = 0; lz < 16; lz++) {
-      for (let lx = 0; lx < 16; lx++) {
-        const wx = x0 + lx, wz = z0 + lz;
-        const soul = this.nPatch.noise2(wx / 22, wz / 22) > 0.42;
-        const gravel = this.nGravel.noise2(wx / 18, wz / 18) > 0.5;
-        for (let y = 5; y < NETHER_ROOF - 5; y++) {
-          if (at(lx, y, lz) !== NETHERRACK || at(lx, y + 1, lz) === NETHERRACK || at(lx, y + 1, lz) === BEDROCK) continue;
-          const up = at(lx, y + 1, lz);
-          const shore = y >= NETHER_LAVA_LEVEL - 4 && y <= NETHER_LAVA_LEVEL + 6;
-          const r = hashToFloat(hash3(wx, y, wz, seed ^ 0x5041));
-          if (shore && soul) {
-            for (let k = 0; k < 3 && at(lx, y - k, lz) === NETHERRACK; k++) put(lx, y - k, lz, SOUL_SAND);
-          } else if (shore && gravel && up === AIR) {
-            for (let k = 0; k < 2 && at(lx, y - k, lz) === NETHERRACK; k++) put(lx, y - k, lz, GRAVEL);
-          } else if (y >= NETHER_LAVA_LEVEL - 4 && y <= NETHER_LAVA_LEVEL + 3 && r < 0.05) {
-            put(lx, y, lz, MAGMA_BLOCK);
-          } else if (up === AIR && r > 0.996) {
-            put(lx, y + 1, lz, FIRE);
-          }
-        }
-      }
-    }
-
-    // --- 3. Menas: cuarzo (16 vetas) y oro (10), sólo en la rocanegra ---
-    const vein = (ore: number, count: number, size: number, salt: number) => {
-      for (let v = 0; v < count; v++) {
-        const h = hash2(cx * 131 + v, cz * 71 - v, seed ^ salt);
-        let x = h & 15, z = (h >>> 4) & 15, y = 10 + ((h >>> 8) % 108);
-        const n = 2 + ((h >>> 16) % size);
-        for (let k = 0; k < n; k++) {
-          if (x >= 0 && x < 16 && z >= 0 && z < 16 && at(x, y, z) === NETHERRACK) put(x, y, z, ore);
-          const m = hash3(x + x0, y, z + z0, seed ^ salt ^ k);
-          x += (m % 3) - 1;
-          y += ((m >>> 2) % 3) - 1;
-          z += ((m >>> 4) % 3) - 1;
-        }
-      }
-    };
-    vein(NETHER_QUARTZ_ORE, 16, 12, 0x9a27);
-    vein(NETHER_GOLD_ORE, 10, 8, 0x901d);
-
-    // --- 4. Piedra luminosa colgando del techo (racimos que crecen hacia abajo dentro del chunk) ---
-    for (let c = 0; c < 10; c++) {
-      const h = hash2(cx * 17 + c, cz * 29 + c * 7, seed ^ 0x6105);
-      const sx = 3 + (h % 10), sz = 3 + ((h >>> 4) % 10);
-      let sy = 60 + ((h >>> 8) % 60);
-      // Sube hasta tocar techo firme.
-      while (sy < NETHER_ROOF - 1 && at(sx, sy, sz) === AIR && at(sx, sy + 1, sz) === AIR) sy++;
-      if (at(sx, sy, sz) !== AIR || at(sx, sy + 1, sz) !== NETHERRACK) continue;
-      put(sx, sy, sz, GLOWSTONE);
-      for (let k = 0; k < 90; k++) {
-        const m = hash3(sx + k, sy - k, sz, seed ^ 0x6106 ^ c);
-        const x = sx + (m % 7) - 3, z = sz + ((m >>> 3) % 7) - 3, y = sy - ((m >>> 6) % 8);
-        if (x < 0 || x > 15 || z < 0 || z > 15 || y < 1 || at(x, y, z) !== AIR) continue;
-        let touch = 0;
-        if (at(x, y + 1, z) === GLOWSTONE) touch++;
-        if (x > 0 && at(x - 1, y, z) === GLOWSTONE) touch++;
-        if (x < 15 && at(x + 1, y, z) === GLOWSTONE) touch++;
-        if (z > 0 && at(x, y, z - 1) === GLOWSTONE) touch++;
-        if (z < 15 && at(x, y, z + 1) === GLOWSTONE) touch++;
-        if (touch === 1) put(x, y, z, GLOWSTONE);
-      }
-    }
-
-    // --- 5. Alturas (el bloque más alto que no es aire) ---
+    // Alturas (el bloque más alto que no es aire).
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
         let y = MAX_Y - 1;
-        while (y > MIN_Y && at(lx, y, lz) === AIR) y--;
+        while (y > MIN_Y && blocks[blockIndex(lx, y, lz)] === AIR) y--;
         heights[lz * 16 + lx] = y;
       }
     }
     // Sin hierba: el tinte es un pardo cualquiera (temperatura alta en A).
     const tint = new Uint8Array(64);
     for (let i = 0; i < 16; i++) tint.set([110, 90, 60, 255], i * 4);
-    return { blocks, tint, heights, chests: [], villagers: [], mobs: [] };
+    return { blocks, tint, heights, chests: [], villagers: [], mobs: [], fluidTicks };
   }
 }

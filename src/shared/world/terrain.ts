@@ -101,6 +101,11 @@ export interface GenResult {
   villagers: VillagerSpawn[];
   /** Fase 7.5 (océano, mansión): criaturas de estructura de este chunk (guardianes ancianos, illagers…). */
   mobs: StructureMob[];
+  /**
+   * Fase 8.2: fluidos que deben ponerse a correr al cargar el chunk (como los que Java marca para el
+   * postproceso: los manantiales de lava del Nether), en coordenadas del mundo: x, y, z, x, y, z…
+   */
+  fluidTicks?: number[];
 }
 
 const CAVE_GRID = 4;

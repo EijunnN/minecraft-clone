@@ -12,13 +12,13 @@ import {
   BIOME_SUNFLOWER_PLAINS, BIOME_FLOWER_FOREST, BIOME_OLD_GROWTH_BIRCH_FOREST, BIOME_WINDSWEPT_GRAVELLY_HILLS,
   BIOME_FROZEN_PEAKS, BIOME_STONY_PEAKS, BIOME_OLD_GROWTH_SPRUCE_TAIGA, BIOME_BAMBOO_JUNGLE, BIOME_ERODED_BADLANDS,
   BIOME_WOODED_BADLANDS, BIOME_MANGROVE_SWAMP, BIOME_LUSH_CAVES, BIOME_OCEAN, BIOME_BEACH, BIOME_TAIGA, BIOME_BADLANDS,
-  BIOME_SWAMP, BIOME_DEEP_OCEAN, BIOME_PLAINS, BIOME_NETHER_WASTES, baseBiome, isOceanBiome, isRiverBiome,
+  BIOME_SWAMP, BIOME_DEEP_OCEAN, BIOME_PLAINS, BIOME_BASALT_DELTAS, baseBiome, isOceanBiome, isRiverBiome,
 } from '../src/shared/world/biomeIds';
 import { isVillageBiome } from '../src/shared/world/villages';
 import { blockIndex, CHUNK_VOLUME } from '../src/shared/constants';
 
 test('biomas: nombres, herencia y océanos', () => {
-  assert.equal(BIOME_NAMES.length, BIOME_NETHER_WASTES + 1, 'cada id tiene nombre');
+  assert.equal(BIOME_NAMES.length, BIOME_BASALT_DELTAS + 1, 'cada id tiene nombre');
   assert.equal(new Set(BIOME_NAMES).size, BIOME_NAMES.length, 'sin nombres repetidos');
   assert.equal(baseBiome(BIOME_MANGROVE_SWAMP), BIOME_SWAMP);
   assert.equal(baseBiome(BIOME_ERODED_BADLANDS), BIOME_BADLANDS);

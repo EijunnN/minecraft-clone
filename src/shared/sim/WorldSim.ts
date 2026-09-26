@@ -47,6 +47,8 @@ export class WorldSim {
   onStructureMobs: ((mobs: StructureMob[]) => void) | null = null;
   /** Fase 7 (redstone): un chunk acaba de cargarse (sus componentes se apuntan y reprograman). */
   onChunkLoaded: ((c: SimChunk) => void) | null = null;
+  /** Fase 8.2: fluidos que el generador deja para que corran al cargar el chunk (x, y, z, x, y, z…). */
+  onFluidTicks: ((coords: readonly number[]) => void) | null = null;
   /** Fase 7 (mecanismos): un chunk se va a descargar (lo que mueven los pistones en él se asienta ya). */
   onChunkUnload: ((c: SimChunk) => void) | null = null;
   /**
@@ -174,6 +176,7 @@ export class WorldSim {
     this.chunks.set(key, c);
     this.generatedCount++;
     this.onChunkLoaded?.(c); // Fase 7 (redstone)
+    if (r.fluidTicks?.length) this.onFluidTicks?.(r.fluidTicks); // Fase 8.2
     return c;
   }
 

@@ -60,6 +60,11 @@ export const BIOME_DRIPSTONE_CAVES = 50;
 export const BIOME_LUSH_CAVES = 51;
 // Fase 8: los biomas del Nether.
 export const BIOME_NETHER_WASTES = 52;
+// Fase 8.2 (biomas del Nether).
+export const BIOME_SOUL_SAND_VALLEY = 53;
+export const BIOME_CRIMSON_FOREST = 54;
+export const BIOME_WARPED_FOREST = 55;
+export const BIOME_BASALT_DELTAS = 56;
 
 export const BIOME_NAMES = [
   'Océano', 'Océano helado', 'Playa', 'Llanura', 'Bosque', 'Bosque de abedules', 'Taiga',
@@ -75,6 +80,8 @@ export const BIOME_NAMES = [
   'Meseta de sabana', 'Sabana ventosa', 'Pantano de manglares', 'Cuevas de goteo', 'Cuevas frondosas',
   // Fase 8
   'Desiertos del Nether',
+  // Fase 8.2
+  'Valle de almas', 'Bosque carmesí', 'Bosque distorsionado', 'Deltas de basalto',
 ];
 
 /**

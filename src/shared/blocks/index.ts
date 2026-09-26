@@ -215,3 +215,8 @@ export * from './deepDarkBlocks';
 import { NETHER_INVENTORY } from './netherBlocks';
 export * from './netherBlocks';
 (INVENTORY_ORDER as number[]).push(...NETHER_INVENTORY);
+// Fase 8.2 (biomas del Nether): maderas carmesí y distorsionada, necelio, hongos, raíces, enredaderas, verrugas,
+// luz de hongo, basalto, piedra negra y ladrillos del Nether (registrados los últimos: ids nuevos).
+import { NETHER_BIOME_INVENTORY } from './netherBiomeBlocks';
+export * from './netherBiomeBlocks';
+(INVENTORY_ORDER as number[]).push(...NETHER_BIOME_INVENTORY);

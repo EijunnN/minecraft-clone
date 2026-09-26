@@ -18,6 +18,8 @@ import { ITEMS, STICK, APPLE, FLINT, itemForBlock, type ItemStack } from '../ite
 import { SILK_TOUCH, FORTUNE, type EnchList } from '../enchantments';
 import { levelIn } from '../enchantEffects';
 import { blockDrops } from './drops';
+import { netherBiomeDrops } from './netherDrops'; // Fase 8.2 (biomas del Nether)
+import { netherVineOf, GILDED_BLACKSTONE } from '../blocks';
 
 /** Bloques que con Toque de seda se sueltan a sí mismos (claves del bloque base). */
 const SILK_KEYS = new Set([
@@ -27,6 +29,9 @@ const SILK_KEYS = new Set([
   'mushroom_stem', 'amethyst_bud', 'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'emerald_ore',
   'copper_ore',
   'sculk', 'sculk_vein', 'sculk_catalyst', 'sculk_sensor', 'calibrated_sculk_sensor', 'sculk_shrieker', // Fase 7.5 (abismo)
+  // Fase 8.2 (biomas del Nether)
+  'crimson_nylium', 'warped_nylium', 'gilded_blackstone', 'weeping_vines', 'weeping_vines_plant', 'twisting_vines',
+  'twisting_vines_plant',
 ]);
 const SILK_PATTERNS = [/_leaves$/, /_ore$/, /_stained_glass(_pane)?$/, /coral/];
 
@@ -111,6 +116,8 @@ function fortuneDrops(block: number, toolId: number, fortune: number, rand: () =
     return drops;
   }
   if (block === GRAVEL) return rand() < tableBonus(FLINT_CHANCE, fortune) ? [{ id: FLINT, count: 1 }] : [{ id: GRAVEL, count: 1 }];
+  // Fase 8.2 (biomas del Nether): enredaderas y piedra negra dorada.
+  if (netherVineOf(block) || block === GILDED_BLACKSTONE) return netherBiomeDrops(block, toolId, rand, fortune);
   // Hojas (sin tijeras): brotes, palos y manzanas más probables.
   if (isLeaves(block) && ITEMS[toolId]?.tool?.kind !== 'shears') {
     const wood = woodOf(block);

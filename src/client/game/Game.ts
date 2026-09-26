@@ -29,6 +29,7 @@ import { Survival } from './Survival';
 import { ClientEntities } from './ClientEntities';
 import { BLOCK_RENDER, BLOCK_SOLID, BLOCK_FLUID, DEFAULT_HOTBAR, WATER, R_CROSS, R_CROP } from '../../shared/blocks';
 import { AmbientParticles } from './ambientParticles';
+import { NetherAtmosphere } from './netherAtmosphere'; // Fase 8.2 (biomas del Nether)
 import { maxStack, type ItemStack } from '../../shared/items';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
 import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
@@ -98,6 +99,8 @@ export class Game {
   readonly environment = new Environment(this);
   /** Partículas del ambiente (hojas y pétalos que caen, antorchas, goteo, luciérnagas, lluvia). */
   readonly ambient = new AmbientParticles(this);
+  /** Fase 8.2: niebla, partículas y sonidos de cada bioma del Nether. */
+  readonly netherAtmos = new NetherAtmosphere(this);
   /** Intensidad de la lluvia ahora mismo (0..1), para las salpicaduras. */
   rainNow = 0;
   readonly riding = new Riding(this); // Fase 6 (monturas)
@@ -844,6 +847,7 @@ export class Game {
     };
     ps.update(dt);
     this.ambient.update(dt);
+    this.netherAtmos.update(dt); // Fase 8.2
     equipmentFrame(this, dt); // Fase 6.5 (equipo): estela de los cohetes
     potionFrame(this, dt); // Fase 7 (pociones): remolinos, nubes y flechas con efecto
 
@@ -916,6 +920,7 @@ export class Game {
       waterProximity: waterNear,
       altitude: cam.camY,
       rain: sky.snow ? 0 : rain * Math.min(1, this.camera.eyeSky * 1.3),
+      netherBiome: this.netherAtmos.biome, // Fase 8.2
     });
 
     ui.setDebug(this.debug ? debugText(this, eye, sky, { mobs: mobs.length, drops: drops.length }, target) : null);

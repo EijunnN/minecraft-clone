@@ -57,6 +57,7 @@ import { OceanMonuments } from './monuments';
 import { CritterWorld } from './critterWorld';
 import { Allays } from './allays';
 import { Portals } from './portals';
+import { NetherPlants } from './netherPlants'; // Fase 8.2 (biomas del Nether)
 
 export class ServerSystems {
   readonly rules: BlockRules;
@@ -134,6 +135,8 @@ export class ServerSystems {
   readonly allays: Allays;
   /** Fase 8 (dimensiones): portales del Nether (encender, romper, cruzar y llegar). */
   readonly portals: Portals;
+  /** Fase 8.2 (biomas del Nether): necelio, hongos y enredaderas del Nether. */
+  readonly netherPlants: NetherPlants;
 
   constructor(private ctx: ServerContext, store: ServerStore) {
     const { world, entities } = ctx;
@@ -243,6 +246,8 @@ export class ServerSystems {
     this.critters = new CritterWorld(ctx, this.storms, this.trading);
     this.allays = new Allays(ctx, this.collections);
     this.portals = new Portals(ctx, store);
+    this.netherPlants = new NetherPlants(ctx, this.nature);
+    this.farming.extraFertilize = (x, y, z) => this.oceanLife.fertilize(x, y, z) || this.netherPlants.fertilize(x, y, z);
 
     // Cada rayo: el cobre se desoxida, carga creepers, prende fuego, la redstone (pararrayos) y vibra.
     this.storms.strikes.add((x, y, z) => this.copper.lightning(Math.floor(x), Math.floor(y) - 1, Math.floor(z)));
@@ -286,6 +291,7 @@ export class ServerSystems {
     this.redstone?.onBlockChanged(x, y, z, old, id);
     this.deepDark?.onBlockChanged(x, y, z, old, id, actor); // vibraciones y venas de sculk
     this.portals?.onBlockChanged(x, y, z, old, id); // Fase 8: el fuego en un marco enciende el portal
+    this.netherPlants?.onBlockChanged(x, y, z); // Fase 8.2: punta y tallo de las enredaderas del Nether
   }
 
   /** Un efecto (sonido y partículas) que se difunde: algunos sistemas lo oyen. */

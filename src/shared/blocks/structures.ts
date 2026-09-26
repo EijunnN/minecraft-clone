@@ -26,7 +26,7 @@ export const CRACKED_STONE_BRICKS = family('cracked_stone_bricks', 'Ladrillos de
   all: 'cracked_stone_bricks', hardness: 1.5, tool: 'pickaxe', tier: 1,
 }));
 export const NETHERRACK = family('netherrack', 'Rocanegra', [], () => ({
-  all: 'netherrack', hardness: 0.4, tool: 'pickaxe', tier: 1, category: 'naturaleza',
+  all: 'netherrack', hardness: 0.4, tool: 'pickaxe', tier: 1, category: 'naturaleza', sound: 'netherrack',
 }));
 export const CRYING_OBSIDIAN = family('crying_obsidian', 'Obsidiana llorosa', [], () => ({
   all: 'crying_obsidian', hardness: 50, tool: 'pickaxe', tier: 4, emission: 10, category: 'naturaleza',

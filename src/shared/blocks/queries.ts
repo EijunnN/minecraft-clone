@@ -102,13 +102,25 @@ export function isValidBlockId(id: number): boolean {
   return Number.isInteger(id) && id >= 0 && id < defs.length && id < MAX_BLOCK_ID && defs[id] !== undefined;
 }
 
-/** Nivel máximo de expansión horizontal: agua 7, lava 3. */
-export const FLUID_MAX_LEVEL = [0, 7, 3];
+/**
+ * Fase 8.2: primer id de la lava de niveles impares (1, 3, 5 y 7: la que corre rápido en el Nether). Se
+ * registra la última (netherBiomeBlocks.ts) y se apunta aquí para no mover los ids de los demás bloques.
+ */
+let LAVA_FLOW_ODD = 0;
+export function registerOddLava(base: number): void {
+  LAVA_FLOW_ODD = base;
+}
+
+/** Nivel máximo de un fluido que corre (el 8 es el que cae), como en Java: 7 para los dos. */
+export const FLUID_MAX_LEVEL = [0, 7, 7];
 
 /** Id del bloque de un fluido (1 agua, 2 lava) con nivel 0 (fuente), 1..max o 8 (cayendo). */
 export function fluidBlock(fluid: number, level: number): number {
   if (fluid === 1) return level === 0 ? WATER : level >= 8 ? WATER_FALL : WATER_FLOW_1 + level - 1;
-  return level === 0 ? LAVA : level >= 8 ? LAVA_FALL : LAVA_FLOW_1 + level - 1;
+  if (level === 0) return LAVA;
+  if (level >= 8) return LAVA_FALL;
+  // Niveles pares: los de siempre; impares (la lava rápida del Nether): los de LAVA_FLOW_ODD.
+  return level % 2 === 0 ? LAVA_FLOW_1 + level / 2 - 1 : LAVA_FLOW_ODD + (level >> 1);
 }
 
 /** Altura (0..1) de la superficie de un bloque de fluido según su nivel. */

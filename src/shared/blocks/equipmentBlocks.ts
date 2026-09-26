@@ -91,6 +91,8 @@ const FLAME_RULES: [RegExp, number, number][] = [
   [/^scaffolding$|^bamboo$/, 60, 60],
   [/^tnt$/, 15, 100], // Fase 7 (mecanismos): la dinamita prende (y se enciende al quemarse)
 ];
+/** Madera carmesí y distorsionada (y sus formas): no arde, como en Java. */
+const NETHER_WOOD_KEY = /^(stripped_)?(crimson|warped)_/;
 /** Plantas en cruz que arden (hierba, helechos, flores…): no las de cultivo ni los brotes. */
 const PLANT_FLAMES: [number, number] = [60, 100];
 const NOT_FLAMMABLE_PLANT = /sapling|propagule|mushroom|crop|carrots|potatoes|beetroots|stem|sugar_cane|kelp|seagrass|coral|lily_pad|cobweb|dripstone|amethyst/;
@@ -103,6 +105,7 @@ function buildFlames(): Int16Array {
     if (!b || b.fluid) continue;
     const base = defs[familyBase(b.id)] ?? b;
     const key = base.key;
+    if (NETHER_WOOD_KEY.test(key)) continue; // Fase 8.2: la madera del Nether no arde
     let rule: [number, number] | null = null;
     for (const [re, enc, burn] of FLAME_RULES) {
       if (!re.test(key)) continue;

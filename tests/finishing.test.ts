@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AIR, STONE, HANGING_SIGNS, WALL_HANGING_SIGNS, HANGING_SIGN_LOG, CHISELED_BOOKSHELF, TORCHFLOWER, SLABS, WOOD_EXTRAS,
+  AIR, STONE, HANGING_SIGNS, WALL_HANGING_SIGNS, HANGING_SIGN_LOG, CHISELED_BOOKSHELF, TORCHFLOWER, SLABS, WOOD_EXTRAS, NETHER_WOODS,
   IRON_CHAIN, isSign, hangingSignKind, stateOf, stateProps, isPottable, shelfSlotAt, blockSupported, FENCES,
 } from '../src/shared/blocks';
 import {
@@ -30,7 +30,7 @@ const craft = (grid: number[]) => matchRecipe(grid, 3)?.out;
 
 test('registro: bloques, objetos, texturas y sprites nuevos', () => {
   // Carteles colgantes de las diez maderas, cada uno con su versión de pared.
-  assert.equal(Object.keys(HANGING_SIGNS).length, WOOD_EXTRAS.length + 1);
+  assert.equal(Object.keys(HANGING_SIGNS).length, WOOD_EXTRAS.length + 1 + NETHER_WOODS.length); // bambú y maderas del Nether
   for (const [k, id] of Object.entries(HANGING_SIGNS)) {
     assert.ok(isSign(id) && isSign(WALL_HANGING_SIGNS[k]), `${k}: cuenta como cartel`);
     assert.equal(hangingSignKind(id), 1);

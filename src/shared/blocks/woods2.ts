@@ -146,6 +146,11 @@ export const WOOD_EXTRAS: readonly WoodExtras[] = WOOD_TYPES.map((w) => {
 STRIP.set(BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK);
 for (const a of [AXIS_X, AXIS_Z]) STRIP.set(BAMBOO_BLOCK_AXIS + a, STRIPPED_BAMBOO_AXIS + a);
 
+/** Registra un bloque que el hacha descorteza (fase 8.2: los tallos y las hifas del Nether). */
+export function addStrip(from: number, to: number): void {
+  STRIP.set(from, to);
+}
+
 /** El bloque descortezado (con la misma orientación), o 0 si el hacha no le hace nada. */
 export function strippedOf(id: number): number {
   return STRIP.get(id) ?? 0;

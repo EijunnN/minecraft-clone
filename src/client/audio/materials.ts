@@ -4,6 +4,7 @@
 import type { NoiseBuffers } from './noise';
 import { playInharmonicRing, playNoiseBurst, playPitchSweep, playTonalBlip } from './dsp';
 import { clamp01, randRange, type SoundKind, type SoundMaterial, type UiKind } from './types';
+import { buildNetherMaterial } from './netherMaterials'; // Fase 8.2 (biomas del Nether)
 
 /** Volumen relativo y duración relativa según el tipo de interacción. */
 function kindProfile(kind: SoundKind, energy: number): { gain: number; dur: number } {
@@ -203,6 +204,7 @@ export function buildMaterialSound(
       break;
     }
     default:
+      if (buildNetherMaterial(ctx, noise, material, g, d, destination, now, sources)) break; // Fase 8.2 (biomas del Nether)
       sources.push(playNoiseBurst(ctx, { buffer: noise.white, destination, now, filterType: 'lowpass', freq: 800, attack: 0.004, decay: 0.08 * d, gain: 0.4 * g }));
   }
 

@@ -17,8 +17,22 @@ function clampIndex(i: number, len: number): number {
   return ((i % len) + len) % len;
 }
 
+/**
+ * Fase 8.2: escala, raíz (Hz) y tempo de la música de cada bioma del Nether (en Java cada uno tiene sus
+ * pistas: aquí son frases generadas con colchones lentos y notas graves sueltas, en modos oscuros).
+ */
+const NETHER_STYLES: Record<number, { scale: readonly number[]; root: number; beat: [number, number] }> = {
+  52: { scale: [0, 1, 3, 5, 7, 8, 10], root: 65.41, beat: [1.4, 2] }, // desiertos: frigio
+  53: { scale: [0, 2, 3, 5, 7, 8, 10], root: 55, beat: [1.8, 2.6] }, // valle de almas: eolio, muy lento
+  54: { scale: [0, 2, 3, 5, 7, 8, 11], root: 61.74, beat: [1.2, 1.8] }, // bosque carmesí: menor armónica
+  55: { scale: [0, 2, 4, 6, 9], root: 73.42, beat: [1.5, 2.2] }, // bosque distorsionado: lidio, frío
+  56: { scale: [0, 1, 3, 5, 6, 8, 10], root: 51.91, beat: [1.3, 1.9] }, // deltas de basalto: locrio
+};
+
 export class MusicEngine {
   private countdown: number;
+  /** Fase 8.2: bioma del Nether cuya música suena (−1: la del mundo normal). */
+  private style = -1;
   private readonly pending: AudioScheduledSourceNode[] = [];
   private disposed = false;
 
@@ -31,12 +45,19 @@ export class MusicEngine {
     this.countdown = randRange(8, 30);
   }
 
+  /** Fase 8.2: estilo de la música (bioma del Nether, −1 para el mundo normal). Al cambiar de mundo, vuelve pronto. */
+  setStyle(style: number): void {
+    if (style === this.style) return;
+    if ((style >= 0) !== (this.style >= 0)) this.countdown = Math.min(this.countdown, randRange(15, 40));
+    this.style = style;
+  }
+
   update(dt: number): void {
     if (this.disposed) return;
     this.countdown -= dt;
     if (this.countdown <= 0) {
       const startAt = this.ctx.currentTime + 1.5;
-      const phraseDuration = this.schedulePhrase(startAt);
+      const phraseDuration = this.style >= 0 ? this.scheduleNetherPhrase(startAt, this.style) : this.schedulePhrase(startAt);
       this.countdown = Math.max(phraseDuration + 20, randRange(120, 240));
     }
   }
@@ -80,6 +101,79 @@ export class MusicEngine {
     }
 
     return beats * beat;
+  }
+
+  /** Fase 8.2: frase del Nether: colchones que entran y salen despacio sobre un bajo, y notas sueltas graves. */
+  private scheduleNetherPhrase(startAt: number, biome: number): number {
+    const st = NETHER_STYLES[biome] ?? NETHER_STYLES[52];
+    const beat = randRange(st.beat[0], st.beat[1]);
+    const beats = Math.max(8, Math.floor(randRange(40, 90) / beat));
+    let idx = 0;
+    for (let b = 0; b < beats; b += randInt(4, 8)) {
+      // Colchón: raíz y dos grados de la escala, con ataque y caída largos.
+      const deg = choice([0, 0, 2, 3, 4]);
+      const tones = [0, st.scale[(deg + 2) % st.scale.length], st.scale[(deg + 4) % st.scale.length] + 12];
+      for (const t of tones) this.playPad(noteFreq(st.root * 2, st.scale[deg] + t), startAt + b * beat, beat * randRange(5, 8), 0.035);
+    }
+    for (let b = 0; b < beats; b++) {
+      if (Math.random() > 0.3) continue;
+      idx = clampIndex(idx + randInt(-2, 2), st.scale.length);
+      const semis = st.scale[idx] + 12 * (Math.random() < 0.3 ? 2 : 1);
+      this.playPianoNote(noteFreq(st.root * 2, semis), startAt + b * beat, beat * randRange(2, 4), randRange(0.05, 0.12));
+    }
+    return beats * beat;
+  }
+
+  /** Fase 8.2: voz de colchón: dos sierras desafinadas por un filtro grave, con ataque y caída lentos. */
+  private playPad(freq: number, startTime: number, duration: number, velocity: number): void {
+    if (this.disposed) return;
+    const ctx = this.ctx;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = Math.min(1200, freq * 3);
+    f.Q.value = 0.5;
+    const amp = ctx.createGain();
+    const attack = Math.min(duration * 0.4, 2.5);
+    amp.gain.setValueAtTime(0.0001, startTime);
+    amp.gain.exponentialRampToValueAtTime(velocity, startTime + attack);
+    amp.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    const oscs: OscillatorNode[] = [];
+    for (const det of [-7, 7]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = freq;
+      o.detune.value = det;
+      o.connect(f);
+      oscs.push(o);
+    }
+    f.connect(amp);
+    const dry = ctx.createGain();
+    dry.gain.value = 0.6;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.8;
+    amp.connect(dry).connect(this.destination);
+    amp.connect(wet).connect(this.reverbSend);
+    const stopAt = startTime + duration + 0.2;
+    for (const o of oscs) {
+      o.start(startTime);
+      o.stop(stopAt);
+    }
+    this.pending.push(...oscs);
+    oscs[0].addEventListener('ended', () => {
+      try {
+        for (const o of oscs) o.disconnect();
+        f.disconnect();
+        amp.disconnect();
+        dry.disconnect();
+        wet.disconnect();
+      } catch {
+        /* ya desconectado */
+      }
+      for (const o of oscs) {
+        const i = this.pending.indexOf(o);
+        if (i >= 0) this.pending.splice(i, 1);
+      }
+    }, { once: true });
   }
 
   /** Voz de piano aditiva/FM suave: ataque rápido, caída exponencial, hacia la reverb compartida. */

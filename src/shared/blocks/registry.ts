@@ -37,7 +37,22 @@ export type SoundMaterial =
   | 'leaves'
   | 'water'
   | 'lava'
-  | 'sculk'; // Fase 7.5 (abismo)
+  | 'sculk' // Fase 7.5 (abismo)
+  // Fase 8.2 (biomas del Nether): los tipos de sonido propios del Nether, como en Java.
+  | 'netherrack'
+  | 'nether_bricks'
+  | 'nether_wood'
+  | 'stem'
+  | 'nylium'
+  | 'fungus'
+  | 'roots'
+  | 'shroomlight'
+  | 'vines'
+  | 'soul_sand'
+  | 'soul_soil'
+  | 'basalt'
+  | 'wart'
+  | 'nether_ore';
 
 export type BlockCategory = 'construccion' | 'naturaleza' | 'minerales' | 'decoracion' | 'colores'
   | 'redstone'; // Fase 7 (redstone)
@@ -191,6 +206,13 @@ export function family(key: string, name: string, props: [string, number][], mak
   }
   nextFamilyId += count;
   return base;
+}
+
+/** Todos los ids (estados) de la familia de `id` (sólo él si no es de una familia). */
+export function familyStates(id: number): number[] {
+  const fam = FAMILY_OF[id];
+  if (!fam) return [id];
+  return Array.from({ length: fam.count }, (_, i) => fam.base + i);
 }
 
 /** Id del estado de la familia de `base` con las propiedades dadas (las que falten valen 0). */

@@ -25,19 +25,20 @@ test('dimensiones: registro y generadores', () => {
   assert.equal(blocks[blockIndex(3, 0, 3)], BEDROCK, 'suelo de lecho de roca');
   assert.equal(blocks[blockIndex(3, 127, 3)], BEDROCK, 'techo de lecho de roca');
   assert.equal(blocks[blockIndex(3, 200, 3)], AIR, 'aire por encima del techo');
-  let rack = 0, lava = 0;
-  for (let y = 1; y < 127; y++) for (let i = 0; i < 256; i++) {
-    const b = blocks[blockIndex(i & 15, y, i >> 4)];
-    if (b === NETHERRACK) rack++;
-    if (b === LAVA) {
-      lava++;
-      assert.ok(y <= NETHER_LAVA_LEVEL, 'la lava sólo hasta el nivel del mar de lava');
-    }
-  }
+  let rack = 0;
+  for (let y = 1; y < 127; y++) for (let i = 0; i < 256; i++) if (blocks[blockIndex(i & 15, y, i >> 4)] === NETHERRACK) rack++;
   assert.ok(rack > 5000, 'rocanegra');
+  // El mar de lava llega hasta y = 31: en una zona grande, el aire nunca toca la lava por debajo de él
+  // (encima puede haber lava de manantiales y de las deltas, como en Java).
+  let sea = 0;
+  for (let cz = 0; cz < 4; cz++) for (let cx = 0; cx < 4; cx++) {
+    const b = g.generate(cx, cz).blocks;
+    for (let i = 0; i < 256; i++) if (b[blockIndex(i & 15, NETHER_LAVA_LEVEL, i >> 4)] === LAVA) sea++;
+    for (let y = 1; y < NETHER_LAVA_LEVEL; y++) for (let i = 0; i < 256; i++) assert.notEqual(b[blockIndex(i & 15, y, i >> 4)], AIR, 'sin aire bajo el mar de lava');
+  }
+  assert.ok(sea > 0, 'hay mar de lava');
   const sp = g.findSpawn();
   assert.ok(sp.y > NETHER_LAVA_LEVEL && sp.y < 127, 'aparición sobre la lava y bajo el techo');
-  void lava;
 });
 
 test('almacenamiento: cada dimensión guarda lo suyo; jugadores, semilla y hora son comunes', () => {

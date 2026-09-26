@@ -82,7 +82,7 @@ export interface Traveler {
 export class GameServer {
   readonly world: WorldSim;
   readonly entities: Entities;
-  private fluids = new FluidSim();
+  private fluids: FluidSim;
   private fluidWorld: FluidWorld;
   private store: ServerStore;
   private sessions = new Map<Conn, Session>();
@@ -119,6 +119,7 @@ export class GameServer {
     this.local = !!opts.local;
     this.flushTicks = Math.max(1, Math.round((opts.flushSeconds ?? 30) * TICK_RATE));
     this.dim = opts.dim ?? DIM_OVERWORLD;
+    this.fluids = new FluidSim(dimensionDef(this.dim).fastLava); // Fase 8.2: la lava rápida del Nether
     this.dimDef = dimensionDef(this.dim);
     this.hub = opts.hub ?? null;
     let seed = Number(store.getMeta('seed'));
@@ -139,6 +140,10 @@ export class GameServer {
     if (m === 's' || m === 'c') this.defaultMode = m;
     this.world = new WorldSim(seed | 0, store, this.dim);
     this.world.onChange = (x, y, z, old, id) => this.onBlockChanged(x, y, z, old, id);
+    // Fase 8.2: los fluidos que el generador deja corriendo (manantiales de lava del Nether) empiezan al cargarse.
+    this.world.onFluidTicks = (t) => {
+      for (let i = 0; i < t.length; i += 3) this.fluids.schedule(t[i], t[i + 1], t[i + 2], 1);
+    };
     this.fluidWorld = {
       getBlock: (x, y, z) => this.world.getBlock(x, y, z),
       setBlock: (x, y, z, id) => {

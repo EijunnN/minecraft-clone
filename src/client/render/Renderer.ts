@@ -176,6 +176,8 @@ export interface FrameState {
   nausea?: number;
   /** Fase 8: dimensión en la que está la cámara (cielo, niebla y luz; sin ella, el mundo normal). */
   dim?: number;
+  /** Fase 8.2: color de la niebla del bioma (sRGB 0..255; sin él, el de la dimensión). */
+  fog?: readonly [number, number, number] | null;
   sight?: SightFog | null;
 }
 
@@ -514,8 +516,12 @@ export class Renderer {
     const dd = dimensionDef(s.dim ?? 0);
     const lin = (c: number) => Math.pow(c / 255, 2.2);
     d[156] = dd.sky ? 1 : 0; d[157] = 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = 0;
-    d[160] = lin(dd.fog[0]) * 0.8; d[161] = lin(dd.fog[1]) * 0.8; d[162] = lin(dd.fog[2]) * 0.8; d[163] = 0;
-    d[164] = dd.ambient * 0.8; d[165] = dd.ambient * 0.62; d[166] = dd.ambient * 0.55; d[167] = 0;
+    // Fase 8.2: la niebla es la del bioma (mezclada con los de alrededor) y la penumbra toma su tono.
+    const fog = s.fog ?? dd.fog;
+    d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = 0;
+    const top = Math.max(fog[0], fog[1], fog[2], 1);
+    const hue = (c: number) => 0.55 + 0.45 * (c / top);
+    d[164] = dd.ambient * 0.8 * hue(fog[0]); d[165] = dd.ambient * 0.8 * hue(fog[1]); d[166] = dd.ambient * 0.8 * hue(fog[2]); d[167] = 0;
     this.ubo.upload();
   }
 

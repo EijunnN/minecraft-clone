@@ -1,6 +1,9 @@
 // Simulación de fluidos al estilo de Minecraft: el agua avanza 7 bloques y la lava 3, caen,
 // buscan el hueco más cercano, se secan al quitar la fuente, dos fuentes de agua crean una
-// tercera y el contacto agua–lava produce obsidiana, roca o piedra.
+// tercera y el contacto agua–lava produce obsidiana, roca o piedra. Como en Java, el nivel es 8 − la
+// cantidad: el agua baja 1 por bloque y la lava 2 (niveles 2, 4 y 6). Fase 8.2: en las dimensiones de
+// lava rápida (el Nether, FAST_LAVA de Java) la lava baja 1 por bloque (avanza 7), busca huecos a 4 y se
+// actualiza cada 10 ticks en vez de 30.
 import { MIN_Y, MAX_Y } from '../constants';
 import {
   AIR, OBSIDIAN, COBBLESTONE, STONE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_TORCH, R_CROP,
@@ -17,14 +20,23 @@ export interface FluidWorld {
   washAway(x: number, y: number, z: number, id: number): void;
 }
 
-/** Ticks entre actualizaciones (20 ticks/s): agua 5, lava 30. */
-const RATE = [0, 5, 30];
-/** Distancia de búsqueda de huecos: agua 4, lava 2. */
-const SEARCH = [0, 4, 2];
 const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 export class FluidSim {
   tick = 0;
+  /** Ticks entre actualizaciones (20 ticks/s): agua 5, lava 30 (10 si es rápida). */
+  private readonly RATE: readonly number[];
+  /** Distancia de búsqueda de huecos: agua 4, lava 2 (4 si es rápida). */
+  private readonly SEARCH: readonly number[];
+  /** Cuánto baja el nivel por bloque: agua 1, lava 2 (1 si es rápida). */
+  private readonly DROP: readonly number[];
+
+  constructor(fastLava = false) {
+    this.RATE = [0, 5, fastLava ? 10 : 30];
+    this.SEARCH = [0, 4, fastLava ? 4 : 2];
+    this.DROP = [0, 1, fastLava ? 1 : 2];
+  }
+
   private due = new Map<number, number[]>();
   private scheduled = new Map<number, number>();
   /** Límite de actualizaciones por tick (protege la CPU ante inundaciones enormes). */
@@ -52,11 +64,11 @@ export class FluidSim {
   /** Un bloque cambió: programa la actualización de los fluidos implicados. */
   onBlockChanged(world: FluidWorld, x: number, y: number, z: number): void {
     const self = world.getBlock(x, y, z);
-    if (self > 0 && BLOCK_FLUID[self]) this.schedule(x, y, z, RATE[BLOCK_FLUID[self]]);
+    if (self > 0 && BLOCK_FLUID[self]) this.schedule(x, y, z, this.RATE[BLOCK_FLUID[self]]);
     const n: [number, number, number][] = [[x + 1, y, z], [x - 1, y, z], [x, y, z + 1], [x, y, z - 1], [x, y + 1, z], [x, y - 1, z]];
     for (const [nx, ny, nz] of n) {
       const id = world.getBlock(nx, ny, nz);
-      if (id > 0 && BLOCK_FLUID[id]) this.schedule(nx, ny, nz, RATE[BLOCK_FLUID[id]]);
+      if (id > 0 && BLOCK_FLUID[id]) this.schedule(nx, ny, nz, this.RATE[BLOCK_FLUID[id]]);
     }
   }
 
@@ -138,7 +150,7 @@ export class FluidSim {
       const below = world.getBlock(x, y - 1, z);
       if (below > 0 && (BLOCK_SOLID[below] || (BLOCK_FLUID[below] === 1 && BLOCK_FLUID_LEVEL[below] === 0))) return fluidBlock(1, 0);
     }
-    const nl = best + 1;
+    const nl = best + this.DROP[f];
     if (nl > FLUID_MAX_LEVEL[f]) return AIR;
     return fluidBlock(f, nl);
   }
@@ -153,7 +165,7 @@ export class FluidSim {
       }
     }
     const base = level === 8 ? 0 : level;
-    const nl = base + 1;
+    const nl = base + this.DROP[f];
     if (nl > FLUID_MAX_LEVEL[f]) return;
     // Direcciones transitables (incluidas las ya ocupadas por el mismo fluido): se calcula la
     // distancia al hueco más cercano y sólo se fluye hacia las de distancia mínima.
@@ -199,7 +211,7 @@ export class FluidSim {
 
   /** Pasos hasta la caída más cercana partiendo de (x, y, z), o Infinity si no hay en el radio. */
   private holeDistance(world: FluidWorld, x: number, y: number, z: number, f: number, fromDir: number): number {
-    const max = SEARCH[f];
+    const max = this.SEARCH[f];
     const back = fromDir ^ 1;
     const seen = new Set<number>();
     let frontier: [number, number, number][] = [[x, z, back]];

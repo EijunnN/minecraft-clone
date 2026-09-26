@@ -185,10 +185,12 @@ def(WATER_FALL, 'water_fall', 'Agua', {
   all: 'water', render: R_WATER, solid: false, lightOpacity: 2, sound: 'water', replaceable: true, category: null,
   fluid: 1, level: 8, hardness: -1,
 });
+// Fase 8.2: como en Java, el nivel de la lava es 8 − su cantidad; la del mundo normal baja de 2 en 2 (niveles 2, 4
+// y 6) y la del Nether, de 1 en 1 (los impares se registran al final, en fluids.ts de blocks). Toda da luz 15.
 for (let l = 1; l <= 3; l++) {
   def(LAVA_FLOW_1 + l - 1, 'lava_flow_' + l, 'Lava', {
-    all: 'lava', render: R_LAVA, solid: false, opaque: false, lightOpacity: 15, emission: 15 - l, sound: 'lava',
-    replaceable: true, category: null, fluid: 2, level: l, hardness: -1,
+    all: 'lava', render: R_LAVA, solid: false, opaque: false, lightOpacity: 15, emission: 15, sound: 'lava',
+    replaceable: true, category: null, fluid: 2, level: l * 2, hardness: -1,
   });
 }
 def(LAVA_FALL, 'lava_fall', 'Lava', {

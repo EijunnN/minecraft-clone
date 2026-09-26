@@ -734,3 +734,34 @@ import { QUARTZ_BLOCK, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, MANGROVE_ROOTS, MUDDY
   for (const c of DYE_COLORS) mix([DYES[c], DYE_COLORS.filter((o) => o !== c).map((o) => CARPETS[o])], CARPETS[c]);
   for (let s = 0; s < RS_STAGES; s++) shape([' C ', 'CBC', ' R '], { C: RS_COPPER.block[1][s], B: BLAZE_ROD, R: REDSTONE }, COPPER_BULB[1][s], 4);
 }
+
+// ------------------------------------------------------------------ Fase 8.2 (biomas del Nether)
+// Maderas carmesí y distorsionada (los tablones de cualquier tallo o hifas; hifas de cuatro tallos; carteles),
+// bloque de verrugas, basalto pulido, la familia de la piedra negra y la de los ladrillos del Nether. Las
+// losas, escaleras, vallas, portillos, puertas, trampillas, botones, placas, muros y carteles colgantes salen
+// de las recetas de cada material de arriba.
+import {
+  NETHER_WOODS, NETHER_WART_BLOCK, BASALT, POLISHED_BASALT, BLACKSTONE, POLISHED_BLACKSTONE, POLISHED_BLACKSTONE_BRICKS,
+  CHISELED_POLISHED_BLACKSTONE, POLISHED_BLACKSTONE_BUTTON, POLISHED_BLACKSTONE_PRESSURE_PLATE, NETHER_BRICKS, NETHER_BRICK_FENCE,
+  CHISELED_NETHER_BRICKS, RED_NETHER_BRICKS,
+} from './blocks';
+import { NETHER_BRICK, NETHER_WART as NW } from './items';
+{
+  for (const w of NETHER_WOODS) {
+    mix([[w.stem, w.strippedStem, w.hyphae, w.strippedHyphae]], w.planks, 4);
+    shape(['SS', 'SS'], { S: w.stem }, w.hyphae, 3);
+    shape(['SS', 'SS'], { S: w.strippedStem }, w.strippedHyphae, 3);
+    shape(['PPP', 'PPP', ' S '], { P: w.planks, S: STICK }, SIGNS[w.key], 3);
+  }
+  mix(new Array(9).fill(NW), NETHER_WART_BLOCK);
+  shape(['SS', 'SS'], { S: BASALT }, POLISHED_BASALT, 4);
+  shape(['SS', 'SS'], { S: BLACKSTONE }, POLISHED_BLACKSTONE, 4);
+  shape(['SS', 'SS'], { S: POLISHED_BLACKSTONE }, POLISHED_BLACKSTONE_BRICKS, 4);
+  shape(['S', 'S'], { S: SLABS.polished_blackstone }, CHISELED_POLISHED_BLACKSTONE);
+  mix([POLISHED_BLACKSTONE], POLISHED_BLACKSTONE_BUTTON);
+  shape(['SS'], { S: POLISHED_BLACKSTONE }, POLISHED_BLACKSTONE_PRESSURE_PLATE);
+  shape(['BB', 'BB'], { B: NETHER_BRICK }, NETHER_BRICKS);
+  shape(['WBW', 'WBW'], { W: NETHER_BRICKS, B: NETHER_BRICK }, NETHER_BRICK_FENCE, 6);
+  shape(['S', 'S'], { S: SLABS.nether_brick }, CHISELED_NETHER_BRICKS);
+  shape(['BW', 'WB'], { B: NETHER_BRICK, W: NW }, RED_NETHER_BRICKS);
+}

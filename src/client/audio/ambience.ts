@@ -129,8 +129,10 @@ export class AmbienceController {
     const tone = this.windTone.step(dt);
     this.windFilter.frequency.setTargetAtTime(400 + tone * 1200, now, 1.2);
 
-    // Cueva: drone grave cuando hay poca exposición al cielo (interior).
-    const caveTarget = Math.pow(clamp01(1 - state.skyExposure), 1.5) * 0.09;
+    // Cueva: drone grave cuando hay poca exposición al cielo (interior). Fase 8.2: en el Nether suena el
+    // ambiente de su bioma (netherAmbience.ts), no el de las cuevas.
+    const nether = (state.netherBiome ?? -1) >= 0;
+    const caveTarget = nether ? 0 : Math.pow(clamp01(1 - state.skyExposure), 1.5) * 0.09;
     this.caveGain.gain.setTargetAtTime(caveTarget, now, tc);
 
     // Orilla: nivel ligado a la proximidad al agua, con oleaje lento.
@@ -148,7 +150,7 @@ export class AmbienceController {
 
     this.updateBirds(dt, state, listenerPos, now);
     this.updateCrickets(dt, state, listenerPos, now);
-    this.updateCaveDrips(dt, state, listenerPos, now);
+    if (!nether) this.updateCaveDrips(dt, state, listenerPos, now);
     this.updateRainDroplets(dt, state, listenerPos, now);
     this.updateUnderwaterBubbles(dt, state, listenerPos, now);
     this.updateShoreLaps(dt, state, listenerPos, now);

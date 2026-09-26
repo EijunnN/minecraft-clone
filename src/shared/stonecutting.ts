@@ -13,6 +13,10 @@ import {
 } from './blocks';
 import { COPPER, OXIDATION_STAGES } from './blocks'; // Fase 6.5 (cobre)
 import { PRISMARINE, PRISMARINE_BRICKS, DARK_PRISMARINE } from './blocks'; // Fase 6.5 (océano y plantas)
+import { // Fase 8.2 (biomas del Nether)
+  BASALT, POLISHED_BASALT, BLACKSTONE, POLISHED_BLACKSTONE, POLISHED_BLACKSTONE_BRICKS, CHISELED_POLISHED_BLACKSTONE, NETHER_BRICKS,
+  CHISELED_NETHER_BRICKS,
+} from './blocks';
 
 const table = new Map<number, ItemStack[]>();
 const add = (input: number, id: number, count = 1) => {
@@ -48,6 +52,9 @@ const CUT_EDGES: readonly (readonly [number, number])[] = [
   [RED_SANDSTONE, CUT_RED_SANDSTONE], [RED_SANDSTONE, CHISELED_RED_SANDSTONE],
   [CINNABAR, POLISHED_CINNABAR], [CINNABAR, CHISELED_CINNABAR], [POLISHED_CINNABAR, CINNABAR_BRICKS],
   [SULFUR, POLISHED_SULFUR], [SULFUR, CHISELED_SULFUR], [POLISHED_SULFUR, SULFUR_BRICKS],
+  // Fase 8.2 (biomas del Nether): basalto, piedra negra y ladrillos del Nether.
+  [BASALT, POLISHED_BASALT], [BLACKSTONE, POLISHED_BLACKSTONE], [POLISHED_BLACKSTONE, POLISHED_BLACKSTONE_BRICKS],
+  [POLISHED_BLACKSTONE, CHISELED_POLISHED_BLACKSTONE], [NETHER_BRICKS, CHISELED_NETHER_BRICKS],
 ];
 {
   /** Formas de cada bloque: [id, cantidad]. */

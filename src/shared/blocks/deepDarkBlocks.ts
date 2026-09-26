@@ -272,11 +272,11 @@ INVENTORY.push(REINFORCED_DEEPSLATE);
 
 /** Arena de alma: se hunde un poco (su colisión mide 14/16) y frena al andar por ella. */
 export const SOUL_SAND = family('soul_sand', 'Arena de alma', [], () => ({
-  all: 'soul_sand', hardness: 0.5, tool: 'shovel', sound: 'sand', category: 'naturaleza', collision: [0, 0, 0, 1, 14 / 16, 1],
+  all: 'soul_sand', hardness: 0.5, tool: 'shovel', sound: 'soul_sand', category: 'naturaleza', collision: [0, 0, 0, 1, 14 / 16, 1],
   selection: [0, 0, 0, 1, 1, 1],
 }));
 export const SOUL_SOIL = family('soul_soil', 'Tierra de alma', [], () => ({
-  all: 'soul_soil', hardness: 0.5, tool: 'shovel', sound: 'dirt', category: 'naturaleza',
+  all: 'soul_soil', hardness: 0.5, tool: 'shovel', sound: 'soul_soil', category: 'naturaleza',
 }));
 
 /** ¿Suelo de alma? (sobre él, el fuego es fuego de alma). */

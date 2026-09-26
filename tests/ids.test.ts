@@ -271,3 +271,22 @@ test('los ids de la fase 8 no cambian', () => {
   assert.deepEqual([BIOME_NETHER_WASTES, DIM_OVERWORLD, DIM_NETHER], [52, 0, 1]);
   assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 0, 5541), 536826002, 'huella de los bloques');
 });
+
+// Fase 8.2 (biomas del Nether): maderas carmesí y distorsionada, necelio, hongos, enredaderas, verrugas, luz de
+// hongo, basalto, piedra negra, ladrillos del Nether, la lava rápida (niveles impares), el ladrillo del Nether
+// y los cuatro biomas nuevos.
+import {
+  CRIMSON_STEM, WARPED_STEM, CRIMSON_NYLIUM, WEEPING_VINES, TWISTING_VINES, SHROOMLIGHT, BASALT, BLACKSTONE, NETHER_BRICKS,
+  NETHER_BRICK_FENCE, LAVA_FLOW_ODD,
+} from '../src/shared/blocks';
+import { NETHER_BRICK } from '../src/shared/items';
+import { BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS } from '../src/shared/world/biomeIds';
+test('los ids de la fase 8.2 no cambian', () => {
+  assert.deepEqual(
+    [CRIMSON_STEM, WARPED_STEM, CRIMSON_NYLIUM, WEEPING_VINES, TWISTING_VINES, SHROOMLIGHT, BASALT, BLACKSTONE, NETHER_BRICKS, NETHER_BRICK_FENCE, LAVA_FLOW_ODD],
+    [5541, 5660, 5779, 5786, 5813, 5842, 5843, 5849, 5855, 5919, 5946],
+  );
+  assert.equal(NETHER_BRICK, 613);
+  assert.deepEqual([BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS], [53, 54, 55, 56]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 5541, 5950), 3919161501, 'huella de los bloques');
+});

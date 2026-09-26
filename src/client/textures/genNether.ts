@@ -1,4 +1,4 @@
-// Fase 8 (dimensiones): texturas del Nether básico, todas dibujadas aquí (nada copiado):
+// Fase 8 (dimensiones): texturas de los desiertos del Nether y el portal, todas dibujadas aquí (nada copiado):
 // - portal: un velo violeta translúcido con remolinos que brillan;
 // - menas de cuarzo (cristales blancos) y de oro (pepitas) sobre la rocanegra;
 // - magma: costra oscura partida por grietas de lava que brillan.

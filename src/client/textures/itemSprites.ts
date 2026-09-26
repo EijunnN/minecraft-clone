@@ -396,8 +396,11 @@ const SIGN_WOOD: Record<string, [RGB, RGB, RGB]> = {
   mangrove: [[132, 64, 56], [117, 54, 48], [80, 36, 31]],
   bamboo: [[222, 202, 100], [206, 186, 88], [152, 132, 54]],
   pale_oak: [[238, 230, 226], [226, 216, 212], [180, 170, 166]],
+  // Fase 8.2 (biomas del Nether)
+  crimson: [[130, 64, 92], [114, 54, 80], [76, 34, 54]],
+  warped: [[54, 132, 126], [45, 115, 110], [28, 74, 71]],
 };
-const SIGN_RE = /^(oak|birch|spruce|jungle|acacia|dark_oak|cherry|mangrove|bamboo|pale_oak)_sign$/;
+const SIGN_RE = /^(oak|birch|spruce|jungle|acacia|dark_oak|cherry|mangrove|bamboo|pale_oak|crimson|warped)_sign$/;
 
 /** Puerta de cada madera nueva (fase 5): [claro, base, oscuro, ventana]. */
 const DOOR_WOOD: Record<string, [RGB, RGB, RGB, RGB]> = {
@@ -409,8 +412,11 @@ const DOOR_WOOD: Record<string, [RGB, RGB, RGB, RGB]> = {
   mangrove: [[130, 62, 55], [117, 54, 48], [80, 36, 31], [62, 27, 23]],
   bamboo: [[222, 202, 100], [206, 186, 88], [152, 132, 54], [128, 110, 42]],
   pale_oak: [[236, 228, 224], [226, 216, 212], [180, 170, 166], [156, 146, 142]],
+  // Fase 8.2 (biomas del Nether)
+  crimson: [[130, 64, 92], [114, 54, 80], [76, 34, 54], [56, 25, 41]],
+  warped: [[54, 132, 126], [45, 115, 110], [28, 74, 71], [20, 56, 54]],
 };
-const DOOR_RE = /^(jungle|acacia|dark_oak|cherry|mangrove|bamboo|pale_oak)_door$/;
+const DOOR_RE = /^(jungle|acacia|dark_oak|cherry|mangrove|bamboo|pale_oak|crimson|warped)_door$/;
 function doorSprite(wood: string): SpriteDef {
   const [l, b, d, w] = DOOR_WOOD[wood];
   return { rows: SPRITES.oak_door.rows, inks: doorInks(l, b, d, w) };
@@ -2293,6 +2299,8 @@ Object.assign(SPRITES, REDSTONE_SPRITES);
 Object.assign(SPRITES, MECHANISM_SPRITES);
 // Fase 7.5 (abismo): fragmento de eco, brújula de recuperación y fragmento del disco 5.
 Object.assign(SPRITES, DEEP_DARK_SPRITES);
+// Fase 8.2 (biomas del Nether): el ladrillo del Nether (el del ladrillo con los colores del Nether).
+SPRITES.nether_brick = { rows: SPRITES.brick.rows, inks: ramp([104, 50, 58], [78, 36, 44], [60, 27, 33], [44, 19, 24], [20, 8, 10]) };
 
 // ---------------------------------------------------------------------------
 // Rasterizado

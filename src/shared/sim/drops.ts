@@ -20,6 +20,7 @@ import { plantDrops65 } from './plantDrops'; // Fase 6.5 (océano y plantas)
 import { materialDrops } from './materialDrops'; // Fase 6.5 (materiales)
 import { redstoneDrops } from './redstoneDrops'; // Fase 7 (redstone)
 import { deepDarkDrops } from './deepDarkDrops'; // Fase 7.5 (abismo)
+import { netherBiomeDrops } from './netherDrops'; // Fase 8.2 (biomas del Nether)
 import { POISONOUS_POTATO } from '../items'; // Fase 6.5 (equipo)
 import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from '../blocks'; // Fase 8 (dimensiones)
 import { QUARTZ, GOLD_NUGGET } from '../items';
@@ -49,6 +50,8 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (rs) return rs;
   const dd = deepDarkDrops(block); // Fase 7.5 (abismo): sculk (sólo con Toque de seda) y pizarra reforzada
   if (dd) return dd;
+  const nb = netherBiomeDrops(block, toolId, rand); // Fase 8.2: necelio, brotes, enredaderas, piedra negra dorada
+  if (nb) return nb;
   const one = (id: number, n = 1): ItemStack[] => [{ id, count: n }];
   const rnd = (a: number, c: number) => a + Math.floor(rand() * (c - a + 1));
   // Puertas y camas sueltan el objeto una sola vez (por la mitad de abajo / los pies).

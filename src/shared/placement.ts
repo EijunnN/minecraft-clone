@@ -13,6 +13,7 @@ import {
 import { DIR_X, DIR_Z } from './blockModels';
 import { isBeeHome } from './blocks'; // Fase 6 (fauna)
 import { horizontalLog, AXIS_X, AXIS_Z } from './blocks'; // troncos tumbados
+import { planNetherVine, canFertilizeNether } from './netherPlacement'; // Fase 8.2 (biomas del Nether)
 // Fase 6.5 (colores): velas (hasta 4 por bloque, se encienden y apagan) y terracota esmaltada.
 import { isCandle, canAddCandle, candleCount, isLitCandle, candleState, isGlazedTerracotta } from './blocks';
 import { copperPlacement } from './blocks'; // Fase 6.5 (cobre)
@@ -121,6 +122,8 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 6.5 (océano y plantas): plantas marinas, corales, pepinos de mar y plantas de dos bloques.
   const plant65 = planPlant65(get, hit, x, y, z, base);
   if (plant65 !== undefined) return plant65;
+  const netherVine = planNetherVine(get, base, x, y, z); // Fase 8.2: enredaderas del Nether (punta o tallo)
+  if (netherVine !== undefined) return replaceable(cur) ? netherVine : null;
   // Fase 6.5 (equipo): el conducto queda anegado si se pone en el agua.
   if (base === CONDUIT) return replaceable(cur) ? [[x, y, z, conduitFor(isWaterCell(cur))]] : null;
   if (isSlab(base) && familyBase(cur) === base && stateProps(cur)!.type !== 2) return [[x, y, z, stateOf(base, { type: 2 })]];
@@ -299,6 +302,7 @@ export function isUsable(id: number): boolean {
 export function canFertilize(get: GetBlock, x: number, y: number, z: number, saplings: ReadonlySet<number>, grass: number): boolean {
   const id = get(x, y, z);
   if (canFertilize65(get, x, y, z)) return true; // Fase 6.5 (océano y plantas)
+  if (canFertilizeNether(get, x, y, z)) return true; // Fase 8.2 (biomas del Nether)
   if (isCrop(id)) return !isMatureCrop(id);
   if (saplings.has(id)) return true;
   return id === grass && get(x, y + 1, z) === 0;

@@ -57,6 +57,8 @@ export const FENCE_GATES: Record<string, number> = {};
 export const DOORS: Record<string, number> = {};
 export const TRAPDOORS: Record<string, number> = {};
 const FENCE_IDS = new Set<number>();
+/** Vallas que no son de madera (la de ladrillos del Nether): sólo se unen entre ellas (isSameFence de Java). */
+const NON_WOOD_FENCES = new Set<number>();
 
 /** ¿Valla? (se atan a ella las correas). */
 export function isFence(id: number): boolean {
@@ -68,18 +70,21 @@ function isGate(id: number): boolean {
   return GATE_BASES.has(familyBase(id));
 }
 
-/** Las vallas se unen a otras vallas, a los portillos y a los bloques sólidos completos. */
-function fenceConnects(id: number): boolean {
-  return id > 0 && (FENCE_IDS.has(id) || isGate(id) || BLOCK_OPAQUE[id] === 1);
+/**
+ * Las vallas se unen a las vallas de su clase (de madera con las de madera; la de ladrillos del Nether, con
+ * las suyas), a los portillos y a los bloques sólidos completos.
+ */
+function fenceConnectsTo(wooden: boolean, id: number): boolean {
+  return id > 0 && ((FENCE_IDS.has(id) && NON_WOOD_FENCES.has(id) !== wooden) || isGate(id) || BLOCK_OPAQUE[id] === 1);
 }
 
-/** Valla, portillo, puerta y trampilla de una madera. */
-export function addWoodShapes(w: Material): void {
-  if (!WOODS.includes(w)) WOODS.push(w);
+/** Valla de un material (`wooden`: de madera; la de ladrillos del Nether no lo es). */
+export function addFence(w: Material, wooden = true, key = `${w.key}_fence`, name = `Valla ${w.name}`): number {
   const t = texOf(w.block);
   const post = mbox(6, 0, 6, 10, 16, 10, t);
   const arm = (d: number) => rotateBoxes([mbox(7, 6, 0, 9, 9, 6, t), mbox(7, 12, 0, 9, 15, 6, t)], d);
-  const fence = family(`${w.key}_fence`, `Valla ${w.name}`, [], () => ({
+  const fenceConnects = (id: number) => fenceConnectsTo(wooden, id);
+  const fence = family(key, name, [], () => ({
     ...matOpts(w),
     render: R_MODEL,
     shape: (get) => {
@@ -101,6 +106,15 @@ export function addWoodShapes(w: Material): void {
   }));
   FENCES[w.key] = fence;
   FENCE_IDS.add(fence);
+  if (!wooden) NON_WOOD_FENCES.add(fence);
+  return fence;
+}
+
+/** Valla, portillo, puerta y trampilla de una madera. */
+export function addWoodShapes(w: Material): void {
+  if (!WOODS.includes(w)) WOODS.push(w);
+  const t = texOf(w.block);
+  addFence(w);
   FENCE_GATES[w.key] = family(`${w.key}_fence_gate`, `Portillo ${w.name}`, [['facing', 4], ['open', 2]], (st) => {
     const closed = [
       mbox(0, 5, 7, 2, 16, 9, t), mbox(14, 5, 7, 16, 16, 9, t), mbox(2, 6, 7, 14, 9, 9, t), mbox(2, 12, 7, 14, 15, 9, t),

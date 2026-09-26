@@ -38,6 +38,7 @@ import { Heartbeat } from './heartbeat';
 import { buildMaterialSound, buildSplashSound, buildUiSound } from './materials';
 import { createNoiseBuffers, createReverbImpulse, type NoiseBuffers } from './noise';
 import { MusicEngine } from './music';
+import { NetherAmbience } from './netherAmbience'; // Fase 8.2 (biomas del Nether)
 import { createPanner, isWithinRange, MAX_ONE_SHOT_VOICES, VoicePool } from './spatial';
 import { clamp01, type AmbientState, type MobSoundEvent, type MobSoundKind, type UiKind, type Vec3 } from './types';
 
@@ -85,6 +86,8 @@ export class AudioEngine {
   private heartbeat: Heartbeat | null = null;
   /** Fase 6.5 (colecciones): tocadiscos que suenan y los que llegaron antes de arrancar el audio. */
   private jukeboxes: Jukeboxes | null = null;
+  /** Fase 8.2 (biomas del Nether): bucles, sonidos sueltos y «mood» de cada bioma del Nether. */
+  private nether: NetherAmbience | null = null;
   private pendingDiscs = new Map<string, { disc: number; pos: Vec3; elapsed: number; at: number }>();
   private readonly voices = new VoicePool(MAX_ONE_SHOT_VOICES);
 
@@ -133,6 +136,7 @@ export class AudioEngine {
       this.heartbeat.setLevel(this.pendingHeartbeat);
       // Fase 6.5 (colecciones)
       this.jukeboxes = new Jukeboxes(ctx, this.noise, this.sfxBus, this.reverbSend);
+      this.nether = new NetherAmbience(ctx, this.noise, this.ambientBus, this.reverbSend);
       for (const [key, p] of this.pendingDiscs) this.jukeboxes.play(key, p.disc, p.pos, p.elapsed + (performance.now() - p.at) / 1000);
       this.pendingDiscs.clear();
       if (ctx.state === 'suspended') await ctx.resume();
@@ -148,6 +152,7 @@ export class AudioEngine {
       this.fluids = null;
       this.heartbeat = null;
       this.jukeboxes = null; // Fase 6.5 (colecciones)
+      this.nether = null; // Fase 8.2
       this.noise = null;
     }
   }
@@ -509,6 +514,16 @@ export class AudioEngine {
    * Fase 7.5 (abismo): sensores, chilladores, catalizadores, el warden (rugido, olfateo, latido, estampido…) y
    * el ambiente del Deep Dark (`a`: dato del efecto). Sin posición, suena en la cabeza del jugador.
    */
+  /** Fase 8.2: sonido suelto («additions») del bioma del Nether en `pos`. */
+  playNetherAddition(biome: number, pos: Vec3): void {
+    this.safe(() => this.nether?.playAddition(biome, pos));
+  }
+
+  /** Fase 8.2: «mood» del bioma del Nether en `pos` (tras mucho rato a oscuras). */
+  playNetherMood(biome: number, pos: Vec3): void {
+    this.safe(() => this.nether?.playMood(biome, pos));
+  }
+
   playDeepDarkSfx(kind: string, pos: Vec3 | null, a?: number): void {
     const build = (ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: number) => buildDeepDarkSfx(ctx, noise, kind, dest, now, a);
     this.safe(() => (pos ? this.spawnPositional(pos, build, 0.6) : this.spawnLocal(0.6, build)));
@@ -557,6 +572,8 @@ export class AudioEngine {
       const targetFreq = state.underwater ? UNDERWATER_LOWPASS_FREQ : OPEN_LOWPASS_FREQ;
       this.masterLowpass.frequency.setTargetAtTime(targetFreq, now, 0.4);
       this.ambience?.update(dt, state, this.listenerPos);
+      this.nether?.update(dt, state.netherBiome ?? -1); // Fase 8.2
+      this.music?.setStyle(state.netherBiome ?? -1);
       this.music?.update(dt);
       this.fluids?.update(dt);
       this.heartbeat?.update(dt);
@@ -573,6 +590,8 @@ export class AudioEngine {
       this.heartbeat?.dispose();
       this.jukeboxes?.dispose(); // Fase 6.5 (colecciones)
       this.jukeboxes = null;
+      this.nether?.dispose(); // Fase 8.2
+      this.nether = null;
       this.ambience = null;
       this.music = null;
       this.fluids = null;

@@ -162,6 +162,21 @@ const TICK_PROFILES: Record<SoundMaterial, TickProfile> = {
   water: { type: 'bandpass', freq: [600, 1200], q: 1.2, buffer: 'white' },
   lava: { type: 'lowpass', freq: [800, 1400], q: 0.6, buffer: 'pink' },
   sculk: { type: 'lowpass', freq: [450, 800], q: 1.2, buffer: 'brown', tone: 110 }, // Fase 7.5 (abismo)
+  // Fase 8.2 (biomas del Nether)
+  netherrack: { type: 'bandpass', freq: [800, 1800], q: 2.4, buffer: 'white', tone: 100 },
+  nether_ore: { type: 'bandpass', freq: [900, 2000], q: 2.8, buffer: 'white', tone: 120 },
+  nether_bricks: { type: 'bandpass', freq: [1500, 2600], q: 3, buffer: 'white', tone: 170 },
+  nether_wood: { type: 'bandpass', freq: [250, 420], q: 3, buffer: 'pink', tone: 200 },
+  stem: { type: 'bandpass', freq: [700, 1300], q: 2.2, buffer: 'white', tone: 230 },
+  nylium: { type: 'lowpass', freq: [900, 1400], q: 0.8, buffer: 'pink', tone: 95 },
+  fungus: { type: 'lowpass', freq: [600, 1000], q: 1.2, buffer: 'brown' },
+  roots: { type: 'highpass', freq: [1600, 2600], q: 0.6, buffer: 'white' },
+  shroomlight: { type: 'lowpass', freq: [500, 800], q: 0.8, buffer: 'brown' },
+  vines: { type: 'highpass', freq: [1800, 3000], q: 0.5, buffer: 'white' },
+  soul_sand: { type: 'highpass', freq: [2600, 4200], q: 0.4, buffer: 'white' },
+  soul_soil: { type: 'lowpass', freq: [350, 650], q: 0.9, buffer: 'brown', tone: 75 },
+  basalt: { type: 'bandpass', freq: [600, 1200], q: 2.2, buffer: 'white', tone: 90 },
+  wart: { type: 'lowpass', freq: [400, 750], q: 1.4, buffer: 'brown', tone: 100 },
 };
 
 /** Golpe de picado (minería): breve "tick/scrape", más suave y corto que `buildBreak`; pensado

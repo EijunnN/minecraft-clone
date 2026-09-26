@@ -12,16 +12,16 @@
 // Se registran los últimos (export * al final de index.ts): no mueven ningún id guardado.
 import {
   family, defs, L, familyBase, stateOf, stateProps, isSlab, isStairs, isTrapdoor, FAMILY_KINDS, KINDS, BLOCK_COLLIDE,
-  R_CUBE, R_MODEL, R_TORCH, type NeighborGet, type Opts, type BlockDef,
+  R_CUBE, R_MODEL, R_TORCH, type NeighborGet, type Opts, type BlockDef, type SoundMaterial,
 } from './registry';
 import { REDSTONE_ORE, CHEST, GLOWSTONE } from './classic';
 import { WOODS, isFence } from './building';
-import { WALLS } from './decoration';
+import { WALLS, isWall } from './decoration';
 import { DEEPSLATE_ORE, SURFACE_ORE } from './underground';
 import { addCopperVariants, copperTexture } from './copperBlocks';
 import { EXTRA_CHESTS } from './queries';
 import { mbox, rotateBoxes, rotateFlat, DIR_X, DIR_Z, DIR_FACE, type ModelBox } from '../blockModels';
-import { registerRedstone, setConductor, emitterOf, isConductor, HFACE, UP, DOWN, type RedstoneView } from '../redstone/api';
+import { registerRedstone, setConductor, emitterOf, isConductor, HFACE, UP, DOWN, type RedstoneView, type Emitter } from '../redstone/api';
 
 // ------------------------------------------------------------------ utilidades
 
@@ -290,7 +290,7 @@ export const LEVER = family('lever', 'Palanca', MOUNTED_PROPS, (st) => {
 export const BUTTONS: Record<string, number> = {};
 const WOODEN_BUTTONS = new Set<number>();
 
-function button(key: string, name: string, tex: string, sound: 'stone' | 'wood'): number {
+function button(key: string, name: string, tex: string, sound: SoundMaterial): number {
   return family(`${key}_button`, `Botón ${name}`, MOUNTED_PROPS, (st) => {
     const t = L(tex);
     const box = [mbox(5, 0, 6, 11, st.powered ? 1 : 2, 10, t)];
@@ -301,12 +301,25 @@ function button(key: string, name: string, tex: string, sound: 'stone' | 'wood')
     };
   });
 }
+const BUTTON_BASES = new Set<number>();
+/**
+ * Botón nuevo (los materiales que se registran después: fase 8.2). `wooden`: dura 30 ticks y lo pulsan las
+ * flechas (los de madera); si no, 20 (los de piedra).
+ */
+export function addButton(key: string, name: string, tex: string, sound: SoundMaterial, wooden: boolean): number {
+  const id = button(key, name, tex, sound);
+  BUTTONS[key] = id;
+  BUTTON_BASES.add(id);
+  if (wooden) WOODEN_BUTTONS.add(id);
+  registerRedstone(id, { emitter: mountedEmitter });
+  return id;
+}
 BUTTONS.stone = button('stone', 'de piedra', 'stone', 'stone');
 for (const w of WOODS) {
   BUTTONS[w.key] = button(w.key, w.name, defs[w.block].tex[0], 'wood');
   WOODEN_BUTTONS.add(BUTTONS[w.key]);
 }
-const BUTTON_BASES = new Set(Object.values(BUTTONS));
+for (const id of Object.values(BUTTONS)) BUTTON_BASES.add(id);
 
 export function isButton(id: number): boolean {
   return id > 0 && BUTTON_BASES.has(familyBase(id));
@@ -334,23 +347,22 @@ const WOODEN_PLATES = new Set<number>();
 /** ¿Se puede poner una placa encima? (cara de arriba firme, vallas y muros). */
 function plateSupport(get: NeighborGet): boolean {
   const b = get(0, -1, 0);
-  return b < 0 || sturdyTop(b) || isFence(b) || WALL_IDS.has(familyBase(b));
+  return b < 0 || sturdyTop(b) || isFence(b) || isWall(familyBase(b));
 }
-const WALL_IDS = new Set(Object.values(WALLS));
 
 function plateModel(t: number, pressed: boolean): ModelBox[] {
   // Suelta sobresale 2/16; pisada, 1/16 (el vértice del terreno va de 1/16 en 1/16).
   return [mbox(1, 0, 1, 15, pressed ? 1 : 2, 15, t)];
 }
 
-function plateOpts(tex: string, sound: 'stone' | 'wood' | 'metal', pressed: boolean): Opts {
+function plateOpts(tex: string, sound: SoundMaterial, pressed: boolean): Opts {
   return {
     render: R_MODEL, solid: false, opaque: false, lightOpacity: 0, hardness: 0.5, sound, all: tex, category: 'redstone',
     walkThrough: true, collision: [], model: plateModel(L(tex), pressed), support: plateSupport,
   };
 }
 
-function plate(key: string, name: string, tex: string, sound: 'stone' | 'wood'): number {
+function plate(key: string, name: string, tex: string, sound: SoundMaterial): number {
   return family(`${key}_pressure_plate`, `Placa de presión ${name}`, [['powered', 2]], (st) => plateOpts(tex, sound, st.powered === 1));
 }
 PRESSURE_PLATES.stone = plate('stone', 'de piedra', 'stone', 'stone');
@@ -359,6 +371,18 @@ for (const w of WOODS) {
   WOODEN_PLATES.add(PRESSURE_PLATES[w.key]);
 }
 const PLATE_BASES = new Set(Object.values(PRESSURE_PLATES));
+/**
+ * Placa nueva (fase 8.2). `wooden`: la pisa cualquier entidad (las de madera); si no, sólo los seres vivos
+ * (las de piedra).
+ */
+export function addPressurePlate(key: string, name: string, tex: string, sound: SoundMaterial, wooden: boolean): number {
+  const id = plate(key, name, tex, sound);
+  PRESSURE_PLATES[key] = id;
+  PLATE_BASES.add(id);
+  if (wooden) WOODEN_PLATES.add(id);
+  registerRedstone(id, { emitter: plateEmitter });
+  return id;
+}
 
 /** Placas de peso: ligera (de oro: una potencia por entidad) y pesada (de hierro: una por cada diez). */
 export const LIGHT_WEIGHTED_PLATE = family('light_weighted_pressure_plate', 'Placa de presión para peso ligero', [['power', 16]], (st) =>
@@ -383,12 +407,11 @@ export function platePower(id: number): number {
   return 0;
 }
 
-registerRedstone([...PLATE_BASES, LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE], {
-  emitter: {
-    weak: (_v, _x, _y, _z, id) => platePower(id),
-    strong: (_v, _x, _y, _z, id, face) => (face === DOWN ? platePower(id) : 0),
-  },
-});
+const plateEmitter: Emitter = {
+  weak: (_v, _x, _y, _z, id) => platePower(id),
+  strong: (_v, _x, _y, _z, id, face) => (face === DOWN ? platePower(id) : 0),
+};
+registerRedstone([...PLATE_BASES, LIGHT_WEIGHTED_PLATE, HEAVY_WEIGHTED_PLATE], { emitter: plateEmitter });
 
 // ------------------------------------------------------------------ repetidor y comparador
 

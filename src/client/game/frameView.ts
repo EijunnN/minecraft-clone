@@ -181,6 +181,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass',
     ...effectsView(g, f.dt), // Fase 7 (efectos): náuseas, ceguera y oscuridad
     dim: world.dim, // Fase 8: cielo, niebla y luz de la dimensión
+    fog: g.netherAtmos.fog, // Fase 8.2: la niebla del bioma del Nether
   };
   // Fase 8: dentro de un portal la imagen se retuerce como con las náuseas.
   if (g.portalFx.warp > 0) out.nausea = Math.max(out.nausea ?? 0, g.portalFx.warp * 0.8);

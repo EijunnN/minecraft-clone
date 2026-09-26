@@ -30,7 +30,7 @@ function chainBoxes(x: number, z: number, y0: number, y1: number): ModelBox[] {
   return [mbox(x, y0, z - 1, x, y1, z + 1, [c, c, -1, -1, -1, -1]), mbox(x - 1, y0, z, x + 1, y1, z, [-1, -1, -1, -1, c, c])];
 }
 
-function addHangingSign(key: string, name: string, log: number, logTex: string): void {
+export function addHangingSign(key: string, name: string, log: number, logTex: string): void {
   const opts = {
     render: R_MODEL, solid: false, opaque: false, lightOpacity: 0, hardness: 1, tool: 'axe' as const, sound: 'wood' as const,
     all: logTex,

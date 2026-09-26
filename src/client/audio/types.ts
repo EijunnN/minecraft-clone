@@ -20,6 +20,8 @@ export interface AmbientState {
   altitude: number;
   /** 0..1, intensidad de lluvia (puede quedarse en 0 por ahora, pero se implementa). */
   rain: number;
+  /** Fase 8.2: bioma del Nether en el que está el jugador (−1 o sin él, fuera del Nether). */
+  netherBiome?: number;
 }
 
 /** Tipos de golpe/interacción para un sonido de material. */

@@ -443,6 +443,20 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 8 (dimensiones): el velo del portal (translúcido y emisivo), las menas del Nether y el magma.
   { name: 'nether_portal', special: 4 },
   ...['nether_quartz_ore', 'nether_gold_ore', 'magma'].map((name): TextureDef => ({ name })),
+  // Fase 8.2 (biomas del Nether): maderas carmesí y distorsionada (puertas y trampillas con recorte), necelio,
+  // plantas (con recorte; las de suelo se mecen), verrugas, luz de hongo, basalto, piedra negra y ladrillos.
+  ...['crimson', 'warped'].flatMap((k): TextureDef[] => [
+    ...[`${k}_stem_side`, `${k}_stem_top`, `stripped_${k}_stem_side`, `stripped_${k}_stem_top`, `${k}_planks`, `${k}_nylium`,
+      `${k}_nylium_side`].map((name): TextureDef => ({ name })),
+    ...[`${k}_door_top`, `${k}_door_bottom`, `${k}_trapdoor`].map((name): TextureDef => ({ name, cutout: true })),
+    ...[`${k}_fungus`, `${k}_roots`].map((name): TextureDef => ({ name, cutout: true, wave: 2, sss: 0.4 })),
+  ]),
+  { name: 'nether_sprouts', cutout: true, wave: 2, sss: 0.4 },
+  ...['weeping_vines', 'weeping_vines_plant', 'twisting_vines', 'twisting_vines_plant'].map((name): TextureDef => ({ name, cutout: true, sss: 0.4 })),
+  ...['nether_wart_block', 'warped_wart_block', 'shroomlight', 'basalt_top', 'basalt_side', 'polished_basalt_top', 'polished_basalt_side',
+    'blackstone', 'blackstone_top', 'polished_blackstone', 'polished_blackstone_bricks', 'cracked_polished_blackstone_bricks',
+    'chiseled_polished_blackstone', 'gilded_blackstone', 'nether_bricks', 'cracked_nether_bricks', 'chiseled_nether_bricks',
+    'red_nether_bricks'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);
