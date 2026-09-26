@@ -8,6 +8,8 @@ import { IRON_ORE, GOLD_ORE } from './blocks';
 import { sanitizeItemData, cloneItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { COPPER_ORE, DEEPSLATE_ORE } from './blocks'; // Fase 6.5 (materiales)
 import { RAW_IRON, RAW_GOLD, RAW_COPPER } from './items'; // Fase 6.5 (materiales)
+import { COAL_ORE, DIAMOND_ORE, EMERALD_ORE, LAPIS_ORE, REDSTONE_ORE } from './blocks'; // Fase 7.6
+import { TOOLS, ARMOR, HORSE_ARMOR } from './items';
 import { BREW_SLOTS, BREW_TIME, brewCanPlace, brewClick, brewInsert } from './brewing'; // Fase 7 (pociones)
 
 export const CHEST_SLOTS = 27;
@@ -45,6 +47,10 @@ export type FurnaceVariant = 0 | 1 | 2;
 const BLAST_INPUTS = new Set([IRON_ORE, GOLD_ORE]);
 // Fase 6.5 (materiales): también el mineral en bruto y las menas de cobre y de pizarra profunda.
 for (const id of [RAW_IRON, RAW_GOLD, RAW_COPPER, COPPER_ORE, DEEPSLATE_ORE[IRON_ORE], DEEPSLATE_ORE[GOLD_ORE], DEEPSLATE_ORE[COPPER_ORE]]) BLAST_INPUTS.add(id);
+// Fase 7.6 (auditoría de recetas): también las demás menas y las herramientas y armaduras de metal (dan pepitas).
+for (const ore of [COAL_ORE, DIAMOND_ORE, EMERALD_ORE, LAPIS_ORE, REDSTONE_ORE]) BLAST_INPUTS.add(ore).add(DEEPSLATE_ORE[ore]);
+for (const mat of ['iron', 'golden', 'copper'] as const) for (const id of [...Object.values(TOOLS[mat]), ...Object.values(ARMOR[mat])]) BLAST_INPUTS.add(id);
+for (const id of [...Object.values(ARMOR.chainmail), HORSE_ARMOR.iron, HORSE_ARMOR.golden]) BLAST_INPUTS.add(id);
 
 /** ¿Funde este horno lo que hay en la entrada? */
 export function variantSmelts(variant: FurnaceVariant, input: number): boolean {

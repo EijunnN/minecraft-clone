@@ -526,8 +526,12 @@ Fuera de la fase 7.5 (anotado para que no se pierda):
 
 ### Fase 7.6 — Biomas y remates del mundo normal (L) · 🟡 en curso
 Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la fase 9), de uno en uno:
-- **Orden del código:** `GameServer.ts` y `Game.ts` en módulos (sin ganchos encadenados).
-- **Auditoría de recetas:** las recetas de Minecraft de objetos que ya existen y aún no se fabrican.
+- ✅ **Orden del código:** `GameServer.ts` y `Game.ts` en módulos (sin ganchos encadenados).
+- ✅ **Auditoría de recetas:** de las recetas del catálogo con todos sus objetos en el juego, faltaban 70
+  (diorita y granito con cuarzo, bloque de cuarzo y de espeleotema, raíces con barro, alfombras que se
+  vuelven a teñir, bombillas enceradas y fundir menas, herramientas y pepinos de mar) y cuatro habían
+  cambiado en 26.x (correa, etiqueta, silla y andamio de bambú; el alto horno lleva piedra lisa).
+  Ahora coinciden todas; las 450 que usan objetos que aún no existen llegarán con ellos (fases 8 y 9).
 - **Sistemas sueltos:** mesa de cartografía (ampliar, copiar y bloquear mapas), estandarte en el
   escudo, reparar juntando dos herramientas, cabeza de esqueleto en la pared y discos que faltan.
 - **Ciudad antigua** con edificios más detallados.

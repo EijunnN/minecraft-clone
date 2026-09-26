@@ -14,6 +14,7 @@ import {
   HAY_BALE, // Fase 6 (monturas)
 } from './blocks';
 import { SUGAR_CANE } from './blocks'; // Fase 6 (fauna)
+import { COAL_ORE, DIAMOND_ORE, EMERALD_ORE, LAPIS_ORE, REDSTONE_ORE, SEA_PICKLE } from './blocks'; // Fase 7.6 (auditoría de recetas)
 import { BAMBOO, BAMBOO_BLOCK, STRIPPED_BAMBOO_BLOCK, BAMBOO_MOSAIC } from './blocks'; // Fase 6.5 (maderas)
 // Fase 6.5 (colores)
 import { DYE_COLORS, COLOR_NAMES, COLORED_TERRACOTTA, GLAZED_TERRACOTTA, CARPETS, BANNERS, type DyeColor } from './blocks';
@@ -743,6 +744,15 @@ smelt(RED_SANDSTONE, SMOOTH_RED_SANDSTONE);
 // de carbón arde como 9 de carbón (80 objetos); las ranas crían con bolas de slime (y ponen huevos).
 smelt(RAW_IRON, IRON_INGOT);
 smelt(RAW_GOLD, GOLD_INGOT);
+// Fase 7.6 (auditoría de recetas): menas sacadas con Toque de seda, herramientas y armaduras de hierro y oro
+// (dan una pepita) y el pepino de mar (tinte lima), como en Minecraft.
+for (const [ore, out] of [[COAL_ORE, COAL], [DIAMOND_ORE, DIAMOND], [EMERALD_ORE, EMERALD], [LAPIS_ORE, LAPIS], [REDSTONE_ORE, REDSTONE]] as const) {
+  smelt(ore, out);
+  smelt(DEEPSLATE_ORE[ore], out);
+}
+for (const id of [...Object.values(TOOLS.iron), ...Object.values(ARMOR.iron), ...Object.values(ARMOR.chainmail), HORSE_ARMOR.iron]) smelt(id, IRON_NUGGET);
+for (const id of [...Object.values(TOOLS.golden), ...Object.values(ARMOR.golden), HORSE_ARMOR.golden]) smelt(id, GOLD_NUGGET);
+smelt(SEA_PICKLE, DYES.lime);
 fuel(COAL_BLOCK, 800);
 (BREED_FOOD as Record<string, readonly number[]>).frog = [SLIME_BALL];
 // Fase 7.5 (fauna): el ocelote con bacalao o salmón crudos (confianza y cría), la champiñaca con trigo y la

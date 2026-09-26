@@ -107,7 +107,7 @@ test('monturas: ids, nombres, modelos, texturas, silla y aparición por bioma', 
   assert.notDeepEqual(a, b, 'caballo blanco y negro no son iguales');
   // La silla: objeto con dibujo, en el creativo y con receta.
   assert.ok(isValidItem(SADDLE) && itemSpriteIndex(SADDLE) >= 0 && CREATIVE_ITEMS.includes(SADDLE));
-  assert.equal(matchRecipe([LEATHER, LEATHER, LEATHER, 0, IRON_INGOT, 0, 0, 0, 0], 3)?.out.id, SADDLE);
+  assert.equal(matchRecipe([0, LEATHER, 0, LEATHER, IRON_INGOT, LEATHER, 0, 0, 0], 3)?.out.id, SADDLE); // Minecraft 26.x
   // Cría entre especies.
   assert.ok(canMate(MOB_HORSE, MOB_DONKEY) && canMate(MOB_DONKEY, MOB_HORSE) && !canMate(MOB_HORSE, MOB_LLAMA));
   assert.equal(offspringType(MOB_DONKEY, MOB_HORSE), MOB_MULE);

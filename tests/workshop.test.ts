@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AIR, STONE, COBBLESTONE, CHEST, WALLS, BEDS, SIGNS, WALL_SIGNS, CHEST_DOUBLE, SMOKER, BLAST_FURNACE, CAMPFIRE,
+  AIR, STONE, SMOOTH_STONE, COBBLESTONE, CHEST, WALLS, BEDS, SIGNS, WALL_SIGNS, CHEST_DOUBLE, SMOKER, BLAST_FURNACE, CAMPFIRE,
   STONECUTTER, SLABS, STAIRS, STONE_BRICKS, WHITE_WOOL, OAK_PLANKS, OAK_LOG, FURNACE, IRON_ORE, BLOCK_TALL, blockModel,
   familyBase, stateOf, stateProps,
 } from '../src/shared/blocks';
@@ -55,7 +55,7 @@ test('camas de colores, carteles y bloques de trabajo: recetas', () => {
   assert.equal(R([W, W, W, P, P, P, 0, 0, 0])?.id, BEDS.white);
   assert.deepEqual(R([P, P, P, P, P, P, 0, STICK, 0]), { id: SIGNS.oak, count: 3 });
   assert.equal(R([0, OAK_LOG, 0, OAK_LOG, FURNACE, OAK_LOG, 0, OAK_LOG, 0])?.id, SMOKER);
-  assert.equal(R([IRON_INGOT, IRON_INGOT, IRON_INGOT, IRON_INGOT, FURNACE, IRON_INGOT, STONE, STONE, STONE])?.id, BLAST_FURNACE);
+  assert.equal(R([IRON_INGOT, IRON_INGOT, IRON_INGOT, IRON_INGOT, FURNACE, IRON_INGOT, SMOOTH_STONE, SMOOTH_STONE, SMOOTH_STONE])?.id, BLAST_FURNACE);
   assert.equal(R([0, STICK, 0, STICK, COAL, STICK, OAK_LOG, OAK_LOG, OAK_LOG])?.id, CAMPFIRE);
   assert.equal(R([0, IRON_INGOT, 0, STONE, STONE, STONE, 0, 0, 0])?.id, STONECUTTER);
   // Cortapiedras.

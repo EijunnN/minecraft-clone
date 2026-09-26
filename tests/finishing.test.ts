@@ -7,7 +7,7 @@ import {
   IRON_CHAIN, isSign, hangingSignKind, stateOf, stateProps, isPottable, shelfSlotAt, blockSupported, FENCES,
 } from '../src/shared/blocks';
 import {
-  ITEMS, CREATIVE_ITEMS, itemSpriteIndex, NAME_TAG, LEAD, BUNDLE, DYED_BUNDLES, ARMOR_STAND, BOOK, STRING, PAPER, SLIME_BALL,
+  ITEMS, CREATIVE_ITEMS, itemSpriteIndex, NAME_TAG, LEAD, BUNDLE, DYED_BUNDLES, ARMOR_STAND, BOOK, STRING, PAPER, IRON_NUGGET,
   LEATHER, STICK, DYES, ARMOR, type ItemStack,
 } from '../src/shared/items';
 import { matchRecipe } from '../src/shared/recipes';
@@ -54,8 +54,9 @@ test('recetas: carteles colgantes, estantería, correa, etiqueta, saco y soporte
   assert.deepEqual(craft([C, 0, C, log, log, log, log, log, log]), { id: HANGING_SIGNS.oak, count: 6 });
   const P = ITEMS.findIndex((it) => it?.key === 'oak_planks'), S = SLABS.oak;
   assert.deepEqual(craft([P, P, P, S, S, S, P, P, P]), { id: CHISELED_BOOKSHELF, count: 1 });
-  assert.deepEqual(craft([STRING, STRING, 0, STRING, SLIME_BALL, 0, 0, 0, STRING]), { id: LEAD, count: 2 });
-  assert.equal(matchRecipe([PAPER, STRING, 0, 0], 2)?.out.id, NAME_TAG);
+  // Minecraft 26.x: la correa es sólo cuerda y la etiqueta, papel con una pepita.
+  assert.deepEqual(craft([STRING, STRING, 0, STRING, STRING, 0, 0, 0, STRING]), { id: LEAD, count: 2 });
+  assert.equal(matchRecipe([0, IRON_NUGGET, PAPER, 0], 2)?.out.id, NAME_TAG);
   assert.equal(matchRecipe([STRING, 0, LEATHER, 0], 2)?.out.id, BUNDLE);
   assert.equal(matchRecipe([BUNDLE, DYES.red, 0, 0], 2)?.out.id, DYED_BUNDLES.red);
   assert.equal(matchRecipe([DYED_BUNDLES.red, DYES.blue, 0, 0], 2)?.out.id, DYED_BUNDLES.blue);

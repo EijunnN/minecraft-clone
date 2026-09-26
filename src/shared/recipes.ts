@@ -182,7 +182,7 @@ for (const [color, bed] of Object.entries(BEDS)) if (WOOL_OF[color]) shape(['WWW
 for (const w of WOOD_TYPES) shape(['PPP', 'PPP', ' S '], { P: w.planks, S: STICK }, SIGNS[w.key], 3);
 const LOGS = ALL_LOGS;
 shape([' L ', 'LFL', ' L '], { L: LOGS, F: FURNACE }, SMOKER);
-shape(['III', 'IFI', 'SSS'], { I: IRON_INGOT, F: FURNACE, S: STONE }, BLAST_FURNACE);
+shape(['III', 'IFI', 'SSS'], { I: IRON_INGOT, F: FURNACE, S: SMOOTH_STONE }, BLAST_FURNACE);
 shape([' S ', 'SCS', 'LLL'], { S: STICK, C: FUEL_COAL, L: LOGS }, CAMPFIRE);
 shape([' I ', 'SSS'], { I: IRON_INGOT, S: STONE }, STONECUTTER);
 
@@ -225,7 +225,7 @@ mix([CORNFLOWER, WHITE_WOOL], BLUE_WOOL);
 mix([LAPIS, WHITE_WOOL], BLUE_WOOL);
 
 // --- Fase 6 (monturas): silla de montar (cuero y un lingote de hierro, como en Minecraft 1.21.6) ---
-shape(['LLL', ' I '], { L: LEATHER, I: IRON_INGOT }, SADDLE);
+shape([' L ', 'LIL'], { L: LEATHER, I: IRON_INGOT }, SADDLE); // Minecraft 26.x
 // --- Fase 6 (aldeanos): bloques de trabajo ---
 {
   const WOOD_SLABS = WOODS.map((w) => SLABS[w.key]);
@@ -398,12 +398,12 @@ shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
   shape(['WCW'], { W: WHEAT, C: COCOA_BEANS }, COOKIE, 8);
   mix([COCOA_BEANS], DYES.brown); // tinte marrón (los granos de cacao llegan con la decoración)
   mix([INK_SAC], DYES.black); // tinte negro
-  mix([RED_MUSHROOM, BROWN_MUSHROOM, BOWL], MUSHROOM_STEW);
+  mix([[RED_MUSHROOM, BROWN_MUSHROOM], [RED_MUSHROOM, BROWN_MUSHROOM], BOWL], MUSHROOM_STEW); // dos champiñones cualesquiera
   mix([COOKED_RABBIT, CARROT, BAKED_POTATO, [RED_MUSHROOM, BROWN_MUSHROOM], BOWL], RABBIT_STEW);
   mix([BEETROOT, BEETROOT, BEETROOT, BEETROOT, BEETROOT, BEETROOT, BOWL], BEETROOT_SOUP);
   // Estofado sospechoso: la flor queda anotada en el desgaste de la pila (su efecto, en decorFood.ts).
   SUSPICIOUS_FLOWERS.forEach(([flower], i) => {
-    shapeless.push({ items: [[RED_MUSHROOM], [BROWN_MUSHROOM], [BOWL], [flower]], out: { id: SUSPICIOUS_STEW, count: 1, dmg: i + 1 } });
+    shapeless.push({ items: [[RED_MUSHROOM, BROWN_MUSHROOM], [RED_MUSHROOM, BROWN_MUSHROOM], [BOWL], [flower]], out: { id: SUSPICIOUS_STEW, count: 1, dmg: i + 1 } });
   });
   shape(['NNN', 'NCN', 'NNN'], { N: GOLD_NUGGET, C: CARROT }, GOLDEN_CARROT);
   shape(['NNN', 'NMN', 'NNN'], { N: GOLD_NUGGET, M: MELON_SLICE }, GLISTERING_MELON_SLICE);
@@ -416,7 +416,7 @@ shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
   shape(['NNN', 'NTN', 'NNN'], { N: IRON_NUGGET, T: TORCH }, LANTERN);
   shape(['N', 'I', 'N'], { N: IRON_NUGGET, I: IRON_INGOT }, IRON_CHAIN);
   shape(['III', 'III'], { I: IRON_INGOT }, IRON_BARS, 16);
-  shape(['SWS', 'S S', 'S S'], { S: STICK, W: STRING }, SCAFFOLDING, 6);
+  shape(['BWB', 'B B', 'B B'], { B: BAMBOO, W: STRING }, SCAFFOLDING, 6); // de bambú, como en Minecraft
   shape([' B ', 'B B', ' B '], { B: BRICK }, DECORATED_POT);
 }
 
@@ -446,8 +446,9 @@ import { HANGING_SIGNS, HANGING_SIGN_LOG } from './blocks';
 for (const [k, id] of Object.entries(HANGING_SIGNS)) shape(['C C', 'LLL', 'LLL'], { C: IRON_CHAIN, L: HANGING_SIGN_LOG[k] }, id, 6);
 // Correa (4 cuerdas y una bola de slime → 2) y etiqueta (papel y cuerda).
 import { LEAD, NAME_TAG, SLIME_BALL } from './items';
-shape(['SS ', 'SB ', '  S'], { S: STRING, B: SLIME_BALL }, LEAD, 2);
-mix([PAPER, STRING], NAME_TAG);
+// Minecraft 26.x: la correa sólo lleva cuerda y la etiqueta es papel con una pepita de metal.
+shape(['SS ', 'SS ', '  S'], { S: STRING }, LEAD, 2);
+shape([' N', 'P '], { P: PAPER, N: [IRON_NUGGET, GOLD_NUGGET, COPPER_NUGGET] }, NAME_TAG);
 // Saco (cuerda sobre cuero) y teñirlo de cualquiera de los 16 colores (se queda con lo que lleva).
 import { BUNDLE, DYED_BUNDLES } from './items';
 shape(['S', 'L'], { S: STRING, L: LEATHER }, BUNDLE);
@@ -717,4 +718,19 @@ import { ECHO_SHARD, RECOVERY_COMPASS, DISC_FRAGMENT_5, MUSIC_DISC_5 } from './i
   mix(new Array(9).fill(DISC_FRAGMENT_5), MUSIC_DISC_5);
   shape(['C', 'S', 'B'], { C: FUEL_COAL, S: STICK, B: [SOUL_SAND, SOUL_SOIL] }, SOUL_TORCH, 4);
   shape(['NNN', 'NTN', 'NNN'], { N: IRON_NUGGET, T: SOUL_TORCH }, SOUL_LANTERN);
+}
+
+// ------------------------------------------------------------------ Fase 7.6 (auditoría de recetas)
+// Recetas de Minecraft cuyos objetos ya existían pero no se fabricaban: la diorita y el granito con
+// cuarzo, el bloque de cuarzo, el bloque de espeleotema, las raíces de mangle con barro, volver a teñir
+// alfombras y las bombillas de cobre enceradas.
+import { QUARTZ_BLOCK, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, MANGROVE_ROOTS, MUDDY_MANGROVE_ROOTS } from './blocks';
+{
+  shape(['CQ', 'QC'], { C: COBBLESTONE, Q: QUARTZ }, DIORITE, 2);
+  mix([DIORITE, QUARTZ], GRANITE);
+  shape(['QQ', 'QQ'], { Q: QUARTZ }, QUARTZ_BLOCK);
+  shape(['DD', 'DD'], { D: POINTED_DRIPSTONE }, DRIPSTONE_BLOCK);
+  mix([MUD, MANGROVE_ROOTS], MUDDY_MANGROVE_ROOTS);
+  for (const c of DYE_COLORS) mix([DYES[c], DYE_COLORS.filter((o) => o !== c).map((o) => CARPETS[o])], CARPETS[c]);
+  for (let s = 0; s < RS_STAGES; s++) shape([' C ', 'CBC', ' R '], { C: RS_COPPER.block[1][s], B: BLAZE_ROD, R: REDSTONE }, COPPER_BULB[1][s], 4);
 }

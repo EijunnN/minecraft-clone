@@ -31,7 +31,7 @@ import { generateItemSprites } from '../src/client/textures/itemSprites';
 import { MemoryStore } from '../src/shared/sim/store';
 import { GameServer } from '../src/shared/sim/GameServer';
 import { makeServer, type Client, type Harness } from './harness';
-import { WHITE_WOOL } from '../src/shared/blocks';
+import { WHITE_WOOL, BAMBOO } from '../src/shared/blocks';
 import { scaffoldFloor, scaffoldClimb, SCAFFOLD_CLIMB_SPEED, SCAFFOLD_DESCEND_SPEED } from '../src/shared/scaffoldPhysics';
 
 // ------------------------------------------------------------------ registro
@@ -126,7 +126,7 @@ test('recetas de la decoración y los objetos', () => {
   assert.equal(matchRecipe([I, I, I, I, TORCH, I, I, I, I], 3)?.out.id, LANTERN);
   assert.equal(matchRecipe(grid(0, I, 0, 0, IRON_INGOT, 0, 0, I, 0), 3)?.out.id, IRON_CHAIN);
   assert.deepEqual(matchRecipe(grid(IRON_INGOT, IRON_INGOT, IRON_INGOT, IRON_INGOT, IRON_INGOT, IRON_INGOT), 3)?.out, { id: IRON_BARS, count: 16 });
-  assert.deepEqual(matchRecipe([S, STRING, S, S, 0, S, S, 0, S], 3)?.out, { id: SCAFFOLDING, count: 6 });
+  assert.deepEqual(matchRecipe([BAMBOO, STRING, BAMBOO, BAMBOO, 0, BAMBOO, BAMBOO, 0, BAMBOO], 3)?.out, { id: SCAFFOLDING, count: 6 }); // de bambú
   assert.equal(matchRecipe([0, B, 0, B, 0, B, 0, B, 0], 3)?.out.id, DECORATED_POT);
   assert.equal(matchRecipe([S, S, S, S, WHITE_WOOL, S, S, S, S], 3)?.out.id, PAINTING);
   assert.equal(matchRecipe([S, S, S, S, LEATHER, S, S, S, S], 3)?.out.id, ITEM_FRAME);
