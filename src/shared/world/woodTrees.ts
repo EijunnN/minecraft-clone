@@ -12,7 +12,7 @@ import {
 import { MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { DIR_X, DIR_Z } from '../blockModels';
 import { Simplex } from './noise';
-import { BIOME_SWAMP, BIOME_DARK_FOREST, BIOME_JUNGLE } from './biomeIds';
+import { BIOME_SWAMP, BIOME_DARK_FOREST, BIOME_JUNGLE, BIOME_MANGROVE_SWAMP, BIOME_BAMBOO_JUNGLE, baseBiome } from './biomeIds';
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 /** Altura del suelo (último bloque sólido) en la columna (x, z). */
@@ -139,7 +139,8 @@ export function paleOakTree(seed: number, x: number, y: number, z: number, r: nu
 export function placeWoodTree(
   seed: number, biome: number, x: number, y: number, z: number, tr: number, set: SetBlock, ground: Ground,
 ): boolean {
-  if (biome === BIOME_SWAMP && isMangroveArea(seed, x, z) && tr < 0.85) {
+  // Fase 7.6: en el pantano de manglares, todos; en los demás pantanos, en sus zonas de mangle.
+  if (biome === BIOME_MANGROVE_SWAMP || (biome === BIOME_SWAMP && isMangroveArea(seed, x, z) && tr < 0.85)) {
     mangroveTree(seed, x, y, z, tr, set, ground);
     return true;
   }
@@ -174,10 +175,13 @@ export function placeBamboo(
   const n = regionNoise(seed);
   for (let lz = 0; lz < 16; lz++) {
     for (let lx = 0; lx < 16; lx++) {
-      if (biomes(lx, lz) !== BIOME_JUNGLE) continue;
+      // Fase 7.6: la jungla de bambú está llena; las demás junglas, a rodales.
+      const b = biomes(lx, lz);
+      if (baseBiome(b) !== BIOME_JUNGLE) continue;
       const wx = x0 + lx, wz = z0 + lz;
-      if (n.noise2(wx / 26 + 300, wz / 26) < 0.3) continue;
-      if (hashToFloat(hash2(wx, wz, seed ^ 0xba3b)) > 0.3) continue;
+      const dense = b === BIOME_BAMBOO_JUNGLE;
+      if (!dense && n.noise2(wx / 26 + 300, wz / 26) < 0.3) continue;
+      if (hashToFloat(hash2(wx, wz, seed ^ 0xba3b)) > (dense ? 0.55 : 0.3)) continue;
       const top = tops[lz * 16 + lx];
       if (top >= MAX_Y - 18 || blocks[blockIndex(lx, top, lz)] !== GRASS) continue;
       const above = blocks[blockIndex(lx, top + 1, lz)];

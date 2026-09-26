@@ -524,7 +524,7 @@ Fuera de la fase 7.5 (anotado para que no se pierda):
   sospechosas y la resina (que también salen en estas estructuras); el sniffer, el breeze, el
   ciénago, el crepitante y las demás criaturas de 2024–2026.
 
-### Fase 7.6 — Biomas y remates del mundo normal (L) · 🟡 en curso
+### Fase 7.6 — Biomas y remates del mundo normal (L) · ✅ hecha
 Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la fase 9), de uno en uno:
 - ✅ **Orden del código:** `GameServer.ts` y `Game.ts` en módulos (sin ganchos encadenados).
 - ✅ **Auditoría de recetas:** de las recetas del catálogo con todos sus objetos en el juego, faltaban 70
@@ -545,9 +545,18 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
   sobre ménsulas con barandilla y aguja con farol, escalera de mano por dentro) que caben bajo la bóveda;
   pasarelas elevadas entre torres vecinas; costillas del centro con pilares, arcos y faroles colgados y
   barandillas en las escalinatas; farolas con pie cincelado.
-- **Los ~30 biomas que faltan** (montañas, colinas ventosas, taigas y abedulares viejos, jungla de
-  bambú y dispersa, badlands erosionadas y boscosas, manglar, bosque de flores, océanos templados y
-  profundos, costa pedregosa, cuevas como biomas…), con la selección por ruidos de Java.
+- ✅ **Los biomas que faltaban** (29 nuevos; ya están los 53 del mundo normal salvo el jardín pálido,
+  que es de la fase 9): ríos y ríos helados, playa nevada y costa pedregosa, océanos templados y los
+  profundos que faltaban, llanuras de girasoles y nevadas, bosque de flores, abedular viejo, colinas
+  ventosas de grava y con bosque, arboleda nevada, picos helados, escarpados y pedregosos, taigas de
+  pinos y de abetos viejos (piceas gigantes de 2×2, podsol, rocas musgosas), junglas dispersa y de
+  bambú, tierras baldías erosionadas (chimeneas de terracota) y boscosas (robles sobre tierra gruesa),
+  meseta de sabana y sabana ventosa, manglar; las cuevas frondosas y de goteo salen con F3. Se eligen con
+  los mismos parámetros que Java (temperatura, humedad, continentalidad, montaña, rareza y ríos), pero
+  con reglas sobre nuestros ruidos, no con la tabla de Java: la forma del terreno no cambia. Cada bioma
+  nuevo hereda de su bioma base lo general (criaturas, aldeas, estructuras) y tiene lo suyo (superficie,
+  árboles y plantas). Las colinas ventosas y laderas nevadas son las antiguas «montañas» y «picos
+  nevados».
 
 ### Fase 8 — Nether y End (XL)
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),

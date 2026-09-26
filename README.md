@@ -7,12 +7,16 @@ Un juego de bloques estilo Minecraft que corre en el navegador, con gráficos ti
 modo **supervivencia** completo y multijugador en tiempo real sobre Cloudflare (Workers + Durable
 Objects). Pensado para PC (teclado y ratón).
 
-- **Mundo infinito procedural** con 23 biomas: océanos (cálidos, fríos, helados y profundos), playas,
-  llanuras, praderas en flor, bosques, abedulares, bosques oscuros, arboledas de cerezos, taiga,
-  picos de hielo, desiertos, tierras baldías de terracota, sabanas de acacias, junglas con árboles
-  gigantes, pantanos, islas de champiñones y montañas con picos nevados; ríos, cuevas (frondosas con
-  bayas luminosas, de goteo con estalactitas, inundadas), lagos de lava, geodas de amatista y las ocho
-  menas de Minecraft (también en pizarra profunda por debajo de 0).
+- **Mundo infinito procedural** con los 53 biomas del mundo normal de Minecraft (salvo el jardín
+  pálido): océanos de las cinco temperaturas (y los profundos), ríos (también helados), playas (nevadas)
+  y costas pedregosas; llanuras (de girasoles, nevadas), praderas, bosques (de flores), abedulares (viejos),
+  bosques oscuros, arboledas de cerezos, taigas (nevadas, de pinos y de abetos viejos con piceas
+  gigantes), picos de hielo, desiertos, tierras baldías (erosionadas con chimeneas, boscosas), sabanas
+  (mesetas, ventosas), junglas (dispersas, de bambú), pantanos y manglares, islas de champiñones,
+  colinas ventosas (de grava, con bosque), arboledas y laderas nevadas y picos helados, escarpados y
+  pedregosos; cuevas (frondosas con bayas luminosas, de goteo con estalactitas, inundadas, el Deep
+  Dark), lagos de lava, geodas de amatista y las ocho menas de Minecraft (también en pizarra profunda
+  por debajo de 0).
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus

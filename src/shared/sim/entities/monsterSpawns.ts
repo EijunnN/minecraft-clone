@@ -7,7 +7,7 @@
 // bloques infestados.
 import { MOBS, MOB_ZOMBIE, MOB_ZOMBIE_VILLAGER, MOB_WITCH, MOB_SLIME, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL, MOB_DROWNED } from '../../mobs';
 import { BLOCK_FLUID, BLOCK_OPAQUE } from '../../blocks';
-import { BIOME_SWAMP } from '../../world/biomeIds';
+import { BIOME_SWAMP, baseBiome } from '../../world/biomeIds';
 import { isSlimeChunk, SLIME_CHUNK_MAX_Y } from '../../world/infested';
 import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
@@ -36,7 +36,7 @@ export function slimeThatFits(m: Entities, x: number, y: number, z: number): num
 /** Cambia el monstruo elegido por Spawner según el bioma y el sitio (devuelve el tipo final). */
 export function pickMonster(m: Entities, type: number, biome: number, x: number, y: number, z: number): number {
   const r = m.rand();
-  if (biome === BIOME_SWAMP && r < 0.3) {
+  if (baseBiome(biome) === BIOME_SWAMP && r < 0.3) {
     if (r < 0.1) return MOB_WITCH;
     return slimeThatFits(m, x, y, z) || type;
   }

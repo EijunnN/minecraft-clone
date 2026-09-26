@@ -24,7 +24,7 @@ import {
 } from '../../blocks';
 import { SHEARS, BOWL, BUCKET, MILK_BUCKET, MUSHROOM_STEW, SUSPICIOUS_STEW, BREED_FOOD, type ItemStack } from '../../items';
 import { SUSPICIOUS_FLOWERS } from '../../decorFood';
-import { BIOME_JUNGLE, BIOME_MUSHROOM_FIELDS } from '../../world/biomeIds';
+import { BIOME_JUNGLE, BIOME_MUSHROOM_FIELDS, baseBiome } from '../../world/biomeIds';
 import { inHutBox } from '../../world/swampHut';
 import { locateStructure } from '../../world/structures';
 import type { TerrainGenerator } from '../../world/terrain';
@@ -533,7 +533,7 @@ export function critterRestore(e: Entity, row: unknown[]): void {
 /** Criatura nueva para un bioma (0: ninguna; entonces decide el spawner de siempre). */
 export function critterPassiveFor(biome: number, rand: () => number): number {
   if (biome === BIOME_MUSHROOM_FIELDS) return MOB_MOOSHROOM;
-  if (biome === BIOME_JUNGLE) return rand() < 0.12 ? MOB_OCELOT : 0;
+  if (baseBiome(biome) === BIOME_JUNGLE) return rand() < 0.12 ? MOB_OCELOT : 0;
   return 0;
 }
 

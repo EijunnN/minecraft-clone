@@ -17,7 +17,7 @@ import { mobXp } from '../src/shared/experience';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { locateStructure, STRUCTURE_NAMES } from '../src/shared/world/structures';
 import { MONUMENT_Y, MONUMENT_RADIUS } from '../src/shared/world/monument';
-import { BIOME_DEEP_OCEAN, BIOME_BEACH, isOceanBiome } from '../src/shared/world/biomeIds';
+import { BIOME_DEEP_OCEAN, BIOME_BEACH, isOceanBiome, baseBiome } from '../src/shared/world/biomeIds';
 import { LOOT_TABLES, rollLoot } from '../src/shared/loot';
 import { structureMap, structureMapOf, resolveStructureMaps, pendingStructureMap } from '../src/shared/structureMaps';
 import { mapKeyAt } from '../src/shared/maps';
@@ -117,7 +117,7 @@ test('ruinas oceánicas en el fondo y tesoro enterrado en la playa', () => {
   }
   assert.ok(ruinChests >= 1, 'con su cofre');
   const t = locateStructure(gen, 'buried_treasure', 0, 0, 60)!;
-  assert.ok(t && gen.biomeAt(t[0], t[2]) === BIOME_BEACH, 'el tesoro está en una playa');
+  assert.ok(t && baseBiome(gen.biomeAt(t[0], t[2])) === BIOME_BEACH, 'el tesoro está en una playa');
   const chunk = gen.generate(Math.floor(t[0] / 16), Math.floor(t[2] / 16));
   const ch = chunk.chests.find((c) => c.table === 'buried_treasure')!;
   assert.ok(ch && ch.x === t[0] && ch.z === t[2] && ch.y === t[1] - 2, 'cofre bajo la arena');

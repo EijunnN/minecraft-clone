@@ -20,7 +20,8 @@ import { SEA_LEVEL } from '../constants';
 import { mulberry32 } from './noise';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
 import {
-  BIOME_PLAINS, BIOME_MEADOW, BIOME_DESERT, BIOME_SAVANNA, BIOME_TAIGA, BIOME_SNOWY,
+  BIOME_PLAINS, BIOME_MEADOW, BIOME_DESERT, BIOME_SAVANNA, BIOME_TAIGA, BIOME_SNOWY, baseBiome,
+  BIOME_SUNFLOWER_PLAINS, BIOME_SAVANNA_PLATEAU, BIOME_SNOWY_PLAINS,
 } from './biomeIds';
 
 /** Lo que usa la aldea del lienzo del chunk (la clase Canvas de structures.ts). */
@@ -56,7 +57,10 @@ export interface VillageStart {
 /** Radio máximo que ocupa una aldea alrededor del pozo (bloques). */
 export const VILLAGE_RADIUS = 38;
 
-const VILLAGE_BIOMES = new Set([BIOME_PLAINS, BIOME_MEADOW, BIOME_DESERT, BIOME_SAVANNA, BIOME_TAIGA, BIOME_SNOWY]);
+const VILLAGE_BIOMES = new Set([
+  BIOME_PLAINS, BIOME_MEADOW, BIOME_DESERT, BIOME_SAVANNA, BIOME_TAIGA, BIOME_SNOWY,
+  BIOME_SUNFLOWER_PLAINS, BIOME_SAVANNA_PLATEAU, BIOME_SNOWY_PLAINS, // Fase 7.6
+]);
 /** ¿Puede haber una aldea en este bioma? */
 export const isVillageBiome = (b: number): boolean => VILLAGE_BIOMES.has(b);
 
@@ -88,7 +92,7 @@ function styleFor(biome: number): Style {
     planks, log, base: COBBLESTONE, path: DIRT_PATH, stairs: STAIRS[key], slab: SLABS[key], door: DOORS[key],
     fence: FENCES[key], flat: false, ridge: ridge || planks, accent: log, bed: BEDS[bed],
   });
-  switch (biome) {
+  switch (baseBiome(biome)) {
     case BIOME_DESERT:
       return {
         planks: SANDSTONE, log: CUT_SANDSTONE, base: SANDSTONE, path: SANDSTONE, stairs: STAIRS.sandstone,

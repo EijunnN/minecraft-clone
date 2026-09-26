@@ -10,7 +10,7 @@ import {
 } from '../../blocks';
 import {
   BIOME_PLAINS, BIOME_TAIGA, BIOME_SNOWY, BIOME_DESERT, BIOME_MOUNTAINS, BIOME_SNOWY_PEAKS, BIOME_MEADOW, BIOME_ICE_SPIKES,
-  BIOME_FROZEN_OCEAN, BIOME_CHERRY_GROVE,
+  BIOME_FROZEN_OCEAN, BIOME_CHERRY_GROVE, baseBiome,
 } from '../../world/biomeIds';
 import { SEA_LEVEL, MIN_Y } from '../../constants';
 import { standable } from '../pathfind';
@@ -103,7 +103,7 @@ export class Spawner {
       if (biomeWithoutMonsters(info.biome)) continue; // Fase 7.5 (fauna): campos de champiñones
       const r = this.m.rand();
       let type: number;
-      if (r < 0.34) type = info.biome === 8 ? MOB_HUSK : MOB_ZOMBIE;
+      if (r < 0.34) type = info.biome === BIOME_DESERT ? MOB_HUSK : MOB_ZOMBIE;
       else if (r < 0.6) type = info.temp < -0.5 ? MOB_STRAY : MOB_SKELETON;
       else if (r < 0.8) type = MOB_SPIDER;
       else if (r < 0.95) type = MOB_CREEPER;
@@ -169,7 +169,7 @@ export class Spawner {
     // Fase 6 (monturas): caballos, burros, llamas y camellos según el bioma.
     const mount = mountSpawnFor(biome, this.m.rand());
     if (mount) return mount;
-    switch (biome) {
+    switch (baseBiome(biome)) {
       case BIOME_TAIGA:
         return r < 0.25 ? MOB_WOLF : r < 0.5 ? MOB_FOX : farm();
       case BIOME_SNOWY:

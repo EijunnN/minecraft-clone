@@ -11,7 +11,7 @@ import {
   BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, isLeaves,
   DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE, DEEPSLATE_ORE,
   MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, CAVE_VINES, AMETHYST_BLOCK, BUDDING_AMETHYST, AMETHYST_BUD,
-  BLOCK_OPAQUE, SNOW_LAYER,
+  BLOCK_OPAQUE, SNOW_LAYER, COARSE_DIRT, PODZOL, MOSSY_COBBLESTONE,
 } from '../blocks';
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32, smoothstep, clamp01, spline, lerp } from './noise';
@@ -35,12 +35,24 @@ import {
   BIOME_DESERT, BIOME_SAVANNA, BIOME_MOUNTAINS, BIOME_SNOWY_PEAKS, BIOME_SWAMP, BIOME_JUNGLE, BIOME_DARK_FOREST,
   BIOME_BADLANDS, BIOME_MUSHROOM_FIELDS, BIOME_CHERRY_GROVE, BIOME_MEADOW, BIOME_ICE_SPIKES, BIOME_WARM_OCEAN,
   BIOME_COLD_OCEAN, BIOME_DEEP_OCEAN, isOceanBiome,
+  // Fase 7.6: los biomas nuevos.
+  BIOME_RIVER, BIOME_FROZEN_RIVER, BIOME_SNOWY_BEACH, BIOME_STONY_SHORE, BIOME_LUKEWARM_OCEAN, BIOME_DEEP_LUKEWARM_OCEAN,
+  BIOME_DEEP_COLD_OCEAN, BIOME_DEEP_FROZEN_OCEAN, BIOME_SUNFLOWER_PLAINS, BIOME_FLOWER_FOREST, BIOME_OLD_GROWTH_BIRCH_FOREST,
+  BIOME_WINDSWEPT_GRAVELLY_HILLS, BIOME_WINDSWEPT_FOREST, BIOME_GROVE, BIOME_FROZEN_PEAKS, BIOME_JAGGED_PEAKS,
+  BIOME_STONY_PEAKS, BIOME_SNOWY_PLAINS, BIOME_OLD_GROWTH_PINE_TAIGA, BIOME_OLD_GROWTH_SPRUCE_TAIGA, BIOME_SPARSE_JUNGLE,
+  BIOME_BAMBOO_JUNGLE, BIOME_ERODED_BADLANDS, BIOME_WOODED_BADLANDS, BIOME_SAVANNA_PLATEAU, BIOME_WINDSWEPT_SAVANNA,
+  BIOME_MANGROVE_SWAMP, baseBiome,
 } from './biomeIds';
 
 /** Densidad de árboles (probabilidad por celda de 4x4) por bioma. */
 const TREE_DENSITY = [
   0, 0, 0, 0.035, 0.55, 0.5, 0.42, 0.3, 0.05, 0.1, 0.06, 0,
   0.16, 0.85, 0.8, 0.03, 0.035, 0.16, 0.012, 0.03, 0, 0, 0,
+  // Fase 7.6: río, río helado, playa nevada, costa pedregosa, océanos (4), girasoles, flores, abedules viejos,
+  // colinas de grava, bosque ventoso, arboleda, picos (3), llanura nevada, taigas viejas (2), junglas (2),
+  // badlands (2), sabanas (2), manglar y las cuevas.
+  0, 0, 0, 0, 0, 0, 0, 0, 0.02, 0.28, 0.55, 0.03, 0.34, 0.3, 0, 0, 0, 0.012, 0.5, 0.55, 0.18, 0.2,
+  0.07, 0.14, 0.08, 0.07, 0.5, 0, 0,
 ];
 
 /** Color de la hierba de los biomas con color propio (sRGB); el resto sale del clima. */
@@ -52,6 +64,12 @@ const BIOME_GRASS: Record<number, [number, number, number]> = {
   [BIOME_MUSHROOM_FIELDS]: [85, 190, 63],
   [BIOME_CHERRY_GROVE]: [182, 219, 97],
   [BIOME_MEADOW]: [131, 187, 109],
+  // Fase 7.6
+  [BIOME_MANGROVE_SWAMP]: [120, 142, 52],
+  [BIOME_ERODED_BADLANDS]: [144, 129, 77],
+  [BIOME_WOODED_BADLANDS]: [144, 129, 77],
+  [BIOME_SPARSE_JUNGLE]: [110, 190, 70],
+  [BIOME_BAMBOO_JUNGLE]: [89, 196, 60],
 };
 
 /** Terracotas de las franjas de las badlands, con su peso. */
@@ -204,41 +222,62 @@ export class TerrainGenerator {
     out.humid = humid;
     out.mount = mount;
     out.cont = c;
-    out.biome = this.pickBiome(height, temp, humid, mount, c, weird, swamp, mush, mesa);
+    out.biome = this.pickBiome(height, temp, humid, mount, c, weird, swamp, mush, mesa, riverCut);
     return out;
   }
 
   private pickBiome(
     h: number, t: number, hu: number, m: number, c: number, weird: number, swamp: number, mush: number, mesa: number,
+    river = 0,
   ): number {
     if (mush > 0.5 && h >= SEA_LEVEL - 1.5) return BIOME_MUSHROOM_FIELDS;
-    if (swamp > 0.5 && h > SEA_LEVEL - 4) return BIOME_SWAMP;
+    // Fase 7.6: el pantano cálido es de manglares.
+    if (swamp > 0.5 && h > SEA_LEVEL - 4) return t > 0.22 ? BIOME_MANGROVE_SWAMP : BIOME_SWAMP;
+    // Fase 7.6: los cauces de los ríos (helados en el frío).
+    if (river > 0.5 && h < SEA_LEVEL + 1) return t < -0.58 ? BIOME_FROZEN_RIVER : BIOME_RIVER;
     if (h < SEA_LEVEL - 1.5) {
-      if (t < -0.58) return BIOME_FROZEN_OCEAN;
-      if (h < 44) return BIOME_DEEP_OCEAN;
-      if (t < -0.3) return BIOME_COLD_OCEAN;
-      if (t > 0.42) return BIOME_WARM_OCEAN;
-      return BIOME_OCEAN;
+      const deep = h < 44;
+      if (t < -0.58) return deep ? BIOME_DEEP_FROZEN_OCEAN : BIOME_FROZEN_OCEAN;
+      if (t < -0.3) return deep ? BIOME_DEEP_COLD_OCEAN : BIOME_COLD_OCEAN;
+      if (t > 0.42) return deep ? BIOME_DEEP_LUKEWARM_OCEAN : BIOME_WARM_OCEAN;
+      if (t > 0.2) return deep ? BIOME_DEEP_LUKEWARM_OCEAN : BIOME_LUKEWARM_OCEAN;
+      return deep ? BIOME_DEEP_OCEAN : BIOME_OCEAN;
     }
-    if (m > 0.45 && h > 105) return h > 150 || t < -0.35 ? BIOME_SNOWY_PEAKS : BIOME_MOUNTAINS;
+    if (m > 0.45 && h > 105) {
+      // Fase 7.6: cumbres (escarpadas o heladas en el frío; pedregosas si no), laderas nevadas y arboledas en
+      // el frío, y colinas ventosas (de grava o con bosque) más abajo.
+      if (h > 132) return t < -0.2 ? (weird > 0 ? BIOME_JAGGED_PEAKS : BIOME_FROZEN_PEAKS) : BIOME_STONY_PEAKS;
+      if (t < -0.35) return hu > 0.1 ? BIOME_GROVE : BIOME_SNOWY_PEAKS;
+      return weird < -0.3 ? BIOME_WINDSWEPT_GRAVELLY_HILLS : hu > 0.2 ? BIOME_WINDSWEPT_FOREST : BIOME_MOUNTAINS;
+    }
     // Faldas de las montañas: praderas y, a trechos, cerezales.
     if (m > 0.2 && h > 84 && t > -0.26 && t < 0.38) return weird > 0.2 ? BIOME_CHERRY_GROVE : BIOME_MEADOW;
     if (h < SEA_LEVEL + 2.5 && c < 0.12 && m < 0.25) {
-      if (t < -0.58) return BIOME_SNOWY;
+      if (t < -0.58) return BIOME_SNOWY_BEACH;
+      if (weird < -0.45) return BIOME_STONY_SHORE; // costas rocosas a trechos
       return t > 0.35 && hu < 0 ? BIOME_DESERT : BIOME_BEACH;
     }
-    if (t < -0.58) return weird > 0.35 ? BIOME_ICE_SPIKES : BIOME_SNOWY;
-    if (t < -0.26) return BIOME_TAIGA;
+    if (t < -0.58) return weird > 0.35 ? BIOME_ICE_SPIKES : hu < 0 ? BIOME_SNOWY_PLAINS : BIOME_SNOWY;
+    if (t < -0.26) {
+      if (hu > 0.35) return BIOME_OLD_GROWTH_SPRUCE_TAIGA;
+      if (weird > 0.4) return BIOME_OLD_GROWTH_PINE_TAIGA;
+      return BIOME_TAIGA;
+    }
     if (t > 0.38) {
-      if (hu > 0.3) return BIOME_JUNGLE;
-      if (hu < 0.05) return mesa > 0.5 ? BIOME_BADLANDS : BIOME_DESERT;
-      return BIOME_SAVANNA;
+      if (hu > 0.3) return weird > 0.3 ? BIOME_BAMBOO_JUNGLE : hu < 0.4 ? BIOME_SPARSE_JUNGLE : BIOME_JUNGLE;
+      if (hu < 0.05) {
+        if (mesa > 0.5) return h > 90 ? BIOME_WOODED_BADLANDS : weird > 0.45 ? BIOME_ERODED_BADLANDS : BIOME_BADLANDS;
+        return BIOME_DESERT;
+      }
+      if (m > 0.3) return BIOME_WINDSWEPT_SAVANNA;
+      return h > 82 ? BIOME_SAVANNA_PLATEAU : BIOME_SAVANNA;
     }
     if (hu > 0.1) {
       if (hu > 0.42 && t > -0.1) return BIOME_DARK_FOREST;
-      return t < 0.05 && hu > 0.32 ? BIOME_BIRCH_FOREST : BIOME_FOREST;
+      if (t < 0.05 && hu > 0.32) return weird > 0.3 ? BIOME_OLD_GROWTH_BIRCH_FOREST : BIOME_BIRCH_FOREST;
+      return weird > 0.45 ? BIOME_FLOWER_FOREST : BIOME_FOREST;
     }
-    return BIOME_PLAINS;
+    return weird > 0.45 ? BIOME_SUNFLOWER_PLAINS : BIOME_PLAINS;
   }
 
   biomeAt(x: number, z: number): number {
@@ -352,27 +391,81 @@ export class TerrainGenerator {
         topBlock = SAND; filler = SAND; deep = SANDSTONE;
         break;
       case BIOME_BEACH:
+      case BIOME_SNOWY_BEACH: // Fase 7.6: la nieve la pone el paso de la nieve
         topBlock = SAND; filler = SAND; deep = SANDSTONE;
         if (slope > 3.5) { topBlock = STONE; filler = STONE; deep = -1; }
         break;
+      // Fase 7.6
+      case BIOME_STONY_SHORE:
+        topBlock = sn < -0.35 ? GRAVEL : STONE; filler = topBlock;
+        break;
+      case BIOME_RIVER:
+      case BIOME_FROZEN_RIVER:
+        topBlock = sn > 0.45 ? CLAY : sn < -0.35 ? GRAVEL : SAND; filler = topBlock === CLAY ? CLAY : topBlock;
+        break;
+      case BIOME_WINDSWEPT_GRAVELLY_HILLS:
+        if (slope > 4.5) { topBlock = STONE; filler = STONE; } else { topBlock = GRAVEL; filler = GRAVEL; }
+        break;
+      case BIOME_GROVE:
+        topBlock = sn > 0.35 ? SNOW_BLOCK : SNOWY_GRASS;
+        break;
+      case BIOME_FROZEN_PEAKS:
+        topBlock = sn > 0.1 ? PACKED_ICE : sn < -0.45 ? ICE : SNOW_BLOCK; filler = topBlock === ICE ? PACKED_ICE : topBlock;
+        break;
+      case BIOME_JAGGED_PEAKS:
+        if (slope > 6) { topBlock = STONE; filler = STONE; } else { topBlock = SNOW_BLOCK; filler = SNOW_BLOCK; }
+        break;
+      case BIOME_STONY_PEAKS:
+        topBlock = sn > 0.4 ? CALCITE : STONE; filler = STONE;
+        break;
+      case BIOME_SNOWY_PLAINS:
+        topBlock = SNOWY_GRASS;
+        break;
+      case BIOME_BAMBOO_JUNGLE:
+        if (sn > 0.25) topBlock = PODZOL;
+        break;
+      case BIOME_WINDSWEPT_SAVANNA:
+        topBlock = sn > 0.3 ? COARSE_DIRT : sn < -0.3 || slope > 4 ? STONE : GRASS; filler = topBlock === STONE ? STONE : DIRT;
+        break;
+      case BIOME_WOODED_BADLANDS:
+        // Las mesetas altas tienen tierra gruesa y hierba (con robles); lo de abajo, como las badlands.
+        if (top > 88 && slope <= 3) {
+          out[0] = sn > 0 ? GRASS : COARSE_DIRT;
+          out[1] = DIRT;
+          out[2] = -1;
+          out[3] = 2;
+          return out;
+        }
+        if (slope > 3) { topBlock = STONE; filler = STONE; } else { topBlock = RED_SAND; filler = RED_SAND; }
+        out[0] = topBlock;
+        out[1] = filler;
+        out[2] = -1;
+        out[3] = 2;
+        return out;
       case BIOME_OCEAN:
       case BIOME_FROZEN_OCEAN:
       case BIOME_DEEP_OCEAN:
       case BIOME_WARM_OCEAN:
-      case BIOME_COLD_OCEAN: {
+      case BIOME_COLD_OCEAN:
+      case BIOME_LUKEWARM_OCEAN: // Fase 7.6
+      case BIOME_DEEP_LUKEWARM_OCEAN:
+      case BIOME_DEEP_COLD_OCEAN:
+      case BIOME_DEEP_FROZEN_OCEAN: {
         const deepWater = SEA_LEVEL - top;
         topBlock = deepWater > 9 ? GRAVEL : SAND;
         if (sn > 0.55) topBlock = CLAY;
         else if (sn < -0.6) topBlock = GRAVEL;
         // Los mares cálidos tienen fondo de arena; los fríos, sobre todo de grava.
-        if (biome === BIOME_WARM_OCEAN) topBlock = SAND;
-        else if (biome === BIOME_COLD_OCEAN && sn < 0.3) topBlock = GRAVEL;
+        if (biome === BIOME_WARM_OCEAN || biome === BIOME_LUKEWARM_OCEAN || biome === BIOME_DEEP_LUKEWARM_OCEAN) topBlock = SAND;
+        else if ((biome === BIOME_COLD_OCEAN || biome === BIOME_DEEP_COLD_OCEAN || biome === BIOME_DEEP_FROZEN_OCEAN) && sn < 0.3) topBlock = GRAVEL;
         filler = topBlock;
         break;
       }
+      case BIOME_ERODED_BADLANDS:
       case BIOME_BADLANDS:
-        // Arena roja en lo llano; en las laderas asoman las franjas de terracota (ver generate).
-        if (slope > 3) { topBlock = STONE; filler = STONE; }
+        // Arena roja en lo llano; en las laderas asoman las franjas de terracota (ver generate). Fase 7.6: en
+        // las erosionadas, más franjas al aire.
+        if (slope > (biome === BIOME_ERODED_BADLANDS ? 1.5 : 3)) { topBlock = STONE; filler = STONE; }
         else { topBlock = RED_SAND; filler = RED_SAND; }
         out[3] = 2;
         out[0] = topBlock;
@@ -402,7 +495,7 @@ export class TerrainGenerator {
         if (slope > 5.5) { topBlock = STONE; filler = STONE; }
     }
     if (underwater && (topBlock === GRASS || topBlock === SNOWY_GRASS || topBlock === MYCELIUM)) {
-      if (biome === BIOME_SWAMP) topBlock = sn > 0.3 ? CLAY : DIRT;
+      if (baseBiome(biome) === BIOME_SWAMP) topBlock = sn > 0.3 ? CLAY : DIRT;
       else topBlock = sn > 0.2 ? SAND : sn < -0.3 ? GRAVEL : DIRT;
       filler = topBlock === GRAVEL ? GRAVEL : DIRT;
     }
@@ -490,9 +583,10 @@ export class TerrainGenerator {
     const g = layers[0];
     let ok: boolean;
     if (biome === BIOME_DESERT) ok = g === SAND && sy >= SEA_LEVEL;
-    else if (biome === BIOME_BADLANDS) ok = g === RED_SAND && sy >= SEA_LEVEL;
+    else if (biome === BIOME_WOODED_BADLANDS) ok = g === GRASS || g === COARSE_DIRT || (g === RED_SAND && sy >= SEA_LEVEL); // Fase 7.6
+    else if (baseBiome(biome) === BIOME_BADLANDS) ok = g === RED_SAND && sy >= SEA_LEVEL;
     else if (biome === BIOME_ICE_SPIKES) ok = g === SNOW_BLOCK;
-    else ok = g === GRASS || g === SNOWY_GRASS || g === DIRT || g === MYCELIUM;
+    else ok = g === GRASS || g === SNOWY_GRASS || g === DIRT || g === MYCELIUM || g === PODZOL || g === COARSE_DIRT;
     void height;
     void amp;
     return ok ? sy : -1;
@@ -569,7 +663,7 @@ export class TerrainGenerator {
           d++;
         }
         // Badlands: la piedra de las mesetas se vuelve terracota en franjas de colores.
-        if (inf.biome === BIOME_BADLANDS) {
+        if (baseBiome(inf.biome) === BIOME_BADLANDS) {
           for (let y = top; y > SEA_LEVEL - 8; y--) {
             const i = blockIndex(lx, y, lz);
             if (blocks[i] === STONE) blocks[i] = this.bandAt(x0 + lx, y, z0 + lz);
@@ -682,7 +776,7 @@ export class TerrainGenerator {
     vein(COPPER_ORE, this.caveBiomeAt(x0 + 8, z0 + 8) === 2 ? 20 : 9, -16, 112, 9, STONE);
     vein(TUFF, 3, MIN_Y + 5, 0, 32, DEEPSLATE);
     const cb = infos[8 * 16 + 8].biome;
-    if (cb === BIOME_MOUNTAINS || cb === BIOME_SNOWY_PEAKS) vein(EMERALD_ORE, 8, -16, 200, 1, STONE);
+    if (baseBiome(cb) === BIOME_MOUNTAINS || baseBiome(cb) === BIOME_SNOWY_PEAKS) vein(EMERALD_ORE, 8, -16, 200, 1, STONE);
     placeInfested(blocks, cx, cz, seed, cb); // Fase 6 (monstruos): piedra infestada en las montañas
     placeStones(blocks, x0, z0, seed, infos, tops, this.caveBiomeAt(x0 + 8, z0 + 8)); // Fase 6.5 (piedras): barro y azufre
 
@@ -703,6 +797,7 @@ export class TerrainGenerator {
         const r = hashToFloat(hash2(wx, wz, seed ^ 0x9a5));
         const biome = infos[lz * 16 + lx].biome;
         if (biome >= BIOME_SWAMP || (ground === GRASS && (biome === BIOME_PLAINS || biome === BIOME_FOREST))) {
+          // (Fase 7.6: los biomas nuevos, que tienen id mayor, también pasan por aquí.)
           const plant = this.newPlant(biome, ground, top, wx, wz, r);
           if (plant > 0) blocks[above] = plant;
         } else if (ground === GRASS) {
@@ -748,9 +843,10 @@ export class TerrainGenerator {
       const pr = mulberry32(hash2(cx, cz, seed ^ 0x3d1));
       const clx = 3 + Math.floor(pr() * 10), clz = 3 + Math.floor(pr() * 10);
       const b0 = infos[clz * 16 + clx].biome;
+      const bb = baseBiome(b0); // Fase 7.6
       const okBiome = melon
-        ? b0 === BIOME_SAVANNA || b0 === BIOME_PLAINS || b0 === BIOME_JUNGLE
-        : b0 === BIOME_PLAINS || b0 === BIOME_FOREST || b0 === BIOME_TAIGA || b0 === BIOME_BIRCH_FOREST;
+        ? bb === BIOME_SAVANNA || bb === BIOME_PLAINS || bb === BIOME_JUNGLE
+        : bb === BIOME_PLAINS || bb === BIOME_FOREST || bb === BIOME_TAIGA || bb === BIOME_BIRCH_FOREST;
       for (let k = 0; okBiome && k < 10; k++) {
         const lx = clx + Math.floor(pr() * 7) - 3, lz = clz + Math.floor(pr() * 7) - 3;
         if (lx < 0 || lx > 15 || lz < 0 || lz > 15) continue;
@@ -799,7 +895,16 @@ export class TerrainGenerator {
         if (sy < 0) continue;
         const inside = tx >= x0 && tx < x0 + 16 && tz >= z0 && tz < z0 + 16;
         const tr = hashToFloat(hash2(tx, tz, seed ^ 0x3a7));
-        if (biome === BIOME_DESERT || biome === BIOME_BADLANDS) {
+        // Fase 7.6: chimeneas de terracota en las badlands erosionadas y robles en las boscosas.
+        if (biome === BIOME_ERODED_BADLANDS && tr < 0.7) {
+          this.hoodoo(tx, sy + 1, tz, tr, set);
+          continue;
+        }
+        if (biome === BIOME_WOODED_BADLANDS) {
+          this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
+          continue;
+        }
+        if (biome === BIOME_DESERT || baseBiome(biome) === BIOME_BADLANDS) {
           const hgt = 1 + Math.floor(tr * 3);
           for (let k = 1; k <= hgt; k++) set(tx, sy + k, tz, CACTUS, true);
           continue;
@@ -809,9 +914,26 @@ export class TerrainGenerator {
           continue;
         }
         // Fase 6.5 (maderas): mangles en algunos pantanos y algún roble pálido en los bosques oscuros.
+        const tb = baseBiome(biome); // Fase 7.6: lo que no tiene árbol propio, como su bioma base
         if (placeWoodTree(seed, biome, tx, sy + 1, tz, tr, set, (gx, gz) => this.surfaceAt(gx, gz, this.columnInfo(gx, gz, groundInfo)))) {
           // (puesto)
-        } else if (biome === BIOME_TAIGA || biome === BIOME_SNOWY || biome === BIOME_MOUNTAINS) {
+        } else if (biome === BIOME_OLD_GROWTH_PINE_TAIGA || biome === BIOME_OLD_GROWTH_SPRUCE_TAIGA) {
+          // Fase 7.6: piceas gigantes (2×2) y, en la de pinos, rocas de roca musgosa.
+          if (biome === BIOME_OLD_GROWTH_PINE_TAIGA && tr > 0.94) this.boulder(tx, sy, tz, tr, set);
+          else if (tr < 0.45) this.megaSpruce(tx, sy + 1, tz, tr, biome === BIOME_OLD_GROWTH_PINE_TAIGA, set);
+          else this.spruce(tx, sy + 1, tz, tr, set);
+        } else if (biome === BIOME_OLD_GROWTH_BIRCH_FOREST) {
+          this.tallBirch(tx, sy + 1, tz, tr, set);
+        } else if (biome === BIOME_FLOWER_FOREST) {
+          if (tr < 0.25) this.oak(tx, sy + 1, tz, tr, BIRCH_LOG, BIRCH_LEAVES, set);
+          else this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
+        } else if (biome === BIOME_WINDSWEPT_FOREST || biome === BIOME_WINDSWEPT_GRAVELLY_HILLS) {
+          if (tr < 0.6) this.spruce(tx, sy + 1, tz, tr, set);
+          else this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
+        } else if (biome === BIOME_SPARSE_JUNGLE || biome === BIOME_BAMBOO_JUNGLE) {
+          if (tr < 0.4) this.jungleTree(tx, sy + 1, tz, tr, set);
+          else this.jungleBush(tx, sy + 1, tz, set);
+        } else if (tb === BIOME_TAIGA || tb === BIOME_SNOWY || tb === BIOME_MOUNTAINS) {
           this.spruce(tx, sy + 1, tz, tr, set);
         } else if (biome === BIOME_BIRCH_FOREST) {
           if (tr < 0.85) this.oak(tx, sy + 1, tz, tr, BIRCH_LOG, BIRCH_LEAVES, set);
@@ -820,9 +942,9 @@ export class TerrainGenerator {
           if (tr < 0.22) this.oak(tx, sy + 1, tz, tr, BIRCH_LOG, BIRCH_LEAVES, set);
           else if (tr > 0.9) this.bigOak(tx, sy + 1, tz, tr, set);
           else this.oak(tx, sy + 1, tz, tr, OAK_LOG, OAK_LEAVES, set);
-        } else if (biome === BIOME_SAVANNA) {
+        } else if (tb === BIOME_SAVANNA) {
           this.savannaTree(tx, sy + 1, tz, tr, set);
-        } else if (biome === BIOME_SWAMP) {
+        } else if (tb === BIOME_SWAMP) {
           this.swampOak(tx, sy + 1, tz, tr, set);
         } else if (biome === BIOME_JUNGLE) {
           if (tr < 0.12) this.megaJungle(tx, sy + 1, tz, tr, set);
@@ -1051,6 +1173,64 @@ export class TerrainGenerator {
     }
   }
 
+  // ---------------------------------------------------------------- Fase 7.6: árboles y rocas nuevos
+
+  /**
+   * Picea gigante (2×2, como las de las taigas viejas): tronco alto y copa cónica; la de pino sólo tiene
+   * hojas en lo alto.
+   */
+  private megaSpruce(x: number, y: number, z: number, r: number, pine: boolean, set: SetBlock): void {
+    const h = 16 + Math.floor(r * 1000) % 12;
+    for (let k = 0; k < h; k++) for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) set(x + dx, y + k, z + dz, SPRUCE_LOG, true);
+    const top = y + h;
+    const crown = pine ? 6 + Math.floor(r * 37) % 3 : Math.floor(h * 0.7);
+    for (let k = 0; k <= crown; k++) {
+      const yy = top - k;
+      // Radio que crece hacia abajo en escalones (más ancho en las de abeto).
+      const rad = Math.min(pine ? 2.6 : 4.2, 0.6 + k * (pine ? 0.3 : 0.4) - (k % 3 === 2 ? 0.8 : 0));
+      if (rad > 0.4) this.leafDisc(x + 1, yy, z + 1, rad, SPRUCE_LEAVES, set);
+    }
+    set(x, top + 1, z, SPRUCE_LEAVES, false);
+    set(x + 1, top + 1, z + 1, SPRUCE_LEAVES, false);
+  }
+
+  /** Abedul alto de los bosques viejos: tronco de 10 a 14 y copa estrecha. */
+  private tallBirch(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 10 + Math.floor(r * 1000) % 5;
+    for (let k = 0; k < h; k++) set(x, y + k, z, BIRCH_LOG, true);
+    const top = y + h - 1;
+    for (let dy = -3; dy <= 1; dy++) this.leafDisc(x + 0.5, top + dy, z + 0.5, dy === 1 ? 0.8 : dy === -3 ? 1.6 : 2.1, BIRCH_LEAVES, set);
+  }
+
+  /** Roca de roca musgosa (y algo de roca) de las taigas de pinos viejos, medio enterrada. */
+  private boulder(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const rad = 1 + Math.floor(r * 100) % 2;
+    for (let dy = -1; dy <= rad; dy++) {
+      for (let dz = -rad; dz <= rad; dz++) {
+        for (let dx = -rad; dx <= rad; dx++) {
+          if (dx * dx + dz * dz + dy * dy * 1.5 > rad * rad + 0.8) continue;
+          const moss = hash3(x + dx, y + dy, z + dz, this.seed ^ 0xb01d) % 4 !== 0;
+          set(x + dx, y + dy, z + dz, moss ? MOSSY_COBBLESTONE : STONE, true);
+        }
+      }
+    }
+  }
+
+  /** Chimenea de terracota de las badlands erosionadas: una columna ancha abajo que se estrecha arriba, en franjas. */
+  private hoodoo(x: number, y: number, z: number, r: number, set: SetBlock): void {
+    const h = 6 + Math.floor(r * 1000) % 16;
+    for (let k = -2; k < h; k++) {
+      const rad = k < h * 0.35 ? 1.6 : k < h * 0.75 ? 1.1 : 0.5;
+      const ri = Math.ceil(rad);
+      for (let dz = -ri; dz <= ri; dz++) {
+        for (let dx = -ri; dx <= ri; dx++) {
+          if (dx * dx + dz * dz > rad * rad + 0.3) continue;
+          set(x + dx, y + k, z + dz, this.bandAt(x + dx, y + k, z + dz), true);
+        }
+      }
+    }
+  }
+
   // ---------------------------------------------------------------- árboles de la fase 5
 
   /** ¿Está (x, z) dentro del disco de hojas de radio `rad` centrado en (cx, cz)? (borde irregular) */
@@ -1276,11 +1456,38 @@ export class TerrainGenerator {
     const kind = this.nFlowers.noise2(wx / 20 + 100, wz / 20);
     const f = hashToFloat(hash2(wx, wz, seed ^ 0x77f));
     const mushroom = r > 0.997 ? RED_MUSHROOM : BROWN_MUSHROOM;
-    if (ground === WATER) return biome === BIOME_SWAMP && top === SEA_LEVEL - 1 && r < 0.07 ? LILY_PAD : 0;
+    if (ground === WATER) return baseBiome(biome) === BIOME_SWAMP && top === SEA_LEVEL - 1 && r < 0.07 ? LILY_PAD : 0;
     if (ground === MYCELIUM) return r < 0.015 ? mushroom : 0;
-    if (ground === RED_SAND) return biome === BIOME_BADLANDS && r < 0.012 ? DEAD_BUSH : 0;
-    if (ground !== GRASS) return 0;
+    if (ground === RED_SAND) return baseBiome(biome) === BIOME_BADLANDS && r < 0.012 ? DEAD_BUSH : 0;
+    if (ground !== GRASS && ground !== PODZOL && ground !== COARSE_DIRT) return 0;
+    // Fase 7.6: lo propio de los biomas nuevos; lo demás, como su bioma base.
     switch (biome) {
+      case BIOME_FLOWER_FOREST:
+        // Flores por todas partes, por rodales de cada tipo.
+        if (r < 0.55) {
+          const all = [POPPY, DANDELION, FLOWERS.allium, FLOWERS.azure_bluet, FLOWERS.red_tulip, FLOWERS.orange_tulip,
+            FLOWERS.white_tulip, FLOWERS.pink_tulip, FLOWERS.oxeye_daisy, CORNFLOWER, FLOWERS.lily_of_the_valley];
+          return all[Math.floor((kind * 0.5 + 0.5) * all.length * 0.999)];
+        }
+        return r < 0.7 ? SHORT_GRASS : 0;
+      case BIOME_OLD_GROWTH_PINE_TAIGA:
+      case BIOME_OLD_GROWTH_SPRUCE_TAIGA:
+        if (r > 0.985) return mushroom;
+        return r < 0.3 ? FERN : r < 0.45 ? SHORT_GRASS : 0;
+      case BIOME_SNOWY_PLAINS:
+      case BIOME_GROVE:
+        return r < 0.04 ? SHORT_GRASS : 0;
+      case BIOME_SPARSE_JUNGLE:
+      case BIOME_BAMBOO_JUNGLE:
+        return r < 0.3 ? SHORT_GRASS : r < 0.45 ? FERN : 0;
+      case BIOME_WINDSWEPT_SAVANNA:
+      case BIOME_SAVANNA_PLATEAU:
+        return r < 0.35 ? SHORT_GRASS : 0;
+      case BIOME_WOODED_BADLANDS:
+        return r < 0.15 ? SHORT_GRASS : 0;
+    }
+    if (ground !== GRASS) return 0;
+    switch (baseBiome(biome)) {
       case BIOME_PLAINS:
       case BIOME_FOREST: {
         if (flowers > 0.45 && r < 0.3) {
@@ -1440,7 +1647,7 @@ export class TerrainGenerator {
         const x = Math.round(Math.cos(a) * r);
         const z = Math.round(Math.sin(a) * r);
         this.columnInfo(x, z, info);
-        if (info.biome === BIOME_OCEAN || info.biome === BIOME_FROZEN_OCEAN || info.mount > 0.35) continue;
+        if (isOceanBiome(info.biome) || baseBiome(info.biome) === BIOME_OCEAN || info.mount > 0.35) continue; // Fase 7.6: ni ríos
         const y = this.surfaceAt(x, z, info);
         if (y >= SEA_LEVEL && y < 110) return { x: x + 0.5, y: y + 1, z: z + 0.5 };
       }

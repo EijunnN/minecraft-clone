@@ -17,7 +17,7 @@ import { mulberry32 } from './noise';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
 import { iglooBrick } from './materialDecor'; // Fase 6.5 (materiales)
 import {
-  BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN,
+  BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN, baseBiome,
 } from './biomeIds';
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
@@ -170,7 +170,7 @@ const GRID: GridType[] = [
   {
     key: 'jungle_temple', spacing: 32, separation: 8, salt: 14357619, radius: 9,
     site: (gen, x, z, inf) => {
-      if (inf.biome !== BIOME_JUNGLE) return null;
+      if (baseBiome(inf.biome) !== BIOME_JUNGLE) return null;
       const [h, slope] = flatness(gen, x, z, 6);
       return slope <= 6 && h >= SEA_LEVEL ? h : null;
     },
@@ -179,7 +179,7 @@ const GRID: GridType[] = [
   {
     key: 'shipwreck', spacing: 24, separation: 4, salt: 165745295, radius: 11,
     site: (gen, x, z, inf) => {
-      if (!(isOceanBiome(inf.biome) && inf.biome !== BIOME_FROZEN_OCEAN) && inf.biome !== BIOME_BEACH) return null;
+      if (!(isOceanBiome(inf.biome) && inf.biome !== BIOME_FROZEN_OCEAN) && baseBiome(inf.biome) !== BIOME_BEACH) return null;
       const h = gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp));
       return h < SEA_LEVEL - 4 ? h : null;
     },
@@ -197,7 +197,7 @@ const GRID: GridType[] = [
   {
     key: 'igloo', spacing: 32, separation: 8, salt: 14357618, radius: 5,
     site: (gen, x, z, inf) => {
-      if (inf.biome !== BIOME_SNOWY && inf.biome !== BIOME_ICE_SPIKES) return null;
+      if (baseBiome(inf.biome) !== BIOME_SNOWY && inf.biome !== BIOME_ICE_SPIKES) return null;
       const [h, slope] = flatness(gen, x, z, 4);
       return slope <= 3 && h >= SEA_LEVEL ? h : null;
     },

@@ -13,7 +13,7 @@ import {
 } from '../blocks';
 import { MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
 import { Simplex, mulberry32 } from './noise';
-import { BIOME_TAIGA, BIOME_SNOWY_PEAKS, BIOME_MOUNTAINS } from './biomeIds';
+import { BIOME_TAIGA, BIOME_SNOWY_PEAKS, BIOME_MOUNTAINS, BIOME_GROVE, BIOME_OLD_GROWTH_PINE_TAIGA, BIOME_OLD_GROWTH_SPRUCE_TAIGA, baseBiome } from './biomeIds';
 import type { ColumnInfo } from './terrain';
 
 /** Distancia en el índice entre una fila y la siguiente. */
@@ -37,7 +37,10 @@ export function decorateMaterials(
   const x0 = cx * 16, z0 = cz * 16;
   for (let lz = 0; lz < 16; lz++) {
     for (let lx = 0; lx < 16; lx++) {
-      const biome = infos[lz * 16 + lx].biome;
+      // Fase 7.6: por su bioma base (las taigas viejas son taigas; los picos, laderas y colinas); la
+      // arboleda nevada también tiene nieve polvo.
+      const specific = infos[lz * 16 + lx].biome;
+      const biome = specific === BIOME_GROVE ? BIOME_SNOWY_PEAKS : baseBiome(specific);
       if (biome !== BIOME_TAIGA && biome !== BIOME_SNOWY_PEAKS && biome !== BIOME_MOUNTAINS) continue;
       // Suelo de la columna (antes de los árboles).
       const y = tops[lz * 16 + lx];
@@ -48,7 +51,10 @@ export function decorateMaterials(
       if (biome === BIOME_TAIGA) {
         if (top !== GRASS) continue;
         const v = nz.soil.noise2(wx / 22, wz / 22);
-        if (v > 0.38) blocks[i] = PODZOL;
+        // Las taigas viejas tienen mucho más podsol y tierra gruesa (como en Minecraft).
+        const old = specific === BIOME_OLD_GROWTH_PINE_TAIGA || specific === BIOME_OLD_GROWTH_SPRUCE_TAIGA;
+        if (old && v < -0.2) blocks[i] = COARSE_DIRT;
+        else if (v > (old ? -0.2 : 0.38)) blocks[i] = PODZOL;
         else if (v < -0.62 && hashToFloat(hash2(wx, wz, seed ^ 0xc0a5)) < 0.6) blocks[i] = COARSE_DIRT;
         continue;
       }

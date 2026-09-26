@@ -22,6 +22,8 @@ import { Simplex } from './noise';
 import {
   BIOME_OCEAN, BIOME_FROZEN_OCEAN, BIOME_WARM_OCEAN, BIOME_COLD_OCEAN, BIOME_DEEP_OCEAN, BIOME_PLAINS, BIOME_FOREST,
   BIOME_BIRCH_FOREST, BIOME_DARK_FOREST, BIOME_TAIGA, BIOME_SNOWY, BIOME_JUNGLE, BIOME_SAVANNA, BIOME_MEADOW,
+  // Fase 7.6: los océanos nuevos y las variantes con flores.
+  BIOME_DEEP_FROZEN_OCEAN, BIOME_DEEP_COLD_OCEAN, BIOME_SUNFLOWER_PLAINS, BIOME_FLOWER_FOREST, isOceanBiome, baseBiome,
 } from './biomeIds';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
 import { rootColumn } from './materialDecor'; // Fase 6.5 (materiales)
@@ -75,8 +77,7 @@ function decorateOcean(seed: number, nz: Noises, blocks: Uint16Array, infos: Col
   for (let lz = 0; lz < 16; lz++) {
     for (let lx = 0; lx < 16; lx++) {
       const biome = infos[lz * 16 + lx].biome;
-      if (biome !== BIOME_OCEAN && biome !== BIOME_WARM_OCEAN && biome !== BIOME_COLD_OCEAN && biome !== BIOME_DEEP_OCEAN &&
-        biome !== BIOME_FROZEN_OCEAN) continue;
+      if (!isOceanBiome(biome)) continue; // Fase 7.6: también los templados y los profundos
       let y = SEA_LEVEL - 1;
       if (blocks[blockIndex(lx, y, lz)] === ICE) y--;
       if (blocks[blockIndex(lx, y, lz)] !== WATER) continue;
@@ -123,10 +124,10 @@ function decorateOcean(seed: number, nz: Noises, blocks: Uint16Array, infos: Col
         } else if (r < (reef ? 0.64 : 0.325)) {
           blocks[at(fy)] = seaPickleBlock(1 + Math.floor(r2 * 4), true);
         }
-      } else if (biome === BIOME_FROZEN_OCEAN) {
+      } else if (biome === BIOME_FROZEN_OCEAN || biome === BIOME_DEEP_FROZEN_OCEAN) {
         if (r < 0.06) blocks[at(fy)] = SEAGRASS_SHORT;
       } else {
-        const forest = depth >= 3 && nz.kelp.noise2(wx / 40, wz / 40) > (biome === BIOME_COLD_OCEAN ? -0.1 : 0.05);
+        const forest = depth >= 3 && nz.kelp.noise2(wx / 40, wz / 40) > (biome === BIOME_COLD_OCEAN || biome === BIOME_DEEP_COLD_OCEAN ? -0.1 : 0.05);
         if (forest && r < 0.5) {
           // Alga de varios bloques: tallos y una punta (a veces llega a la superficie).
           const h = Math.max(1, Math.min(depth, 2 + Math.floor(r2 * Math.min(depth, 16))));
@@ -195,7 +196,10 @@ function decorateLand(
         continue;
       }
       const patch = nz.patch.noise2(wx / 34, wz / 34);
-      switch (biome) {
+      // Fase 7.6: la llanura de girasoles y el bosque de flores, llenos; los demás, como su bioma base.
+      if (biome === BIOME_SUNFLOWER_PLAINS && r < 0.22 && tall(SUNFLOWER)) continue;
+      if (biome === BIOME_FLOWER_FOREST && r < 0.12 && tall([LILAC, ROSE_BUSH, PEONY][Math.floor(r2 * 3)])) continue;
+      switch (baseBiome(biome)) {
         case BIOME_PLAINS:
           if (patch > 0.5 && r < 0.14) tall(SUNFLOWER);
           else if (cur === SHORT_GRASS && r < 0.2) tall(TALL_GRASS);

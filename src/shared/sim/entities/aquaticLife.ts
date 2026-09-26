@@ -10,7 +10,7 @@ import {
 import { WATER_BUCKET } from '../../items';
 import { AIR, SAND, RED_SAND, GRASS, DIRT, CLAY, ICE, PACKED_ICE, BLOCK_FLUID, BLOCK_SOLID, BLOCK_REPLACEABLE, turtleEggBlock, isTurtleEgg } from '../../blocks';
 import {
-  BIOME_OCEAN, BIOME_FROZEN_OCEAN, BIOME_BEACH, BIOME_SWAMP, BIOME_WARM_OCEAN, BIOME_COLD_OCEAN, BIOME_DEEP_OCEAN, isOceanBiome,
+  BIOME_OCEAN, BIOME_FROZEN_OCEAN, BIOME_BEACH, BIOME_SWAMP, BIOME_WARM_OCEAN, BIOME_COLD_OCEAN, BIOME_DEEP_OCEAN, isOceanBiome, baseBiome,
 } from '../../world/biomeIds';
 import { EF_ACTION, EF_ANGRY } from '../../protocol';
 import { EFFECT_POISON } from '../../effects';
@@ -752,7 +752,7 @@ export class AquaticLife {
 
   /** Criatura del agua abierta según el bioma (0: ninguna). */
   waterMobFor(biome: number, r: number): number {
-    switch (biome) {
+    switch (baseBiome(biome)) { // Fase 7.6: los océanos y ríos nuevos, como su base
       case BIOME_WARM_OCEAN:
         return r < 0.62 ? MOB_TROPICAL_FISH : r < 0.9 ? MOB_PUFFERFISH : MOB_DOLPHIN;
       case BIOME_OCEAN:
@@ -800,8 +800,8 @@ export class AquaticLife {
     }
     // Tierra: tortugas en las playas y ranas en los pantanos, siempre junto al agua.
     let type = 0;
-    if (biome === BIOME_BEACH && (surface === SAND || surface === RED_SAND)) type = this.m.rand() < 0.35 ? MOB_TURTLE : 0;
-    else if (biome === BIOME_SWAMP && (surface === GRASS || surface === DIRT || surface === CLAY)) type = MOB_FROG;
+    if (baseBiome(biome) === BIOME_BEACH && (surface === SAND || surface === RED_SAND)) type = this.m.rand() < 0.35 ? MOB_TURTLE : 0;
+    else if (baseBiome(biome) === BIOME_SWAMP && (surface === GRASS || surface === DIRT || surface === CLAY)) type = MOB_FROG;
     if (!type || !this.room(type, ax, az) || !this.waterNear(x, top, z, 5)) return 0;
     const born = this.group(type, x, top + 1, z, (gx, gy, gz) => {
       const f = w.getBlock(gx, gy - 1, gz);

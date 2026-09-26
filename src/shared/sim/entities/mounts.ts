@@ -3,7 +3,7 @@
 // montura que guía su jinete (no piensa ni se mueve sola) y el escupitajo de la llama enfadada.
 // Quién monta qué lo lleva el sistema de monturas del servidor (server/riding.ts).
 import { MOBS, MOB_PIG, MOB_HORSE, MOB_DONKEY, MOB_LLAMA, MOB_CAMEL } from '../../mobs';
-import { BIOME_PLAINS, BIOME_SAVANNA, BIOME_MOUNTAINS, BIOME_DESERT } from '../../world/biomeIds';
+import { BIOME_PLAINS, BIOME_SAVANNA, BIOME_MOUNTAINS, BIOME_DESERT, baseBiome } from '../../world/biomeIds';
 import { SADDLE, GOLDEN_APPLE, BREED_FOOD } from '../../items';
 import { HAY_BALE } from '../../blocks';
 import { EF_SADDLE, EF_TAMED, EF_RIDDEN, EF_ACTION } from '../../protocol';
@@ -192,7 +192,7 @@ export class MountLife {
  * desierto.
  */
 export function mountSpawnFor(biome: number, r: number): number {
-  switch (biome) {
+  switch (baseBiome(biome)) {
     case BIOME_PLAINS:
       return r < 0.12 ? MOB_HORSE : r < 0.16 ? MOB_DONKEY : 0;
     case BIOME_SAVANNA:

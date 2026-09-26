@@ -5,7 +5,7 @@
 import { MOBS, MOB_BEE, MOB_PANDA, MOB_PARROT, MOB_ARMADILLO } from '../../mobs';
 import { GRASS, DIRT, SAND, RED_SAND, TERRACOTTA, COLORED_TERRACOTTA, isLeaves, BLOCK_SOLID } from '../../blocks';
 import { ARMADILLO_SCUTE, BRUSH, BREED_FOOD } from '../../items';
-import { BIOME_JUNGLE, BIOME_SAVANNA, BIOME_BADLANDS } from '../../world/biomeIds';
+import { BIOME_JUNGLE, BIOME_SAVANNA, BIOME_BADLANDS, baseBiome } from '../../world/biomeIds';
 import { EF_FAUNA_A, EF_FAUNA_B } from '../../fauna';
 import { moveBody } from '../physics';
 import { GRAVITY, lerpAngle, type PlayerView, type InteractResult, type Entity } from './types';
@@ -324,6 +324,7 @@ export function faunaInteract(m: Entities, e: Entity, item: number, creative: bo
 /** Animal de la fauna nueva para un bioma (0: ninguno; entonces decide el spawner de siempre). */
 export function faunaPassiveFor(biome: number, rand: () => number): number {
   const r = rand();
+  biome = baseBiome(biome); // Fase 7.6
   if (biome === BIOME_JUNGLE) return r < 0.35 ? MOB_PARROT : r < 0.6 ? MOB_PANDA : 0;
   if (biome === BIOME_SAVANNA) return r < 0.3 ? MOB_ARMADILLO : 0;
   if (biome === BIOME_BADLANDS) return r < 0.7 ? MOB_ARMADILLO : 0;

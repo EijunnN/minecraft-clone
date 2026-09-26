@@ -4,7 +4,7 @@
 import { STONE, INFESTED_STONE } from '../blocks';
 import { MIN_Y, blockIndex, hash2 } from '../constants';
 import { mulberry32 } from './noise';
-import { BIOME_MOUNTAINS, BIOME_SNOWY_PEAKS } from './biomeIds';
+import { BIOME_MOUNTAINS, BIOME_SNOWY_PEAKS, baseBiome } from './biomeIds';
 
 /** Por debajo de esta altura aparecen los slimes de los chunks de slime. */
 export const SLIME_CHUNK_MAX_Y = 40;
@@ -19,7 +19,8 @@ export function isSlimeChunk(seed: number, cx: number, cz: number): boolean {
  * aleatorio para no alterar el resto del terreno.
  */
 export function placeInfested(blocks: Uint16Array, cx: number, cz: number, seed: number, biome: number): void {
-  if (biome !== BIOME_MOUNTAINS && biome !== BIOME_SNOWY_PEAKS) return;
+  const base = baseBiome(biome); // Fase 7.6: también los picos y las colinas nuevas
+  if (base !== BIOME_MOUNTAINS && base !== BIOME_SNOWY_PEAKS) return;
   const rng = mulberry32(hash2(cx, cz, (seed ^ 0x51f7e5) | 0));
   for (let n = 0; n < 7; n++) {
     let x = Math.floor(rng() * 16), y = Math.floor(rng() * 64), z = Math.floor(rng() * 16);

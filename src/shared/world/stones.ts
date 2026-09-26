@@ -5,7 +5,7 @@
 // Usa su propio generador aleatorio (hash de la posición) para no alterar el resto del terreno.
 import { STONE, DEEPSLATE, TUFF, GRANITE, DIORITE, ANDESITE, DIRT, GRAVEL, GRASS, CLAY, SAND, WATER, MUD, SULFUR, CINNABAR } from '../blocks';
 import { MIN_Y, SEA_LEVEL, blockIndex, hash2, hash3, hashToFloat } from '../constants';
-import { BIOME_SWAMP } from './biomeIds';
+import { BIOME_SWAMP, BIOME_MANGROVE_SWAMP, baseBiome } from './biomeIds';
 
 /** Tamaño de las celdas en las que puede haber (o no) una cueva de azufre. */
 const SULFUR_CELL = 128;
@@ -89,8 +89,10 @@ function placeMud(
 ): void {
   for (let lz = 0; lz < 16; lz++) {
     for (let lx = 0; lx < 16; lx++) {
-      if (biomes[lz * 16 + lx].biome !== BIOME_SWAMP) continue;
-      const n = valueNoise(x0 + lx, z0 + lz, 6, seed ^ 0x6d0d);
+      const b = biomes[lz * 16 + lx].biome;
+      if (baseBiome(b) !== BIOME_SWAMP) continue;
+      // Fase 7.6: el pantano de manglares es casi todo barro.
+      const n = b === BIOME_MANGROVE_SWAMP ? 1 : valueNoise(x0 + lx, z0 + lz, 6, seed ^ 0x6d0d);
       let y = tops[lz * 16 + lx];
       let underwater = false;
       while (y > MIN_Y + 1 && blocks[blockIndex(lx, y, lz)] === WATER) {

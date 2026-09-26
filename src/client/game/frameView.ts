@@ -8,6 +8,7 @@ import { STATE_INVISIBLE } from '../../shared/potions';
 import { hasGlint } from '../../shared/enchantments';
 import { isVehicleType } from '../../shared/vehicles';
 import { TerrainGenerator, BIOME_NAMES } from '../../shared/world/terrain';
+import { BIOME_LUSH_CAVES, BIOME_DRIPSTONE_CAVES } from '../../shared/world/biomeIds';
 import { isDeepDark } from '../../shared/world/deepDark';
 import { OFFHAND } from './Inventory';
 import { useLook } from './equipmentInteraction';
@@ -208,7 +209,12 @@ export function debugText(g: Game, eye: EyeLight, sky: SkyState, counts: { mobs:
   const world = g.world!;
   const gen = world.generator;
   // Fase 7.5 (abismo): el Deep Dark es un bioma de cueva (depende también de la altura).
-  const biome = isDeepDark(gen, Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)) ? 'Deep Dark' : BIOME_NAMES[gen.biomeAt(Math.floor(p.x), Math.floor(p.z))];
+  const bx = Math.floor(p.x), bz = Math.floor(p.z);
+  // Fase 7.6: bajo tierra, también las cuevas frondosas y las de goteo.
+  const cave = p.y < gen.columnInfo(bx, bz).height - 12 ? gen.caveBiomeAt(bx, bz) : 0;
+  const biome = isDeepDark(gen, bx, Math.floor(p.y), bz) ? 'Deep Dark'
+    : cave === 1 ? BIOME_NAMES[BIOME_LUSH_CAVES] : cave === 2 ? BIOME_NAMES[BIOME_DRIPSTONE_CAVES]
+      : BIOME_NAMES[gen.biomeAt(bx, bz)];
   const hours = Math.floor(((sky.dayTime * 24 + 6) % 24));
   const mins = Math.floor(((sky.dayTime * 24 * 60) % 60));
   const r = g.renderer;

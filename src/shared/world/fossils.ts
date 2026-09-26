@@ -11,7 +11,7 @@ import {
 import { MIN_Y, hash2, hash3 } from '../constants';
 import type { VillageCanvas, VillageStart } from './villages';
 import type { TerrainGenerator } from './terrain';
-import { BIOME_DESERT, BIOME_SWAMP } from './biomeIds';
+import { BIOME_DESERT, BIOME_SWAMP, baseBiome } from './biomeIds';
 
 /** Radio de la caja alrededor del origen (el espinazo más largo mide 13). */
 export const FOSSIL_RADIUS = 8;
@@ -29,7 +29,7 @@ type Canvas = Pick<VillageCanvas, 'get' | 'set'>;
  * Minecraft, no vale si más de 4 de las 8 esquinas de su caja caen en una cueva.
  */
 export function fossilSite(gen: TerrainGenerator, x: number, z: number, biome: number, surface: number): number | null {
-  if (biome !== BIOME_DESERT && biome !== BIOME_SWAMP) return null;
+  if (biome !== BIOME_DESERT && baseBiome(biome) !== BIOME_SWAMP) return null;
   const h = hash2(x, z, gen.seed ^ 0xf055);
   const y = h % 2 === 0 ? Math.max(surface - 15 - ((h >>> 3) % 10), MIN_Y + 10) : -56 + ((h >>> 5) % 47);
   const { pieces } = fossilPieces(gen.seed, x, z);
