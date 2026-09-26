@@ -539,7 +539,12 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
   (sólo cambia el nombre interno) y los discos que faltan son de las fases 8 (Pigstep, Tears) y 9
   (Relic, Creator, Precipice, Bounce, Lava Chicken). Como los mapas se dibujan en vivo, uno bloqueado
   deja de cambiar una vez dibujado en esa sesión (no guarda los píxeles).
-- **Ciudad antigua** con edificios más detallados.
+- ✅ **Ciudad antigua** con edificios más detallados: casas y barracones con zócalo, pilastras, franjas,
+  ventanas con barrotes, techo de roble oscuro y tejado a dos aguas con alero (dentro, camas de lana,
+  alfombra, farol colgado y cofre); torres por pisos (base con faldón, cuerpo con saeteras, remate volado
+  sobre ménsulas con barandilla y aguja con farol, escalera de mano por dentro) que caben bajo la bóveda;
+  pasarelas elevadas entre torres vecinas; costillas del centro con pilares, arcos y faroles colgados y
+  barandillas en las escalinatas; farolas con pie cincelado.
 - **Los ~30 biomas que faltan** (montañas, colinas ventosas, taigas y abedulares viejos, jungla de
   bambú y dispersa, badlands erosionadas y boscosas, manglar, bosque de flores, océanos templados y
   profundos, costa pedregosa, cuevas como biomas…), con la selección por ruidos de Java.

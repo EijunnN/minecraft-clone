@@ -11,7 +11,7 @@ import {
   AIR, SCULK, SCULK_SENSOR, SCULK_CATALYST, REINFORCED_DEEPSLATE, DEEPSLATE, COBBLED_DEEPSLATE, POLISHED_DEEPSLATE,
   DEEPSLATE_BRICKS, CRACKED_DEEPSLATE_BRICKS, DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES, CHISELED_DEEPSLATE, SLABS, STAIRS,
   WALLS, WOOL, CARPETS, CANDLE, PACKED_ICE, BLUE_ICE, SNOW_BLOCK, SOUL_SAND, SOUL_FIRE, SOUL_LANTERN, SKULLS, DARK_OAK_PLANKS,
-  FENCES, BLOCK_FLUID, stateOf, candleState, shriekerFor, veinWith, BLOCK_OPAQUE,
+  FENCES, BLOCK_FLUID, stateOf, candleState, shriekerFor, veinWith, BLOCK_OPAQUE, LADDER, TRAPDOORS,
 } from '../blocks';
 import { hash2, hash3 } from '../constants';
 import { mulberry32 } from './noise';
@@ -72,6 +72,8 @@ interface Plan {
   lots: Lot[];
   /** El portal mira a lo largo de x (true) o de z. */
   alongX: boolean;
+  /** Pasarelas elevadas entre torres vecinas (índices en lots). */
+  bridges: [number, number][];
 }
 
 const plans = new Map<string, Plan>();
@@ -104,7 +106,14 @@ function planOf(s: CityStart): Plan {
   }
   // Una nevera como mínimo (como en Minecraft).
   if (!lots.some((l) => l.kind === 'ice_box') && lots.length) lots[Math.floor(rnd() * lots.length)].kind = 'ice_box';
-  p = { lots, alongX: (s.rng & 1) === 0 };
+  // Pasarelas: entre dos torres de solares contiguos (en la misma fila o columna).
+  const bridges: [number, number][] = [];
+  lots.forEach((a, i) => lots.forEach((b, j) => {
+    if (j <= i || a.kind !== 'tower' || b.kind !== 'tower') return;
+    const near = (a.u === b.u && Math.abs(a.v - b.v) === 13) || (a.v === b.v && Math.abs(a.u - b.u) === 13);
+    if (near && towerHeight(a) >= BRIDGE_Y + 3 && towerHeight(b) >= BRIDGE_Y + 3) bridges.push([i, j]);
+  }));
+  p = { lots, alongX: (s.rng & 1) === 0, bridges };
   plans.set(key, p);
   return p;
 }
@@ -169,6 +178,7 @@ export function buildAncientCity(c: CityCanvas, s: CityStart): void {
   streets(d);
   centerPiece(d, plan.alongX);
   for (const lot of plan.lots) if (d.touches(lot.u - 1, lot.v - 1, lot.u + lot.size, lot.v + lot.size)) buildLot(d, lot);
+  for (const [i, j] of plan.bridges) bridge(d, plan.lots[i], plan.lots[j]);
   overgrow(d);
 }
 
@@ -213,13 +223,7 @@ function streets(d: Draw): void {
     if (Math.abs(v) > 19) avenue(u, v, u);
   });
   // Farolas de alma a lo largo de las avenidas (sobre un muro de ladrillo).
-  for (const k of [26, 40]) {
-    for (const [pu, pv] of [[k, 4], [-k, -4], [4, -k], [-4, k]]) {
-      d.set(pu, d.y0, pv, stateOf(WALLS.deepslate_brick, {}));
-      d.set(pu, d.y0 + 1, pv, stateOf(WALLS.deepslate_brick, {}));
-      d.set(pu, d.y0 + 2, pv, SOUL_LANTERN);
-    }
-  }
+  for (const k of [26, 40]) for (const [pu, pv] of [[k, 4], [-k, -4], [4, -k], [-4, k]]) lampPost(d, pu, pv);
 }
 
 /** Silueta del marco (21 × 16, de arriba abajo): R pizarra reforzada. */
@@ -273,13 +277,30 @@ function centerPiece(d: Draw, alongX: boolean): void {
       }
     }
   }
-  // Costillas: a los lados del marco, arcos de azulejos (más altos en el centro) con huecos.
+  // Costillas: a los lados del marco, pilares de pizarra pulida con capitel cincelado, unidos arriba por
+  // arcos de escaleras invertidas y una viga de losas; faroles de alma colgados entre los pilares.
   for (const side of [-1, 1]) {
     for (let b = -7; b <= 7; b++) {
-      if (Math.abs(b) % 3 === 2) continue;
       const [u, v] = P(side * 13, b);
-      const h = 8 - Math.floor(Math.abs(b) / 2);
-      for (let yy = y + 1; yy <= y + h; yy++) d.set(u, yy, v, tile(d, u, yy, v));
+      const top = y + 9 - Math.floor(Math.abs(b) / 3);
+      if (Math.abs(b) % 3 === 0) {
+        for (let yy = y + 1; yy < top; yy++) d.set(u, yy, v, yy === top - 1 ? CHISELED_DEEPSLATE : POLISHED_DEEPSLATE);
+      } else {
+        // Arco: escalera invertida pegada al pilar más cercano.
+        const toward = Math.abs(b) % 3 === 1 ? -Math.sign(b) || 1 : Math.sign(b);
+        const [tu, tv] = P(0, toward);
+        const facing = tu > 0 ? 1 : tu < 0 ? 3 : tv > 0 ? 2 : 0;
+        d.set(u, top - 1, v, stateOf(STAIRS.deepslate_tile, { facing, half: 1 }));
+        if (Math.abs(b) % 3 === 2 && Math.abs(b) < 7) d.set(u, top - 2, v, stateOf(SOUL_LANTERN, { hanging: 1 }));
+      }
+      d.set(u, top, v, stateOf(SLABS.deepslate_tile, { type: 0 }));
+    }
+  }
+  // Barandillas de muro a los lados de las escalinatas.
+  for (const a of [-5, 5]) {
+    for (const b of [9, -9, 8, -8, 7, -7, 6, -6]) {
+      const [u, v] = P(a, b);
+      d.set(u, Math.abs(b) >= 8 ? y : y + 1, v, stateOf(WALLS.deepslate_tile, {}));
     }
   }
   // Velas apagadas y sculk a los pies del marco; dos chilladores y un catalizador en las esquinas.
@@ -319,62 +340,222 @@ function doorCell(u0: number, v0: number, n: number, door: number): [number, num
   return door === 0 ? [u0 + m, v0] : door === 1 ? [u0 + n - 1, v0 + m] : door === 2 ? [u0 + m, v0 + n - 1] : [u0, v0 + m];
 }
 
-/** Casa (o barracón, más grande y con literas de lana): muros de ladrillo, tejado de losas y un cofre. */
+const DU = [0, 1, 0, -1];
+const DV = [-1, 0, 1, 0];
+const wall = (id: number) => stateOf(id, {});
+/** Escalera cuyo lado alto mira a `facing` (0 N, 1 E, 2 S, 3 O); `top`, invertida. */
+const stair = (id: number, facing: number, top = false) => stateOf(id, { facing: facing & 3, half: top ? 1 : 0 });
+const slab = (id: number, top = false) => stateOf(id, { type: top ? 1 : 0 });
+
+/** Farola: pie cincelado, dos muros de ladrillo, una losa y el farol de alma. */
+function lampPost(d: Draw, u: number, v: number): void {
+  const y = d.y0;
+  d.set(u, y, v, CHISELED_DEEPSLATE);
+  d.set(u, y + 1, v, wall(WALLS.deepslate_brick));
+  d.set(u, y + 2, v, wall(WALLS.deepslate_brick));
+  d.set(u, y + 3, v, SOUL_LANTERN);
+}
+
+/**
+ * Casa (o barracón, más grande): zócalo de pizarra pulida, pilastras en las esquinas, franja de azulejos
+ * arriba, ventanas con barrotes de muro, techo de tablones de roble oscuro y tejado a dos aguas de
+ * escaleras de azulejos con alero; dentro, camas de lana, alfombras, un farol colgado, velas y el cofre.
+ */
 function house(d: Draw, lot: Lot, barracks: boolean): void {
   const n = barracks ? 11 : 9, off = barracks ? 0 : 1;
   const u0 = lot.u + off, v0 = lot.v + off, u1 = u0 + n - 1, v1 = v0 + n - 1;
   const y = d.y0, H = barracks ? 6 : 5;
   const rnd = mulberry32(lot.seed);
-  d.fill(u0, y, v0, u1, y + H, v1, (u, yy, v) => {
-    const edge = u === u0 || u === u1 || v === v0 || v === v1;
-    if (yy === y + H) return stateOf(SLABS.deepslate_tile, { type: 0 });
-    if (!edge) return yy === y ? CARPETS.gray : AIR;
-    const corner = (u === u0 || u === u1) && (v === v0 || v === v1);
-    if (corner) return POLISHED_DEEPSLATE;
-    // Ventanas estrechas a media altura.
-    if (yy === y + 2 && (u + v) % 3 === 0) return AIR;
+  const [du, dv] = doorCell(u0, v0, n, lot.door);
+  d.fill(u0, y, v0, u1, y + H - 1, v1, (u, yy, v) => {
+    const edgeU = u === u0 || u === u1, edgeV = v === v0 || v === v1;
+    if (!edgeU && !edgeV) return AIR;
+    if (edgeU && edgeV) return yy === y + H - 1 ? CHISELED_DEEPSLATE : POLISHED_DEEPSLATE;
+    if (yy === y) return POLISHED_DEEPSLATE;
+    if (yy === y + H - 1) return tile(d, u, yy, v);
+    // Pilastras cada 4 y ventanas entre ellas (barrotes de muro abajo, hueco arriba).
+    const along = edgeU ? v - v0 : u - u0;
+    if (along % 4 === 0) return POLISHED_DEEPSLATE;
+    if (along % 4 === 2 && yy === y + 2) return wall(WALLS.deepslate_tile);
+    if (along % 4 === 2 && yy === y + 3 && barracks) return AIR;
     return brick(d, u, yy, v);
   });
-  d.fill(u0 + 1, y - 1, v0 + 1, u1 - 1, y - 1, v1 - 1, DARK_OAK_PLANKS);
-  const [du, dv] = doorCell(u0, v0, n, lot.door);
-  for (let k = 0; k < 3; k++) d.set(du, y + k, dv, AIR);
-  // Dentro: el cofre, velas apagadas, lana gris y algún sensor.
-  const inner = (a: number) => Math.floor(a * (n - 3)) + 1;
-  if (rnd() < 0.6) {
-    const cu = u0 + inner(rnd()), cv = v0 + (lot.door === 0 ? n - 2 : 1);
-    d.chest(cu, y, cv, lot.door === 0 ? 0 : 2, 'ancient_city');
-  }
-  for (let k = 0; k < 3; k++) d.set(u0 + inner(rnd()), y, v0 + inner(rnd()), unlitCandles(1 + Math.floor(rnd() * 4)));
-  if (barracks) {
-    for (let k = 1; k < n - 1; k += 3) {
-      d.set(u0 + 1, y, v0 + k, WOOL.gray);
-      d.set(u1 - 1, y, v0 + k, WOOL.light_gray);
-    }
-  }
-  if (rnd() < 0.6) d.set(u0 + inner(rnd()), y, v0 + inner(rnd()), stateOf(SCULK_SENSOR, { phase: 0, water: 0 }));
-  if (rnd() < 0.5) d.set(u0 + inner(rnd()), y + H + 1, v0 + inner(rnd()), SKULLS.skeleton + Math.floor(rnd() * 16));
-}
-
-/** Torre maciza de azulejos con franjas cinceladas y remate de pizarra pulida. */
-function tower(d: Draw, lot: Lot): void {
-  const rnd = mulberry32(lot.seed);
-  const cu = lot.u + 5, cv = lot.v + 5, y = d.y0;
-  const H = 12 + Math.floor(rnd() * 9);
-  d.fill(cu - 2, y, cv - 2, cu + 2, y + H, cv + 2, (u, yy, v) => {
-    const edge = Math.abs(u - cu) === 2 || Math.abs(v - cv) === 2;
-    if (!edge) return yy < y + H ? AIR : POLISHED_DEEPSLATE;
-    if ((yy - y) % 5 === 4) return CHISELED_DEEPSLATE;
-    return tile(d, u, yy, v);
-  });
-  // Remate con almenas y un farol de alma colgado.
-  d.fill(cu - 3, y + H, cv - 3, cu + 3, y + H, cv + 3, (u, yy, v) => (Math.abs(u - cu) === 3 || Math.abs(v - cv) === 3 ? POLISHED_DEEPSLATE : -1));
-  for (const [du, dv] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) d.set(cu + du, y + H + 1, cv + dv, stateOf(WALLS.polished_deepslate, {}));
-  d.set(cu + 3, y + H - 1, cv, stateOf(SOUL_LANTERN, { hanging: 1 }));
-  // Hueco de entrada.
-  const [du, dv] = lot.door === 0 ? [cu, cv - 2] : lot.door === 1 ? [cu + 2, cv] : lot.door === 2 ? [cu, cv + 2] : [cu - 2, cv];
+  // Puerta de 2 de alto con dintel cincelado.
   d.set(du, y, dv, AIR);
   d.set(du, y + 1, dv, AIR);
-  if (rnd() < 0.5) d.chest(cu, y, cv, (lot.door + 2) & 3, 'ancient_city');
+  d.set(du, y + 2, dv, CHISELED_DEEPSLATE);
+  // Suelo y techo de tablones.
+  d.fill(u0 + 1, y - 1, v0 + 1, u1 - 1, y - 1, v1 - 1, DARK_OAK_PLANKS);
+  d.fill(u0 + 1, y + H - 1, v0 + 1, u1 - 1, y + H - 1, v1 - 1, DARK_OAK_PLANKS);
+  roof(d, u0, v0, u1, v1, y + H - 1, lot.door === 0 || lot.door === 2);
+  // Dentro.
+  const inner = (a: number) => Math.floor(a * (n - 3)) + 1;
+  d.set(u0 + Math.floor(n / 2), y + H - 2, v0 + Math.floor(n / 2), stateOf(SOUL_LANTERN, { hanging: 1 }));
+  for (let k = 1; k < n - 1; k++) {
+    // Pasillo de alfombra gris de la puerta al fondo.
+    const [cu, cv] = lot.door === 0 || lot.door === 2 ? [du, v0 + k] : [u0 + k, dv];
+    d.set(cu, y, cv, CARPETS.gray);
+  }
+  // Camas: lana gris y azul claro contra las paredes laterales.
+  const beds = barracks ? 4 : 2;
+  for (let k = 0; k < beds; k++) {
+    const side = k % 2 === 0;
+    const along = 2 + Math.floor(k / 2) * 3;
+    const [bu, bv] = lot.door === 0 || lot.door === 2 ? [side ? u0 + 1 : u1 - 1, v0 + along] : [u0 + along, side ? v0 + 1 : v1 - 1];
+    d.set(bu, y, bv, k % 3 === 2 ? WOOL.light_blue : WOOL.gray);
+    d.set(bu, y + 1, bv, CARPETS.light_gray);
+  }
+  if (rnd() < 0.7) {
+    const cu = lot.door === 0 || lot.door === 2 ? u0 + inner(rnd()) : lot.door === 1 ? u0 + 1 : u1 - 1;
+    const cv = lot.door === 0 ? v1 - 1 : lot.door === 2 ? v0 + 1 : v0 + inner(rnd());
+    if (d.get(cu, y, cv) === AIR || d.get(cu, y, cv) === CARPETS.gray) d.chest(cu, y, cv, (lot.door + 2) & 3, 'ancient_city');
+  }
+  for (let k = 0; k < 2; k++) {
+    const cu = u0 + inner(rnd()), cv = v0 + inner(rnd());
+    if (d.get(cu, y, cv) === AIR) d.set(cu, y, cv, unlitCandles(1 + Math.floor(rnd() * 4)));
+  }
+  if (rnd() < 0.6) {
+    const cu = u0 + inner(rnd()), cv = v0 + inner(rnd());
+    if (d.get(cu, y, cv) === AIR) d.set(cu, y, cv, stateOf(SCULK_SENSOR, { phase: 0, water: 0 }));
+  }
+}
+
+/**
+ * Tejado a dos aguas sobre el recinto (u0..u1, v0..v1) desde la altura y: escaleras de azulejos con alero
+ * de 1 y cumbrera de losas; los hastiales, de ladrillo. `ridgeU`: la cumbrera va a lo largo de u.
+ */
+function roof(d: Draw, u0: number, v0: number, u1: number, v1: number, y: number, ridgeU: boolean): void {
+  // Coordenadas del tejado: a a lo largo de la cumbrera, b de alero a alero.
+  const P = (a: number, b: number): [number, number] => (ridgeU ? [a, b] : [b, a]);
+  const [a0, a1, b0, b1] = ridgeU ? [u0, u1, v0, v1] : [v0, v1, u0, u1];
+  for (let k = 0; ; k++) {
+    const lo = b0 - 1 + k, hi = b1 + 1 - k, yy = y + k;
+    if (lo > hi) break;
+    for (let a = a0 - 1; a <= a1 + 1; a++) {
+      if (lo === hi) {
+        const [u, v] = P(a, lo);
+        d.set(u, yy, v, slab(SLABS.deepslate_tile));
+        continue;
+      }
+      const [nu, nv] = P(a, lo), [su, sv] = P(a, hi);
+      // El lado alto de cada fila mira a la cumbrera.
+      d.set(nu, yy, nv, stair(STAIRS.deepslate_tile, ridgeU ? 2 : 1));
+      d.set(su, yy, sv, stair(STAIRS.deepslate_tile, ridgeU ? 0 : 3));
+      // Hastiales: ladrillo entre las dos aguas en los extremos.
+      if (a === a0 || a === a1) {
+        for (let b = lo + 1; b < hi; b++) {
+          const [gu, gv] = P(a, b);
+          if (k > 0) d.set(gu, yy, gv, brick(d, gu, yy, gv));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Torre por pisos: base ancha de ladrillo con faldón de escaleras, cuerpo de azulejos con pilastras,
+ * franjas cinceladas y saeteras, remate volado sobre ménsulas con barandilla de muro y una aguja con farol;
+ * por dentro, una escalera de mano sube hasta el remate.
+ */
+function tower(d: Draw, lot: Lot): void {
+  const rnd = mulberry32(lot.seed ^ 0x70e5);
+  const cu = lot.u + 5, cv = lot.v + 5, y = d.y0;
+  const H = towerHeight(lot);
+  const door = lot.door, back = (door + 2) & 3;
+  // Base: 7×7, 4 de alto.
+  d.fill(cu - 3, y, cv - 3, cu + 3, y + 3, cv + 3, (u, yy, v) => {
+    const eu = Math.abs(u - cu) === 3, ev = Math.abs(v - cv) === 3;
+    if (!eu && !ev) return AIR;
+    if (eu && ev) return yy === y + 3 ? CHISELED_DEEPSLATE : POLISHED_DEEPSLATE;
+    return yy === y ? POLISHED_DEEPSLATE : brick(d, u, yy, v);
+  });
+  // Faldón: escaleras alrededor de la base, con el lado alto hacia el cuerpo.
+  d.each(cu - 3, cv - 3, cu + 3, cv + 3, (u, v) => {
+    const ru = u - cu, rv = v - cv;
+    if (Math.max(Math.abs(ru), Math.abs(rv)) !== 3) return;
+    const facing = Math.abs(ru) === 3 && Math.abs(rv) === 3 ? -1 : rv === -3 ? 2 : rv === 3 ? 0 : ru === -3 ? 1 : 3;
+    d.set(u, y + 4, v, facing < 0 ? POLISHED_DEEPSLATE : stair(STAIRS.deepslate_brick, facing));
+  });
+  // Cuerpo: 5×5 hasta el remate.
+  d.fill(cu - 2, y + 4, cv - 2, cu + 2, y + H, cv + 2, (u, yy, v) => {
+    const eu = Math.abs(u - cu) === 2, ev = Math.abs(v - cv) === 2;
+    if (!eu && !ev) return AIR;
+    if (eu && ev) return POLISHED_DEEPSLATE;
+    if ((yy - y) % 5 === 0) return CHISELED_DEEPSLATE;
+    // Saeteras en el centro de cada cara cada 5.
+    if ((u === cu || v === cv) && (yy - y) % 5 === 2) return AIR;
+    return tile(d, u, yy, v);
+  });
+  // Ménsulas (escaleras invertidas) bajo el remate y el remate volado de 7×7.
+  d.each(cu - 3, cv - 3, cu + 3, cv + 3, (u, v) => {
+    const ru = u - cu, rv = v - cv;
+    const ring = Math.max(Math.abs(ru), Math.abs(rv)) === 3;
+    if (ring) {
+      const corner = Math.abs(ru) === 3 && Math.abs(rv) === 3;
+      const facing = rv === -3 ? 2 : rv === 3 ? 0 : ru === -3 ? 1 : 3;
+      if (!corner) d.set(u, y + H, v, stair(STAIRS.deepslate_tile, facing, true));
+      d.set(u, y + H + 1, v, corner ? POLISHED_DEEPSLATE : slab(SLABS.polished_deepslate, true));
+      // Barandilla: pilares en las esquinas y muros entre ellos.
+      d.set(u, y + H + 2, v, corner ? CHISELED_DEEPSLATE : wall(WALLS.polished_deepslate));
+      if (corner) d.set(u, y + H + 3, v, wall(WALLS.polished_deepslate));
+    } else d.set(u, y + H + 1, v, slab(SLABS.polished_deepslate, true));
+  });
+  // Aguja con farol.
+  for (let k = 2; k <= 4; k++) d.set(cu, y + H + k, cv, wall(WALLS.deepslate_brick));
+  d.set(cu, y + H + 5, cv, SOUL_LANTERN);
+  // Puerta en la base y escalera de mano contra la pared del fondo, hasta el remate (con su trampilla).
+  const [pu, pv] = [cu + DU[door] * 3, cv + DV[door] * 3];
+  d.set(pu, y, pv, AIR);
+  d.set(pu, y + 1, pv, AIR);
+  d.set(pu, y + 2, pv, CHISELED_DEEPSLATE);
+  const [lu, lv] = [cu + DU[back], cv + DV[back]];
+  for (let yy = y; yy <= y + H + 1; yy++) d.set(lu, yy, lv, stateOf(LADDER, { facing: (back + 2) & 3 }));
+  d.set(lu, y + H + 1, lv, stateOf(TRAPDOORS.dark_oak, { facing: door, half: 1, open: 1 }));
+  // Muro del cuerpo detrás de la escalera, hasta arriba (apoyo de la escalera).
+  for (let yy = y; yy <= y + H; yy++) {
+    const wu = cu + DU[back] * 2, wv = cv + DV[back] * 2;
+    if (d.get(wu, yy, wv) === AIR) d.set(wu, yy, wv, tile(d, wu, yy, wv));
+  }
+  if (rnd() < 0.5) d.chest(cu + DU[(door + 1) & 3] * 2, y, cv + DV[(door + 1) & 3] * 2, (door + 3) & 3, 'ancient_city');
+  d.set(cu + DU[(door + 3) & 3] * 2, y, cv + DV[(door + 3) & 3] * 2, unlitCandles(1 + Math.floor(rnd() * 4)));
+}
+
+/** Altura de las pasarelas (el piso por el que se anda). */
+const BRIDGE_Y = 9;
+
+/** Alto del cuerpo de una torre: cabe bajo la bóveda (más baja hacia el borde), con el remate y la aguja. */
+function towerHeight(lot: Lot): number {
+  const cu = lot.u + 5, cv = lot.v + 5;
+  const r = Math.hypot(Math.abs(cu) + 3, Math.abs(cv) + 3);
+  const room = Math.floor(DOME * Math.sqrt(Math.max(0, 1 - (r / ANCIENT_CITY_RADIUS) ** 2))) - 7;
+  return Math.max(6, Math.min(13 + Math.floor(mulberry32(lot.seed)() * 7), room));
+}
+
+/** Pasarela elevada entre dos torres vecinas: losas altas con barandilla de muro y huecos en los muros. */
+function bridge(d: Draw, a: Lot, b: Lot): void {
+  const y = d.y0 + BRIDGE_Y;
+  const ac = [a.u + 5, a.v + 5], bc = [b.u + 5, b.v + 5];
+  const alongU = ac[1] === bc[1];
+  const [c0, c1] = alongU ? [Math.min(ac[0], bc[0]), Math.max(ac[0], bc[0])] : [Math.min(ac[1], bc[1]), Math.max(ac[1], bc[1])];
+  const mid = alongU ? ac[1] : ac[0];
+  for (let t = c0 + 2; t <= c1 - 2; t++) {
+    for (let w = -1; w <= 1; w++) {
+      const [u, v] = alongU ? [t, mid + w] : [mid + w, t];
+      const inside = t > c0 + 2 && t < c1 - 2;
+      if (Math.abs(w) <= 1) d.set(u, y - 1, v, inside ? slab(SLABS.deepslate_brick, true) : POLISHED_DEEPSLATE);
+      // Paso por el muro de cada torre.
+      if (!inside && w === 0) {
+        d.set(u, y, v, AIR);
+        d.set(u, y + 1, v, AIR);
+      }
+      if (inside && Math.abs(w) === 1) d.set(u, y, v, wall(WALLS.deepslate_brick));
+    }
+    // Ménsulas bajo la pasarela en el centro del vano.
+    if (t === Math.floor((c0 + c1) / 2)) {
+      const [u, v] = alongU ? [t, mid] : [mid, t];
+      d.set(u, y - 2, v, stateOf(SOUL_LANTERN, { hanging: 1 }));
+    }
+  }
 }
 
 /** Nevera: una sala de hielo compacto y azul con nieve y su cofre de provisiones. */
