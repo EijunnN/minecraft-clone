@@ -3,12 +3,17 @@
 // las que se conectan. Cada voz entra en el motor de audio como un sonido más del mundo: sale de la cabeza de quien
 // habla (HRTF), se apaga con la distancia hasta los 48 bloques y comparte la reverberación del resto de sonidos.
 //
+// Parte 2: el entorno (voiceEnvironment): las paredes la apagan y le quitan los agudos, en las cuevas y salas
+// retumba y bajo el agua suena ahogada. Cada dimensión es un servidor aparte, así que sólo se oye a los de la misma.
+//
 // Se escucha a los demás en cuanto se entra (con la voz activada en los ajustes); el micrófono sólo se pide la
 // primera vez que se pulsa la tecla de hablar (o al elegir el modo «por voz»).
 import type { RtcSignal, ServerMsg } from '../../shared/protocol';
 import type { Game } from '../game/Game';
 import type { RemotePlayer } from '../game/RemotePlayers';
 import { keyLabel } from '../game/keybinds';
+import { BLOCK_FLUID } from '../../shared/blocks';
+import { voiceOcclusion, voiceReverb, type BlockAt } from './voiceEnvironment';
 
 /** Alcance de la voz (bloques): a partir de aquí no se oye. */
 export const VOICE_RANGE = 48;
@@ -21,6 +26,12 @@ const RETRY_MS = 4000;
 /** Nivel (RMS) a partir del cual se considera que alguien habla, y cuánto dura el «hablando» tras callar (ms). */
 const TALK_RMS = 0.012;
 const TALK_HOLD = 350;
+/** Cada cuánto se recalcula lo que tapa cada voz y cuánto retumba (ms). */
+const OCCLUSION_MS = 120;
+const REVERB_MS = 600;
+/** Quien habla bajo el agua (y se le oye desde fuera): la voz ahogada. */
+const WATER_CUTOFF = 650;
+const WATER_GAIN = 0.6;
 
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.cloudflare.com:3478' },
@@ -48,10 +59,22 @@ interface PeerAudio {
   el: HTMLAudioElement;
   src: MediaStreamAudioSourceNode;
   analyser: AnalyserNode;
+  /** Volumen por la distancia (lo comparten el sonido directo y el eco). */
   gain: GainNode;
+  /** Lo que llega de frente tras las paredes, con los agudos que dejan pasar. */
+  direct: GainNode;
   filter: BiquadFilterNode;
   panner: PannerNode;
   send: GainNode;
+}
+
+/** El entorno de una voz (se recalcula cada poco y el audio se acerca a él con suavidad). */
+interface PeerEnv {
+  gain: number;
+  cutoff: number;
+  reverb: number;
+  nextOcclusion: number;
+  nextReverb: number;
 }
 
 interface Peer {
@@ -63,6 +86,7 @@ interface Peer {
   audio: PeerAudio | null;
   stream: MediaStream | null;
   talkUntil: number;
+  env: PeerEnv;
 }
 
 export type MicState = 'none' | 'asking' | 'ready' | 'denied';
@@ -84,6 +108,9 @@ export class VoiceChat {
   micLevel = 0;
   private vadUntil = 0;
   private hud: HTMLElement | null = null;
+  /** Cuánto retumba donde estamos nosotros (se mezcla con lo de quien habla). */
+  private listenerReverb = 0.04;
+  private nextListenerReverb = 0;
 
   constructor(private g: Game) {}
 
@@ -233,7 +260,10 @@ export class VoiceChat {
 
   private createPeer(id: string): Peer {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    const p: Peer = { id, pc, pending: [], remoteSet: false, audio: null, stream: null, talkUntil: 0 };
+    const p: Peer = {
+      id, pc, pending: [], remoteSet: false, audio: null, stream: null, talkUntil: 0,
+      env: { gain: 1, cutoff: 20000, reverb: 0.04, nextOcclusion: 0, nextReverb: 0 },
+    };
     this.peers.set(id, p);
     pc.onicecandidate = (e) => {
       if (!e.candidate || this.peers.get(id) !== p) return;
@@ -332,6 +362,8 @@ export class VoiceChat {
     analyser.fftSize = 512;
     const gain = ctx.createGain();
     gain.gain.value = 0;
+    const direct = ctx.createGain();
+    direct.gain.value = p.env.gain;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 20000;
@@ -341,12 +373,13 @@ export class VoiceChat {
     // La distancia la aplica voiceDistanceGain (con el alcance exacto); el panner sólo coloca la voz.
     panner.distanceModel = 'linear';
     panner.rolloffFactor = 0;
+    // El eco sale antes de las paredes: tras un muro se oye sobre todo la sala en la que habla el otro.
     const send = ctx.createGain();
-    send.gain.value = 0.12;
+    send.gain.value = p.env.reverb;
     src.connect(analyser);
-    src.connect(gain).connect(filter).connect(panner).connect(bus);
-    panner.connect(send).connect(reverb);
-    p.audio = { el, src, analyser, gain, filter, panner, send };
+    src.connect(gain).connect(direct).connect(filter).connect(panner).connect(bus);
+    gain.connect(send).connect(reverb);
+    p.audio = { el, src, analyser, gain, direct, filter, panner, send };
   }
 
   private placeVoices(cam: readonly [number, number, number]): void {
@@ -354,6 +387,13 @@ export class VoiceChat {
     if (!graph) return;
     const now = performance.now();
     const t = graph.ctx.currentTime;
+    const world = this.g.world;
+    const get: BlockAt | null = world ? (x, y, z) => world.getBlock(x, y, z) : null;
+    if (get && now >= this.nextListenerReverb) {
+      this.nextListenerReverb = now + REVERB_MS;
+      this.listenerReverb = voiceReverb(get, cam[0], cam[1], cam[2]);
+    }
+    const listenerWet = get ? BLOCK_FLUID[get(Math.floor(cam[0]), Math.floor(cam[1]), Math.floor(cam[2]))] === 1 : false;
     for (const p of this.peers.values()) {
       if (!p.audio) this.buildAudio(p);
       const a = p.audio;
@@ -366,10 +406,39 @@ export class VoiceChat {
       a.panner.positionZ.value = v.z;
       const d = Math.hypot(v.x - cam[0], hy - cam[1], v.z - cam[2]);
       a.gain.gain.setTargetAtTime(voiceDistanceGain(d), t, 0.05);
+      if (get && d < VOICE_RANGE) this.updateEnv(p, a, get, cam, v.x, hy, v.z, listenerWet, now, t);
       if (rms(a.analyser, this.buf) > TALK_RMS) p.talkUntil = now + TALK_HOLD;
       this.setTalking(rp, now < p.talkUntil && d < VOICE_RANGE);
     }
     for (const rp of this.g.remote.values()) if (!this.peers.has(rp.id)) this.setTalking(rp, false);
+  }
+
+  /** Paredes en medio, eco del sitio y agua: el filtro, lo que llega de frente y lo que retumba. */
+  private updateEnv(p: Peer, a: PeerAudio, get: BlockAt, cam: readonly [number, number, number],
+    x: number, y: number, z: number, listenerWet: boolean, now: number, t: number): void {
+    const env = p.env;
+    if (now >= env.nextOcclusion) {
+      // Repartidos en el tiempo para no calcular todas las voces en el mismo fotograma.
+      env.nextOcclusion = now + OCCLUSION_MS * (0.8 + Math.random() * 0.4);
+      const occ = voiceOcclusion(get, cam[0], cam[1], cam[2], x, y, z);
+      env.gain = occ.gain;
+      env.cutoff = occ.cutoff;
+      // Quien habla bajo el agua suena ahogado desde fuera (si los dos están dentro, ya lo apaga el filtro general).
+      const speakerWet = BLOCK_FLUID[get(Math.floor(x), Math.floor(y), Math.floor(z))] === 1;
+      if (speakerWet && !listenerWet) {
+        env.gain *= WATER_GAIN;
+        env.cutoff = Math.min(env.cutoff, WATER_CUTOFF);
+      }
+    }
+    if (now >= env.nextReverb) {
+      env.nextReverb = now + REVERB_MS * (0.8 + Math.random() * 0.4);
+      env.reverb = voiceReverb(get, x, y, z);
+    }
+    // El eco: sobre todo el del sitio de quien habla, algo del nuestro.
+    const wet = 0.7 * env.reverb + 0.3 * this.listenerReverb;
+    a.direct.gain.setTargetAtTime(env.gain, t, 0.12);
+    a.filter.frequency.setTargetAtTime(env.cutoff, t, 0.12);
+    a.send.gain.setTargetAtTime(wet, t, 0.3);
   }
 
   private setTalking(rp: RemotePlayer, on: boolean): void {
@@ -386,6 +455,7 @@ export class VoiceChat {
     p.pc.close();
     if (p.audio) {
       p.audio.src.disconnect();
+      p.audio.gain.disconnect();
       p.audio.panner.disconnect();
       p.audio.send.disconnect();
       p.audio.el.srcObject = null;

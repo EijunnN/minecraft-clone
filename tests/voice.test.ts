@@ -59,3 +59,32 @@ test('cliente: la voz se oye entera de cerca y se apaga del todo a los 48 bloque
   assert.ok(voiceDistanceGain(10) > voiceDistanceGain(20) && voiceDistanceGain(20) > voiceDistanceGain(40));
   assert.ok(voiceDistanceGain(40) > 0 && voiceDistanceGain(40) < 0.05);
 });
+
+test('entorno: las paredes apagan la voz según el material, las cuevas retumban y el aire libre no', async () => {
+  const { voiceOcclusion, voiceReverb } = await import('../src/client/voice/voiceEnvironment');
+  const { STONE, GLASS, OAK_LEAVES, WHITE_WOOL } = await import('../src/shared/blocks');
+  // Una pared de un bloque de grosor en x = 5 (de y 60 a 70), entre dos cabezas a la misma altura.
+  const wall = (id: number, thick = 1) => (x: number, y: number) => (x >= 5 && x < 5 + thick && y >= 60 && y <= 70 ? id : 0);
+  const open = voiceOcclusion(() => 0, 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  assert.deepEqual(open, { gain: 1, cutoff: 20000 });
+  const stone = voiceOcclusion(wall(STONE), 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  const stone3 = voiceOcclusion(wall(STONE, 3), 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  const glass = voiceOcclusion(wall(GLASS), 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  const leaves = voiceOcclusion(wall(OAK_LEAVES), 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  const wool = voiceOcclusion(wall(WHITE_WOOL), 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  assert.ok(stone.gain < 0.4 && stone.cutoff < 5000, JSON.stringify(stone));
+  assert.ok(stone3.gain < stone.gain && stone3.cutoff < stone.cutoff);
+  assert.ok(wool.gain < stone.gain, 'la lana aísla más que la piedra');
+  assert.ok(leaves.gain > glass.gain && glass.gain > stone.gain, 'hojas < cristal < piedra en lo que tapan');
+  // Un muro bajo (hasta y 64): se oye por encima, aunque algo menos que sin nada.
+  const low = voiceOcclusion((x: number, y: number) => (x === 5 && y <= 64 ? STONE : 0), 0.5, 64.6, 0.5, 10.5, 64.6, 0.5);
+  assert.ok(low.gain > 0.6 && low.gain < 1, JSON.stringify(low));
+  // Eco: al aire libre casi nada; en una sala de 5 × 4 × 5 bastante; en una cueva grande más.
+  const box = (r: number, h: number) => (x: number, y: number, z: number) => (Math.abs(x) > r || Math.abs(z) > r || y < 60 || y > 60 + h ? STONE : 0);
+  const outside = voiceReverb((_x: number, y: number) => (y < 60 ? STONE : 0), 0.5, 61.6, 0.5);
+  const room = voiceReverb(box(2, 4), 0.5, 61.6, 0.5);
+  const cave = voiceReverb(box(14, 12), 0.5, 61.6, 0.5);
+  assert.ok(outside < 0.1, `fuera ${outside}`);
+  assert.ok(room > 0.3, `sala ${room}`);
+  assert.ok(cave > room, `cueva ${cave} > sala ${room}`);
+});
