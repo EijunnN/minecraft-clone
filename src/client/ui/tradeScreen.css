@@ -54,6 +54,11 @@
   transition: width 0.25s ease-out;
 }
 
+/* Precio que cambió: el de antes tachado; más barato en verde, más caro en rojo. */
+.tslot b.cheaper { color: #7cf07c; }
+.tslot b.dearer { color: #ff8a7a; }
+.tslot b s { color: #d8d8d8; opacity: 0.8; font-weight: normal; }
+
 .trade-list {
   display: flex;
   flex-direction: column;

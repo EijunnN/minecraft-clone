@@ -1,23 +1,24 @@
 // Aldeanos (fase 6): profesiones, bloque de trabajo de cada una, niveles y ofertas de comercio.
-// Lo usan el servidor (autoridad del comercio), el cliente (pantalla de comercio y texturas) y las
-// pruebas. Todo es determinista: las ofertas salen de la profesión, el nivel y la semilla del aldeano.
-import { RABBIT_HIDE, TURTLE_SCUTE, SADDLE } from './items'; // el peletero de 26.3
-import { DYE_COLORS } from './blocks';
-import { applyDyes } from './dyedColor';
-import {
-  EMERALD, WHEAT, POTATO, CARROT, BEETROOT, BREAD, APPLE, PUMPKIN_PIE, GOLDEN_APPLE, RAW_CHICKEN, RAW_PORKCHOP,
-  RAW_MUTTON, RAW_BEEF, COOKED_PORKCHOP, COOKED_CHICKEN, COOKED_MUTTON, STEAK, COAL, IRON_INGOT, LAVA_BUCKET, DIAMOND,
-  SHIELD, ARMOR, TOOLS, CLAY_BALL, PAPER, BOOK, COMPASS, EMPTY_MAP, STICK, ARROW, FLINT, BOW, STRING, FEATHER, COD,
-  COOKED_COD, SALMON, COOKED_SALMON, TROPICAL_FISH, PUFFERFISH, FISHING_ROD, SHEARS, LEATHER, GLOW_BERRIES, BUCKET,
-  GOLD_INGOT, SUGAR, EGG,
-} from './items';
+// Lo usan el servidor (autoridad del comercio), el cliente (pantalla de comercio y texturas) y las pruebas.
+//
+// Las ofertas son las de Java 26.3 (villagerTrades.ts). Como en Java, cada vez que un aldeano llega a un nivel se
+// eligen al azar las ofertas de ese nivel (sin repetir; si una no sale se prueba otra) y se quedan fijas; el servidor
+// las guarda con el aldeano. El precio de lo primero que pide cambia con la demanda (sube si se agotó la oferta antes
+// de reponer y baja si no se usó) y con cada jugador: su reputación con ese aldeano y el efecto Héroe de la aldea
+// (MerchantOffer.getModifiedCostCount y Villager.updateSpecialPrices).
+import { ITEMS, POTION, SUSPICIOUS_STEW, TIPPED_ARROW, maxStack, type ItemStack } from './items';
 import {
   COMPOSTER, SMOKER, BLAST_FURNACE, STONECUTTER, LECTERN, CARTOGRAPHY_TABLE, FLETCHING_TABLE, BARREL, LOOM, GRINDSTONE,
-  SMITHING_TABLE, CAULDRON, PUMPKIN, MELON, CAKE, STONE, BRICKS, STONE_BRICKS, GRANITE, ANDESITE, DIORITE, TERRACOTTA,
-  QUARTZ_BLOCK, BOOKSHELF, GLASS, GLASS_PANE, GRAVEL, CAMPFIRE, WHITE_WOOL, BLACK_WOOL, RED_WOOL, YELLOW_WOOL, BLUE_WOOL,
-  LIME_WOOL, BEDS, ALL_SAPLINGS, FLOWERS, LILY_PAD, VINE, SUGAR_CANE, CACTUS, PACKED_ICE, RED_SAND, MOSS_BLOCK, POPPY,
-  DANDELION, CORNFLOWER, BROWN_MUSHROOM, RED_MUSHROOM, baseBlock,
+  SMITHING_TABLE, CAULDRON, BREWING_STAND, DYE_COLORS, baseBlock,
 } from './blocks';
+import type { ItemData } from './itemData';
+import { VILLAGER_TRADES, WANDERING_TRADES, TRADEABLE_POTIONS, type TradeDef, type TradeLevel } from './villagerTrades';
+import { villagerTypeIndex } from './villagerTypes';
+import { librarianBook, enchantWithLevels, rndFrom, TABLE_POOL } from './enchanting';
+import { applyDyes } from './dyedColor';
+import { POTIONS } from './potions';
+import { EFFECTS } from './effects';
+import { stewDmgFor } from './decorFood';
 
 /** Una oferta: lo que pide (una o dos pilas) y lo que da; `max` usos antes de reponer; `xp` que gana el aldeano. */
 export interface TradeOffer {
@@ -26,17 +27,19 @@ export interface TradeOffer {
   result: [number, number];
   max: number;
   xp: number;
-  /** Fase 7 (encantamientos): datos de lo que da (un libro encantado, equipo encantado). */
+  /** Cuánto mueven el precio la demanda y la reputación (reputation_discount de Java). */
+  disc: number;
+  /** Datos de lo que da (un libro o equipo encantado, el cuero teñido, un mapa de explorador). */
   data?: ItemData;
-  /** Fase 7 (encantamientos): se encanta al crear la oferta ('book': libro al azar; 'item': con 5–19 niveles). */
-  enchant?: 'book' | 'item';
-  /**
-   * Fase 7.5 (mansión): mapa de explorador hacia la estructura más cercana de esta clave (el servidor la
-   * busca desde el aldeano; si no hay ninguna, la oferta no sale).
-   */
-  explorer?: string;
-  /** Se tiñe al crear la oferta (set_random_dyes: 1 tinte más una binomial(2; 0,75), cada uno al azar). */
-  dye?: true;
+  /** Desgaste de lo que da: el tipo de poción (flechas con efecto, poción) o el efecto del estofado. */
+  rdmg?: number;
+  /** Lo primero que pide es un frasco de agua (no cualquier poción). */
+  water?: true;
+}
+
+/** Oferta concreta: `key` la identifica en la tabla (nivel · 64 + posición; el comerciante, 1000 + grupo · 128 + posición). */
+export interface Offer extends TradeOffer {
+  key: number;
 }
 
 export interface Profession {
@@ -46,16 +49,7 @@ export interface Profession {
   name: string;
   /** Bloque de trabajo (estado base); 0 = ninguno. */
   block: number;
-  /** Ofertas posibles por nivel (índice 0 = novato … 4 = maestro). */
-  pool: TradeOffer[][];
 }
-
-/** Compra: el aldeano paga `em` esmeraldas por `n` objetos. */
-const buy = (id: number, n: number, em = 1, max = 16, xp = 2): TradeOffer => ({ cost: [id, n], result: [EMERALD, em], max, xp });
-/** Venta: el aldeano da `n` objetos por `em` esmeraldas. */
-const sell = (id: number, n: number, em: number, max = 12, xp = 1): TradeOffer => ({ cost: [EMERALD, em], result: [id, n], max, xp });
-/** Venta de una pieza teñida al azar. */
-const sellDyed = (id: number, em: number, xp = 1): TradeOffer => ({ ...sell(id, 1, em, 12, xp), dye: true });
 
 export const PROF_NONE = 0;
 export const PROF_FARMER = 1;
@@ -70,138 +64,30 @@ export const PROF_SHEPHERD = 9;
 export const PROF_WEAPONSMITH = 10;
 export const PROF_TOOLSMITH = 11;
 export const PROF_LEATHERWORKER = 12;
+/** El clérigo (soporte para pociones), el último (los ids se guardan: sólo se añade al final). */
+export const PROF_CLERIC = 13;
 
 export const PROFESSIONS: readonly Profession[] = [
-  { id: PROF_NONE, key: 'none', name: 'Aldeano', block: 0, pool: [] },
-  {
-    id: PROF_FARMER, key: 'farmer', name: 'Granjero', block: COMPOSTER, pool: [
-      [buy(WHEAT, 20), buy(POTATO, 26), buy(CARROT, 22), sell(BREAD, 6, 1, 16)],
-      [buy(PUMPKIN, 6, 1, 12, 10), sell(PUMPKIN_PIE, 4, 1, 12, 5), sell(APPLE, 4, 1, 16, 5)],
-      [buy(MELON, 4, 1, 12, 20), sell(CAKE, 1, 1, 12, 10)],
-      [buy(BEETROOT, 15, 1, 12, 20), sell(GLOW_BERRIES, 6, 2, 12, 15)],
-      [sell(GOLDEN_APPLE, 1, 10, 6, 30)],
-    ],
-  },
-  {
-    id: PROF_BUTCHER, key: 'butcher', name: 'Carnicero', block: SMOKER, pool: [
-      [buy(RAW_CHICKEN, 14), buy(RAW_PORKCHOP, 7), buy(COAL, 15), sell(COOKED_PORKCHOP, 5, 1, 16)],
-      [sell(COOKED_CHICKEN, 8, 1, 16, 5), buy(RAW_MUTTON, 7, 1, 16, 10)],
-      [buy(RAW_BEEF, 10, 1, 16, 20), sell(COOKED_MUTTON, 5, 1, 12, 10)],
-      [sell(STEAK, 4, 1, 12, 15)],
-      [buy(EGG, 12, 1, 12, 30)],
-    ],
-  },
-  {
-    id: PROF_ARMORER, key: 'armorer', name: 'Armero', block: BLAST_FURNACE, pool: [
-      [buy(COAL, 15), sell(ARMOR.iron.helmet, 1, 5, 12), sell(ARMOR.iron.leggings, 1, 7, 12), sell(ARMOR.iron.boots, 1, 4, 12)],
-      [buy(IRON_INGOT, 4, 1, 12, 10), sell(ARMOR.iron.chestplate, 1, 9, 12, 5)],
-      [buy(LAVA_BUCKET, 1, 1, 12, 20), sell(SHIELD, 1, 5, 12, 10)],
-      [buy(DIAMOND, 1, 1, 12, 30), sell(ARMOR.diamond.leggings, 1, 19, 3, 15)],
-      [sell(ARMOR.diamond.chestplate, 1, 21, 3, 30)],
-    ],
-  },
-  {
-    id: PROF_MASON, key: 'mason', name: 'Cantero', block: STONECUTTER, pool: [
-      [buy(CLAY_BALL, 10), buy(STONE, 20), sell(BRICKS, 10, 1, 16)],
-      [sell(STONE_BRICKS, 4, 1, 16, 5), buy(GRANITE, 16, 1, 16, 10)],
-      [buy(ANDESITE, 16, 1, 16, 20), buy(DIORITE, 16, 1, 16, 20)],
-      [sell(TERRACOTTA, 1, 1, 12, 15)],
-      [sell(QUARTZ_BLOCK, 1, 1, 12, 30)],
-    ],
-  },
-  {
-    id: PROF_LIBRARIAN, key: 'librarian', name: 'Bibliotecario', block: LECTERN, pool: [
-      [buy(PAPER, 24), sell(BOOKSHELF, 1, 9, 12), buy(BOOK, 4, 1, 12, 2)],
-      [sell(GLASS, 4, 1, 12, 5), buy(SUGAR, 20, 1, 12, 10)],
-      [sell(PAPER, 16, 2, 12, 10), sell(BOOK, 2, 3, 12, 10)],
-      [sell(COMPASS, 1, 5, 12, 15)],
-      [sell(GOLD_INGOT, 1, 6, 6, 30)],
-    ],
-  },
-  {
-    id: PROF_CARTOGRAPHER, key: 'cartographer', name: 'Cartógrafo', block: CARTOGRAPHY_TABLE, pool: [
-      [buy(PAPER, 24), sell(EMPTY_MAP, 1, 7, 12), buy(GLASS_PANE, 11)],
-      [buy(COMPASS, 1, 1, 12, 10), sell(PAPER, 8, 1, 12, 5)],
-      [sell(GLASS_PANE, 8, 1, 12, 10)],
-      [sell(COMPASS, 1, 4, 12, 15)],
-      [sell(EMPTY_MAP, 3, 12, 6, 30)],
-    ],
-  },
-  {
-    id: PROF_FLETCHER, key: 'fletcher', name: 'Flechero', block: FLETCHING_TABLE, pool: [
-      [buy(STICK, 32), sell(ARROW, 16, 1, 12), { cost: [GRAVEL, 10], cost2: [EMERALD, 1], result: [FLINT, 10], max: 12, xp: 1 }],
-      [buy(FLINT, 26, 1, 12, 10), sell(BOW, 1, 2, 12, 5)],
-      [buy(STRING, 14, 1, 16, 20), sell(ARROW, 32, 2, 12, 10)],
-      [buy(FEATHER, 24, 1, 16, 30)],
-      [sell(BOW, 1, 4, 3, 30)],
-    ],
-  },
-  {
-    id: PROF_FISHERMAN, key: 'fisherman', name: 'Pescador', block: BARREL, pool: [
-      [buy(STRING, 20), buy(COAL, 10), { cost: [COD, 6], cost2: [EMERALD, 1], result: [COOKED_COD, 6], max: 16, xp: 1 }],
-      [buy(COD, 15, 1, 16, 10), sell(CAMPFIRE, 1, 2, 12, 5)],
-      [buy(SALMON, 13, 1, 16, 20), { cost: [SALMON, 6], cost2: [EMERALD, 1], result: [COOKED_SALMON, 6], max: 16, xp: 10 }],
-      [buy(TROPICAL_FISH, 6, 1, 12, 30), sell(BUCKET, 1, 2, 12, 15)],
-      [buy(PUFFERFISH, 4, 1, 12, 30), sell(FISHING_ROD, 1, 3, 3, 30)],
-    ],
-  },
-  {
-    id: PROF_SHEPHERD, key: 'shepherd', name: 'Pastor', block: LOOM, pool: [
-      [buy(WHITE_WOOL, 18), buy(BLACK_WOOL, 18), sell(SHEARS, 1, 2, 12)],
-      [sell(RED_WOOL, 1, 1, 16, 5), sell(YELLOW_WOOL, 1, 1, 16, 5), sell(BLUE_WOOL, 1, 1, 16, 5)],
-      [sell(LIME_WOOL, 1, 1, 16, 10), sell(BEDS.white ?? WHITE_WOOL, 1, 3, 12, 10)],
-      [sell(BEDS.red ?? RED_WOOL, 1, 3, 12, 15)],
-      [sell(BEDS.blue ?? BLUE_WOOL, 1, 3, 12, 30)],
-    ],
-  },
-  {
-    id: PROF_WEAPONSMITH, key: 'weaponsmith', name: 'Herrero de armas', block: GRINDSTONE, pool: [
-      [buy(COAL, 15), sell(TOOLS.iron.axe, 1, 3, 12), sell(TOOLS.iron.sword, 1, 7, 12)],
-      [buy(IRON_INGOT, 4, 1, 12, 10), sell(TOOLS.stone.sword, 1, 1, 12, 5)],
-      [buy(FLINT, 24, 1, 12, 20)],
-      [buy(DIAMOND, 1, 1, 12, 30), sell(TOOLS.diamond.axe, 1, 17, 3, 15)],
-      [sell(TOOLS.diamond.sword, 1, 13, 3, 30)],
-    ],
-  },
-  {
-    id: PROF_TOOLSMITH, key: 'toolsmith', name: 'Herrero', block: SMITHING_TABLE, pool: [
-      [buy(COAL, 15), sell(TOOLS.stone.axe, 1, 1, 12), sell(TOOLS.stone.shovel, 1, 1, 12), sell(TOOLS.stone.pickaxe, 1, 1, 12),
-        sell(TOOLS.stone.hoe, 1, 1, 12)],
-      [buy(IRON_INGOT, 4, 1, 12, 10)],
-      [buy(FLINT, 30, 1, 12, 20), sell(TOOLS.iron.shovel, 1, 4, 12, 10), sell(TOOLS.iron.pickaxe, 1, 7, 12, 10)],
-      [buy(DIAMOND, 1, 1, 12, 30), sell(TOOLS.diamond.axe, 1, 12, 3, 15)],
-      [sell(TOOLS.diamond.pickaxe, 1, 13, 3, 30)],
-    ],
-  },
-  {
-    id: PROF_LEATHERWORKER, key: 'leatherworker', name: 'Peletero', block: CAULDRON, pool: [
-      // villager_trade/leatherworker de 26.3: la armadura de cuero, teñida al azar.
-      [buy(LEATHER, 6), sellDyed(ARMOR.leather.leggings, 3), sellDyed(ARMOR.leather.chestplate, 7)],
-      [buy(FLINT, 26, 1, 12, 10), sellDyed(ARMOR.leather.helmet, 5, 5), sellDyed(ARMOR.leather.boots, 4, 5)],
-      [buy(RABBIT_HIDE, 9, 1, 12, 20), sellDyed(ARMOR.leather.chestplate, 7)],
-      [buy(TURTLE_SCUTE, 4, 1, 12, 30), sellDyed(HORSE_ARMOR.leather, 6, 15)],
-      [sell(SADDLE, 1, 6, 12, 30), sellDyed(ARMOR.leather.helmet, 5, 5)],
-    ],
-  },
+  { id: PROF_NONE, key: 'none', name: 'Aldeano', block: 0 },
+  { id: PROF_FARMER, key: 'farmer', name: 'Granjero', block: COMPOSTER },
+  { id: PROF_BUTCHER, key: 'butcher', name: 'Carnicero', block: SMOKER },
+  { id: PROF_ARMORER, key: 'armorer', name: 'Armero', block: BLAST_FURNACE },
+  { id: PROF_MASON, key: 'mason', name: 'Cantero', block: STONECUTTER },
+  { id: PROF_LIBRARIAN, key: 'librarian', name: 'Bibliotecario', block: LECTERN },
+  { id: PROF_CARTOGRAPHER, key: 'cartographer', name: 'Cartógrafo', block: CARTOGRAPHY_TABLE },
+  { id: PROF_FLETCHER, key: 'fletcher', name: 'Flechero', block: FLETCHING_TABLE },
+  { id: PROF_FISHERMAN, key: 'fisherman', name: 'Pescador', block: BARREL },
+  { id: PROF_SHEPHERD, key: 'shepherd', name: 'Pastor', block: LOOM },
+  { id: PROF_WEAPONSMITH, key: 'weaponsmith', name: 'Herrero de armas', block: GRINDSTONE },
+  { id: PROF_TOOLSMITH, key: 'toolsmith', name: 'Herrero', block: SMITHING_TABLE },
+  { id: PROF_LEATHERWORKER, key: 'leatherworker', name: 'Peletero', block: CAULDRON },
+  { id: PROF_CLERIC, key: 'cleric', name: 'Clérigo', block: BREWING_STAND },
 ];
 
-/** Ofertas del comerciante ambulante: plantas y rarezas de otros biomas (se eligen 5). */
-export const TRADER_POOL: readonly TradeOffer[] = [
-  ...ALL_SAPLINGS.map((s) => sell(s, 1, 5, 8)),
-  ...Object.values(FLOWERS).slice(0, 6).map((f) => sell(f, 1, 1, 12)),
-  sell(POPPY, 1, 1, 12), sell(DANDELION, 1, 1, 12), sell(CORNFLOWER, 1, 1, 12),
-  sell(LILY_PAD, 2, 1, 5), sell(VINE, 1, 1, 12), sell(SUGAR_CANE, 1, 1, 8), sell(CACTUS, 1, 3, 8),
-  sell(PUMPKIN, 1, 1, 4), sell(PACKED_ICE, 1, 3, 6), sell(RED_SAND, 8, 1, 6), sell(MOSS_BLOCK, 2, 1, 5),
-  sell(GLOW_BERRIES, 3, 1, 8), sell(BROWN_MUSHROOM, 1, 1, 4), sell(RED_MUSHROOM, 1, 1, 4),
-];
-
-/** Experiencia total para llegar a cada nivel (1 novato … 5 maestro). */
+/** Experiencia total para llegar a cada nivel (VillagerData.NEXT_LEVEL_XP_THRESHOLDS). */
 export const LEVEL_XP = [0, 10, 70, 150, 250] as const;
 export const MAX_LEVEL = 5;
 export const LEVEL_NAMES = ['Novato', 'Aprendiz', 'Oficial', 'Experto', 'Maestro'] as const;
-/** Ofertas nuevas que se desbloquean en cada nivel; se muestran como mucho 6. */
-const PICKS = [3, 1, 1, 1, 1];
-export const MAX_OFFERS = 6;
 
 /** Nivel (1..5) que corresponde a una experiencia. */
 export function levelForXp(xp: number): number {
@@ -221,8 +107,142 @@ export function professionForBlock(block: number): number {
 /** ¿Es un bloque de trabajo de aldeano? */
 export const isWorkstation = (block: number): boolean => professionForBlock(block) !== PROF_NONE;
 
-/** PRNG pequeño y determinista (mulberry32) para elegir ofertas. */
-function rng(seed: number): () => number {
+// ------------------------------------------------------------------ plantillas
+
+const ID_OF = new Map<string, number>();
+for (const it of ITEMS) if (it?.key && !ID_OF.has(it.key)) ID_OF.set(it.key, it.id);
+const POTION_OF = new Map<string, number>(POTIONS.map((p) => [p.key, p.id]));
+const EFFECT_OF = new Map<string, number>(Object.values(EFFECTS).map((e) => [e.key, e.id]));
+
+/** Plantilla de una oferta de la tabla (con los modificadores aún sin aplicar). */
+export interface Template extends Offer {
+  def: TradeDef;
+}
+
+function template(d: TradeDef, key: number): Template {
+  const id = (k: string) => {
+    const v = ID_OF.get(k);
+    if (v === undefined) throw new Error(`villagerTrades: objeto desconocido ${k}`);
+    return v;
+  };
+  const t: Template = { key, def: d, cost: [id(d.w[0]), d.w[1]], result: [id(d.g[0]), d.g[1]], max: d.max, xp: d.xp, disc: d.disc };
+  if (d.w2) t.cost2 = [id(d.w2[0]), d.w2[1]];
+  if (d.water) t.water = true;
+  return t;
+}
+
+/** Plantillas de cada oficio y nivel (índice 0 = novato). */
+const TEMPLATES: readonly (readonly Template[][])[] = PROFESSIONS.map((p) =>
+  (VILLAGER_TRADES[p.key] ?? []).map((lvl, li) => lvl.trades.map((d, i) => template(d, li * 64 + i))));
+const AMOUNTS: readonly (readonly number[])[] = PROFESSIONS.map((p) => (VILLAGER_TRADES[p.key] ?? []).map((l) => l.amount));
+const TRADER_TEMPLATES: readonly Template[][] = WANDERING_TRADES.map((g, gi) => g.trades.map((d, i) => template(d, 1000 + gi * 128 + i)));
+
+/** Todas las ofertas posibles de un oficio y nivel (1..5), sin modificadores (para las pruebas). */
+export function professionPool(prof: number, level: number): readonly Template[] {
+  return TEMPLATES[prof]?.[level - 1] ?? [];
+}
+
+/** Plantilla por su clave (para rehacer una oferta guardada). */
+export function templateByKey(prof: number, key: number): Template | undefined {
+  if (key >= 1000) return TRADER_TEMPLATES[Math.floor((key - 1000) / 128)]?.[(key - 1000) % 128];
+  return TEMPLATES[prof]?.[Math.floor(key / 64)]?.[key % 64];
+}
+
+// ------------------------------------------------------------------ elegir y resolver
+
+/** Lo que hace falta para crear las ofertas de un aldeano. */
+export interface TradeContext {
+  /** Tipo de aldeano (villagerTypes.ts). */
+  type: number;
+  rand: () => number;
+  /** Mapa de explorador hacia la estructura más cercana de esa clase (null si no hay: la oferta no sale). */
+  map?: (kind: string) => ItemData | null;
+}
+
+/**
+ * VillagerTrade.getOffer: la oferta concreta a partir de su plantilla (el tipo de aldeano que la admite, el
+ * encantamiento, el tinte, el estofado, la poción o el mapa), o null si no sale.
+ */
+export function resolveOffer(t: Template, ctx: TradeContext): Offer | null {
+  const d = t.def;
+  if (d.types && !d.types.some((k) => villagerTypeIndex(k) === ctx.type)) return null;
+  const { def: _d, ...base } = t;
+  void _d;
+  const o: Offer = { ...base, cost: [t.cost[0], t.cost[1]] };
+  const r = rndFrom(ctx.rand);
+  let extra = 0;
+  if (d.enchant) {
+    // EnchantWithLevelsFunction: niveles uniformes en [mín, máx]; el precio sube tantas esmeraldas como niveles.
+    const levels = d.enchant[0] + r.nextInt(d.enchant[1] - d.enchant[0] + 1);
+    const stack = enchantWithLevels({ id: o.result[0], count: 1 }, levels, r, TABLE_POOL);
+    if (!stack.data?.ench?.length) return null;
+    o.data = stack.data;
+    extra += levels;
+  }
+  if (d.book) {
+    // EnchantRandomlyFunction (libro): el encantamiento al azar y su precio (el doble si es un tesoro).
+    const b = librarianBook(r);
+    o.result = [b.book.id, 1];
+    if (b.book.data) o.data = b.book.data;
+    extra += b.price;
+  }
+  if (d.dye) {
+    // set_random_dyes: 1 tinte más una binomial(2; 0,75).
+    const n = 1 + (ctx.rand() < 0.75 ? 1 : 0) + (ctx.rand() < 0.75 ? 1 : 0);
+    const dyes = Array.from({ length: n }, () => DYE_COLORS[Math.floor(ctx.rand() * DYE_COLORS.length)]);
+    o.data = applyDyes({ id: o.result[0], count: 1 }, dyes).data;
+  }
+  if (d.stew && o.result[0] === SUSPICIOUS_STEW) {
+    const [effect, secs] = d.stew[Math.floor(ctx.rand() * d.stew.length)];
+    const e = EFFECT_OF.get(effect);
+    const dmg = e === undefined ? 0 : stewDmgFor(e, secs);
+    if (dmg) o.rdmg = dmg;
+  }
+  if (d.tipped && o.result[0] === TIPPED_ARROW) {
+    const list = TRADEABLE_POTIONS.map((k) => POTION_OF.get(k)).filter((p): p is number => p !== undefined);
+    o.rdmg = list[Math.floor(ctx.rand() * list.length)];
+  }
+  if (d.potion && o.result[0] === POTION) {
+    const p = POTION_OF.get(d.potion);
+    if (p === undefined) return null;
+    o.rdmg = p;
+  }
+  if (d.map) {
+    const data = ctx.map?.(d.map) ?? null;
+    if (!data) return null;
+    o.data = data;
+  }
+  // TradeCost.toItemCost: el precio más lo añadido, entre 0 y lo que cabe en una pila; con menos de 1 no sale.
+  o.cost[1] = Math.max(0, Math.min(maxStack(o.cost[0]), o.cost[1] + extra));
+  if (o.cost[1] < 1) return null;
+  return o;
+}
+
+/** AbstractVillager.addOffersFromItemListingsWithoutDuplicates: `amount` ofertas distintas del grupo. */
+function pickFrom(pool: readonly Template[], amount: number, ctx: TradeContext): Offer[] {
+  const left = pool.slice();
+  const out: Offer[] = [];
+  while (out.length < amount && left.length) {
+    const t = left.splice(Math.floor(ctx.rand() * left.length), 1)[0];
+    const o = resolveOffer(t, ctx);
+    if (o) out.push(o);
+  }
+  return out;
+}
+
+/** Las ofertas nuevas de un aldeano al llegar al nivel `level` (1..5). */
+export function pickLevelOffers(prof: number, level: number, ctx: TradeContext): Offer[] {
+  const pool = TEMPLATES[prof]?.[level - 1];
+  return pool ? pickFrom(pool, AMOUNTS[prof][level - 1], ctx) : [];
+}
+
+/** Las ofertas de un comerciante ambulante (WanderingTrader.updateTrades: compra, poco comunes y comunes). */
+export function pickTraderOffers(ctx: TradeContext): Offer[] {
+  return TRADER_TEMPLATES.flatMap((pool, i) => pickFrom(pool, WANDERING_TRADES[i].amount, ctx));
+}
+
+/** PRNG pequeño y determinista (mulberry32). */
+export function rng(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
     s = (s + 0x6d2b79f5) | 0;
@@ -233,55 +253,77 @@ function rng(seed: number): () => number {
   };
 }
 
-/** Oferta concreta de un aldeano: `key` la identifica aunque cambie su posición en la lista. */
-export interface Offer extends TradeOffer {
-  key: number;
+/** Las ofertas de los niveles 1..`level` con una semilla (aldeano de llanura, sin mapas): para las pruebas. */
+export function offersFor(prof: number, level: number, seed: number, type = villagerTypeIndex('plains')): Offer[] {
+  const ctx: TradeContext = { type, rand: rng(seed ^ Math.imul(prof + 1, 0x9e3779b1)) };
+  const out: Offer[] = [];
+  for (let l = 1; l <= level; l++) out.push(...pickLevelOffers(prof, l, ctx));
+  return out;
+}
+
+/** Ofertas de un comerciante ambulante con una semilla (para las pruebas). */
+export function traderOffers(seed: number): Offer[] {
+  return pickTraderOffers({ type: villagerTypeIndex('plains'), rand: rng(seed ^ 0x7a3c5) });
+}
+
+// ------------------------------------------------------------------ precios
+
+/**
+ * MerchantOffer.getModifiedCostCount: el precio de lo primero que pide con la demanda (`demand`) y lo especial de
+ * cada jugador (`special`, de updateSpecialPrices), entre 1 y lo que cabe en una pila.
+ */
+export function offerPrice(o: TradeOffer, demand: number, special: number): number {
+  const base = o.cost[1];
+  const demandDiff = Math.max(0, Math.floor(Math.fround(Math.fround(base * demand) * o.disc)));
+  return Math.max(1, Math.min(maxStack(o.cost[0]), base + demandDiff + special));
 }
 
 /**
- * Ofertas de un aldeano: las de cada nivel alcanzado (3 de novato y una más por nivel), sin repetir.
- * Si pasan de 6, se retiran las más antiguas.
+ * Villager.updateSpecialPrices: lo que cambia el precio para un jugador según su reputación con el aldeano y el
+ * efecto Héroe de la aldea (`heroAmp`: su nivel, o null si no lo tiene).
  */
-export function offersFor(prof: number, level: number, seed: number): Offer[] {
-  const p = PROFESSIONS[prof];
-  if (!p || p.pool.length === 0) return [];
-  const out: Offer[] = [];
-  const r = rng(seed ^ (prof * 0x9e3779b1));
-  for (let lvl = 0; lvl < Math.min(level, p.pool.length); lvl++) {
-    const pool = p.pool[lvl].map((o, i) => ({ ...o, key: lvl * 16 + i }));
-    // Barajado determinista del nivel (se baraja entero para que la elección no dependa del nivel actual).
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(r() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    out.push(...pool.slice(0, PICKS[lvl]));
+export function specialPrice(o: TradeOffer, rep: number, heroAmp: number | null): number {
+  let d = 0;
+  if (rep !== 0) d -= Math.floor(Math.fround(rep * o.disc));
+  if (heroAmp !== null) {
+    const mod = Math.fround(0.3 + Math.fround(0.0625 * heroAmp));
+    d -= Math.max(Math.floor(mod * o.cost[1]), 1);
   }
-  while (out.length > MAX_OFFERS) out.shift();
-  // Fase 7.5 (mansión): los mapas de explorador del cartógrafo salen siempre en su nivel (aparte del sorteo).
-  for (let lvl = 0; lvl < Math.min(level, p.pool.length); lvl++) {
-    (EXPLORER_TRADES[prof]?.[lvl] ?? []).forEach((o, i) => out.push({ ...o, key: lvl * 16 + 12 + i }));
-  }
-  return out.map((o) => (o.enchant ? enchantOffer(o, seed) : o.dye ? dyeOffer(o, seed) : o)); // Fase 7 (encantamientos); el cuero teñido
+  return d;
 }
 
-/** Ofertas del comerciante ambulante (5, según su semilla). */
-export function traderOffers(seed: number): Offer[] {
-  const pool = TRADER_POOL.map((o, i) => ({ ...o, key: 200 + i }));
-  const r = rng(seed ^ 0x7a3c5);
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(r() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return pool.slice(0, 5);
+/** MerchantOffer.updateDemand (al reponer). */
+export function nextDemand(demand: number, uses: number, max: number): number {
+  return demand + uses - (max - uses);
 }
 
-/** Oferta en la red: [pide, n, pide2, n2, da, n, usos, máximo] y, Fase 7 (encantamientos), los datos de lo que da. */
-export type TradeWire = [number, number, number, number, number, number, number, number] |
-  [number, number, number, number, number, number, number, number, ItemData];
+// ------------------------------------------------------------------ red
 
-export function offerToWire(o: TradeOffer, uses: number): TradeWire {
-  const w: TradeWire = [o.cost[0], o.cost[1], o.cost2?.[0] ?? 0, o.cost2?.[1] ?? 0, o.result[0], o.result[1], uses, o.max];
-  return o.data ? [...w, o.data] : w;
+/** Lo que va aparte en la oferta: precio sin cambios, desgaste de lo que da y si pide un frasco de agua. */
+export interface TradeExtra {
+  /** Precio base (si el de ahora es otro, se ve tachado). */
+  b?: number;
+  rd?: number;
+  w?: 1;
+}
+
+/**
+ * Oferta en la red: [pide, n (el precio de ahora), pide2, n2, da, n, usos, máximo, datos de lo que da (0 sin ellos),
+ * lo que va aparte].
+ */
+export type TradeWire = [number, number, number, number, number, number, number, number, ItemData | 0, TradeExtra];
+
+export function offerToWire(o: TradeOffer, uses: number, price = o.cost[1]): TradeWire {
+  const extra: TradeExtra = {};
+  if (price !== o.cost[1]) extra.b = o.cost[1];
+  if (o.rdmg) extra.rd = o.rdmg;
+  if (o.water) extra.w = 1;
+  return [o.cost[0], price, o.cost2?.[0] ?? 0, o.cost2?.[1] ?? 0, o.result[0], o.result[1], uses, o.max, o.data ?? 0, extra];
+}
+
+/** Pila de lo que da una oferta. */
+export function offerResult(o: TradeOffer): ItemStack {
+  return { id: o.result[0], count: o.result[1], ...(o.rdmg ? { dmg: o.rdmg } : {}), ...(o.data ? { data: o.data } : {}) };
 }
 
 /** Nombre visible de un aldeano según su profesión (y del comerciante). */
@@ -290,100 +332,41 @@ export function villagerTitle(prof: number, trader: boolean): string {
   return PROFESSIONS[prof]?.name ?? 'Aldeano';
 }
 
-// Fase 6.5 (equipo): el armero vende cota de malla (aprendiz: grebas y botas; oficial: casco y peto),
-// y el flechero, ballestas (la armadura de cuero para caballo del peletero ya va en su nivel).
-import { CROSSBOW, HORSE_ARMOR } from './items';
-{
-  const prof = (id: number) => PROFESSIONS.find((p) => p.id === id)!;
-  prof(PROF_ARMORER).pool[0].push(sell(ARMOR.chainmail.leggings, 1, 3, 12, 1), sell(ARMOR.chainmail.boots, 1, 1, 12, 1));
-  prof(PROF_ARMORER).pool[1].push(sell(ARMOR.chainmail.helmet, 1, 1, 12, 5), sell(ARMOR.chainmail.chestplate, 1, 4, 12, 5));
-  prof(PROF_FLETCHER).pool[2].push(sell(CROSSBOW, 1, 3, 12, 10));
+export type { TradeLevel };
+
+// ------------------------------------------------------------------ guardado
+
+/** Tope de ofertas de un aldeano (5 niveles de 2, el bibliotecario maestro 3) o del comerciante (9). */
+export const MAX_OFFER_COUNT = 16;
+
+/** Oferta ya elegida tal como se guarda con el aldeano: su clave y lo que cambió al crearla. */
+export interface StoredOffer {
+  k: number;
+  /** Precio (con lo que añadieron el encantamiento o el libro). */
+  c: number;
+  /** Lo que da, si no es lo de la plantilla (el libro encantado). */
+  r?: number;
+  d?: ItemData;
+  rd?: number;
 }
 
-// Fase 7 (encantamientos): libros encantados del bibliotecario (uno por nivel, de novato a experto: un
-// encantamiento al azar con un nivel al azar; cuestan 2 + azar(5 + nivel·10) + 3·nivel esmeraldas, el doble
-// si es un tesoro, y un libro) y el equipo encantado del armero, el herrero de armas, el herrero, el
-// flechero y el pescador (encantado con 5 a 19 niveles, que se suman a su precio), como en Minecraft.
-import { EXPERIENCE_BOTTLE, ENCHANTED_BOOK, type ItemStack } from './items';
-import type { ItemData } from './itemData';
-import { librarianBook, enchantWithLevels, rndFrom, TABLE_POOL } from './enchanting';
-{
-  const prof = (id: number) => PROFESSIONS.find((p) => p.id === id)!;
-  const book = (xp: number): TradeOffer => ({ cost: [EMERALD, 1], cost2: [BOOK, 1], result: [ENCHANTED_BOOK, 1], max: 12, xp, enchant: 'book' });
-  const gear = (id: number, em: number, xp: number): TradeOffer => ({ cost: [EMERALD, em], result: [id, 1], max: 3, xp, enchant: 'item' });
-  const lib = prof(PROF_LIBRARIAN).pool;
-  lib[0].push(book(1));
-  lib[1].push(book(5));
-  lib[2].push(book(10));
-  lib[3].push(book(15));
-  // El equipo de diamante de los niveles altos sale encantado (sustituye a la versión sin encantar).
-  const enchanted = (p: number, lvl: number, id: number, em: number, xp: number) => {
-    const pool = prof(p).pool[lvl];
-    const i = pool.findIndex((o) => o.result[0] === id);
-    if (i >= 0) pool.splice(i, 1, gear(id, em, xp));
-    else pool.push(gear(id, em, xp));
-  };
-  enchanted(PROF_ARMORER, 3, ARMOR.diamond.leggings, 14, 15);
-  enchanted(PROF_ARMORER, 4, ARMOR.diamond.chestplate, 16, 30);
-  prof(PROF_ARMORER).pool[3].push(gear(ARMOR.diamond.boots, 8, 15));
-  prof(PROF_ARMORER).pool[4].push(gear(ARMOR.diamond.helmet, 8, 30));
-  prof(PROF_WEAPONSMITH).pool[0].push(gear(TOOLS.iron.sword, 2, 1));
-  enchanted(PROF_WEAPONSMITH, 3, TOOLS.diamond.axe, 12, 15);
-  enchanted(PROF_WEAPONSMITH, 4, TOOLS.diamond.sword, 8, 30);
-  prof(PROF_TOOLSMITH).pool[2].push(gear(TOOLS.iron.axe, 1, 10));
-  enchanted(PROF_TOOLSMITH, 3, TOOLS.diamond.axe, 12, 15);
-  prof(PROF_TOOLSMITH).pool[3].push(gear(TOOLS.diamond.shovel, 5, 15));
-  enchanted(PROF_TOOLSMITH, 4, TOOLS.diamond.pickaxe, 13, 30);
-  prof(PROF_FLETCHER).pool[3].push(gear(BOW, 2, 15));
-  enchanted(PROF_FLETCHER, 4, BOW, 2, 30);
-  prof(PROF_FLETCHER).pool[4].push(gear(CROSSBOW, 3, 30));
-  enchanted(PROF_FISHERMAN, 4, FISHING_ROD, 3, 30);
-  // Botellas con experiencia: el cartógrafo no, el bibliotecario maestro sí (no hay clérigo todavía).
-  prof(PROF_LIBRARIAN).pool[4].push(sell(EXPERIENCE_BOTTLE, 1, 3, 12, 30));
+export function storeOffer(prof: number, o: Offer): StoredOffer {
+  const t = templateByKey(prof, o.key);
+  const s: StoredOffer = { k: o.key, c: o.cost[1] };
+  if (!t || t.result[0] !== o.result[0]) s.r = o.result[0];
+  if (o.data) s.d = o.data;
+  if (o.rdmg) s.rd = o.rdmg;
+  return s;
 }
 
-/**
- * Fase 7 (encantamientos): la oferta encantada concreta de un aldeano (siempre la misma para su semilla y
- * la oferta): el libro o el objeto encantado, con su precio.
- */
-function enchantOffer(o: Offer, seed: number): Offer {
-  const r = rndFrom(rng(seed ^ Math.imul(o.key + 1, 0x2c1b3c6d)));
-  let stack: ItemStack;
-  let price: number;
-  if (o.enchant === 'book') {
-    const b = librarianBook(r);
-    stack = b.book;
-    price = b.price;
-  } else {
-    const levels = 5 + r.nextInt(15);
-    stack = enchantWithLevels({ id: o.result[0], count: 1 }, levels, r, TABLE_POOL);
-    price = Math.min(64, o.cost[1] + levels);
-  }
-  const { enchant: _e, ...rest } = o;
-  void _e;
-  return { ...rest, cost: [o.cost[0], price], result: [stack.id, 1], ...(stack.data ? { data: stack.data } : {}) };
-}
-
-/** La pieza teñida concreta de una oferta (siempre la misma para su semilla y la oferta). */
-function dyeOffer(o: Offer, seed: number): Offer {
-  const r = rng(seed ^ Math.imul(o.key + 1, 0x51ed270b));
-  const n = 1 + (r() < 0.75 ? 1 : 0) + (r() < 0.75 ? 1 : 0);
-  const dyes = Array.from({ length: n }, () => DYE_COLORS[Math.floor(r() * DYE_COLORS.length)]);
-  const stack = applyDyes({ id: o.result[0], count: 1 }, dyes);
-  const { dye: _d, ...rest } = o;
+/** La oferta de un aldeano de oficio `prof` a partir de lo guardado (null si la clave ya no existe). */
+export function offerFromStore(prof: number, s: StoredOffer): Offer | null {
+  const t = templateByKey(prof, s.k);
+  if (!t) return null;
+  const { def: _d, ...base } = t;
   void _d;
-  return { ...rest, data: stack.data };
+  const o: Offer = { ...base, cost: [t.cost[0], s.c], result: [s.r ?? t.result[0], t.result[1]] };
+  if (s.d) o.data = s.d;
+  if (s.rd) o.rdmg = s.rd;
+  return o;
 }
-
-// ------------------------------------------------------------------ Fase 7.5 (mansión)
-// Mapas de explorador del cartógrafo, como en Minecraft 26.x: el del monumento oceánico de oficial (13
-// esmeraldas y una brújula) y el de la mansión del bosque de maestro (14 esmeraldas y una brújula). No
-// entran en el sorteo de ofertas: salen siempre (si hay una estructura así en el mundo).
-import { FILLED_MAP } from './items';
-const explorerTrade = (kind: string, em: number, xp: number): TradeOffer => ({
-  cost: [EMERALD, em], cost2: [COMPASS, 1], result: [FILLED_MAP, 1], max: 12, xp, explorer: kind,
-});
-/** Ofertas de mapas de explorador por profesión y nivel (índice 0 = novato). */
-export const EXPLORER_TRADES: Readonly<Record<number, TradeOffer[][]>> = {
-  [PROF_CARTOGRAPHER]: [[], [], [explorerTrade('monument', 13, 10)], [], [explorerTrade('mansion', 14, 30)]],
-};

@@ -86,6 +86,17 @@ interface Style {
   bed: number;
 }
 
+/** Clase de aldea de un bioma (la que decide su estilo): desert, savanna, taiga, snowy o plains. */
+export function villageKind(biome: number): string {
+  switch (baseBiome(biome)) {
+    case BIOME_DESERT: return 'desert';
+    case BIOME_SAVANNA: return 'savanna';
+    case BIOME_TAIGA: return 'taiga';
+    case BIOME_SNOWY: return 'snowy';
+    default: return 'plains';
+  }
+}
+
 function styleFor(biome: number): Style {
   const wood = (planks: number, log: number, key: string, bed: string, ridge = 0): Style => ({
     // Fase 6.5 (materiales): calles de camino de tierra (antes, grava).

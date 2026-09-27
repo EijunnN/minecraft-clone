@@ -7,7 +7,11 @@ import {
   MOB_VINDICATOR, MOB_EVOKER, MOB_VEX, MOB_RAVAGER, isVillagerType,
 } from '../../mobs';
 import { AIR, isDoor, familyBase, stateProps } from '../../blocks';
-import { PROFESSIONS, PROF_NONE, levelForXp, MAX_LEVEL } from '../../villagers';
+import { PROFESSIONS, PROF_NONE, levelForXp, MAX_LEVEL, LEVEL_XP, offerFromStore, nextDemand, type StoredOffer } from '../../villagers';
+import { villagerTypeFor, sanitizeVillagerType, villagerVariant } from '../../villagerTypes';
+import { addGossip, decayGossip, transferGossip, reputation, sanitizeGossips, type Gossips } from '../../villagerGossip';
+import { sanitizeStoredOffers } from './villagerOffers';
+import { lineOfSight } from '../physics';
 import { toggleEdits } from '../../placement';
 import { findPath, type PathNode } from '../pathfind';
 import type { BlockGetter } from '../physics';
@@ -32,6 +36,22 @@ export interface VillagerData {
   seed: number;
   /** Usos de cada oferta (por su clave) desde la última reposición. */
   uses: Record<number, number>;
+  /** Tipo de aldeano (villagerTypes.ts), según el bioma donde nació. */
+  type: number;
+  /** Ofertas ya elegidas (fijas, como en Java) y hasta qué nivel están elegidas (0 ninguna). */
+  offers: StoredOffer[];
+  offerLevels: number;
+  /** Demanda de cada oferta (MerchantOffer.demand), por su clave. */
+  demand: Record<number, number>;
+  /** Lo que sabe de cada jugador (villagerGossip.ts). */
+  gossip: Gossips;
+  /** Reposición (Villager.shouldRestock): última (días del mundo), cuántas hoy y el día de la última comprobación. */
+  lastRestock: number;
+  restocksToday: number;
+  restockDay: number;
+  /** Último día en que olvidó cotilleos y última vez que cotilleó con otro aldeano (días del mundo). */
+  gossipDecay: number;
+  lastGossip: number;
   /** Casa (donde duerme), punto de reunión de la aldea (el pozo) y bloque de trabajo. */
   home: Vec3 | null;
   meet: Vec3 | null;
@@ -42,7 +62,10 @@ export interface VillagerData {
   life: number;
   // --- estado temporal (no se guarda) ---
   scan: number;
-  restock: number;
+  /** Segundos hasta la próxima vez que mira si está en su bloque de trabajo (WorkAtPoi: cada 300 ticks). */
+  work: number;
+  /** Segundos hasta buscar otro aldeano con quien cotillear. */
+  chat: number;
   fleeScan: number;
   flee: number;
   fleeFrom: [number, number];
@@ -58,8 +81,17 @@ export interface VillagerData {
 
 /** Radio en el que un aldeano busca bloque de trabajo (como en Minecraft). */
 export const JOB_RADIUS = 16;
-/** Segundos entre reposiciones de las ofertas. */
-const RESTOCK_SECONDS = 300;
+/** WorkAtPoi: cada 300 ticks (15 s), con la mitad de probabilidad, mira si está a menos de 1,73 de su bloque de trabajo. */
+const WORK_CHECK = 15;
+const WORK_REACH = 1.73;
+/** Horario de trabajo de Java (de 2000 a 9000 ticks del día). */
+const WORK_FROM = 2000 / 24000;
+const WORK_TO = 9000 / 24000;
+/** TradeWithVillager: cotillean al encontrarse (a 2 bloques), cada uno como mucho cada 1200 ticks. */
+const GOSSIP_REACH = 2;
+const GOSSIP_EVERY = 1200 / 24000;
+/** Quienes ven morir a un aldeano a manos de un jugador (NEAREST_VISIBLE_LIVING_ENTITIES: 16 bloques). */
+const WITNESS_RANGE = 16;
 /** Distancia a la que huye de un zombi. */
 const FLEE_RANGE = 8;
 
@@ -68,7 +100,11 @@ const WORKSTATIONS = new Map<number, number>(PROFESSIONS.filter((p) => p.block).
 
 /** Lo que se guarda de un aldeano (junto a los demás datos del animal). */
 export interface VillagerSave {
-  vil: { p: number; l: number; x: number; s: number; h: Vec3 | null; m: Vec3 | null; j: Vec3 | null; t: number };
+  vil: {
+    p: number; l: number; x: number; s: number; h: Vec3 | null; m: Vec3 | null; j: Vec3 | null; t: number;
+    ty?: number; of?: StoredOffer[]; ol?: number; u?: Record<number, number>; dm?: Record<number, number>; go?: Gossips;
+    rs?: [number, number, number]; gd?: number;
+  };
 }
 
 const vec = (v: unknown): Vec3 | null =>
@@ -87,7 +123,10 @@ export class VillagerLife {
         prof: PROF_NONE, level: 1, xp: 0, seed: Math.floor(this.m.rand() * 2 ** 31), uses: {}, home: null,
         meet: [Math.floor(e.x), Math.floor(e.y), Math.floor(e.z)], job: null, trading: null,
         life: e.type === MOB_WANDERING_TRADER ? 2400 : 0,
-        scan: this.m.rand() * 2, restock: RESTOCK_SECONDS, fleeScan: 0, flee: 0, fleeFrom: [0, 0], dest: null, destT: 0,
+        // Villager.finalizeSpawn: el tipo, el del bioma donde aparece.
+        type: villagerTypeFor(this.m.w.gen.biomeAt(Math.floor(e.x), Math.floor(e.z))),
+        offers: [], offerLevels: 0, demand: {}, gossip: {}, lastRestock: 0, restocksToday: 0, restockDay: 0, gossipDecay: 0, lastGossip: -1,
+        scan: this.m.rand() * 2, work: this.m.rand() * WORK_CHECK, chat: this.m.rand() * 3, fleeScan: 0, flee: 0, fleeFrom: [0, 0], dest: null, destT: 0,
         idle: this.m.rand() * 3, path: null, pathIdx: 0, repath: 0, doors: [],
       };
     }
@@ -109,7 +148,7 @@ export class VillagerLife {
   /** Profesión, reposición, huida, puertas y marcha del comerciante. */
   tick(e: Entity, dt: number): void {
     const v = this.data(e);
-    e.variant = v.prof;
+    e.variant = villagerVariant(v.prof, v.type);
     if (e.dead) {
       this.release(e);
       return;
@@ -123,11 +162,9 @@ export class VillagerLife {
         return;
       }
     }
-    v.restock -= dt;
-    if (v.restock <= 0) {
-      v.restock = RESTOCK_SECONDS;
-      // Sólo repone quien tiene su bloque de trabajo (o el comerciante, que no tiene).
-      if (v.job || e.type === MOB_WANDERING_TRADER) v.uses = {};
+    if (e.type === MOB_VILLAGER) {
+      this.workTick(e, v, dt);
+      this.gossipTick(e, v, dt);
     }
     v.fleeScan -= dt;
     if (v.fleeScan <= 0) {
@@ -198,7 +235,8 @@ export class VillagerLife {
       v.job = null;
       if (v.xp === 0 && v.level === 1) {
         v.prof = PROF_NONE;
-        e.variant = PROF_NONE;
+        this.clearOffers(v);
+        e.variant = villagerVariant(PROF_NONE, v.type);
       }
     }
     const found = this.findJob(e, v.prof);
@@ -208,8 +246,8 @@ export class VillagerLife {
     this.claims.set(posKey(x, y, z), e.id);
     if (v.prof !== prof) {
       v.prof = prof;
-      v.uses = {};
-      e.variant = prof;
+      this.clearOffers(v);
+      e.variant = villagerVariant(prof, v.type);
       this.m.host.fx('villager_job', e.x, e.y + e.height + 0.2, e.z, e.type);
     }
   }
@@ -237,16 +275,140 @@ export class VillagerLife {
     return best;
   }
 
-  /** Suma experiencia de comercio; devuelve true si sube de nivel. */
+  /**
+   * Suma experiencia de comercio; devuelve true si sube de nivel. Como Villager.rewardTradeXp, sube como mucho un
+   * nivel por trato (y se cura: Regeneración 10 s).
+   */
   addXp(e: Entity, xp: number): boolean {
     const v = this.data(e);
     if (e.type !== MOB_VILLAGER) return false;
     v.xp += xp;
-    const lvl = Math.min(MAX_LEVEL, levelForXp(v.xp));
-    if (lvl <= v.level) return false;
-    v.level = lvl;
+    if (v.level >= MAX_LEVEL || v.xp < LEVEL_XP[v.level]) return false;
+    v.level++;
+    e.health = Math.min(MOBS[e.type].health, e.health + 4);
     this.m.host.fx('villager_levelup', e.x, e.y + e.height, e.z, e.type);
     return true;
+  }
+
+  /** Olvida las ofertas elegidas (cambió de oficio o lo perdió). */
+  private clearOffers(v: VillagerData): void {
+    v.uses = {};
+    v.offers = [];
+    v.offerLevels = 0;
+    v.demand = {};
+  }
+
+  // ------------------------------------------------------------------ reposición (WorkAtPoi y Villager.restock)
+
+  /** Cada 15 s, la mitad de las veces: si en horario de trabajo está junto a su bloque, trabaja y quizá repone. */
+  private workTick(e: Entity, v: VillagerData, dt: number): void {
+    v.work -= dt;
+    if (v.work > 0) return;
+    v.work = WORK_CHECK;
+    if (!v.job || this.m.rand() >= 0.5) return;
+    const now = this.m.host.worldTime();
+    const dayTime = now - Math.floor(now);
+    if (dayTime < WORK_FROM || dayTime > WORK_TO) return;
+    if (Math.hypot(v.job[0] + 0.5 - e.x, v.job[1] + 0.5 - e.y, v.job[2] + 0.5 - e.z) >= WORK_REACH) return;
+    this.m.host.fx('villager_work', e.x, e.y + e.height, e.z, v.prof);
+    if (this.shouldRestock(v, now)) this.restock(v, now);
+  }
+
+  /** Villager.shouldRestock: un día nuevo pone la cuenta a cero (y recupera la demanda); como mucho 2 al día. */
+  shouldRestock(v: VillagerData, now: number): boolean {
+    let newDay = now > v.lastRestock + 0.5;
+    const day = Math.floor(now);
+    newDay ||= v.restockDay > 0 && day > v.restockDay;
+    v.restockDay = day;
+    if (newDay) {
+      v.lastRestock = now;
+      this.catchUpDemand(v);
+      v.restocksToday = 0;
+    }
+    const allowed = v.restocksToday === 0 || (v.restocksToday < 2 && now > v.lastRestock + 2400 / 24000);
+    return allowed && v.offers.some((o) => (v.uses[o.k] ?? 0) > 0);
+  }
+
+  /** Villager.restock: la demanda de cada oferta se actualiza y se reponen todas. */
+  restock(v: VillagerData, now: number): void {
+    this.updateDemand(v);
+    v.uses = {};
+    v.lastRestock = now;
+    v.restocksToday++;
+  }
+
+  /** Villager.catchUpDemand: las reposiciones que no hizo ayer cuentan para la demanda. */
+  private catchUpDemand(v: VillagerData): void {
+    const missed = 2 - v.restocksToday;
+    if (missed > 0) {
+      for (let i = 0; i < missed; i++) this.updateDemand(v);
+      v.uses = {};
+    }
+  }
+
+  private updateDemand(v: VillagerData): void {
+    for (const s of v.offers) {
+      const o = offerFromStore(v.prof, s);
+      if (o) v.demand[s.k] = nextDemand(v.demand[s.k] ?? 0, v.uses[s.k] ?? 0, o.max);
+    }
+  }
+
+  // ------------------------------------------------------------------ cotilleos (GossipContainer)
+
+  /** Olvida un poco cada día y cotillea con los aldeanos con los que se cruza. */
+  private gossipTick(e: Entity, v: VillagerData, dt: number): void {
+    const now = this.m.host.worldTime();
+    if (v.gossipDecay === 0) v.gossipDecay = now;
+    else if (now >= v.gossipDecay + 1) {
+      decayGossip(v.gossip);
+      v.gossipDecay = now;
+    }
+    v.chat -= dt;
+    if (v.chat > 0) return;
+    v.chat = 2 + this.m.rand() * 2;
+    if ((e.growAge ?? 0) > 0 || now < v.lastGossip + GOSSIP_EVERY) return;
+    for (const o of this.m.list.values()) {
+      if (o === e || o.type !== MOB_VILLAGER || o.dead || (o.growAge ?? 0) > 0) continue;
+      if (Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) > GOSSIP_REACH) continue;
+      const w = this.data(o);
+      if (now < w.lastGossip + GOSSIP_EVERY) continue;
+      // Villager.gossip (TradeWithVillager lo hace en los dos): cada uno oye hasta 10 cotilleos del otro.
+      transferGossip(v.gossip, w.gossip, () => this.m.rand(), 10);
+      transferGossip(w.gossip, v.gossip, () => this.m.rand(), 10);
+      v.lastGossip = w.lastGossip = now;
+      return;
+    }
+  }
+
+  /** Un jugador le ha hecho daño (ReputationEventType.VILLAGER_HURT: +25 de minor_negative). */
+  onHurtBy(e: Entity, playerId: string): void {
+    if (e.type !== MOB_VILLAGER || e.dead) return;
+    const who = this.nameOf(playerId);
+    if (who) addGossip(this.data(e).gossip, who, 'minor_negative', 25);
+  }
+
+  /** Nombre (en minúsculas: la clave de los cotilleos) del jugador con ese id de sesión. */
+  private nameOf(playerId: string): string | null {
+    const p = this.m.host.players().find((pp) => pp.id === playerId);
+    return p ? p.name.toLowerCase() : null;
+  }
+
+  /** Un jugador lo ha matado: los aldeanos que lo ven se enteran (VILLAGER_KILLED: +25 de major_negative). */
+  onMurdered(e: Entity, playerId: string): void {
+    if (e.type !== MOB_VILLAGER) return;
+    const who = this.nameOf(playerId);
+    if (!who) return;
+    for (const o of this.m.list.values()) {
+      if (o === e || o.type !== MOB_VILLAGER || o.dead) continue;
+      if (Math.hypot(o.x - e.x, o.y - e.y, o.z - e.z) > WITNESS_RANGE) continue;
+      if (!lineOfSight(this.m.w, o.x, o.y + o.height * 0.9, o.z, e.x, e.y + e.height * 0.5, e.z)) continue;
+      addGossip(this.data(o).gossip, who, 'major_negative', 25);
+    }
+  }
+
+  /** Reputación de un jugador con este aldeano. */
+  reputationOf(e: Entity, who: string): number {
+    return reputation(this.data(e).gossip, who.toLowerCase());
   }
 
   // ------------------------------------------------------------------ movimiento
@@ -385,7 +547,13 @@ export class VillagerLife {
   save(e: Entity): VillagerSave | null {
     const v = e.villager;
     if (!v || !isVillagerType(e.type)) return null;
-    return { vil: { p: v.prof, l: v.level, x: v.xp, s: v.seed, h: v.home, m: v.meet, j: v.job, t: Math.round(v.life) } };
+    return {
+      vil: {
+        p: v.prof, l: v.level, x: v.xp, s: v.seed, h: v.home, m: v.meet, j: v.job, t: Math.round(v.life),
+        ty: v.type, of: v.offers, ol: v.offerLevels, u: v.uses, dm: v.demand, go: v.gossip, rs: [v.lastRestock, v.restocksToday, v.restockDay],
+        gd: v.gossipDecay,
+      },
+    };
   }
 
   restore(e: Entity, raw: unknown): void {
@@ -402,6 +570,28 @@ export class VillagerLife {
     v.meet = vec(s.m) ?? v.meet;
     v.job = vec(s.j);
     if (e.type === MOB_WANDERING_TRADER) v.life = int(s.t, 0, 100_000, 600);
-    e.variant = v.prof;
+    if (s.ty !== undefined) v.type = sanitizeVillagerType(s.ty);
+    v.offers = sanitizeStoredOffers(e.type === MOB_WANDERING_TRADER ? PROF_NONE : v.prof, s.of);
+    v.offerLevels = v.offers.length ? int(s.ol, 0, MAX_LEVEL, 0) : 0;
+    const keyed = (raw: unknown, lo: number, hi: number) => {
+      const out: Record<number, number> = {};
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        for (const [k, n] of Object.entries(raw as Record<string, unknown>)) {
+          if (v.offers.some((o) => o.k === Number(k)) && Number.isInteger(n) && (n as number) >= lo && (n as number) <= hi) out[Number(k)] = n as number;
+        }
+      }
+      return out;
+    };
+    v.uses = keyed(s.u, 0, 10_000);
+    v.demand = keyed(s.dm, -1_000_000, 1_000_000);
+    v.gossip = sanitizeGossips(s.go);
+    if (Array.isArray(s.rs)) {
+      const [a, b, c] = s.rs.map(Number);
+      if (Number.isFinite(a) && a >= 0) v.lastRestock = a;
+      v.restocksToday = int(b, 0, 2, 0);
+      v.restockDay = int(c, 0, 1e9, 0);
+    }
+    if (Number.isFinite(Number(s.gd)) && Number(s.gd) >= 0) v.gossipDecay = Number(s.gd);
+    e.variant = villagerVariant(v.prof, v.type);
   }
 }

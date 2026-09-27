@@ -32,8 +32,32 @@ export const SUSPICIOUS_FLOWERS: readonly (readonly [number, number, number])[] 
 
 /** Efecto de un estofado sospechoso: [efecto, segundos] o null si no tiene flor. */
 export function stewEffect(dmg: number | undefined): readonly [number, number] | null {
+  if ((dmg ?? 0) > TRADE_STEW_BASE) return TRADE_STEWS[dmg! - TRADE_STEW_BASE - 1] ?? null;
   const f = SUSPICIOUS_FLOWERS[(dmg ?? 0) - 1];
   return f ? [f[1], f[2]] : null;
+}
+
+/**
+ * El estofado que vende el granjero experto (set_stew_effect): un efecto al azar de su lista, con su duración. Los
+ * que coinciden con una flor usan su `dmg`; los que no (supersalto 8 s, ceguera 6 s y veneno 14 s) van a partir de
+ * TRADE_STEW_BASE + 1 (sólo se añade al final).
+ */
+const TRADE_STEW_BASE = 100;
+const TRADE_STEWS: readonly (readonly [number, number])[] = [
+  [EFFECT_JUMP_BOOST, 8],
+  [EFFECT_BLINDNESS, 6],
+  [EFFECT_POISON, 14],
+];
+/** Efectos instantáneos: su duración en Java son ticks, no segundos. */
+const INSTANT_STEW = new Set([EFFECT_SATURATION]);
+
+/** `dmg` del estofado con ese efecto y duración (en segundos; en ticks si es instantáneo), o 0 si no hay. */
+export function stewDmgFor(effect: number, duration: number): number {
+  const secs = INSTANT_STEW.has(effect) ? duration / 20 : duration;
+  const f = SUSPICIOUS_FLOWERS.findIndex(([, e, s]) => e === effect && s === secs);
+  if (f >= 0) return f + 1;
+  const t = TRADE_STEWS.findIndex(([e, s]) => e === effect && s === secs);
+  return t >= 0 ? TRADE_STEW_BASE + 1 + t : 0;
 }
 
 /** Texto del efecto (para la descripción del objeto). */

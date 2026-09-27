@@ -5,6 +5,15 @@ import type { StructureMapMarker } from '../../shared/structureMapData';
 
 const cache = new Map<string, string>();
 
+/** Tejado, pared y marco de la casita de cada clase de aldea. */
+const VILLAGE_COLORS: Record<string, [string, string, string]> = {
+  village_plains: ['#6b4a2b', '#b08c56', '#5a3f24'],
+  village_desert: ['#c9a86a', '#e3d3a0', '#b5703a'],
+  village_savanna: ['#a8542c', '#c9763f', '#6d5a4a'],
+  village_snowy: ['#f2f6f8', '#6d5234', '#3f2f1f'],
+  village_taiga: ['#3f2c1b', '#6d5234', '#2e2014'],
+};
+
 /** Imagen (data URL) de la marca de un mapa de estructura. */
 export function structureMarkIcon(marker: StructureMapMarker): string {
   let url = cache.get(marker);
@@ -39,6 +48,42 @@ export function structureMarkIcon(marker: StructureMapMarker): string {
       px(x, 11, 1, 2, '#f0d878');
     }
     px(7, 11, 2, 3, '#2a1a0e');
+  } else if (marker.startsWith('village_')) {
+    // Casita de la aldea con los colores de su clase: tejado, pared y marco.
+    const [roof, wall, frame] = VILLAGE_COLORS[marker] ?? VILLAGE_COLORS.village_plains;
+    for (let k = 0; k < 6; k++) px(7 - k, 2 + k, 2 + 2 * k, 1, '#1c120b');
+    for (let k = 0; k < 5; k++) px(7 - k, 3 + k, 2 + 2 * k, 1, roof);
+    px(2, 8, 12, 7, '#1c120b');
+    px(3, 8, 10, 6, wall);
+    px(3, 8, 1, 6, frame);
+    px(12, 8, 1, 6, frame);
+    px(7, 10, 2, 4, '#2a1a0e');
+    px(4, 9, 2, 2, '#f0d878');
+    px(10, 9, 2, 2, '#f0d878');
+  } else if (marker === 'swamp_hut') {
+    // Cabaña de la bruja sobre pilotes: tejado de abeto, paredes oscuras y una ventana verde.
+    for (let k = 0; k < 5; k++) px(7 - k, 1 + k, 2 + 2 * k, 1, '#1b1410');
+    for (let k = 0; k < 4; k++) px(7 - k, 2 + k, 2 + 2 * k, 1, '#3f2c1b');
+    px(2, 6, 12, 6, '#1b1410');
+    px(3, 6, 10, 5, '#4e3a24');
+    px(5, 7, 2, 2, '#7fd26a');
+    px(9, 7, 2, 4, '#1b1410');
+    for (const x of [3, 7, 12]) px(x, 12, 1, 3, '#2b1f14');
+    px(1, 14, 14, 1, '#2f4a2c');
+  } else if (marker === 'jungle_temple') {
+    // Templo de piedra musgosa escalonado con la entrada oscura.
+    const steps: [number, number][] = [[5, 2], [3, 6], [1, 10]];
+    for (const [x, y] of steps) px(x, y, 16 - 2 * x, 4, '#2b3326');
+    for (const [x, y] of steps) px(x + 1, y + 1, 14 - 2 * x, 3, '#7c8a6a');
+    for (const [x, y] of [[4, 8], [9, 11], [7, 4], [12, 12]] as const) px(x, y, 2, 1, '#4f7a38');
+    px(6, 11, 4, 4, '#141a10');
+  } else if (marker === 'trial_chambers') {
+    // Cámara de toba y cobre: bloque ancho con una rejilla de cobre.
+    px(1, 3, 14, 12, '#2c2a28');
+    px(2, 4, 12, 10, '#6b6964');
+    px(2, 4, 12, 2, '#c07a4e');
+    for (const x of [4, 7, 10]) px(x, 7, 2, 5, '#b86b3f');
+    px(6, 11, 4, 3, '#1d1b1a');
   } else {
     // Pirámide escalonada verde azulada con la entrada oscura.
     const steps: [number, number][] = [[7, 2], [5, 5], [3, 8], [1, 11]];

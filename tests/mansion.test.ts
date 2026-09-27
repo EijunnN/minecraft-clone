@@ -17,7 +17,8 @@ import { blockIndex } from '../src/shared/constants';
 import { locateStructure, structureStartAt, STRUCTURE_NAMES } from '../src/shared/world/structures';
 import { mansionLayout, MANSION_LOOT } from '../src/shared/world/mansion';
 import { LOOT_TABLES, rollLoot } from '../src/shared/loot';
-import { offersFor, PROF_CARTOGRAPHER } from '../src/shared/villagers';
+import { PROF_CARTOGRAPHER, pickLevelOffers, professionPool, resolveOffer, storeOffer, rng, type Template } from '../src/shared/villagers';
+import { villagerTypeIndex } from '../src/shared/villagerTypes';
 import { structureMap, structureMapAt, structureMapOf, STRUCTURE_MAPS } from '../src/shared/structureMaps';
 import { structureMapArea } from '../src/shared/structureMapData';
 import { sanitizeStack } from '../src/shared/containers';
@@ -295,12 +296,28 @@ test('alay: jaulas con alays en la mitad de los puestos de saqueadores', () => {
 
 // ------------------------------------------------------------------ mapas de explorador
 
-test('cartógrafo: mapa del monumento de oficial y de la mansión de maestro, fuera del sorteo', () => {
-  const o3 = offersFor(PROF_CARTOGRAPHER, 3, 42), o5 = offersFor(PROF_CARTOGRAPHER, 5, 42);
-  const ex = (o: typeof o3) => o.filter((t) => t.explorer).map((t) => [t.explorer, t.cost[1], t.cost2?.[0], t.result[0]]);
-  assert.deepEqual(ex(offersFor(PROF_CARTOGRAPHER, 2, 42)), []);
-  assert.deepEqual(ex(o3), [['monument', 13, COMPASS, FILLED_MAP]]);
-  assert.deepEqual(ex(o5), [['monument', 13, COMPASS, FILLED_MAP], ['mansion', 14, COMPASS, FILLED_MAP]]);
+test('cartógrafo: los mapas de 26.3 según su tipo de aldeano; sin estructura cerca, la oferta no sale', () => {
+  // Qué mapas de aldea y de explorador puede vender cada tipo (merchant_predicate de cartographer/2).
+  const allowed: Record<string, string[]> = {
+    plains: ['village_taiga', 'village_savanna'], desert: ['village_savanna', 'village_plains', 'jungle_temple'],
+    jungle: ['swamp_hut', 'village_savanna', 'village_desert'], savanna: ['village_plains', 'jungle_temple', 'village_desert'],
+    snow: ['village_taiga', 'swamp_hut', 'village_plains'], swamp: ['village_taiga', 'village_snowy', 'jungle_temple'],
+    taiga: ['swamp_hut', 'village_snowy', 'village_plains'],
+  };
+  for (const [type, kinds] of Object.entries(allowed)) {
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 80; seed++) {
+      const tc = { type: villagerTypeIndex(type), rand: rng(seed), map: (k: string) => ({ smap: { k, x: 0, z: 0 } }) as never };
+      for (const o of pickLevelOffers(PROF_CARTOGRAPHER, 2, tc)) if (o.data?.smap) seen.add(o.data.smap.k);
+    }
+    assert.deepEqual([...seen].sort(), [...kinds].sort(), type);
+  }
+  // Oficial: monumento (13 esmeraldas y una brújula); sin cámaras de desafío en el mundo, ese mapa no sale nunca.
+  const tc = { type: villagerTypeIndex('plains'), rand: rng(3), map: (k: string) => (k === 'trial_chambers' ? null : ({ smap: { k, x: 0, z: 0 } }) as never) };
+  const lvl3 = professionPool(PROF_CARTOGRAPHER, 3).map((t) => resolveOffer(t, tc)).filter((o) => o?.data?.smap);
+  assert.deepEqual(lvl3.map((o) => [o!.data!.smap!.k, o!.cost[1], o!.cost2?.[0], o!.result[0]]), [['monument', 13, COMPASS, FILLED_MAP]]);
+  const lvl5 = professionPool(PROF_CARTOGRAPHER, 5).map((t) => resolveOffer(t, tc)).filter((o) => o?.data?.smap);
+  assert.deepEqual(lvl5.map((o) => [o!.data!.smap!.k, o!.cost[1]]), [['mansion', 14]]);
   // El mapa (el de estructura de structureMaps.ts): su nombre, su zona (1:4) y sus datos sobreviven a la red.
   const map = structureMapAt('mansion', 5000, -3000);
   const clean = sanitizeStack(JSON.parse(JSON.stringify(map)))!;
@@ -335,6 +352,14 @@ test('cartógrafo: vende los mapas del monumento y de la mansión más cercanos'
   const v = h.gs.entities.villagers.data(e);
   v.prof = PROF_CARTOGRAPHER;
   v.level = 5;
+  // Sus ofertas: el mapa del monumento (oficial) y el de la mansión (maestro), resueltos desde donde está el aldeano.
+  const explorer = h.gs.sys.trading.explorer;
+  const pick = (lvl: number, kind: string) => {
+    const t = professionPool(PROF_CARTOGRAPHER, lvl).find((x: Template) => x.def.map === kind)!;
+    return storeOffer(PROF_CARTOGRAPHER, resolveOffer(t, { type: v.type, rand: rng(1), map: (k) => explorer.mapData(e, k) })!);
+  };
+  v.offers = [pick(3, 'monument'), pick(5, 'mansion')];
+  v.offerLevels = 5;
   c.pos(e.x + 1, e.y, e.z);
   c.send({ t: 'topen', e: e.id });
   const trades = c.conn.take('trades')[0];

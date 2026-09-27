@@ -336,7 +336,9 @@ export function structureStartAt(gen: TerrainGenerator, key: string, x: number, 
 export const LOCATE_REGIONS = 100;
 
 /** Estructura más cercana de un tipo a (x, z): [x, y, z] o null (busca hasta `maxRegions` regiones). */
-export function locateStructure(gen: TerrainGenerator, key: string, x: number, z: number, maxRegions = 12): [number, number, number] | null {
+export function locateStructure(
+  gen: TerrainGenerator, key: string, x: number, z: number, maxRegions = 12, accept?: (x: number, z: number) => boolean,
+): [number, number, number] | null {
   if (key === 'stronghold') return locateStronghold(gen, x, z); // Fase 8.6
   if (key === 'mineshaft') {
     const cx = Math.floor(x / 16), cz = Math.floor(z / 16);
@@ -363,7 +365,7 @@ export function locateStructure(gen: TerrainGenerator, key: string, x: number, z
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
         const s = gridStart(gen, t, rx0 + dx, rz0 + dz);
-        if (!s) continue;
+        if (!s || (accept && !accept(s.x, s.z))) continue;
         const d = Math.hypot(s.x - x, s.z - z);
         if (d < bd) { bd = d; best = [s.x, s.y, s.z]; }
       }

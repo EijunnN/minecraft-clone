@@ -38,6 +38,8 @@ export interface EntityHost {
   players(): PlayerView[];
   /** Altura del sol (-1..1). */
   sunHeight(): number;
+  /** Tiempo del mundo en días (0 = amanecer): la reposición y los cotilleos de los aldeanos. */
+  worldTime(): number;
   raining(): number;
   /** 0 pacífico, 1 fácil, 2 normal, 3 difícil. */
   difficulty(): number;

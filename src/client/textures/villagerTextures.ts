@@ -1,11 +1,13 @@
 // Texturas de los aldeanos (fase 6): la misma cara (piel tostada, cejijunto, ojos verdes y nariz
 // grande) y una ropa distinta por profesión: color de la túnica, ribete, delantal, cinturón y
-// sombrero o cinta. El comerciante ambulante lleva túnica y capucha azules.
+// sombrero o cinta, sobre la ropa del tipo de aldeano (la de su bioma). El comerciante ambulante lleva túnica y capucha
+// azules.
 import { MOB_WANDERING_TRADER } from '../../shared/mobs';
 import {
   PROF_FARMER, PROF_BUTCHER, PROF_ARMORER, PROF_MASON, PROF_LIBRARIAN, PROF_CARTOGRAPHER, PROF_FLETCHER, PROF_FISHERMAN,
-  PROF_SHEPHERD, PROF_WEAPONSMITH, PROF_TOOLSMITH, PROF_LEATHERWORKER,
+  PROF_SHEPHERD, PROF_WEAPONSMITH, PROF_TOOLSMITH, PROF_LEATHERWORKER, PROF_CLERIC,
 } from '../../shared/villagers';
+import { variantProf, variantType, VT_DESERT, VT_JUNGLE, VT_PLAINS, VT_SAVANNA, VT_SNOW, VT_SWAMP, VT_TAIGA } from '../../shared/villagerTypes';
 import {
   mapAt, vnoise, rnd, scaleRGB as scale, PX, NX, TOP, BOTTOM, FRONT, BACK, type Texel, type Paint, type Painter,
   type MobRGB as RGB,
@@ -44,7 +46,35 @@ const OUTFITS: Record<number, Outfit> = {
   [PROF_WEAPONSMITH]: { robe: [50, 48, 54], trim: [150, 40, 38], belt: [150, 40, 38], patch: true },
   [PROF_TOOLSMITH]: { robe: BROWN, trim: [60, 60, 66], apron: [70, 52, 36], belt: [40, 40, 44] },
   [PROF_LEATHERWORKER]: { robe: BROWN, trim: [150, 104, 60], apron: [150, 104, 60], belt: [90, 62, 36] },
+  // El clérigo: túnica morada con ribete dorado.
+  [PROF_CLERIC]: { robe: [104, 56, 132], trim: [214, 176, 72], belt: [214, 176, 72] },
 };
+
+/**
+ * Ropa de cada tipo de aldeano (la de su bioma, VillagerType): la del parado y, debajo de la del oficio, la túnica (si
+ * el oficio no la cambia) y lo que lleva en la cabeza (si el oficio no lleva sombrero).
+ */
+const TYPE_OUTFITS: Record<number, Outfit> = {
+  [VT_PLAINS]: { robe: BROWN, trim: [84, 58, 40] },
+  [VT_DESERT]: { robe: [196, 168, 116], trim: [168, 64, 44], hood: [214, 190, 140], belt: [168, 64, 44] },
+  [VT_JUNGLE]: { robe: [96, 116, 58], trim: [70, 52, 34], band: [72, 150, 52], belt: [110, 80, 48] },
+  [VT_SAVANNA]: { robe: [170, 84, 46], trim: [220, 180, 70], band: [60, 120, 150], belt: [220, 180, 70] },
+  [VT_SNOW]: { robe: [70, 98, 150], trim: [236, 236, 232], hood: [236, 236, 232], belt: [52, 72, 116] },
+  [VT_SWAMP]: { robe: [58, 78, 52], trim: [40, 54, 36], hat: [70, 128, 50], belt: [80, 60, 40] },
+  [VT_TAIGA]: { robe: [92, 66, 44], trim: [150, 120, 90], hood: [120, 90, 62], belt: [60, 44, 30] },
+};
+
+/** Oficios cuya ropa tapa la túnica de su tipo (en los demás se ve la de su bioma con el delantal o el sombrero encima). */
+const OWN_ROBE = new Set([PROF_LIBRARIAN, PROF_CARTOGRAPHER, PROF_CLERIC, PROF_WEAPONSMITH]);
+
+/** La ropa de un aldeano: la del oficio sobre la de su tipo. */
+function outfitFor(prof: number, type: number): Outfit {
+  const base = TYPE_OUTFITS[type] ?? TYPE_OUTFITS[VT_PLAINS];
+  if (!prof || !OUTFITS[prof]) return base;
+  const o = OUTFITS[prof];
+  const head = o.hat || o.band || o.hood ? {} : { hat: base.hat, band: base.band, hood: base.hood };
+  return { ...o, ...(OWN_ROBE.has(prof) ? {} : { robe: base.robe, trim: base.trim, belt: o.belt ?? base.belt }), ...head };
+}
 const TRADER: Outfit = { robe: [40, 72, 146], trim: [230, 226, 214], hood: [32, 58, 120], belt: [110, 80, 48] };
 
 const SKIN: RGB[] = [
@@ -74,7 +104,7 @@ const FACE = [
 ];
 
 export function villagerPainter(mobId: number, variant: number): Painter {
-  const o = mobId === MOB_WANDERING_TRADER ? TRADER : OUTFITS[variant] ?? OUTFITS[0];
+  const o = mobId === MOB_WANDERING_TRADER ? TRADER : outfitFor(variantProf(variant), variantType(variant));
   const seed = 1800 + variant * 17 + (mobId === MOB_WANDERING_TRADER ? 500 : 0);
   return (t: Texel): Paint => {
     const r = rnd(t, seed);

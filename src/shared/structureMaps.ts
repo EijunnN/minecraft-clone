@@ -12,6 +12,7 @@
 import { FILLED_MAP, EMPTY_MAP, type ItemStack } from './items';
 import { mapKeyAt } from './maps';
 import { locateStructure } from './world/structures';
+import { villageKind } from './world/villages';
 import type { TerrainGenerator } from './world/terrain';
 import type { LootFn } from './loot';
 import { STRUCTURE_MAPS, isStructureMapKind, type StructureMapKind, type StructureMapDef } from './structureMapData';
@@ -26,7 +27,9 @@ export function structureMapAt(kind: StructureMapKind, tx: number, tz: number): 
 /** Mapa del `kind` más cercano a (x, z); si no hay ninguno al alcance, un mapa vacío (como en Minecraft). */
 export function structureMap(kind: StructureMapKind, gen: TerrainGenerator, x: number, z: number): ItemStack {
   const def = STRUCTURE_MAPS[kind];
-  const p = locateStructure(gen, def.structure, Math.floor(x), Math.floor(z), def.search);
+  // Las aldeas, sólo las de su clase (según el bioma de su centro, el mismo que decide su estilo).
+  const accept = def.village ? (sx: number, sz: number) => villageKind(gen.columnInfo(sx, sz).biome) === def.village : undefined;
+  const p = locateStructure(gen, def.structure, Math.floor(x), Math.floor(z), def.search, accept);
   return p ? structureMapAt(kind, p[0], p[2]) : { id: EMPTY_MAP, count: 1 };
 }
 

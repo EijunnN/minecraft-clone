@@ -178,7 +178,7 @@ export class ServerSystems {
     this.monsters = new Monsters(ctx, store);
     this.golems = new Golems(ctx, store);
     this.raids = new Raids(ctx, store);
-    this.trading.heroOf = (name) => this.raids.isHero(name);
+    this.trading.heroAmp = (name) => this.raids.heroAmp(name);
     this.commands.raids = this.raids;
     this.commands.lightning = (x, y, z) => this.storms.strike(x, y, z);
     this.colorBlocks = new ColorBlocks(ctx);

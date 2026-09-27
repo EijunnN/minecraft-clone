@@ -330,6 +330,7 @@ export class Entities {
     // Fase 6 (gólems/domesticar): los lobos ayudan a su dueño; gólems y domesticados se defienden.
     if (typeof attacker === 'string') this.companions.onPlayerAttack(attacker, e);
     this.companions.onHurt(e, attacker);
+    if (typeof attacker === 'string') this.villagers.onHurtBy(e, attacker); // cotilleo: le han hecho daño
     if (e.type === MOB_ENDERMAN && this.rand() < 0.6) this.mobs.teleport(e);
     this.mobs.monsters.onDamaged(e, attacker); // Fase 6 (monstruos): las lepismas piden ayuda
     this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
@@ -348,6 +349,7 @@ export class Entities {
 
   kill(e: Entity, drops: boolean): void {
     if (e.dead) return;
+    if (typeof this.killer === 'string') this.villagers.onMurdered(e, this.killer); // cotilleo: lo vieron matar
     e.dead = true;
     e.deathTime = 0;
     e.health = 0;

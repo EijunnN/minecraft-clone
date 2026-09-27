@@ -124,17 +124,18 @@ export class Inventory {
     return rest.count > 0 ? rest : null;
   }
 
-  count(id: number): number {
-    let n = this.offhand?.id === id ? this.offhand.count : 0;
-    for (const s of this.slots) if (s && s.id === id) n += s.count;
+  count(id: number, match?: (s: ItemStack) => boolean): number {
+    const ok = (s: ItemStack | null): s is ItemStack => !!s && s.id === id && (!match || match(s));
+    let n = ok(this.offhand) ? this.offhand.count : 0;
+    for (const s of this.slots) if (ok(s)) n += s.count;
     return n;
   }
 
   /** Quita n objetos del tipo id (primero de la mano secundaria y luego de la mochila). Devuelve cuántos quitó. */
-  remove(id: number, n: number): number {
+  remove(id: number, n: number, match?: (s: ItemStack) => boolean): number {
     let left = n;
     const off = this.offhand;
-    if (off && off.id === id) {
+    if (off && off.id === id && (!match || match(off))) {
       const k = Math.min(left, off.count);
       off.count -= k;
       left -= k;
@@ -142,7 +143,7 @@ export class Inventory {
     }
     for (let i = INV_SIZE - 1; i >= 0 && left > 0; i--) {
       const s = this.slots[i];
-      if (!s || s.id !== id) continue;
+      if (!s || s.id !== id || (match && !match(s))) continue;
       const k = Math.min(left, s.count);
       s.count -= k;
       left -= k;

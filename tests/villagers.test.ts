@@ -1,6 +1,9 @@
 // Fase 6: aldeanos y comercio. Profesión según el bloque de trabajo cercano, comercio validado por el
 // servidor (tratos buenos y malos, ofertas agotadas, subida de nivel), guardado y aldeanos que
 // aparecen una sola vez al generarse el pozo de una aldea.
+import { VILLAGER_TRADES } from '../src/shared/villagerTrades';
+import { variantProf, variantType } from '../src/shared/villagerTypes';
+import { PROF_CARTOGRAPHER } from '../src/shared/villagers';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -110,12 +113,17 @@ test('bloques de trabajo: profesión de cada uno, recetas y texturas procedurale
 });
 
 
-test('ofertas: de 3 a 6 según el nivel, deterministas, y niveles por experiencia', () => {
+test('ofertas: 2 más por nivel (como en 26.3), deterministas, y niveles por experiencia', () => {
   for (const p of PROFESSIONS.slice(1)) {
     for (let lvl = 1; lvl <= 5; lvl++) {
       const o = offersFor(p.id, lvl, 1234);
-      // Fase 7.5 (mansión): los mapas de explorador del cartógrafo van aparte del sorteo.
-      assert.equal(o.filter((t) => !t.explorer).length, Math.min(6, 2 + lvl), `${p.key} nivel ${lvl}`);
+      // Sin mapas (offersFor no busca estructuras), al cartógrafo le salen menos: las de mapa no salen.
+      if (p.id === PROF_CARTOGRAPHER) assert.ok(o.length >= lvl && o.length <= 2 * lvl, `${p.key} nivel ${lvl}`);
+      else {
+        // En cada nivel, `amount` (2; el bibliotecario maestro 3) o las que haya si son menos (el carnicero experto, 1).
+        const want = VILLAGER_TRADES[p.key].slice(0, lvl).reduce((n, l) => n + Math.min(l.amount, l.trades.length), 0);
+        assert.equal(o.length, want, `${p.key} nivel ${lvl}`);
+      }
       assert.deepEqual(o, offersFor(p.id, lvl, 1234));
       // Todas se pagan o se cobran en esmeraldas.
       for (const t of o) assert.ok(t.cost[0] === EMERALD || t.cost2?.[0] === EMERALD || t.result[0] === EMERALD, `${p.key}: ${JSON.stringify(t)}`);
@@ -127,7 +135,8 @@ test('ofertas: de 3 a 6 según el nivel, deterministas, y niveles por experienci
   assert.equal(levelForXp(0), 1);
   assert.equal(levelForXp(LEVEL_XP[1]), 2);
   assert.equal(levelForXp(10_000), 5);
-  assert.equal(traderOffers(5).length, 5);
+  // El comerciante ambulante: 2 de compra, 2 poco comunes y 5 comunes.
+  assert.equal(traderOffers(5).length, 9);
 });
 
 test('profesión: el aldeano coge el bloque de trabajo libre más cercano y lo pierde si se rompe', () => {
@@ -135,7 +144,8 @@ test('profesión: el aldeano coge el bloque de trabajo libre más cercano y lo p
   const v = h.gs.entities.villagers.data(e);
   assert.equal(v.prof, PROF_LIBRARIAN);
   assert.deepEqual(v.job, [bx + 3, by, bz]);
-  assert.equal(e.variant, PROF_LIBRARIAN, 'los clientes ven la ropa de bibliotecario');
+  assert.equal(variantProf(e.variant!), PROF_LIBRARIAN, 'los clientes ven la ropa de bibliotecario');
+  assert.equal(variantType(e.variant!), v.type, 'y la de su tipo de aldeano');
   // Un segundo aldeano no puede quedarse el mismo atril: busca otro (un barril) y se hace pescador.
   const e2 = h.gs.entities.villagers.spawn(bx + 0.5, by, bz + 1.5, null, [bx, by, bz])!;
   h.tick(20 * 8);
@@ -158,7 +168,7 @@ test('comercio válido: paga en esmeraldas, recibe lo ofrecido, gana experiencia
   c.send({ t: 'topen', e: e.id });
   const [tr] = c.conn.take('trades');
   assert.ok(tr, 'llegan las ofertas');
-  assert.equal(tr.o.length, 3);
+  assert.equal(tr.o.length, 2, 'dos ofertas de novato');
   assert.equal(v.trading, c.welcome.id, 'el aldeano se queda comerciando con el jugador');
   const i = tr.o.findIndex((o: number[]) => o[0] !== EMERALD);
   const o = tr.o[i];
@@ -190,7 +200,7 @@ test('comercio válido: paga en esmeraldas, recibe lo ofrecido, gana experiencia
   assert.match(out.m, /agotada/);
   assert.ok(v.level >= 2, `sube de nivel con los tratos (xp ${v.xp})`);
   c.send({ t: 'topen', e: e.id });
-  assert.equal(c.conn.take('trades').at(-1).o.length, 4, 'al subir de nivel aparece una oferta más');
+  assert.equal(c.conn.take('trades').at(-1).o.length, 4, 'al subir de nivel aparecen dos ofertas más');
 });
 
 test('comercio inválido: pago corto, oferta que no existe, sin abrir, sin oficio o lejos', () => {
@@ -319,7 +329,7 @@ test('comerciante ambulante: aparece de día cerca de un jugador, vende plantas 
   c.pos(t!.x + 1, t!.y, t!.z);
   c.send({ t: 'topen', e: t!.id });
   const [tr] = c.conn.take('trades');
-  assert.ok(tr && tr.tr === true && tr.o.length === 5);
+  assert.ok(tr && tr.tr === true && tr.o.length === 9);
   c.send({ t: 'tclose' });
   h.gs.entities.villagers.data(t!).life = 0.01;
   h.tick(5);

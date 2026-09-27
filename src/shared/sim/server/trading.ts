@@ -4,8 +4,13 @@
 // ofertas), aldeanos nuevos al generarse una aldea y el comerciante ambulante que aparece de vez en cuando.
 import { MOB_VILLAGER, MOB_WANDERING_TRADER, isVillagerType } from '../../mobs';
 import { BLOCK_FLUID } from '../../blocks';
-import { maxStack, EMERALD, type ItemStack } from '../../items';
-import { offersFor, traderOffers, offerToWire, PROF_NONE, type Offer } from '../../villagers';
+import { maxStack, type ItemStack } from '../../items';
+import {
+  pickLevelOffers, pickTraderOffers, storeOffer, offerFromStore, offerPrice, specialPrice, offerToWire, offerResult, PROF_NONE,
+  type Offer, type TradeContext,
+} from '../../villagers';
+import { addGossip } from '../../villagerGossip';
+import { potionType, PT_WATER } from '../../potions';
 import { sanitizeStack } from '../../containers';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { sunHeightAt } from '../../weather';
@@ -26,8 +31,8 @@ export class Trading {
   private open = new Map<string, number>();
   private traderTimer = TRADER_EVERY;
 
-  /** Fase 6 (asaltos): ¿es héroe de la aldea este jugador? (rebaja del 30 % en las esmeraldas). */
-  heroOf: (name: string) => boolean = () => false;
+  /** Fase 6 (asaltos): nivel del efecto Héroe de la aldea de un jugador (null si no lo tiene). */
+  heroAmp: (name: string) => number | null = () => null;
   /** Fase 7.5 (fauna): acaba de llegar un comerciante ambulante (trae sus llamas). */
   onTraderSpawn: ((trader: Entity) => void) | null = null;
   /** Fase 7.5 (mansión): mapas de explorador del cartógrafo. */
@@ -37,12 +42,42 @@ export class Trading {
     this.explorer = new ExplorerTrades(ctx);
   }
 
-  /** Ofertas actuales de un aldeano o comerciante (con la rebaja del héroe, si `s` lo es). */
-  offers(e: Entity, s?: Session): Offer[] {
+  /**
+   * Elige las ofertas que le falten (AbstractVillager.updateTrades): las de cada nivel al llegar a él (el comerciante,
+   * todas de una vez). Se quedan fijas y se guardan con el aldeano.
+   */
+  private ensureOffers(e: Entity): void {
     const v = this.ctx.entities.villagers.data(e);
-    const list = e.type === MOB_WANDERING_TRADER ? traderOffers(v.seed) : this.explorer.resolve(e, offersFor(v.prof, v.level, v.seed)); // Fase 7.5
-    if (!s || e.type === MOB_WANDERING_TRADER || !this.heroOf(s.name)) return list;
-    return list.map((o) => o.cost[0] === EMERALD ? { ...o, cost: [EMERALD, Math.max(1, Math.round(o.cost[1] * 0.7))] as [number, number] } : o);
+    const trader = e.type === MOB_WANDERING_TRADER;
+    const target = trader ? 1 : v.prof === PROF_NONE ? 0 : v.level;
+    if (v.offerLevels >= target) return;
+    const prof = trader ? PROF_NONE : v.prof;
+    const tc: TradeContext = { type: v.type, rand: () => this.ctx.rand(), map: (kind) => this.explorer.mapData(e, kind) };
+    for (let l = v.offerLevels + 1; l <= target; l++) {
+      const list = trader ? pickTraderOffers(tc) : pickLevelOffers(prof, l, tc);
+      v.offers.push(...list.map((o) => storeOffer(prof, o)));
+    }
+    v.offerLevels = target;
+  }
+
+  /**
+   * Ofertas actuales de un aldeano o comerciante, con el precio de ahora: la demanda y, para el jugador `s`, su
+   * reputación y el Héroe de la aldea (Villager.updateSpecialPrices; el comerciante no los tiene en cuenta).
+   */
+  offers(e: Entity, s?: Session): { offer: Offer; price: number }[] {
+    this.ensureOffers(e);
+    const v = this.ctx.entities.villagers.data(e);
+    const trader = e.type === MOB_WANDERING_TRADER;
+    const rep = s && !trader ? this.ctx.entities.villagers.reputationOf(e, s.name) : 0;
+    const hero = s && !trader ? this.heroAmp(s.name) : null;
+    const out: { offer: Offer; price: number }[] = [];
+    for (const so of v.offers) {
+      const o = offerFromStore(trader ? PROF_NONE : v.prof, so);
+      if (!o) continue;
+      const price = trader ? o.cost[1] : offerPrice(o, v.demand[o.key] ?? 0, specialPrice(o, rep, hero));
+      out.push({ offer: o, price });
+    }
+    return out;
   }
 
   /** Aldeano vivo y al alcance del jugador (o null). */
@@ -82,7 +117,7 @@ export class Trading {
     const v = this.ctx.entities.villagers.data(e);
     this.ctx.send(s, {
       t: 'trades', e: e.id, p: v.prof, lvl: v.level, xp: v.xp, tr: e.type === MOB_WANDERING_TRADER,
-      o: this.offers(e, s).map((o) => offerToWire(o, v.uses[o.key] ?? 0)),
+      o: this.offers(e, s).map(({ offer, price }) => offerToWire(offer, v.uses[offer.key] ?? 0, price)),
     });
   }
 
@@ -100,32 +135,44 @@ export class Trading {
     }
     const list = this.offers(e, s);
     const i = Number(msg.i);
-    const o = Number.isInteger(i) ? list[i] : undefined;
-    if (!o) return fail();
+    const entry = Number.isInteger(i) ? list[i] : undefined;
+    if (!entry) return fail();
+    const { offer: o, price } = entry;
     const v = ctx.entities.villagers.data(e);
     const used = v.uses[o.key] ?? 0;
     if (used >= o.max) return fail('Esta oferta está agotada: el aldeano repondrá más tarde.');
-    // Lo pagado tiene que cubrir el precio; lo que sobre se devuelve.
-    const left = new Map<number, number>();
-    for (const p of pay) left.set(p.id, (left.get(p.id) ?? 0) + p.count);
-    for (const [cid, n] of [o.cost, ...(o.cost2 ? [o.cost2] : [])]) {
-      const have = left.get(cid) ?? 0;
-      if (have < n) return fail();
-      left.set(cid, have - n);
+    // Lo pagado tiene que cubrir el precio (el de ahora); lo que sobre se devuelve. El frasco de agua tiene que serlo.
+    const rest = pay.map((p) => ({ ...p }));
+    const costs: [number, number, boolean][] = [[o.cost[0], price, !!o.water]];
+    if (o.cost2) costs.push([o.cost2[0], o.cost2[1], false]);
+    for (const [cid, n, water] of costs) {
+      let need = n;
+      for (const p of rest) {
+        if (need <= 0) break;
+        if (p.id !== cid || p.count <= 0 || (water && potionType(p) !== PT_WATER)) continue;
+        const take = Math.min(need, p.count);
+        p.count -= take;
+        need -= take;
+      }
+      if (need > 0) return fail();
     }
-    const back: ItemStack[] = [];
-    for (const [lid, n] of left) {
-      for (let r = n; r > 0; r -= maxStack(lid)) back.push({ id: lid, count: Math.min(r, maxStack(lid)) });
-    }
+    const back: ItemStack[] = rest.filter((p) => p.count > 0).flatMap((p) => {
+      const out: ItemStack[] = [];
+      for (let r = p.count; r > 0; r -= maxStack(p.id)) out.push({ ...p, count: Math.min(r, maxStack(p.id)) });
+      return out;
+    });
     v.uses[o.key] = used + 1;
-    ctx.entities.villagers.addXp(e, o.xp);
-    // Como en Minecraft, cada trato da algo de experiencia también al jugador.
-    ctx.entities.xp.spawn(3 + Math.floor(ctx.rand() * 4), e.x, e.y + 0.5, e.z);
+    // Villager.rewardTradeXp: experiencia para el aldeano (sube un nivel como mucho) y 3 a 6 orbes (+5 si sube).
+    const up = ctx.entities.villagers.addXp(e, o.xp);
+    ctx.entities.xp.spawn(3 + Math.floor(ctx.rand() * 4) + (up ? 5 : 0), e.x, e.y + 0.5, e.z);
+    // ReputationEventType.TRADE: +2 de «trading» para quien comercia.
+    if (e.type !== MOB_WANDERING_TRADER) addGossip(v.gossip, s.name.toLowerCase(), 'trading', 2);
     ctx.fx('villager_yes', e.x, e.y + e.height, e.z, e.type);
     // Fase 7.5 (mansión): el mapa de explorador, con su celda como los demás mapas de estructura.
+    const give = offerResult(o);
     const sm = o.data?.smap;
-    const dmg = sm && sm.x !== undefined && sm.z !== undefined ? { dmg: mapKeyAt(sm.x, sm.z) } : {};
-    ctx.send(s, { t: 'tres', q, ok: true, give: { id: o.result[0], count: o.result[1], ...dmg, ...(o.data ? { data: o.data } : {}) }, back }); // Fase 7: libros y equipo encantados
+    if (sm && sm.x !== undefined && sm.z !== undefined) give.dmg = mapKeyAt(sm.x, sm.z);
+    ctx.send(s, { t: 'tres', q, ok: true, give, back });
     this.sendOffers(s, e);
   }
 

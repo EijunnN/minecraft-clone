@@ -2,15 +2,22 @@
 // Va aparte de structureMaps.ts para que itemData.ts pueda validarlo sin cargar el generador del mundo.
 import { WORLD_LIMIT } from './constants';
 
-/** Tipos de mapa de estructura: tesoro enterrado y mapas de explorador (oceánico y de bosques). */
-export type StructureMapKind = 'buried_treasure' | 'monument' | 'mansion';
+/**
+ * Tipos de mapa de estructura: tesoro enterrado, los de explorador (oceánico y de bosques) y los del cartógrafo de
+ * 26.3 (aldeas de cada clase, cabaña de la bruja, templo de la jungla y cámaras de desafío enterradas).
+ */
+export type StructureMapKind = 'buried_treasure' | 'monument' | 'mansion' | 'village_desert' | 'village_plains' | 'village_savanna'
+  | 'village_snowy' | 'village_taiga' | 'swamp_hut' | 'jungle_temple' | 'trial_chambers';
 
-/** Marca que se dibuja en el objetivo: una X roja, un monumento o una mansión. */
-export type StructureMapMarker = 'x' | 'monument' | 'mansion';
+/** Marca que se dibuja en el objetivo (MapDecorationTypes). */
+export type StructureMapMarker = 'x' | 'monument' | 'mansion' | 'village_desert' | 'village_plains' | 'village_savanna' | 'village_snowy'
+  | 'village_taiga' | 'swamp_hut' | 'jungle_temple' | 'trial_chambers';
 
 export interface StructureMapDef {
   /** Clave de la estructura (la de locateStructure y /localizar). */
   structure: string;
+  /** Aldeas: sólo las de esta clase (desert, plains, savanna, snowy o taiga). */
+  village?: string;
   marker: StructureMapMarker;
   /** Nombre del objeto (el del mapa de Minecraft en español). */
   name: string;
@@ -29,6 +36,16 @@ export const STRUCTURE_MAPS: Readonly<Record<StructureMapKind, StructureMapDef>>
   // 13 regiones de 4 chunks).
   monument: { structure: 'monument', marker: 'monument', name: 'Mapa de explorador oceánico', search: 100, scale: 4 },
   mansion: { structure: 'mansion', marker: 'mansion', name: 'Mapa de explorador de bosques', search: 100, scale: 4 },
+  // Los del cartógrafo de 26.3 (exploration_map con search_radius 100; escala 1:4, como los de explorador).
+  village_desert: { structure: 'village', village: 'desert', marker: 'village_desert', name: 'Mapa de aldea del desierto', search: 100, scale: 4 },
+  village_plains: { structure: 'village', village: 'plains', marker: 'village_plains', name: 'Mapa de aldea de llanura', search: 100, scale: 4 },
+  village_savanna: { structure: 'village', village: 'savanna', marker: 'village_savanna', name: 'Mapa de aldea de sabana', search: 100, scale: 4 },
+  village_snowy: { structure: 'village', village: 'snowy', marker: 'village_snowy', name: 'Mapa de aldea nevada', search: 100, scale: 4 },
+  village_taiga: { structure: 'village', village: 'taiga', marker: 'village_taiga', name: 'Mapa de aldea de taiga', search: 100, scale: 4 },
+  swamp_hut: { structure: 'swamp_hut', marker: 'swamp_hut', name: 'Mapa de explorador de pantanos', search: 100, scale: 4 },
+  jungle_temple: { structure: 'jungle_temple', marker: 'jungle_temple', name: 'Mapa de explorador de junglas', search: 100, scale: 4 },
+  // Aún no hay cámaras de desafío: el mapa nunca encuentra una y la oferta no sale (como en Java sin ninguna cerca).
+  trial_chambers: { structure: 'trial_chambers', marker: 'trial_chambers', name: 'Mapa de cámaras de desafío', search: 100, scale: 4 },
 };
 
 /**

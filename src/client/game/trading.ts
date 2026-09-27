@@ -4,7 +4,8 @@
 import { isVillagerType } from '../../shared/mobs';
 import { isValidItem, maxStack, type ItemStack } from '../../shared/items';
 import type { ServerMsg } from '../../shared/protocol';
-import type { TradeWire } from '../../shared/villagers';
+import { MAX_OFFER_COUNT, type TradeWire, type TradeExtra } from '../../shared/villagers';
+import { potionType, PT_WATER } from '../../shared/potions';
 import { TradeScreen, type TradeView } from '../ui/TradeScreen';
 import { EF_BABY } from '../../shared/protocol';
 import { sanitizeStack } from '../../shared/containers'; // Fase 7 (encantamientos)
@@ -25,7 +26,7 @@ export class Trading {
   constructor(private g: Game) {
     this.screen = new TradeScreen({
       icons: () => g.ui.icons,
-      have: (id) => g.inv.count(id),
+      have: (id, water) => g.inv.count(id, water ? isWater : undefined),
       trade: (i, all) => this.trade(i, all),
       close: () => this.close(true),
     }, () => g.cfg.settings.keys);
@@ -72,9 +73,10 @@ export class Trading {
       const inv = this.g.inv;
       const give = (s: ItemStack | null | undefined) => {
         if (!s || !isValidItem(s.id) || !(s.count > 0)) return;
-        // Fase 7 (encantamientos): con sus datos (libros y equipo encantados).
-        const data = sanitizeStack({ ...s, count: 1 })?.data;
-        const rest = inv.add({ id: s.id, count: Math.min(maxStack(s.id), s.count | 0), ...(data ? { data } : {}) });
+        // Fase 7 (encantamientos): con sus datos (libros y equipo encantados) y su desgaste (el tipo de la flecha con
+        // efecto o de la poción, el efecto del estofado, la celda del mapa).
+        const clean = sanitizeStack({ ...s, count: 1 });
+        const rest = inv.add({ ...(clean ?? { id: s.id }), count: Math.min(maxStack(s.id), s.count | 0) } as ItemStack);
         if (rest) this.g.interaction.throwStack(rest, false);
       };
       if (msg.ok) give(msg.give);
@@ -94,12 +96,13 @@ export class Trading {
     const o = v?.offers[i];
     if (!v || !o || !this.g.net) return;
     const [c1, n1, c2, n2] = o;
+    const water = o[9].w ? isWater : undefined; // el frasco de agua: sólo pociones de agua
     const inv = this.g.inv;
     const times = all ? MAX_BATCH : 1;
     let done = 0;
     for (let k = 0; k < times && o[6] < o[7]; k++) {
-      if (inv.count(c1) < n1 + (c2 === c1 ? n2 : 0) || (c2 && inv.count(c2) < n2)) break;
-      const pay: ItemStack[] = [{ id: c1, count: inv.remove(c1, n1) }];
+      if (inv.count(c1, water) < n1 + (c2 === c1 ? n2 : 0) || (c2 && inv.count(c2) < n2)) break;
+      const pay: ItemStack[] = [{ id: c1, count: inv.remove(c1, n1, water) }];
       if (c2) pay.push({ id: c2, count: inv.remove(c2, n2) });
       this.g.net.send({ t: 'trade', e: this.entity, i, q: ++this.q, pay });
       o[6]++; // se descuenta ya (el servidor manda las ofertas de verdad tras cada trato)
@@ -130,13 +133,22 @@ export class Trading {
   }
 }
 
+/** ¿Es un frasco de agua? */
+const isWater = (s: ItemStack) => potionType(s) === PT_WATER;
+
 function sanitize(raw: unknown): TradeWire[] {
   if (!Array.isArray(raw)) return [];
-  // Fase 7 (encantamientos): el noveno campo son los datos de lo que se recibe (se validan con la pila).
-  return raw.slice(0, 12).filter((o): o is TradeWire => Array.isArray(o) && (o.length === 8 || o.length === 9) && o.slice(0, 8).every(Number.isInteger))
+  // Fase 7 (encantamientos): el noveno campo son los datos de lo que se recibe (se validan con la pila); el décimo, el
+  // precio sin cambios, el desgaste de lo que se recibe y si pide un frasco de agua.
+  return raw.slice(0, MAX_OFFER_COUNT).filter((o) => Array.isArray(o) && o.length === 10 && o.slice(0, 8).every(Number.isInteger))
     .map((o) => {
       const w = o.slice(0, 8) as [number, number, number, number, number, number, number, number];
-      const data = o.length === 9 ? sanitizeStack({ id: w[4], count: 1, data: o[8] })?.data : undefined;
-      return data ? [...w, data] : w;
+      const data = o[8] ? sanitizeStack({ id: w[4], count: 1, data: o[8] })?.data : undefined;
+      const x = o[9] && typeof o[9] === 'object' ? o[9] as Record<string, unknown> : {};
+      const extra: TradeExtra = {};
+      if (Number.isInteger(x.b) && (x.b as number) > 0) extra.b = x.b as number;
+      if (Number.isInteger(x.rd) && (x.rd as number) > 0) extra.rd = x.rd as number;
+      if (x.w === 1) extra.w = 1;
+      return [...w, data ?? 0, extra] as TradeWire;
     });
 }

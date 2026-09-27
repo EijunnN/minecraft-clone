@@ -1,5 +1,7 @@
 // Efectos que llegan del servidor (sonidos y partículas) y sonidos de ambiente de las criaturas y
 // los fluidos cercanos.
+import { PROFESSIONS } from '../../shared/villagers'; // el trabajo de cada oficio
+import { BLOCKS } from '../../shared/blocks';
 import type { MobSoundKind, MobSoundEvent } from '../audio/types';
 import type { ClientEntity } from './ClientEntities';
 import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, CAMPFIRE, SOUL_CAMPFIRE, isLitFurnace, isValidBlockId } from '../../shared/blocks';
@@ -128,6 +130,13 @@ export class Effects {
         fx.spawnSparkles(p[0], p[1], p[2], kind === 'villager_levelup' ? 24 : 12, 0.5);
         this.g.audio.playMob('villager', 'idle', p);
         break;
+      case 'villager_work': {
+        // WorkAtPoi (playWorkSound): el aldeano trabaja en su bloque; suena ese bloque (a = el oficio).
+        const block = PROFESSIONS[a ?? 0]?.block;
+        const sound = block ? BLOCKS[block]?.sound : undefined;
+        if (sound) this.g.audio.playPlace(sound, p);
+        break;
+      }
       case 'villager_yes':
         fx.spawnSparkles(p[0], p[1], p[2], 4, 0.3);
         this.g.audio.playMob('villager', 'attack', p);

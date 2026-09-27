@@ -275,12 +275,16 @@ test('asalto: oleadas con calma entre ellas, victoria y Héroe de la aldea con r
   const vil = h.gs.entities.spawnMob(MOB_VILLAGER, x + 2.5, y, z + 2.5)!;
   const data = h.gs.entities.villagers.data(vil);
   data.prof = 4;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data.level = 5;
   const trading = h.gs.sys.trading;
-  const normal = trading.offers(vil) as { cost: [number, number] }[];
-  const hero = trading.offers(vil, s) as { cost: [number, number] }[];
-  const i = normal.findIndex((o) => o.cost[0] === EMERALD && o.cost[1] > 1);
-  if (i >= 0) assert.ok(hero[i].cost[1] < normal[i].cost[1], 'rebaja del héroe');
+  const normal = trading.offers(vil);
+  const hero = trading.offers(vil, s);
+  // Villager.updateSpecialPrices: el héroe de nivel 0 paga un 30 % menos (al menos una menos) de lo primero que pide.
+  assert.equal(raids.heroAmp('Defensor'), 0);
+  normal.forEach((n, i) => {
+    const want = Math.max(1, n.price - Math.max(Math.floor(Math.fround(0.3) * n.offer.cost[1]), 1));
+    assert.equal(hero[i].price, want, 'rebaja del héroe');
+  });
   h.tick(20 * 12);
   assert.equal(raids.active.length, 0, 'el asalto se cierra');
 });

@@ -7,7 +7,6 @@ import { EMPTY_MAP } from '../../items';
 import { structureMap } from '../../structureMaps';
 import { isStructureMapKind } from '../../structureMapData';
 import type { ItemData } from '../../itemData';
-import type { Offer } from '../../villagers';
 import type { Entity } from '../entities';
 import type { ServerContext } from './context';
 
@@ -18,23 +17,8 @@ export class ExplorerTrades {
 
   constructor(private ctx: ServerContext) {}
 
-  /** Las ofertas del aldeano con los mapas de explorador ya apuntando a su destino (o sin ellos). */
-  resolve(e: Entity, list: Offer[]): Offer[] {
-    if (!list.some((o) => o.explorer)) return list;
-    const out: Offer[] = [];
-    for (const o of list) {
-      if (!o.explorer) {
-        out.push(o);
-        continue;
-      }
-      const data = this.mapData(e, o.explorer);
-      if (data) out.push({ ...o, data });
-    }
-    return out;
-  }
-
-  /** Datos del mapa de esa clase para el aldeano (null si no hay estructura al alcance). */
-  private mapData(e: Entity, kind: string): ItemData | null {
+  /** Datos del mapa de esa clase para el aldeano (null si no hay estructura al alcance: la oferta no sale). */
+  mapData(e: Entity, kind: string): ItemData | null {
     let m = this.maps.get(e);
     if (!m) this.maps.set(e, (m = new Map()));
     if (!m.has(kind)) {

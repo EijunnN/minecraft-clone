@@ -6,8 +6,8 @@ import './tradeScreen.css';
 import { itemName, EMERALD } from '../../shared/items';
 import { LEVEL_NAMES, LEVEL_XP, MAX_LEVEL, villagerTitle, type TradeWire } from '../../shared/villagers';
 // Fase 7 (encantamientos): libros y equipo encantados en las ofertas.
-import type { ItemData } from '../../shared/itemData';
 import type { ItemStack } from '../../shared/items';
+import { stackIconUrl } from './bannerIcons';
 import { glintAttrs } from './glint';
 import { enchantName, enchantsOf, storedOf } from '../../shared/enchantments';
 
@@ -19,8 +19,8 @@ function stackLabel(s: ItemStack): string {
 
 export interface TradeScreenHost {
   icons(): Map<number, string>;
-  /** Cuántos objetos de ese tipo tiene el jugador. */
-  have(id: number): number;
+  /** Cuántos objetos de ese tipo tiene el jugador (`water`: sólo frascos de agua). */
+  have(id: number, water?: boolean): number;
   /** Comerciar con la oferta i (all: tantas veces como se pueda). */
   trade(i: number, all: boolean): void;
   /** El jugador cierra la pantalla (Esc, E o el botón). */
@@ -121,26 +121,32 @@ export class TradeScreen {
       this.barFill.style.width = `${Math.round(f * 100)}%`;
     }
     const icons = this.host.icons();
-    // Fase 7 (encantamientos): lo que se recibe puede llevar datos (libro o equipo encantado): brillo y nombre.
-    const slot = (id: number, n: number, data?: ItemData) => {
-      if (!id) return '<span class="tslot empty"></span>';
-      const st: ItemStack = { id, count: n, ...(data ? { data } : {}) };
-      const url = icons.get(id) ?? '';
+    // Fase 7 (encantamientos): lo que se recibe puede llevar datos (libro o equipo encantado): brillo y nombre. Los
+    // iconos, los de la pila (el color de la poción, el cuero teñido). Si el precio cambió (demanda, reputación o
+    // Héroe de la aldea), el de antes se ve tachado, como en Java.
+    const slot = (st: ItemStack | null, base?: number) => {
+      if (!st) return '<span class="tslot empty"></span>';
+      const url = stackIconUrl(st, icons) ?? '';
       const gl = glintAttrs(st, url);
-      return `<span class="tslot" title="${esc(stackLabel(st))}"><i class="${gl.cls.trim()}" style="background-image:url(${url})${gl.style}"></i>${n > 1 ? `<b>${n}</b>` : ''}</span>`;
+      const n = st.count;
+      const count = base !== undefined && base !== n
+        ? `<b class="${n < base ? 'cheaper' : 'dearer'}"><s>${base}</s> ${n}</b>`
+        : n > 1 ? `<b>${n}</b>` : '';
+      return `<span class="tslot" title="${esc(stackLabel(st))}"><i class="${gl.cls.trim()}" style="background-image:url(${url})${gl.style}"></i>${count}</span>`;
     };
     const html = v.offers.map((o, i) => {
-      const [c1, n1, c2, n2, r, rn, uses, max] = o;
-      const rd = o[8];
+      const [c1, n1, c2, n2, r, rn, uses, max, rdata, x] = o;
+      const give: ItemStack = { id: r, count: rn, ...(x.rd ? { dmg: x.rd } : {}), ...(rdata ? { data: rdata } : {}) };
       const out = uses >= max;
-      const need = new Map<number, number>([[c1, n1]]);
-      if (c2) need.set(c2, (need.get(c2) ?? 0) + n2);
-      const poor = [...need].some(([id, n]) => this.host.have(id) < n);
-      const tip = `${n1} × ${itemName(c1)}${c2 ? ` + ${n2} × ${itemName(c2)}` : ''} → ${rn} × ${stackLabel({ id: r, count: rn, ...(rd ? { data: rd } : {}) })}` +
+      const poor = c2 === c1
+        ? this.host.have(c1, !!x.w) < n1 + n2
+        : this.host.have(c1, !!x.w) < n1 || (!!c2 && this.host.have(c2) < n2);
+      const first = x.w ? 'Frasco de agua' : itemName(c1);
+      const tip = `${n1} × ${first}${c2 ? ` + ${n2} × ${itemName(c2)}` : ''} → ${rn} × ${stackLabel(give)}` +
         (out ? ' (agotada)' : ` · quedan ${max - uses}`);
       return `<div class="trade-row${out ? ' out' : ''}${poor ? ' poor' : ''}" data-i="${i}" title="${esc(tip)}">` +
-        `${slot(c1, n1)}${slot(c2, n2)}<span class="tarrow"></span>${slot(r, rn, rd)}` +
-        `<span class="tname">${esc(stackLabel({ id: r, count: rn, ...(rd ? { data: rd } : {}) }))}</span>` +
+        `${slot({ id: c1, count: n1 }, x.b ?? n1)}${slot(c2 ? { id: c2, count: n2 } : null)}<span class="tarrow"></span>${slot(give)}` +
+        `<span class="tname">${esc(stackLabel(give))}</span>` +
         `<span class="tstock">${out ? 'Agotada' : `${max - uses}/${max}`}</span></div>`;
     }).join('');
     const key = html;

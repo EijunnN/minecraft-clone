@@ -79,13 +79,16 @@ interface Raid {
   lonely: number;
   /** Aldeanos al empezar (si llega a 0, se pierde). */
   villagers: number;
+  /** Nivel del mal presagio que lo empezó (el del Héroe de la aldea al ganarlo). */
+  amp: number;
 }
 
 export class Raids {
   /** Mal presagio por jugador (nombre en minúsculas): nivel y momento en que acaba (ms). */
   private omens = new Map<string, { amp: number; until: number }>();
   /** Héroe de la aldea por jugador: hasta cuándo (ms). */
-  private heroes = new Map<string, number>();
+  /** Héroes de la aldea: nivel del efecto y momento en que acaba (ms). */
+  private heroes = new Map<string, { amp: number; until: number }>();
   private raids: Raid[] = [];
   private nextId = 1;
   private patrolIn: number;
@@ -95,12 +98,15 @@ export class Raids {
   constructor(private ctx: ServerContext, store: ServerStore) {
     this.patrolIn = PATROL_EVERY + ctx.rand() * 60;
     try {
-      const raw = JSON.parse(store.getMeta(META_KEY) ?? '{}') as { o?: Record<string, [number, number]>; h?: Record<string, number> };
+      const raw = JSON.parse(store.getMeta(META_KEY) ?? '{}') as { o?: Record<string, [number, number]>; h?: Record<string, number | [number, number]> };
       const now = ctx.now();
       for (const [k, v] of Object.entries(raw.o ?? {})) {
         if (Array.isArray(v) && Number(v[1]) > now) this.omens.set(k, { amp: Math.max(0, Math.min(4, Number(v[0]) | 0)), until: Number(v[1]) });
       }
-      for (const [k, v] of Object.entries(raw.h ?? {})) if (Number(v) > now) this.heroes.set(k, Number(v));
+      for (const [k, v] of Object.entries(raw.h ?? {})) {
+        const [amp, until] = Array.isArray(v) ? v.map(Number) : [0, Number(v)];
+        if (until > now) this.heroes.set(k, { amp: Math.max(0, Math.min(4, amp | 0)), until });
+      }
     } catch {
       /* ignorar */
     }
@@ -128,7 +134,13 @@ export class Raids {
 
   /** ¿Es héroe de la aldea? (los aldeanos le rebajan los precios). */
   isHero(name: string): boolean {
-    return (this.heroes.get(name.toLowerCase()) ?? 0) > this.ctx.now();
+    return this.heroAmp(name) !== null;
+  }
+
+  /** Nivel del Héroe de la aldea de un jugador (null si no lo tiene). */
+  heroAmp(name: string): number | null {
+    const h = this.heroes.get(name.toLowerCase());
+    return h && h.until > this.ctx.now() ? h.amp : null;
   }
 
   /** Asaltos en curso (para las pruebas y el comando). */
@@ -177,7 +189,7 @@ export class Raids {
     const waves = (RAID_WAVES[ctx.difficulty] ?? 5) + (amp > 0 ? 1 : 0);
     const r: Raid = {
       id: this.nextId++, cx: x, cy: y, cz: z, waves, wave: 0, raiders: new Set(), waveHp: 1, state: 'wait', timer: RAID_WAIT,
-      age: 0, lonely: 0, villagers: this.villagersNear(x, z),
+      age: 0, lonely: 0, villagers: this.villagersNear(x, z), amp,
     };
     this.raids.push(r);
     ctx.entities.raidCenters.set(r.id, [x, y, z]);
@@ -283,9 +295,9 @@ export class Raids {
       if (won) {
         ctx.tell(s, '¡Victoria! Has defendido la aldea.');
         if (!(s.s & STATE_DEAD)) {
-          this.heroes.set(s.name.toLowerCase(), ctx.now() + HERO_SECONDS * 1000);
+          this.heroes.set(s.name.toLowerCase(), { amp: r.amp, until: ctx.now() + HERO_SECONDS * 1000 });
           this.dirty = true;
-          ctx.send(s, { t: 'effect', id: EFFECT_HERO, s: HERO_SECONDS, a: 0 });
+          ctx.send(s, { t: 'effect', id: EFFECT_HERO, s: HERO_SECONDS, a: r.amp });
         }
       } else ctx.tell(s, 'Derrota: los saqueadores han arrasado la aldea.');
     }
@@ -398,8 +410,8 @@ export class Raids {
     this.dirty = false;
     const o: Record<string, [number, number]> = {};
     for (const [k, v] of this.omens) o[k] = [v.amp, v.until];
-    const h: Record<string, number> = {};
-    for (const [k, v] of this.heroes) if (v > this.ctx.now()) h[k] = v;
+    const h: Record<string, [number, number]> = {};
+    for (const [k, v] of this.heroes) if (v.until > this.ctx.now()) h[k] = [v.amp, v.until];
     store.setMeta(META_KEY, JSON.stringify({ o, h }));
   }
 }

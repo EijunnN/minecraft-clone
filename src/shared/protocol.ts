@@ -5,7 +5,7 @@ import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import type { BannerLayer } from './bannerPatterns';
 
-export const PROTOCOL_VERSION = 16; // correcciones: luces de rana, brotes de amatista en las seis caras y el color del cuero teñido
+export const PROTOCOL_VERSION = 17; // aldeanos de 26.3: ofertas con precio de ahora, desgaste y frasco de agua; tipo de aldeano en la variante
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;

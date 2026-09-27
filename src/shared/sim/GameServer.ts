@@ -258,6 +258,7 @@ export class GameServer {
       players: () => this.playerViews(),
       // Fase 8: sin cielo no hay sol (los muertos vivientes no arden) ni lluvia.
       sunHeight: () => (this.dimDef.sky ? sunHeightAt(this.worldTime()) : -1),
+      worldTime: () => this.worldTime(),
       raining: () => (this.dimDef.weather ? rainAt(this.worldTime(), this.seed) : 0),
       difficulty: () => this.difficulty,
       hurtPlayer: (id, amount, kx, ky, kz, cause, src) => {

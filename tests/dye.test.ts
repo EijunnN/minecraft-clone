@@ -9,7 +9,7 @@ import { applyDyes, dyeArmorCraft, dyedColor, washDye, isDyeable, shownColor, LE
 import { cauldronUse } from '../src/shared/cauldronUse';
 import { sanitizeItemData } from '../src/shared/itemData';
 import { stackToWire, stackFromWire } from '../src/shared/protocol';
-import { offersFor, PROFESSIONS } from '../src/shared/villagers';
+import { offersFor, PROFESSIONS, professionPool } from '../src/shared/villagers';
 import { ENT_ARMOR_STAND } from '../src/shared/armorStands';
 import { MOB_HORSE, MOB_WOLF } from '../src/shared/mobs';
 import { makeServer } from './harness';
@@ -84,7 +84,7 @@ test('peletero: sus ofertas de 26.3, con la armadura teñida al azar', () => {
     }
   }
   assert.ok(dyedSeen > 20);
-  const all = prof.pool.flat().map((o) => o.result[0] === ARMOR.leather.chestplate ? 'peto' : o.result[0]);
+  const all = [1, 2, 3, 4, 5].flatMap((l) => professionPool(prof.id, l)).map((o) => o.result[0] === ARMOR.leather.chestplate ? 'peto' : o.result[0]);
   assert.ok(all.includes(HORSE_ARMOR.leather), 'la armadura de cuero para caballo (oficial experto)');
 });
 
