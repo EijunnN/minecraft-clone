@@ -2,6 +2,10 @@
 // que ejecuta el servidor de juego autoritativo a 20 ticks/s mientras haya jugadores conectados, y
 // guarda en SQLite las ediciones, los contenedores, los jugadores y los animales. Fase 8: una sala tiene
 // varias dimensiones (Multiverse: un GameServer por dimensión, todas en el mismo objeto).
+//
+// Cada mundo avisa al directorio (WorldDirectory, un único objeto) de cuánta gente tiene conectada; la portada
+// pide ahí cuántos mundos hay activos y cuántos jugadores (/api/stats). Un mundo sin nadie durante 48 horas se
+// borra entero (una alarma que se pone al irse el último y se quita al entrar alguien).
 import { DurableObject } from 'cloudflare:workers';
 import { TICK_RATE, type Conn } from '../shared/sim/GameServer';
 import { Multiverse } from '../shared/sim/Multiverse';
@@ -9,7 +13,17 @@ import type { ServerStore } from '../shared/sim/store';
 
 export interface Env {
   GAME_WORLDS: DurableObjectNamespace<GameWorld>;
+  WORLD_DIRECTORY: DurableObjectNamespace<WorldDirectory>;
+  /** Sólo para pruebas en local (.dev.vars): acorta el plazo de borrado (ms). */
+  IDLE_DELETE_MS?: string;
 }
+
+/** Tiempo sin nadie tras el que un mundo se borra (48 horas). */
+const IDLE_DELETE_MS = 48 * 60 * 60 * 1000;
+const idleMs = (env: Env): number => {
+  const v = Number(env.IDLE_DELETE_MS);
+  return Number.isFinite(v) && v > 0 ? v : IDLE_DELETE_MS;
+};
 
 const ROOM_RE = /^\/api\/room\/([a-z0-9_-]{1,32})\/ws$/i;
 
@@ -21,10 +35,18 @@ export default {
       if (request.headers.get('Upgrade') !== 'websocket') {
         return new Response('Se esperaba una conexión WebSocket', { status: 426 });
       }
-      const stub = env.GAME_WORLDS.getByName(m[1].toLowerCase());
-      return stub.fetch(request);
+      const room = m[1].toLowerCase();
+      const stub = env.GAME_WORLDS.getByName(room);
+      // El objeto no sabe su propio nombre: se lo pasamos (lo necesita para avisar al directorio).
+      const u = new URL(request.url);
+      u.searchParams.set('sala', room);
+      return stub.fetch(new Request(u, request));
     }
     if (url.pathname === '/api/health') return Response.json({ ok: true });
+    if (url.pathname === '/api/stats') {
+      const stats = await env.WORLD_DIRECTORY.getByName('global').stats();
+      return Response.json(stats, { headers: { 'Cache-Control': 'public, max-age=10' } });
+    }
     return new Response('No encontrado', { status: 404 });
   },
 } satisfies ExportedHandler<Env>;
@@ -108,13 +130,22 @@ class SqlStore implements ServerStore {
 export class GameWorld extends DurableObject<Env> {
   private gameServer: Multiverse | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private sqlStore: SqlStore | null = null;
+  /** Nombre de la sala (llega en la URL de conexión y se guarda). */
+  private room: string | null = null;
+  /** Lo último que se contó al directorio (para no repetirlo). */
+  private reported = -1;
+
+  private get store(): SqlStore {
+    return (this.sqlStore ??= new SqlStore(this.ctx.storage.sql));
+  }
 
   /**
    * El servidor del mundo se crea con la primera conexión: así un mundo nuevo puede nacer con la
    * semilla que eligió quien lo creó (si ya existe, manda la guardada).
    */
   private get game(): Multiverse {
-    return (this.gameServer ??= new Multiverse(new SqlStore(this.ctx.storage.sql)));
+    return (this.gameServer ??= new Multiverse(this.store));
   }
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -132,17 +163,60 @@ export class GameWorld extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
+    const params = new URL(request.url).searchParams;
+    const sala = params.get('sala');
+    if (sala && !this.room) {
+      this.room = sala;
+      this.store.setMeta('room', sala);
+    }
     if (!this.gameServer) {
-      const raw = new URL(request.url).searchParams.get('semilla');
+      const raw = params.get('semilla');
       const seed = raw !== null && /^-?\d{1,10}$/.test(raw) ? Number(raw) | 0 : undefined;
-      this.gameServer = new Multiverse(new SqlStore(this.ctx.storage.sql), { seed });
+      this.gameServer = new Multiverse(this.store, { seed });
     }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
     this.ctx.acceptWebSocket(server);
     this.game.connect(server as Conn);
     this.startTicking();
+    // Hay alguien: el mundo ya no se borra.
+    await this.ctx.storage.deleteAlarm();
+    this.report();
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  private roomName(): string | null {
+    return (this.room ??= this.store.getMeta('room'));
+  }
+
+  /** Cuenta al directorio cuánta gente hay (si cambió). */
+  private report(): void {
+    const n = this.gameServer ? this.gameServer.connectionCount : 0;
+    if (n === this.reported) return;
+    const room = this.roomName();
+    if (!room) return;
+    this.reported = n;
+    this.ctx.waitUntil(this.env.WORLD_DIRECTORY.getByName('global').update(room, n, Date.now()).catch(() => {}));
+  }
+
+  /** Se fue alguien: si ya no queda nadie y en 48 horas no vuelve nadie, se borra el mundo. */
+  private async whenEmpty(): Promise<void> {
+    this.report();
+    if (this.gameServer && this.gameServer.connectionCount > 0) return;
+    await this.ctx.storage.setAlarm(Date.now() + idleMs(this.env));
+  }
+
+  /** La alarma de las 48 horas: sin nadie, se borra todo (ediciones, jugadores, cofres…) y se quita del directorio. */
+  async alarm(): Promise<void> {
+    if ((this.gameServer && this.gameServer.connectionCount > 0) || this.ctx.getWebSockets().length > 0) return;
+    const room = this.roomName();
+    this.stopTicking();
+    this.gameServer = null;
+    this.sqlStore = null;
+    this.reported = -1;
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+    if (room) await this.env.WORLD_DIRECTORY.getByName('global').remove(room).catch(() => {});
   }
 
   private startTicking(): void {
@@ -184,9 +258,46 @@ export class GameWorld extends DurableObject<Env> {
     } catch {
       /* ya cerrada */
     }
+    await this.whenEmpty();
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
     this.game.disconnect(ws as Conn);
+    await this.whenEmpty();
+  }
+}
+
+/**
+ * Directorio de mundos: cuánta gente hay en cada sala y cuándo cambió por última vez. La portada sólo pide el
+ * resumen: mundos activos (con gente ahora o usados en las últimas 48 horas, los que aún no se han borrado) y
+ * jugadores conectados.
+ */
+export class WorldDirectory extends DurableObject<Env> {
+  private sql: SqlStorage;
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    this.sql = ctx.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS rooms (name TEXT PRIMARY KEY, players INTEGER NOT NULL, last INTEGER NOT NULL)`);
+  }
+
+  async update(room: string, players: number, at: number): Promise<void> {
+    this.sql.exec(
+      `INSERT INTO rooms (name, players, last) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET players = excluded.players, last = excluded.last`,
+      room, Math.max(0, players | 0), at,
+    );
+  }
+
+  async remove(room: string): Promise<void> {
+    this.sql.exec(`DELETE FROM rooms WHERE name = ?`, room);
+  }
+
+  async stats(): Promise<{ servers: number; players: number }> {
+    // Los que llevan más de 48 horas vacíos ya se han borrado (o lo harán al saltar su alarma).
+    this.sql.exec(`DELETE FROM rooms WHERE players = 0 AND last < ?`, Date.now() - idleMs(this.env));
+    const row = this.sql.exec<{ servers: number; players: number }>(
+      `SELECT COUNT(*) AS servers, COALESCE(SUM(players), 0) AS players FROM rooms`,
+    ).one();
+    return { servers: Number(row.servers), players: Number(row.players) };
   }
 }

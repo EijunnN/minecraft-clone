@@ -269,6 +269,18 @@ export class UI {
     $('menu-error').textContent = msg;
   }
 
+  /** Portada: mundos activos y jugadores conectados (null: sin datos, se oculta). */
+  setLiveStats(stats: { servers: number; players: number } | null): void {
+    const box = $('live-stats');
+    box.classList.toggle('hidden', !stats);
+    if (!stats) return;
+    box.classList.toggle('idle', stats.players === 0);
+    $('stat-servers').textContent = String(stats.servers);
+    $('stat-servers-label').textContent = stats.servers === 1 ? 'servidor activo' : 'servidores activos';
+    $('stat-players').textContent = String(stats.players);
+    $('stat-players-label').textContent = stats.players === 1 ? 'conectado' : 'conectados';
+  }
+
   setPlayEnabled(on: boolean): void {
     const b = $('btn-play') as HTMLButtonElement;
     b.disabled = !on;
@@ -640,9 +652,25 @@ export class UI {
     }
   }
 
+  /** Pinta los iconos de la cuadrícula del inventario creativo cuando se ven (cada uno se dibuja al pedirlo). */
+  private gridObserver: IntersectionObserver | null = null;
+
   private renderInventoryGrid(): void {
     const grid = $('invgrid');
     grid.innerHTML = '';
+    this.gridObserver?.disconnect();
+    const fills = new Map<Element, () => void>();
+    const observer = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          fills.get(e.target)?.();
+          fills.delete(e.target);
+          observer?.unobserve(e.target);
+        }
+      }, { root: grid, rootMargin: '240px' })
+      : null;
+    this.gridObserver = observer;
     const q = $<HTMLInputElement>('invsearch').value.trim().toLowerCase();
     const ids: number[] = [];
     if (this.invCategory !== 'objetos' && this.invCategory !== 'pociones') {
@@ -668,9 +696,18 @@ export class UI {
       if (q && !name.toLowerCase().includes(q)) continue;
       const item = document.createElement('div');
       item.className = 'invitem';
-      const url = stackIconUrl(st, this.icons) ?? '';
-      const gl = glintAttrs(st, url);
-      item.innerHTML = `<div class="ico${gl.cls}" style="background-image:url(${url})${gl.style}"></div>`;
+      item.innerHTML = '<div class="ico"></div>';
+      const fill = () => {
+        const url = stackIconUrl(st, this.icons) ?? '';
+        const gl = glintAttrs(st, url);
+        const ico = item.firstElementChild as HTMLElement;
+        ico.className = `ico${gl.cls}`;
+        ico.setAttribute('style', `background-image:url(${url})${gl.style}`);
+      };
+      if (observer) {
+        fills.set(item, fill);
+        observer.observe(item);
+      } else fill();
       const stack = st.data || st.dmg ? st : undefined;
       item.addEventListener('click', () => {
         this.onUiSound?.('click');

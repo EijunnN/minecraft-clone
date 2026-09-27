@@ -43,16 +43,22 @@ function numberLines(src: string): string {
     .join('\n');
 }
 
-function compile(gl: GL, type: number, src: string, name: string): WebGLShader {
+/** Empieza a compilar un shader (sin esperar al resultado). */
+function startShader(gl: GL, type: number, src: string): WebGLShader {
   const sh = gl.createShader(type)!;
   gl.shaderSource(sh, src);
   gl.compileShader(sh);
-  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(sh);
-    console.error(`Error compilando ${name} (${type === gl.VERTEX_SHADER ? 'vertex' : 'fragment'}):\n${log}\n${numberLines(src)}`);
-    throw new Error(`Shader ${name}: ${log}`);
-  }
   return sh;
+}
+
+/** Si el shader no compiló, lo cuenta (con el código numerado) y lanza el error. */
+function checkShader(gl: GL, sh: WebGLShader, src: string, name: string, kind: string): void {
+  if (gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return;
+  const log = gl.getShaderInfoLog(sh);
+  console.error(`Error compilando ${name} (${kind}):
+${log}
+${numberLines(src)}`);
+  throw new Error(`Shader ${name}: ${log}`);
 }
 
 export interface ProgramSource {
@@ -74,29 +80,77 @@ function withDefines(src: string, defines?: Record<string, string | number | boo
   return header + defs + src;
 }
 
+/**
+ * Programa de shaders. Se compila y enlaza sin esperar al resultado (con KHR_parallel_shader_compile el navegador
+ * lo hace en otros hilos): la comprobación y la preparación (bloque Frame, samplers) se hacen la primera vez que
+ * se usa, o antes con Program.finishAll cuando Program.allReady dice que ya han terminado.
+ */
 export class Program {
-  readonly program: WebGLProgram;
+  private readonly prog: WebGLProgram;
   readonly name: string;
   private gl: GL;
   private uniforms = new Map<string, WebGLUniformLocation | null>();
   private samplerUnits = new Map<string, number>();
+  private pending: { vs: WebGLShader; fs: WebGLShader; vsSrc: string; fsSrc: string } | null;
+
+  private static open = new Set<Program>();
+  private static parallel = new WeakMap<GL, { COMPLETION_STATUS_KHR: number } | null>();
 
   constructor(gl: GL, src: ProgramSource) {
     this.gl = gl;
     this.name = src.name;
-    const vs = compile(gl, gl.VERTEX_SHADER, withDefines(src.vs, src.defines), src.name);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, withDefines(src.fs, src.defines, true), src.name);
+    const vsSrc = withDefines(src.vs, src.defines), fsSrc = withDefines(src.fs, src.defines, true);
+    const vs = startShader(gl, gl.VERTEX_SHADER, vsSrc);
+    const fs = startShader(gl, gl.FRAGMENT_SHADER, fsSrc);
     const p = gl.createProgram()!;
     gl.attachShader(p, vs);
     gl.attachShader(p, fs);
     gl.linkProgram(p);
+    this.prog = p;
+    this.pending = { vs, fs, vsSrc, fsSrc };
+    Program.open.add(this);
+    if (!Program.parallel.has(gl)) Program.parallel.set(gl, gl.getExtension('KHR_parallel_shader_compile'));
+  }
+
+  /** El programa de WebGL (ya comprobado y preparado). */
+  get program(): WebGLProgram {
+    this.finish();
+    return this.prog;
+  }
+
+  /** ¿Ha terminado el navegador de compilarlo? (sin la extensión, se da por terminado: se compila al usarlo). */
+  get ready(): boolean {
+    if (!this.pending) return true;
+    const ext = Program.parallel.get(this.gl);
+    return !ext || this.gl.getProgramParameter(this.prog, ext.COMPLETION_STATUS_KHR) === true;
+  }
+
+  /** ¿Han terminado todos los programas creados? */
+  static allReady(): boolean {
+    for (const p of Program.open) if (!p.ready) return false;
+    return true;
+  }
+
+  /** Comprueba y prepara todos los programas pendientes (lanza el primer error de compilación). */
+  static finishAll(): void {
+    for (const p of [...Program.open]) p.finish();
+  }
+
+  /** Comprueba el enlace (y, si falla, la compilación, con el código numerado) y prepara el programa. */
+  private finish(): void {
+    const pend = this.pending;
+    if (!pend) return;
+    this.pending = null;
+    Program.open.delete(this);
+    const gl = this.gl, p = this.prog;
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-      const log = gl.getProgramInfoLog(p);
-      throw new Error(`Programa ${src.name}: ${log}`);
+      checkShader(gl, pend.vs, pend.vsSrc, this.name, 'vertex');
+      checkShader(gl, pend.fs, pend.fsSrc, this.name, 'fragment');
+      throw new Error(`Programa ${this.name}: ${gl.getProgramInfoLog(p)}`);
     }
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
-    this.program = p;
+    gl.deleteShader(pend.vs);
+    gl.deleteShader(pend.fs);
+    const previous = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
     // Enlaza el bloque uniforme Frame (si existe) al punto 0.
     const blockIndex = gl.getUniformBlockIndex(p, 'Frame');
     if (blockIndex !== gl.INVALID_INDEX) gl.uniformBlockBinding(p, blockIndex, 0);
@@ -123,17 +177,21 @@ export class Program {
         unit++;
       }
     }
+    // (El que estaba puesto puede haberse borrado entretanto: entonces no se vuelve a poner.)
+    gl.useProgram(previous && gl.isProgram(previous) ? previous : null);
   }
 
   use(): this {
-    this.gl.useProgram(this.program);
+    this.finish();
+    this.gl.useProgram(this.prog);
     return this;
   }
 
   loc(name: string): WebGLUniformLocation | null {
     let l = this.uniforms.get(name);
     if (l === undefined) {
-      l = this.gl.getUniformLocation(this.program, name);
+      this.finish();
+      l = this.gl.getUniformLocation(this.prog, name);
       this.uniforms.set(name, l);
     }
     return l;
@@ -141,6 +199,7 @@ export class Program {
 
   /** Enlaza una textura al sampler indicado (si el shader lo usa). */
   tex(name: string, target: number, texture: WebGLTexture | null, sampler: WebGLSampler | null = null): this {
+    this.finish();
     const unit = this.samplerUnits.get(name);
     if (unit === undefined) return this;
     const gl = this.gl;

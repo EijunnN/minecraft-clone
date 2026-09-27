@@ -127,47 +127,62 @@
     <div id="menu">
       <canvas id="menu-bg"></canvas>
       <div class="menu-content">
-        <div class="logo">VoxelCraft</div>
-        <p class="tagline">Construye un mundo infinito con tus amigos</p>
-        <div class="panel menu-card">
-          <label class="field">
-            <span>Tu nombre</span>
-            <div class="row">
-              <input id="in-name" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Steve" />
-              <label class="color-pick" title="Color de tu camiseta">
-                <input id="in-color" type="color" value="#3a7bd5" />
-              </label>
-            </div>
-          </label>
-          <label class="field">
-            <span>Mundo (comparte este nombre o el enlace con tus amigos)</span>
-            <div class="row">
-              <input id="in-room" maxlength="32" autocomplete="off" spellcheck="false" />
-              <button id="btn-random" class="btn icon" title="Nombre aleatorio">⟳</button>
-            </div>
-          </label>
-          <div id="recent-worlds" class="recent hidden"></div>
-          <div class="field">
-            <span>Modo de juego (para mundos nuevos)</span>
-            <div id="mode-seg" class="seg">
-              <button data-mode="s" class="active">Supervivencia</button>
-              <button data-mode="c">Creativo</button>
-            </div>
+        <header class="menu-head">
+          <div class="logo">VoxelCraft</div>
+          <p class="tagline">Construye un mundo infinito con tus amigos</p>
+          <div id="live-stats" class="live-stats hidden" title="Mundos usados en las últimas 48 horas y jugadores conectados ahora">
+            <span class="live-dot"></span>
+            <span><b id="stat-servers">0</b> <span id="stat-servers-label">servidores activos</span></span>
+            <span class="live-sep"></span>
+            <span><b id="stat-players">0</b> <span id="stat-players-label">conectados</span></span>
           </div>
-          <label class="field">
-            <span>Semilla (opcional, sólo para mundos nuevos)</span>
-            <input id="in-seed" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Aleatoria" />
-          </label>
-          <label class="check">
-            <input id="in-offline" type="checkbox" />
-            <span>Jugar sin conexión (el mundo se guarda en este navegador)</span>
-          </label>
-          <button id="btn-play" class="btn primary big">Jugar</button>
-          <div class="row">
-            <button id="btn-copy" class="btn">Copiar invitación</button>
-            <button id="btn-settings" class="btn">Ajustes</button>
-          </div>
-          <p id="menu-error" class="error"></p>
+        </header>
+        <div class="menu-grid">
+          <section class="panel menu-card main-card">
+            <h3 class="card-title">Jugar</h3>
+            <label class="field">
+              <span>Tu nombre</span>
+              <div class="row">
+                <input id="in-name" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Steve" />
+                <label class="color-pick" title="Color de tu camiseta">
+                  <input id="in-color" type="color" value="#3a7bd5" />
+                </label>
+              </div>
+            </label>
+            <label class="field">
+              <span>Mundo <em>· comparte el nombre o el enlace con tus amigos</em></span>
+              <div class="row">
+                <input id="in-room" maxlength="32" autocomplete="off" spellcheck="false" />
+                <button id="btn-random" class="btn icon" title="Nombre aleatorio">⟳</button>
+              </div>
+            </label>
+            <div id="recent-worlds" class="recent hidden"></div>
+            <button id="btn-play" class="btn primary big" disabled>Preparando…</button>
+            <div class="row">
+              <button id="btn-copy" class="btn">Copiar invitación</button>
+              <button id="btn-settings" class="btn">Ajustes</button>
+            </div>
+            <p id="menu-error" class="error"></p>
+          </section>
+          <section class="panel menu-card side-card">
+            <h3 class="card-title">Mundo nuevo</h3>
+            <div class="field">
+              <span>Modo de juego</span>
+              <div id="mode-seg" class="seg">
+                <button data-mode="s" class="active">Supervivencia</button>
+                <button data-mode="c">Creativo</button>
+              </div>
+            </div>
+            <label class="field">
+              <span>Semilla</span>
+              <input id="in-seed" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Aleatoria" />
+            </label>
+            <label class="check">
+              <input id="in-offline" type="checkbox" />
+              <span>Jugar sin conexión <em>(el mundo se guarda en este navegador)</em></span>
+            </label>
+            <p class="side-note">El modo y la semilla sólo cuentan al crear un mundo; si ya existe, se entra en el suyo. Un mundo sin nadie durante 48 horas se borra.</p>
+          </section>
         </div>
         <div class="controls-help">
           <span><kbd>WASD</kbd> moverse</span>
@@ -175,12 +190,11 @@
           <span><kbd>Shift</kbd> agacharse</span>
           <span><kbd>Ctrl</kbd> correr</span>
           <span><kbd>Clic izq.</kbd> romper · atacar</span>
-          <span><kbd>Clic der.</kbd> colocar · usar · comer</span>
+          <span><kbd>Clic der.</kbd> colocar · usar</span>
           <span><kbd>E</kbd> inventario</span>
-          <span><kbd>Q</kbd> tirar</span>
           <span><kbd>T</kbd> chat</span>
-          <span><kbd>F5</kbd> tercera persona</span>
-          <span><kbd>F3</kbd> info</span>
+          <span><kbd>V</kbd> hablar</span>
+          <span><kbd>F5</kbd> cámara</span>
         </div>
       </div>
     </div>

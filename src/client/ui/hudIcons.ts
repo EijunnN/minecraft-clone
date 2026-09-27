@@ -115,26 +115,50 @@ export function buildHudIcons(): HudIcons {
 }
 
 /** Iconos de todos los objetos: bloques (isométricos, ya generados) y sprites. */
-export function buildItemIcons(blockIcons: Map<number, string>, sprites: ItemSprites): Map<number, string> {
-  const out = new Map<number, string>();
+/**
+ * Mapa id → dataURL que pinta cada icono la primera vez que se pide (y lo guarda). Se usa como un Map normal;
+ * lo que se añade con set (pociones, estandartes…) tiene prioridad.
+ */
+export class LazyIcons extends Map<number, string> {
+  private missing = new Set<number>();
+  constructor(private make: (id: number) => string | undefined) {
+    super();
+  }
+  override get(id: number): string | undefined {
+    let v = super.get(id);
+    if (v === undefined && !this.missing.has(id)) {
+      v = this.make(id);
+      if (v === undefined) this.missing.add(id);
+      else super.set(id, v);
+    }
+    return v;
+  }
+  override has(id: number): boolean {
+    return this.get(id) !== undefined;
+  }
+}
+
+/** Iconos de los objetos: los de bloque, el icono del bloque; los demás, su sprite. Se pintan al pedirlos. */
+export function buildItemIcons(blockIcon: (id: number) => string | undefined, sprites: ItemSprites): LazyIcons {
   const c = document.createElement('canvas');
   c.width = 16;
   c.height = 16;
   const g = c.getContext('2d')!;
-  for (const it of ITEMS) {
-    if (!it) continue;
-    if (it.block !== undefined && it.sprite === undefined) {
-      const url = blockIcons.get(it.block);
-      if (url) out.set(it.id, url);
-      continue;
-    }
+  const blockCache = new Map<number, string | undefined>();
+  const block = (id: number) => {
+    if (!blockCache.has(id)) blockCache.set(id, blockIcon(id));
+    return blockCache.get(id);
+  };
+  return new LazyIcons((id) => {
+    const it = ITEMS[id];
+    if (!it) return undefined;
+    if (it.block !== undefined && it.sprite === undefined) return block(it.block);
     const s = itemSpriteIndex(it.id);
-    if (s < 0 || s >= sprites.count) continue;
+    if (s < 0 || s >= sprites.count) return undefined;
     const img = g.createImageData(16, 16);
     img.data.set(sprites.rgba.subarray(s * 1024, s * 1024 + 1024));
     g.clearRect(0, 0, 16, 16);
     g.putImageData(img, 0, 0);
-    out.set(it.id, c.toDataURL());
-  }
-  return out;
+    return c.toDataURL();
+  });
 }

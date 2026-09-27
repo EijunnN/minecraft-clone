@@ -39,8 +39,11 @@ function layerCanvas(tex: GeneratedTextures, layer: number): HTMLCanvasElement {
   return c;
 }
 
-/** Genera un mapa id → dataURL con los iconos de todos los bloques. */
-export function buildIcons(tex: GeneratedTextures): Map<number, string> {
+/**
+ * Dibujante de iconos de bloque: devuelve una función id → dataURL que pinta cada icono la primera vez que se
+ * pide (dibujarlos todos al arrancar eran miles de PNG y varios segundos antes de que respondiera el menú).
+ */
+export function blockIconMaker(tex: GeneratedTextures): (id: number) => string | undefined {
   const layers = new Map<number, HTMLCanvasElement>();
   const L = (i: number) => {
     let c = layers.get(i);
@@ -50,10 +53,10 @@ export function buildIcons(tex: GeneratedTextures): Map<number, string> {
     }
     return c;
   };
-  const out = new Map<number, string>();
   const S = 64;
-  for (const b of BLOCKS) {
-    if (!b || b.render === R_NONE) continue;
+  return (id: number) => {
+    const b = BLOCKS[id];
+    if (!b || b.render === R_NONE) return undefined;
     const cv = document.createElement('canvas');
     cv.width = S;
     cv.height = S;
@@ -86,9 +89,8 @@ export function buildIcons(tex: GeneratedTextures): Map<number, string> {
       face(left, k, k / 2, 0, k, 6, 18.5, 0.22);
       face(right, k, -k / 2, 0, k, 32, 31.5, 0.4);
     }
-    out.set(b.id, cv.toDataURL());
-  }
-  return out;
+    return cv.toDataURL();
+  };
 }
 
 /** Fase 6.5 (colecciones): amplía el dibujo de un icono alrededor de su centro. */

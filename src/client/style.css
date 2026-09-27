@@ -230,8 +230,16 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 16px;
-  width: min(520px, 100%);
+  padding: 28px 16px 22px;
+  width: min(900px, 100%);
+  margin: auto;
+}
+
+.menu-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .logo {
@@ -250,10 +258,66 @@ kbd {
 }
 
 .tagline {
-  margin: 14px 0 26px;
+  margin: 12px 0 14px;
   color: #e3ecf4;
   font-weight: 500;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* Mundos activos y gente conectada (en vivo). */
+.live-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(8, 14, 24, 0.62);
+  border: 1px solid var(--line-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 13.5px;
+  color: #d9e4ee;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.live-stats b {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(124, 205, 79, 0.6);
+  animation: live-pulse 2s ease-out infinite;
+}
+
+.live-stats.idle .live-dot {
+  background: #8da0b3;
+  animation: none;
+}
+
+.live-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line-strong);
+}
+
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(124, 205, 79, 0.55); }
+  70% { box-shadow: 0 0 0 9px rgba(124, 205, 79, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(124, 205, 79, 0); }
+}
+
+.menu-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
 }
 
 .menu-card {
@@ -262,6 +326,59 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.card-title {
+  margin: 0 0 2px;
+  font-family: var(--pixel);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #cfe8bf;
+}
+
+.side-card .card-title {
+  color: #bcd3ea;
+}
+
+.field em,
+.check em {
+  font-style: normal;
+  color: #7f91a5;
+  font-weight: 400;
+}
+
+.menu-card .error:empty {
+  display: none;
+}
+
+.side-note {
+  margin: auto 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8c9db0;
+}
+
+.main-card .btn.primary.big {
+  margin-top: 4px;
+}
+
+.btn.primary.big:disabled {
+  filter: saturate(0.4) brightness(0.8);
+  cursor: progress;
+}
+
+@media (max-width: 760px) {
+  .menu-grid {
+    grid-template-columns: 1fr;
+  }
+  .menu-content {
+    padding-top: 22px;
+  }
+  .live-stats {
+    font-size: 12.5px;
+  }
 }
 
 .field {
@@ -299,10 +416,12 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px 14px;
-  margin-top: 22px;
-  font-size: 12.5px;
-  color: #dfe8f1;
+  gap: 6px 14px;
+  margin-top: 18px;
+  max-width: 760px;
+  font-size: 12px;
+  color: #c9d6e2;
+  opacity: 0.85;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
 
