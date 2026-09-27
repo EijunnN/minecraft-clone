@@ -6,7 +6,7 @@
 //   salpicaduras de la lluvia en el suelo.
 // Las fuentes fijas (antorchas, hornos, fogatas, lava) se buscan dos veces por segundo; el resto se
 // descubre muestreando bloques al azar cada frame.
-import { isEnderChest, isEndRod } from '../../shared/blocks'; // Fase 8.6
+import { isEnderChest, isEndRod, WITHER_ROSE } from '../../shared/blocks'; // Fase 8.6; 8.7: la rosa marchita
 import {
   BLOCK_SOLID, BLOCK_FLUID, TORCH, WALL_TORCH, isCampfire, MYCELIUM, POINTED_DRIPSTONE, GRASS, CHERRY_LEAVES, BIRCH_LEAVES,
   SPRUCE_LEAVES, isLeaves, isLitFurnace, familyBase, stateProps, blockFacing, anchorCharges, isBubbleColumn, bubbleColumnDown,
@@ -43,6 +43,8 @@ export class AmbientParticles {
   /** Fase 8.6: cofres de ender (partículas de portal) y varas del End (chispas desde la punta, hacia donde apunta). */
   private enderChests: P3[] = [];
   private endRods: [number, number, number, number][] = [];
+  /** Fase 8.7: rosas marchitas (echan humo). */
+  private witherRoses: P3[] = [];
   private scanT = 0;
   private tint = [0, 0, 0];
 
@@ -71,6 +73,11 @@ export class AmbientParticles {
         const sx = Math.random() < 0.5 ? -1 : 1, sz = Math.random() < 0.5 ? -1 : 1;
         fx.portal(x + 0.5 + 0.25 * sx, y + Math.random() - 0.6, z + 0.5 + 0.25 * sz, sx * Math.random(), (Math.random() - 0.5) * 0.25, sz * Math.random());
       }
+    }
+    // Fase 8.7 (WitherRoseBlock.animateTick): humo que sale de la flor (tres oportunidades por vez, la mitad de las veces).
+    for (const [x, y, z] of this.witherRoses) {
+      if (Math.random() > dt * 2) continue;
+      for (let k = 0; k < 3; k++) if (Math.random() < 0.5) fx.smoke(x + 0.5 + Math.random() / 5 - 0.1, y + 0.5 - Math.random() * 0.5 + 0.25, z + 0.5 + Math.random() / 5 - 0.1, 1, 0.01, 0.2, 0.06, 0.5);
     }
     // Fase 8.6 (EndRodBlock.animateTick): una chispa de vez en cuando junto a la punta, que se aleja despacio.
     for (const [x, y, z, f] of this.endRods) {
@@ -181,6 +188,7 @@ export class AmbientParticles {
     const blazes: P3[] = []; // Fase 6.5 (equipo)
     const redTorches: P3[] = []; // Fase 7 (redstone)
     const enderChests: P3[] = [], endRods: [number, number, number, number][] = []; // Fase 8.6
+    const witherRoses: P3[] = []; // Fase 8.7
     for (let dy = -SCAN_H; dy <= SCAN_H; dy++) {
       for (let dz = -SCAN_R; dz <= SCAN_R; dz++) {
         for (let dx = -SCAN_R; dx <= SCAN_R; dx++) {
@@ -189,6 +197,8 @@ export class AmbientParticles {
           if (b <= 0) continue;
           if (b === TORCH) {
             if (torches.length < 64) torches.push([x + 0.5, y + 0.7, z + 0.5]);
+          } else if (b === WITHER_ROSE) {
+            if (witherRoses.length < 32) witherRoses.push([x, y, z]); // Fase 8.7
           } else if (isEnderChest(b)) {
             if (enderChests.length < 16) enderChests.push([x, y, z]); // Fase 8.6
           } else if (isEndRod(b)) {
@@ -225,6 +235,7 @@ export class AmbientParticles {
     this.redTorches = redTorches;
     this.enderChests = enderChests;
     this.endRods = endRods;
+    this.witherRoses = witherRoses;
   }
 
   /** Color de las hojas que caen: fijo para abedul y abeto; del bioma para el resto. */

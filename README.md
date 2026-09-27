@@ -53,6 +53,12 @@ Objects). Pensado para PC (teclado y ratón).
   **shulkers**, y el **barco** con la **cabeza de dragón** y los **élitros** (planeo con la física de Java,
   cohetes y el viento al volar); **cajas de shulker** de 17 colores que se llevan lo suyo y el **cofre de
   ender** de cada jugador.
+- **El Wither** (portado de Java 26.3): se invoca con tres cráneos de esqueleto wither sobre una T de arena o tierra
+  de alma (en cualquier orientación, también tumbada); nace invulnerable, crece y explota; sus tres cabezas eligen
+  cada una su objetivo y lanzan calaveras que explotan y dan Marchitamiento (las azules rompen hasta la obsidiana);
+  a media vida se blinda (las flechas rebotan) y rompe los bloques que le rodean al recibir daño. Barra morada que
+  oscurece el cielo, estrella del Nether al morir y **rosa marchita** donde caen sus víctimas (con `/jefes duros`
+  también gana vida con cada jugador y dispara el doble al final).
 - **Lo que da el Nether**: **escombros ancestrales** y la **netherita** (herramientas, armadura y armadura
   para caballo que se mejoran desde el diamante en la **mesa de herrería**, que no arden y flotan en la lava),
   el **nexo de reaparición** (se carga con piedra luminosa y fija el punto de reaparición en el Nether), la
@@ -241,7 +247,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Dos faros de noche, uno con el haz teñido por cristales de color](docs/screenshots/beacon.png) | ![Faro sobre su pirámide, nexo de reaparición cargado, magnetita, cuarzo, escombros ancestrales y netherita](docs/screenshots/nether_goods.png) |
 | ![La isla del dragón con sus pilares de obsidiana y la barra del dragón de Ender](docs/screenshots/end_island.png) | ![El portal de salida con el huevo de dragón sobre el podio](docs/screenshots/end_portal.png) |
 | ![Ciudad del End con sus torres y puentes, y el barco flotando bajo el destello del cielo](docs/screenshots/end_city.png) | ![Planeando con élitros sobre una ciudad del End](docs/screenshots/elytra.png) |
-| ![Cajas de shulker de colores, un cofre de ender y una cabeza de dragón](docs/screenshots/shulker_boxes.png) | |
+| ![Cajas de shulker de colores, un cofre de ender y una cabeza de dragón](docs/screenshots/shulker_boxes.png) | ![El Wither en vuelo, con los ojos de sus tres cabezas encendidos](docs/screenshots/wither.png) |
 
 ## Controles
 

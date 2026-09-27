@@ -33,6 +33,8 @@ import { netherMobs } from './netherMobs';
 export * from './netherMobs';
 import { endMobs } from './endMobs'; // Fase 8.6 (el End)
 export * from './endMobs';
+import { witherMobs } from './witherMobs'; // Fase 8.7 (el Wither)
+export * from './witherMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -126,6 +128,7 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'warden' // Fase 7.5 (abismo)
   | 'guardian' // Fase 7.5 (océano)
   | 'allay' // Fase 7.5 (mansión)
+  | 'wither' // Fase 8.7
   | 'piglin' | 'ghast' | 'blaze' | 'magma' | 'hoglin' | 'strider' | 'wither_skeleton' // Fase 8.3 (criaturas del Nether)
   | 'endermite' | 'dragon' | 'shulker'; // Fase 8.6 (el End)
 
@@ -666,6 +669,7 @@ for (const d of critterMobs(MOBS, { cat: MOB_CAT, cow: MOB_COW, llama: MOB_LLAMA
 mob(ALLAY_DEF); // Fase 7.5 (mansión)
 for (const d of netherMobs()) mob(d); // Fase 8.3 (criaturas del Nether)
 for (const d of endMobs()) mob(d); // Fase 8.6 (el End)
+for (const d of witherMobs()) mob(d); // Fase 8.7 (el Wither)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

@@ -1,5 +1,6 @@
 // Envío de entidades a cada jugador: sólo las cercanas y sólo lo que cambió desde el último envío
 // (altas, actualizaciones y bajas, con quién recogió cada objeto para la animación).
+import { MOB_WITHER, ENT_WITHER_SKULL } from '../../witherMobs'; // Fase 8.7
 import { dyedColor } from '../../dyedColor';
 import { MOB_ENDER_DRAGON, MOB_SHULKER } from '../../mobs'; // Fase 8.6
 import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mobs';
@@ -50,7 +51,8 @@ export class EntitySync {
   private key(e: Entity): string {
     // Fase 6 (aldeanos): la variante (profesión) también cuenta como cambio.
     return `${r2(e.x)},${r2(e.y)},${r2(e.z)},${r2(e.yaw)},${r2(e.bodyYaw)},${r2(e.pitch)},${flagsOf(e)},${e.stack?.count ?? e.xp ?? 0},${e.variant ?? 0}` +
-      (e.cloudRadius !== undefined ? `,${Math.round(e.cloudRadius * 10)}` : ''); // Fase 7 (pociones): radio de la nube
+      (e.cloudRadius !== undefined ? `,${Math.round(e.cloudRadius * 10)}` : '') + // Fase 7 (pociones): radio de la nube
+      (e.type === MOB_WITHER ? `,${this.ctx.entities.wither.headRots(e).join(',')}` : ''); // Fase 8.7: las cabezas del Wither
   }
 
   sync(): void {
@@ -96,6 +98,7 @@ export class EntitySync {
           else if (e.type === ENT_TNT) rec.push(e.block ?? 0, Math.round(e.fuse ?? 0)); // Fase 7 (mecanismos): bloque y mecha
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (isHangingType(e.type)) rec.push(e.variant ?? 0); // Fase 6.5: variante del cuadro u objeto del marco
+          else if (e.type === ENT_WITHER_SKULL) rec.push(e.variant ?? 0); // Fase 8.7: la calavera azul
           else if (e.type === ENT_ARMOR_STAND) rec.push(...(e.standArmor ?? [0, 0, 0, 0]), ...(e.standDye ?? [-1, -1, -1, -1])); // Fase 6.5 (remate): su armadura (y su color)
           else if (isVehicleType(e.type)) rec.push(e.variant ?? 0); // Fase 7 (transporte): madera de la barca
           else if (e.ai) rec.push(Math.round(e.health), e.variant ?? 0); // Fase 6: variante (pelaje o profesión)
@@ -106,6 +109,7 @@ export class EntitySync {
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (e.villager) rec.push(e.variant ?? 0); // Fase 6 (aldeanos): profesión del aldeano
           else if (e.type === MOB_ENDER_DRAGON || e.type === MOB_SHULKER) rec.push(e.variant ?? 0); // Fase 8.6: los ticks de la muerte del dragón; la cara y lo que se asoma el shulker
+          else if (e.type === MOB_WITHER) rec.push(e.variant ?? 0, ...ctx.entities.wither.headRots(e)); // Fase 8.7: invulnerabilidad y cabezas de los lados
           else if (e.type === ENT_EFFECT_CLOUD) rec.push(Math.round((e.cloudRadius ?? 0) * 100)); // Fase 7 (pociones)
           upd.push(rec);
         }

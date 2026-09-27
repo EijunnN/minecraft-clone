@@ -566,7 +566,7 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
   árboles y plantas). Las colinas ventosas y laderas nevadas son las antiguas «montañas» y «picos
   nevados».
 
-### Fase 8 — Nether y End (XL) · 🟡 en curso
+### Fase 8 — Nether y End (XL) · ✅ hecha
 Portales, los 5 biomas del Nether con sus criaturas (piglins, ghasts, blazes, hoglins, striders),
 fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End, ciudades del End,
 élitros y shulkers; el Wither. De uno en uno:
@@ -734,7 +734,28 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   - Pendiente: las **estrellas de fuegos artificiales** completas (forma, rastro, centelleo y desvanecimiento; hoy
     sólo el color), la **cura del aldeano zombi** (manzana dorada y debilidad) y la vasija con fragmentos (con la
     arqueología, fase 9).
-- **8.7 El Wither.**
+- ✅ **8.7 El Wither** (WitherBoss y WitherSkull de Java 26.3):
+  - **Invocación:** tres cráneos de esqueleto wither sobre una T de arena o tierra de alma con aire en las esquinas
+    de abajo, en cualquiera de las 24 orientaciones del BlockPattern de Java (también tumbada o del revés); no en
+    pacífico. Con el huevo nace entero.
+  - **Nacimiento:** un tercio de la vida y 220 ticks de invulnerabilidad en los que se cura 10 cada 10 ticks, crece y
+    parpadea en azul; al acabar, explota con fuerza 7 y su rugido se oye en toda la dimensión.
+  - **Combate:** 300 de vida y armadura 4; vuela hacia su objetivo (la criatura viva no muerta más cercana a 40
+    bloques o quien le hiera), 5 bloques por encima mientras no está blindado. La cabeza del centro dispara cada 40
+    ticks; las de los lados eligen sus propios objetivos a 20 × 8 × 20 y, en normal y difícil, sueltan calaveras azules
+    al azar. **Calaveras** que aceleran, hacen 8 de daño, dan Marchitamiento II (10 s en normal, 40 en difícil) y
+    explotan; las azules rompen hasta la obsidiana. A media vida se blinda (las flechas rebotan, aura de energía);
+    rompe los bloques de alrededor tras cada golpe; se cura 1 por segundo; no le afectan los efectos ni le hieren
+    los no muertos ni sus propias explosiones.
+  - **Muerte:** estrella del Nether y experiencia; lo que él mata deja una **rosa marchita** (o la suelta).
+  - **Rosa marchita:** da Marchitamiento al tocarla, va en maceta, da tinte negro y un estofado sospechoso.
+  - Barra del jefe morada que oscurece el cielo; modelo (tres cabezas que miran a sus objetivos, costillas y cola
+    que se mecen), texturas normal e invulnerable, partículas (humo en las cabezas, remolinos), sonidos y su huevo.
+    Con los jefes reforzados gana 150 de vida por jugador de más y, por debajo de un cuarto, dispara el doble.
+  - De paso: los no muertos del Nether (esqueleto wither, piglin zombificado, zoglin) ya se tratan como no muertos
+    con las pociones, y los hongos y raíces del Nether van en maceta.
+  - Pendiente de la fase 8 (a propósito): el Poema del End y los créditos; las animaciones de la tapa de las cajas de
+    shulker y de la mandíbula de la cabeza de dragón; la maceta con bambú.
 
 ### Fase 9 — Metajuego y novedades recientes (L)
 Logros y estadísticas, modos aventura, espectador y extremo, reglas del juego, más comandos,

@@ -1,6 +1,7 @@
 // Lo que se dibuja en cada frame: los demás jugadores (y uno mismo en tercera persona), la mano, las
 // entidades, las grietas del bloque que se mina, los carteles, estandartes, rayos, sedales y correas;
 // después, las etiquetas de nombre y el texto de depuración (F3).
+import { ENT_WITHER_SKULL } from '../../shared/witherMobs'; // Fase 8.7
 import { dyedColor } from '../../shared/dyedColor';
 import { newGlidePose, stepGlidePose, glideScale, glideRoll } from '../render/elytraPose'; // Fase 8.6
 import { ENT_END_CRYSTAL, ENT_SHULKER_BULLET } from '../../shared/mobs'; // Fase 8.6
@@ -101,7 +102,7 @@ export function splitEntities(g: Game): { mobs: ClientEntity[]; drops: ClientEnt
   for (const e of g.ents.list.values()) {
     // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
     // lo que llevan (lo decide MobRenderer).
-    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_END_CRYSTAL || e.type === ENT_SHULKER_BULLET) mobs.push(e); // Fase 8.6: y los cristales del End y las balas de shulker
+    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_END_CRYSTAL || e.type === ENT_SHULKER_BULLET || e.type === ENT_WITHER_SKULL) mobs.push(e); // Fase 8.6: y los cristales del End y las balas de shulker
     else drops.push(e);
   }
   return { mobs, drops };

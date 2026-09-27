@@ -3,6 +3,7 @@
 // repeticiones no suenen idénticas. Construido sobre las mismas primitivas de dsp.ts que
 // materials.ts; los timbres más particulares (formantes, vibrato) se montan aquí a mano con
 // nodos crudos, igual que hacen ambience.ts y music.ts para sus propios instrumentos.
+import { buildWitherVoice } from './witherSounds'; // Fase 8.7
 import { playInharmonicRing, playNoiseBurst, playPitchSweep, playTonalBlip, scheduleEnvelope } from './dsp';
 import { noiseOffset, noiseSource, type NoiseBuffers } from './noise';
 import { buildBowTwang } from './combat';
@@ -477,6 +478,8 @@ export function buildMobSound(ctx: AudioContext, noise: NoiseBuffers, kind: MobS
     case 'villager':
     case 'wandering_trader':
       return villagerSound(ctx, noise, event, destination, now);
+    case 'wither': // Fase 8.7
+      return buildWitherVoice(ctx, noise, event, destination, now);
     default:
       // Fase 6 (monstruos): bruja, slime, phantom y lepisma; (fauna): zorro, cabra, oso polar, conejo, lobo,
       // abeja, panda, loro y armadillo.

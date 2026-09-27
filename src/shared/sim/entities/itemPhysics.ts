@@ -162,7 +162,7 @@ export class ItemPhysics {
           // Fase 7 (encantamientos): Retroceso empuja más, Fuego prende y Perforación sigue de largo.
           if (e.pierced?.includes(m.id)) continue;
           // Fase 8.6: al shulker cerrado le rebotan (ProjectileDeflection.REVERSE).
-          if (this.m.shulkers.deflectsArrow(m)) {
+          if (this.m.shulkers.deflectsArrow(m) || this.m.wither.deflectsArrow(m)) { // 8.7: el Wither blindado
             e.vx *= -0.1;
             e.vy *= -0.1;
             e.vz *= -0.1;

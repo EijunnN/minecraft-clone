@@ -12,6 +12,8 @@
 // trata alpha 128–250 como brillo propio). Las zonas del atlas sin uso quedan
 // transparentes (alpha 0).
 
+import { witherPainter } from './witherTextures'; // Fase 8.7
+import { MOB_WITHER } from '../../shared/witherMobs';
 import { frogPainter } from './aquaticMobTextures'; // las variedades de rana
 import { MOB_FROG } from '../../shared/mobs';
 import {
@@ -1488,6 +1490,7 @@ const VARIANT_PAINTERS: Record<number, (variant: number) => Painter> = {
   [MOB_HORSE]: horsePainter,
   [MOB_LLAMA]: (v) => (t) => llama(t, LLAMA_COATS[((v % LLAMA_COATS.length) + LLAMA_COATS.length) % LLAMA_COATS.length]),
   [MOB_FROG]: (v) => frogPainter(v) as Painter, // las tres variedades de rana
+  [MOB_WITHER]: (v) => witherPainter(v), // Fase 8.7: el Wither (1: invulnerable)
 };
 
 // ---------------------------------------------------------------------------

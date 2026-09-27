@@ -37,6 +37,7 @@ import { Riding } from './riding';
 import { Trading } from './trading';
 import { Monsters } from './monsters';
 import { Golems } from './golems';
+import { WitherBoss } from './witherBoss'; // Fase 8.7
 import { Raids } from './raids';
 import { ColorBlocks } from './colorBlocks';
 import { Copper } from './copper';
@@ -94,6 +95,8 @@ export class ServerSystems {
   readonly monsters: Monsters;
   /** Fase 6 (gólems/domesticar): construir gólems y poblar las aldeas. */
   readonly golems: Golems;
+  /** Fase 8.7: invocar al Wither, su barra y la rosa marchita. */
+  readonly witherBoss: WitherBoss;
   /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
   readonly raids: Raids;
   /** Fase 6.5 (colores): hormigón en polvo que se endurece en el agua. */
@@ -177,6 +180,7 @@ export class ServerSystems {
     world.onVillagers = (v) => this.trading.spawnVillagers(v);
     this.monsters = new Monsters(ctx, store);
     this.golems = new Golems(ctx, store);
+    this.witherBoss = new WitherBoss(ctx);
     this.raids = new Raids(ctx, store);
     this.trading.heroAmp = (name) => this.raids.heroAmp(name);
     this.commands.raids = this.raids;
@@ -303,6 +307,7 @@ export class ServerSystems {
     this.rules?.onBlockChanged(x, y, z, id);
     this.monsters?.onBlockChanged(x, y, z, old, id);
     this.golems?.onBlockChanged(x, y, z, id);
+    this.witherBoss?.onBlockChanged(x, y, z, id); // Fase 8.7
     this.colorBlocks?.onBlockChanged(x, y, z, old, id);
     this.hangings?.onBlockChanged(x, y, z);
     this.shelves?.onBlockChanged(x, y, z, old, id);
@@ -361,6 +366,7 @@ export class ServerSystems {
       this.critters.tick();
     }
     this.golems.tick();
+    this.witherBoss.tick(); // Fase 8.7
     this.oceanLife.tick();
     this.banners.endTick();
     this.containers.endTick(); // Fase 8.6: las cajas de shulker rotas que no soltaron nada
@@ -399,6 +405,7 @@ export class ServerSystems {
   onLeave(s: Session): void {
     this.trading.onLeave(s);
     this.endFight.onLeave(s); // Fase 8.6
+    this.witherBoss.onLeave(s); // Fase 8.7
     this.containers.close(s); // deja de mirar el cofre trampa
     this.riding.onLeave(s);
     this.raids.onLeave(s);

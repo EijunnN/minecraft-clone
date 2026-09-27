@@ -85,7 +85,8 @@ export type MobSoundKind =
   | 'hoglin'
   | 'zoglin'
   | 'strider'
-  | 'wither_skeleton';
+  | 'wither_skeleton'
+  | 'wither'; // Fase 8.7
 
 /** Eventos de sonido que puede emitir una criatura. No todos los tipos usan todos los eventos
  * (p. ej. el creeper no tiene voz de `idle`); los combos no aplicables caen a un sonido genérico

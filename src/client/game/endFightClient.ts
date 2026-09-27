@@ -9,17 +9,17 @@ import type { BeaconBeam } from './beacons';
 import type { Game } from './Game';
 import { dragonYRot } from './dragonClient';
 
-let boss: { name: string; h: number } | null = null;
-/** Niebla del combate (0..1, suavizada) y cuándo se calculó. */
-let fogK = 0, fogAt = 0;
+let boss: { name: string; h: number; c?: string } | null = null;
+/** Niebla del combate (0..1, suavizada) y cuándo se calculó; Fase 8.7: y el cielo oscurecido del Wither. */
+let fogK = 0, fogAt = 0, darkK = 0;
 const gates: { x: number; y: number; z: number; until: number; born: number }[] = [];
 
-export function bossState(): { name: string; h: number } | null {
+export function bossState(): { name: string; h: number; c?: string } | null {
   return boss;
 }
 
-export function onBossMsg(msg: { n?: string; h: number }): void {
-  boss = msg.h < 0 ? null : { name: msg.n ?? boss?.name ?? '', h: msg.h };
+export function onBossMsg(msg: { n?: string; h: number; c?: string }): void {
+  boss = msg.h < 0 ? null : { name: msg.n ?? boss?.name ?? '', h: msg.h, ...(msg.c ? { c: msg.c } : {}) };
 }
 
 /** Un haz en la puerta de (x, y, z) durante `seconds`. */
@@ -31,7 +31,7 @@ export function gatewayBeam(x: number, y: number, z: number, seconds: number): v
 }
 
 /** Lo que dibuja el renderer este frame. */
-export function frame(g: Game): { endRays?: DragonRays[]; crystalBeams?: CrystalBeam[]; gatewayBeams?: BeaconBeam[]; bossFog?: number } {
+export function frame(g: Game): { endRays?: DragonRays[]; crystalBeams?: CrystalBeam[]; gatewayBeams?: BeaconBeam[]; bossFog?: number; bossDark?: number } {
   const rays: DragonRays[] = [];
   const beams: CrystalBeam[] = [];
   const time = performance.now() / 1000;
@@ -64,9 +64,12 @@ export function frame(g: Game): { endRays?: DragonRays[]; crystalBeams?: Crystal
   // La niebla del jefe (BossEvent.createWorldFog) entra y sale despacio.
   const dt = Math.min(0.1, fogAt ? time - fogAt : 0);
   fogAt = time;
-  fogK += ((boss ? 1 : 0) - fogK) * Math.min(1, dt * 0.8);
+  // El del dragón trae niebla; el del Wither (morado) oscurece el cielo (BossEvent.darkenScreen).
+  fogK += ((boss && boss.c !== 'purple' ? 1 : 0) - fogK) * Math.min(1, dt * 0.8);
+  darkK += ((boss?.c === 'purple' ? 1 : 0) - darkK) * Math.min(1, dt * 0.8);
   return {
     ...(fogK > 0.01 ? { bossFog: fogK } : {}),
+    ...(darkK > 0.01 ? { bossDark: darkK } : {}),
     ...(rays.length ? { endRays: rays } : {}),
     ...(beams.length ? { crystalBeams: beams } : {}),
     ...(gatewayBeams.length ? { gatewayBeams } : {}),

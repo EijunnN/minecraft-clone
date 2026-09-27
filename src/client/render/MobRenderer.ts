@@ -1,5 +1,7 @@
 // Criaturas: construye la malla de cajas de cada especie (un hueso por parte), anima las partes
 // según el tipo (cuadrúpedo, humanoide, araña, calamar...) y las dibuja con sombras.
+import { animateWither, witherPartOffset, witherScale, witherSkinVariant, witherPowered, witherSkullDef } from './witherPose'; // Fase 8.7
+import { MOB_WITHER, ENT_WITHER_SKULL } from '../../shared/witherMobs';
 import { mat4 } from 'gl-matrix';
 import { Program, type GL } from '../engine/gl';
 import { MOB_VS, MOB_FS, MOB_SHADOW_VS, MOB_SHADOW_FS, MAX_BONES } from './shaders/mob';
@@ -69,7 +71,9 @@ export class MobRenderer {
   /** Fase 8.3: desplazamiento de la parte que se está colocando (varas del blaze, rodajas del cubo de magma…). */
   private off = [0, 0, 0];
   /** Fase 6.5 (colecciones): fotogramas del aura del creeper cargado. */
-  private auraSkins: WebGLTexture[] = [];
+  private auraSkins = new Map<string, WebGLTexture>();
+  /** Fase 8.7: el modelo de la calavera del Wither. */
+  private readonly skullDef = witherSkullDef(MOBS[MOB_WITHER]);
   private model = mat4.create();
   /** Fase 8.6: el dragón de Ender y los cristales del End (se dibujan parte a parte). */
   readonly dragon: DragonRenderer;
@@ -179,6 +183,7 @@ export class MobRenderer {
   private animate(def: MobDef, e: ClientEntity, time: number, name: string, out: number[]): void {
     out[0] = out[1] = out[2] = 0;
     if (netherAnimate(def, e, time, name, out)) return; // Fase 8.3 (criaturas del Nether)
+    if (animateWither(def, e, time, name, out)) return; // Fase 8.7: el Wither y su calavera
     if (animateVehicle(def, e, time, name, out)) return; // Fase 7 (transporte): remos
     if (faunaAnimate(def, e, time, name, out)) return; // Fase 6 (fauna)
     if (animateGuardian(def, e, time, name, out)) return; // Fase 7.5 (océano)
@@ -290,8 +295,8 @@ export class MobRenderer {
       if (isNetherMob(def.id)) {
         netherPartOffset(def, e, time, part.name, this.off); // Fase 8.3
         mat4.translate(m, m, [this.off[0] * P, this.off[1] * P, this.off[2] * P]);
-      } else if (shulkerPartOffset(def, e, time, part.name, this.off)) {
-        mat4.translate(m, m, [this.off[0] * P, this.off[1] * P, this.off[2] * P]); // Fase 8.6: la tapa del shulker
+      } else if (shulkerPartOffset(def, e, time, part.name, this.off) || witherPartOffset(def, e, time, part.name, this.off)) {
+        mat4.translate(m, m, [this.off[0] * P, this.off[1] * P, this.off[2] * P]); // Fase 8.6: la tapa del shulker; 8.7: la cola del Wither
       }
       this.animate(def, e, time, part.name, rot);
       mountPartAnim(def, e, time, part.name, rot); // Fase 6 (monturas)
@@ -304,6 +309,7 @@ export class MobRenderer {
       if (faunaScale) mat4.scale(m, m, faunaScale);
       else if ((part.name === 'wool' && e.flags & EF_SHEARED) || hiddenAquaticPart(def, e, part.name) || hiddenPart(part.name, e.flags)) mat4.scale(m, m, HIDE);
       else if (hiddenMountPart(part.name, e)) mat4.scale(m, m, HIDE); // Fase 6 (monturas): sin silla
+      else if (def.id === MOB_WITHER && part.name === 'skull') mat4.scale(m, m, HIDE); // Fase 8.7: la calavera, sólo en la textura
       else if (hiddenIllagerPart(part.name, e)) mat4.scale(m, m, HIDE); // Fase 6 (asaltos): estandarte
       else if (part.name === 'head' && e.flags & EF_BABY) mat4.scale(m, m, [1.45, 1.45, 1.45]);
       mats.push(m);
@@ -322,7 +328,7 @@ export class MobRenderer {
     mountRootPose(def, e, m); // Fase 6 (monturas): encabritada
     faunaRoot(def, e, m); // Fase 6 (fauna)
     critterRoot(def, e, m); // Fase 7.5 (fauna): murciélago colgado
-    let s = def.scale;
+    let s = def.scale * witherScale(def, e); // Fase 8.7: el Wither, más pequeño mientras nace
     if (e.flags & EF_BABY) s *= 0.5;
     if (def.id === MOB_CREEPER && e.actionT >= 0) {
       // El creeper se hincha mientras arde la mecha.
@@ -369,17 +375,25 @@ export class MobRenderer {
         this.dragon.drawBullet(p, e, camX, camY, camZ, time);
         continue;
       }
-      const vehicle = MOBS[e.type] ? undefined : vehicleModel(e); // Fase 7 (transporte): barcas y vagonetas
-      const def = MOBS[e.type] ?? vehicle?.def;
+      // Fase 8.7: la calavera del Wither (la cabeza con su textura; la azul, con la de invulnerable).
+      const skull = e.type === ENT_WITHER_SKULL;
+      if (skull) e.bodyYaw = e.yaw;
+      const vehicle = MOBS[e.type] || skull ? undefined : vehicleModel(e); // Fase 7 (transporte): barcas y vagonetas
+      const def = skull ? this.skullDef : MOBS[e.type] ?? vehicle?.def;
       if (!def) continue;
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
       const hurt = !vehicle && (e.hurtT < 0.35 || e.deathT >= 0);
-      const light: [number, number] = def.fullBright ? [0, 1] : lightAt(e); // Fase 8.3: el blaze y el cubo de magma brillan
+      // Fase 8.3: el blaze y el cubo de magma brillan. Fase 8.7: el Wither también se ve de noche, pero con luz blanca
+      // (la del cielo a tope) en vez del tono de las antorchas, que lo volvería marrón.
+      const light: [number, number] = def.id === MOB_WITHER || def.id === -MOB_WITHER ? [1, Math.max(lightAt(e)[1], 0.35)] : def.fullBright ? [0, 1] : lightAt(e);
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : def.id === MOB_SHULKER ? 0 : e.variant || mobVariant(e) || netherVariant(e)))
+      const skinDef = skull ? MOBS[MOB_WITHER] : def;
+      const skinVariant = skull ? e.variant ?? 0 : def.id === MOB_WITHER ? witherSkinVariant(e) // Fase 8.7
+        : vehicle ? vehicleSkinVariant(e) : def.id === MOB_SHULKER ? 0 : e.variant || mobVariant(e) || netherVariant(e);
+      p.tex2D('uSkin', this.skin(skinDef, skinVariant))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
@@ -391,8 +405,9 @@ export class MobRenderer {
         gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
       }
       // Fase 6.5 (colecciones): creeper cargado: franjas de energía azul (emisivas) que envuelven el cuerpo.
-      if (def.id === MOB_CREEPER && e.flags & EF_CHARGED && e.deathT < 0) {
-        const aura = this.mesh(def, 1.2);
+      if (((def.id === MOB_CREEPER && e.flags & EF_CHARGED) || (def.id === MOB_WITHER && witherPowered(e))) && e.deathT < 0) {
+        // Fase 8.7: y el Wither blindado (WitherArmorLayer: la misma energía, algo más ceñida).
+        const aura = this.mesh(def, def.id === MOB_WITHER ? 0.5 : 1.2);
         p.tex2D('uSkin', this.auraSkin(def, Math.floor(time * 10) % AURA_FRAMES)).f2('uLightLevel', 1, 1).f3('uTint', 1, 1, 1).f1('uFlash', 0);
         gl.bindVertexArray(aura.vao);
         gl.drawElements(gl.TRIANGLES, aura.count, gl.UNSIGNED_SHORT, 0);
@@ -432,7 +447,8 @@ export class MobRenderer {
 
   /** Fase 6.5 (colecciones): un fotograma de la textura del aura (del tamaño del atlas de la especie). */
   private auraSkin(def: MobDef, frame: number): WebGLTexture {
-    let t = this.auraSkins[frame];
+    const key = `${def.atlas[0]}x${def.atlas[1]}:${frame}`; // (cada tamaño de atlas, el suyo)
+    let t = this.auraSkins.get(key);
     if (t) return t;
     const gl = this.gl;
     const src = chargedAuraTexture(def.atlas[0], def.atlas[1], frame);
@@ -444,7 +460,7 @@ export class MobRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    this.auraSkins[frame] = t;
+    this.auraSkins.set(key, t);
     return t;
   }
 

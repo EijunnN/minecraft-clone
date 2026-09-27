@@ -28,10 +28,10 @@ function ensure(): void {
 }
 
 /** Pinta la barra (null o `show` falso la ocultan). */
-export function renderBossBar(st: { name: string; h: number } | null, show: boolean): void {
+export function renderBossBar(st: { name: string; h: number; c?: string } | null, show: boolean): void {
   ensure();
   if (!el || !fill || !lag || !label) return;
-  const key = st && show ? `${st.name}.${st.h}` : '';
+  const key = st && show ? `${st.name}.${st.h}.${st.c ?? ''}` : '';
   if (key === last) return;
   last = key;
   if (!st || !show) {
@@ -39,6 +39,7 @@ export function renderBossBar(st: { name: string; h: number } | null, show: bool
     return;
   }
   el.classList.remove('hidden');
+  el.classList.toggle('purple', st.c === 'purple'); // Fase 8.7: la del Wither
   label.textContent = st.name;
   const w = `${(Math.max(0, Math.min(1, st.h)) * 100).toFixed(1)}%`;
   fill.style.width = w;

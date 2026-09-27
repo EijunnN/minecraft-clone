@@ -2,6 +2,10 @@
 // experiencia, huevos lanzados y flotadores de pesca. Este gestor guarda la lista, crea y retira
 // entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
 // projectiles, mobBrain, animalLife, spawner y xpOrbs.
+import { MOB_WITHER } from '../../witherMobs';
+import { WitherAI } from './wither'; // Fase 8.7
+/** Fase 8.7: opciones de una explosión (tnt.ts BlastOptions). */
+export interface BlastExtra { source?: number; resist?: (id: number, r: number) => number }
 import { MOB_FROG, frogVariantFor } from '../../aquaticMobs'; // la rana y sus variedades
 import { isDeepDark } from '../../world/deepDark';
 import { MOB_SLIME_SMALL } from '../../mobs';
@@ -108,10 +112,12 @@ export class Entities {
   readonly dragon = new EnderDragonAI(this);
   /** Fase 8.6 (el End): los shulkers y sus balas. */
   readonly shulkers = new ShulkerAI(this);
+  /** Fase 8.7: el Wither y sus calaveras. */
+  readonly wither = new WitherAI(this);
   /** Fase 7.5 (océano): delfines que llevan a los naufragios y a las ruinas. */
   readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
-  explosion: ((x: number, y: number, z: number, power: number, charged: boolean, breakBlocks?: boolean) => void) | null = null; // Fase 8.5: breakBlocks
+  explosion: ((x: number, y: number, z: number, power: number, charged: boolean, breakBlocks?: boolean, extra?: BlastExtra) => void) | null = null; // Fase 8.5: breakBlocks; 8.7: extra
   /** Fase 7.5 (abismo): un catalizador de sculk cercano se come la experiencia de la criatura que muere (devuelve true). */
   xpEater: ((e: Entity) => boolean) | null = null;
   /** Fase 7.5 (mansión): alays (objetos que recogen, bailes y duplicación). */
@@ -157,6 +163,7 @@ export class Entities {
     this.gear.onSpawn(e); // Fase 6.5 (equipo)
     this.allays.init(e); // Fase 7.5 (mansión)
     if (type === MOB_SHULKER) this.shulkers.init(e); // Fase 8.6: en el centro de su celda, pegado abajo
+    if (type === MOB_WITHER) e.persist = true; // Fase 8.7: el Wither no desaparece (salvo en pacífico)
     // La rana, de la variedad de su bioma (la templada, la cálida o la fría).
     if (type === MOB_FROG) e.variant = frogVariantFor(this.w.gen.biomeAt(Math.floor(x), Math.floor(z)), isDeepDark(this.w.gen, Math.floor(x), Math.floor(y), Math.floor(z)));
     this.list.set(e.id, e);
@@ -296,11 +303,13 @@ export class Entities {
       return false;
     }
     if (e.invuln > 0) return false;
+    if (this.wither.ignores(e, attacker)) return false; // Fase 8.7: el Wither al nacer, y contra los no muertos
     if (this.allays.immune(e, attacker)) return false; // Fase 7.5 (mansión): su jugador no hiere al alay
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
     amount = horsemanAbsorb(e, amount); // Fase 7.5 (fauna): el casco del jinete esqueleto
     amount = this.mobs.nether.absorb(e, amount); // Fase 8.3: la armadura del cubo de magma y el oro de los piglins
     amount = this.shulkers.absorb(e, amount); // Fase 8.6: el shulker cerrado
+    amount = this.wither.absorb(e, amount); // Fase 8.7: la armadura del Wither
     knock *= 1 - this.mobs.nether.knockbackResistance(e); // Fase 8.3: el hoglin y el zoglin apenas retroceden
     knock *= 1 - this.gear.knockbackResistance(e); // Fase 8.5: la armadura de netherita del caballo
     amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
@@ -337,6 +346,7 @@ export class Entities {
     this.mobs.warden.onDamaged(e, attacker); // Fase 7.5 (abismo): el warden se enfada (y no retrocede)
     this.mobs.nether.onDamaged(e, attacker); // Fase 8.3 (criaturas del Nether)
     this.shulkers.onDamaged(e, attacker); // Fase 8.6: se teletransporta, se duplica y avisa a los suyos
+    this.wither.onDamaged(e, attacker); // Fase 8.7: rompe lo que le rodea
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.killer = attacker; // Fase 6.5 (colecciones)
@@ -387,13 +397,15 @@ export class Entities {
     if (drops) this.mobs.guardians.onKilled(e); // Fase 7.5 (océano): botín de los guardianes
     if (drops) this.mobs.nether.onKilled(e, this.killer); // Fase 8.3 (criaturas del Nether): equipo, varas, cráneos, cubos que se dividen
     if (drops) this.shulkers.onKilled(e); // Fase 8.6: la concha
+    if (drops) this.wither.onKilled(e); // Fase 8.7: la estrella del Nether
+    this.wither.onVictim(e, this.killer); // Fase 8.7: lo que mata el Wither deja una rosa marchita
   }
 
   // ------------------------------------------------------------------ explosiones
 
   /** `charged`: Fase 6.5 (colecciones), creeper cargado (su víctima suelta la cabeza). */
-  explode(x: number, y: number, z: number, power: number, charged = false): void {
-    if (this.explosion) return this.explosion(x, y, z, power, charged); // Fase 7 (mecanismos)
+  explode(x: number, y: number, z: number, power: number, charged = false, extra?: BlastExtra): void {
+    if (this.explosion) return this.explosion(x, y, z, power, charged, true, extra); // Fase 7 (mecanismos); 8.7: extra
     const r = Math.ceil(power);
     this.host.fx('explode', x, y, z, power);
     for (let dy = -r; dy <= r; dy++) {
@@ -570,6 +582,8 @@ export class Entities {
       if (crit) (row as unknown[]).push(crit);
       const nether = this.mobs.nether.save(e); // Fase 8.3 (criaturas del Nether): equipo e inventario del piglin
       if (nether) (row as unknown[]).push(nether);
+      const wither = this.wither.save(e); // Fase 8.7: la invulnerabilidad del Wither
+      if (wither) (row as unknown[]).push(wither);
       out.push(row);
     }
     return JSON.stringify(out);
@@ -604,6 +618,7 @@ export class Entities {
         if (Array.isArray(row)) critterRestore(e, row as unknown[]); // Fase 7.5 (fauna)
         if (Array.isArray(row)) this.allays.restore(e, row as unknown[]); // Fase 7.5 (mansión): el alay
         if (Array.isArray(row)) this.mobs.nether.restore(e, row as unknown[]); // Fase 8.3 (criaturas del Nether)
+        if (Array.isArray(row)) this.wither.restore(e, row as unknown[]); // Fase 8.7
       }
     } catch {
       /* ignorar */

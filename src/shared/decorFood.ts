@@ -1,6 +1,8 @@
 // Fase 6.5 (decoración): comida con algo especial. El estofado sospechoso da un efecto según la flor
 // con la que se hizo (como en Minecraft Java); la flor va en el `dmg` de la pila (1..n, índice de
 // SUSPICIOUS_FLOWERS + 1). Los estofados y sopas devuelven el cuenco.
+import { WITHER_ROSE } from './blocks'; // Fase 8.7
+import { EFFECT_WITHER } from './effects';
 import { POPPY, DANDELION, CORNFLOWER, FLOWERS, TORCHFLOWER } from './blocks';
 import {
   EFFECT_FIRE_RESISTANCE, EFFECT_NIGHT_VISION, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_WEAKNESS, EFFECTS,
@@ -28,6 +30,7 @@ export const SUSPICIOUS_FLOWERS: readonly (readonly [number, number, number])[] 
   [FLOWERS.oxeye_daisy, EFFECT_REGENERATION, 7],
   [FLOWERS.lily_of_the_valley, EFFECT_POISON, 11],
   [TORCHFLOWER, EFFECT_NIGHT_VISION, 5], // Fase 7 (efectos)
+  [WITHER_ROSE, EFFECT_WITHER, 7], // Fase 8.7: la rosa marchita (WitherRoseBlock(MobEffects.WITHER, 7))
 ];
 
 /** Efecto de un estofado sospechoso: [efecto, segundos] o null si no tiene flor. */

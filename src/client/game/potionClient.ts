@@ -38,7 +38,7 @@ function tone(c: RGB, k = 1.3): [number, number, number] {
 // ------------------------------------------------------------------ partículas
 
 /** Remolino de efecto: una chispa de color que sube despacio y se apaga. */
-function swirl(g: Game, x: number, y: number, z: number, c: RGB, a = 0.9): void {
+export function swirl(g: Game, x: number, y: number, z: number, c: RGB, a = 0.9): void {
   const [r, gg, b] = tone(c);
   g.renderer.entities.pfx.ps.spawn({
     x, y, z, vx: rnd(-0.12, 0.12), vy: rnd(0.25, 0.6), vz: rnd(-0.12, 0.12), life: rnd(0.7, 1.2), size: rnd(0.07, 0.11),

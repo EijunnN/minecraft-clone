@@ -5,7 +5,7 @@ import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import type { BannerLayer } from './bannerPatterns';
 
-export const PROTOCOL_VERSION = 17; // aldeanos de 26.3: ofertas con precio de ahora, desgaste y frasco de agua; tipo de aldeano en la variante
+export const PROTOCOL_VERSION = 18; // Fase 8.7: el Wither, su calavera, la rosa marchita y el color de la barra del jefe
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -316,7 +316,7 @@ export type ServerMsg =
   /** Fase 8.6: el servidor mueve al jugador (la perla de ender que cae). */
   | { t: 'moveTo'; p: [number, number, number] }
   /** Fase 8.6: la barra del jefe (nombre y vida 0..1; −1, quitarla). */
-  | { t: 'boss'; n?: string; h: number }
+  | { t: 'boss'; n?: string; h: number; c?: string } // Fase 8.7: c, el color de la barra (el Wither, morada)
   /** Fase 8.5: los efectos elegidos de un faro. */
   | { t: 'beacon'; x: number; y: number; z: number; p: number; s: number }
   // Fase 6 (monturas)

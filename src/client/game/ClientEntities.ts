@@ -1,6 +1,7 @@
 // Entidades en el cliente: réplica de las del servidor (criaturas, objetos, flechas, bloques que
 // caen, orbes de experiencia) con interpolación entre instantáneas (se dibujan ~110 ms en el pasado
 // para suavizar).
+import { MOB_WITHER, ENT_WITHER_SKULL } from '../../shared/witherMobs'; // Fase 8.7
 import { MOBS, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY, ENT_LARGE_FIREBALL } from '../../shared/mobs';
 import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd, type EntExtra } from '../../shared/protocol';
 import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
@@ -63,6 +64,8 @@ export interface ClientEntity {
   armor?: number[];
   /** Fase 6.5 (equipo): armadura puesta (caballo, lobo) u objeto en la mano (tridente del ahogado). */
   gear?: number;
+  /** Fase 8.7: giros de las cabezas de los lados del Wither [yaw 1, pitch 1, yaw 2, pitch 2] (grados de Java, relativos). */
+  witherHeads?: number[];
   /** Color del cuero teñido: el objeto en el suelo, cada pieza del soporte (−1 sin teñir) y la armadura puesta. */
   dye?: number;
   armorDye?: number[];
@@ -118,6 +121,7 @@ export class ClientEntities {
         e.armorDye = [0, 1, 2, 3].map((k) => dyeFrom(a[13 + k]) ?? -1); // (y el color de cada pieza teñida)
       }
       if (type === ENT_ITEM) e.dye = dyeFrom(e4); // el cuero teñido
+      if (type === ENT_WITHER_SKULL) e.variant = e1 === 1 ? 1 : 0; // Fase 8.7: la calavera azul
       // Fase 7 (pociones): tipo de la poción lanzada, de la flecha con efecto y color y radio de la nube.
       if ((type === ENT_ITEM || type === ENT_THROWN || type === ENT_DISPLAY) && Number.isInteger(e3) && e3 > 0) e.dmg = e3;
       else if (type === ENT_ARROW && Number.isInteger(e1)) e.potion = e1;
@@ -133,7 +137,10 @@ export class ClientEntities {
       if (!e || e.gone) continue;
       this.push(e, now, u[1], u[2], u[3], u[4], u[5], u[6], u[7]);
       if ((e.type === ENT_ITEM || e.type === ENT_XP) && u.length > 8) e.count = u[8];
-      else if (MOBS[e.type] && u.length > 8) e.variant = u[8]; // Fase 6 (aldeanos)
+      else if (MOBS[e.type] && u.length > 8) {
+        e.variant = u[8]; // Fase 6 (aldeanos)
+        if (e.type === MOB_WITHER && u.length > 12) e.witherHeads = [u[9], u[10], u[11], u[12]]; // Fase 8.7: las cabezas de los lados
+      }
       else if (e.type === ENT_EFFECT_CLOUD && u.length > 8) e.cloudRadius = Math.max(0, Math.min(8, u[8] / 100)); // Fase 7 (pociones)
     }
     // Fase 6.5 (remate): nombre y correa.

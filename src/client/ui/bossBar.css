@@ -46,3 +46,13 @@
   background: rgba(255, 240, 255, 0.55);
   transition: width 0.9s ease-in 0.25s;
 }
+
+/* Fase 8.7: la barra del Wither, morada. */
+#boss-bar.purple .track {
+  background: rgba(16, 6, 30, 0.8);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.55), 0 0 12px rgba(150, 90, 240, 0.28);
+}
+
+#boss-bar.purple .fill {
+  background: linear-gradient(#d6b4ff, #9c5cf0 55%, #5a2aa8);
+}

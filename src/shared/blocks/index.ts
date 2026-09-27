@@ -243,3 +243,7 @@ export * from './frogBlocks';
 (INVENTORY_ORDER as number[]).push(...FROG_INVENTORY);
 // Correcciones: los brotes de amatista en las seis caras (ids nuevos, al final).
 export * from './amethystBuds';
+// Fase 8.7 (el Wither): la rosa marchita (ids nuevos, al final).
+import { WITHER_INVENTORY } from './witherBlocks';
+export * from './witherBlocks';
+(INVENTORY_ORDER as number[]).push(...WITHER_INVENTORY);

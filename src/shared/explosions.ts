@@ -50,6 +50,12 @@ export function blastResistance(id: number): number {
   return id < BLOCK_COUNT ? TABLE[id] : 0;
 }
 
+/** Fase 8.7: bloques que el Wither no rompe (etiqueta wither_immune; los que existen). */
+const WITHER_IMMUNE = new Set(['bedrock', 'end_portal', 'end_portal_frame', 'end_gateway', 'reinforced_deepslate', 'barrier', 'light']);
+export function witherImmune(id: number): boolean {
+  return id > 0 && WITHER_IMMUNE.has(defs[familyBase(id)]?.key ?? '');
+}
+
 /** Direcciones de los rayos: las caras de un cubo de 16×16×16 (1352), normalizadas. */
 const RAYS: number[] = [];
 for (let j = 0; j < 16; j++) {
@@ -69,6 +75,7 @@ for (let j = 0; j < 16; j++) {
  */
 export function explodedBlocks(
   get: (x: number, y: number, z: number) => number, x: number, y: number, z: number, power: number, rand: () => number,
+  resist?: (id: number, r: number) => number,
 ): number[] {
   const out: number[] = [];
   const seen = new Set<number>();
@@ -81,7 +88,7 @@ export function explodedBlocks(
       if (by < MIN_Y || by >= MAX_Y) break;
       const id = get(bx, by, bz);
       if (id < 0) break;
-      if (id > 0) f -= (blastResistance(id) + 0.3) * 0.3;
+      if (id > 0) f -= ((resist ? resist(id, blastResistance(id)) : blastResistance(id)) + 0.3) * 0.3; // (8.7: la calavera azul)
       if (f > 0 && id > 0 && !BLOCK_FLUID[id]) {
         const k = posKey(bx, by, bz);
         if (!seen.has(k)) {

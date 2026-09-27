@@ -342,7 +342,7 @@ export const CREATURE_SPAWN_PERIOD = 400;
 
 // ---------------------------------------------------------------------------------- modelos
 
-interface JavaPart {
+export interface JavaPart {
   name: string;
   parent?: string;
   /** PartPose.offset(x, y, z). */
@@ -360,7 +360,7 @@ interface JavaPart {
  * se invierten X e Y (Java dibuja con escala −1, −1) y las raíces se suben 24 píxeles. Las rotaciones de X e Y
  * cambian de signo; la de Z se guarda cambiada porque MobRenderer la vuelve a cambiar al aplicarla.
  */
-function jb(p: JavaPart): ModelPart {
+export function jb(p: JavaPart): ModelPart {
   const [ox, oy, oz] = p.o;
   const [x, y, z, w, h, d] = p.box;
   const part: ModelPart = {

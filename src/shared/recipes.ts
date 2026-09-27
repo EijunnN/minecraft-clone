@@ -1,4 +1,5 @@
 // Recetas de fabricación (cuadrícula 2x2 del inventario y 3x3 de la mesa de trabajo).
+import { WITHER_ROSE } from './blocks'; // Fase 8.7
 import {
   CRAFTING_TABLE, TORCH, CHEST, FURNACE, WOOD_TYPES, COBBLED_DEEPSLATE, COPPER_BLOCK, EMERALD_BLOCK, AMETHYST_BLOCK,
   TINTED_GLASS, MOSS_BLOCK, MOSS_CARPET, SNOW_BLOCK, SNOW_LAYER, ALL_LOGS, ALL_PLANKS, MATERIALS, WOODS, RED_SAND, RED_SANDSTONE,
@@ -398,6 +399,7 @@ shape(['PPP', 'PPP', ' S '], { P: BAMBOO_PLANKS, S: STICK }, SIGNS.bamboo, 3);
   shape(['WCW'], { W: WHEAT, C: COCOA_BEANS }, COOKIE, 8);
   mix([COCOA_BEANS], DYES.brown); // tinte marrón (los granos de cacao llegan con la decoración)
   mix([INK_SAC], DYES.black); // tinte negro
+  mix([WITHER_ROSE], DYES.black); // Fase 8.7: también de la rosa marchita
   mix([[RED_MUSHROOM, BROWN_MUSHROOM], [RED_MUSHROOM, BROWN_MUSHROOM], BOWL], MUSHROOM_STEW); // dos champiñones cualesquiera
   mix([COOKED_RABBIT, CARROT, BAKED_POTATO, [RED_MUSHROOM, BROWN_MUSHROOM], BOWL], RABBIT_STEW);
   mix([BEETROOT, BEETROOT, BEETROOT, BEETROOT, BEETROOT, BEETROOT, BOWL], BEETROOT_SOUP);

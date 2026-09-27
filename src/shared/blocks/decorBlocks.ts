@@ -18,7 +18,10 @@ export const POT_STATES = 64;
 /** Plantas en cruz que no van en maceta (hierba, caña, telaraña…), por clave. */
 const NOT_POTTABLE = new Set(['short_grass', 'sugar_cane', 'cobweb', 'tall_grass', 'large_fern', 'pointed_dripstone']);
 /** Plantas con apoyo propio que sí van en maceta (la anflorcha sólo necesita suelo). */
-const POTTABLE_WITH_SUPPORT = new Set(['torchflower']);
+const POTTABLE_WITH_SUPPORT = new Set([
+  'torchflower', 'wither_rose', // Fase 8.7: la rosa marchita
+  'crimson_fungus', 'warped_fungus', 'crimson_roots', 'warped_roots', // Fase 8.7: y los hongos y raíces del Nether (potted_*)
+]);
 
 let pottable: number[] | null = null;
 let pottableIndex: Map<number, number> | null = null;

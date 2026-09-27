@@ -3,6 +3,7 @@
 // una reverb de convolución compartida (bus de envío), timbres de materiales, ambientación
 // continua/discreta y música generativa. Ningún método debe lanzar nunca ni antes de resume()
 // ni si Web Audio no está disponible (p. ej. navegadores headless de pruebas).
+import { buildWitherSfx } from './witherSounds'; // Fase 8.7
 import { BOSS_STYLE } from './music'; // Fase 8.6
 import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
@@ -508,6 +509,11 @@ export class AudioEngine {
       }
     }
     this.safe(() => this.spawnPositional(p, (ctx, noise, dest, now) => buildEquipmentSfx(ctx, noise, kind, dest, now, a), far ? 0.6 : 0.3));
+  }
+
+  /** Fase 8.7: el Wither (nacer, disparar, romper bloques). */
+  playWitherSfx(kind: string, pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildWitherSfx(ctx, noise, kind, dest, now), kind === 'wither_spawn' ? 0.6 : 0.3));
   }
 
   /**

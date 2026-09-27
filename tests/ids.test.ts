@@ -225,7 +225,7 @@ test('los efectos de estado y las flores del estofado no cambian', () => {
   ]);
   assert.deepEqual(SUSPICIOUS_FLOWERS.map(([f]) => BLOCKS[f]?.key), [
     'poppy', 'dandelion', 'cornflower', 'blue_orchid', 'allium', 'azure_bluet', 'red_tulip', 'orange_tulip', 'white_tulip',
-    'pink_tulip', 'oxeye_daisy', 'lily_of_the_valley', 'torchflower',
+    'pink_tulip', 'oxeye_daisy', 'lily_of_the_valley', 'torchflower', 'wither_rose', // Fase 8.7
   ]);
 });
 
@@ -358,4 +358,14 @@ test('los ids de las correcciones no cambian', () => {
   assert.deepEqual([OCHRE_FROGLIGHT, VERDANT_FROGLIGHT, PEARLESCENT_FROGLIGHT, AMETHYST_BUD_SIDE], [6214, 6217, 6220, 6223]);
   assert.ok(BLOCK_COUNT >= 6243);
   assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 6214, 6243), 3187600550, 'huella de los bloques');
+});
+
+// Fase 8.7 (el Wither): el Wither y su calavera, la rosa marchita y el huevo del Wither.
+import { WITHER_ROSE } from '../src/shared/blocks';
+import { MOB_WITHER, ENT_WITHER_SKULL } from '../src/shared/mobs';
+test('los ids de la fase 8.7 no cambian', () => {
+  assert.deepEqual([MOB_WITHER, ENT_WITHER_SKULL, WITHER_ROSE, SPAWN_EGGS.wither], [99, 126, 6243, 653]);
+  assert.ok(BLOCK_COUNT >= 6244 && ITEM_COUNT >= 654);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 6243, 6244), 4091054837, 'huella de los bloques');
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 653, 654), 817234804, 'huella de los objetos');
 });

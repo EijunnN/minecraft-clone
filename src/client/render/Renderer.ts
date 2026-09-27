@@ -186,6 +186,8 @@ export interface FrameState {
   gatewayBeams?: BeaconBeam[];
   /** Fase 8.6: niebla del combate con el jefe (0..1). */
   bossFog?: number;
+  /** Fase 8.7: cielo oscurecido por el Wither (0..1). */
+  bossDark?: number;
   /** Fase 8.6: el destello del End: [dirección x, y, z, intensidad]. */
   endFlash?: [number, number, number, number];
   /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
@@ -498,7 +500,7 @@ export class Renderer {
     const moonIllum = SUN_ILLUMINANCE[0] * 0.009 * (0.3 + 0.7 * moonFull);
     // Luz directa atenuada por el cielo cubierto cuando llueve.
     // Fase 8: sin cielo no hay luz directa (ni sombras ni rayos de luz).
-    const fade = dimensionDef(s.dim ?? 0).sky ? smooth(0.0, 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain) : 0;
+    const fade = dimensionDef(s.dim ?? 0).sky ? smooth(0.0, 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain) * (1 - 0.4 * (s.bossDark ?? 0)) : 0; // 8.7: el Wither oscurece
     const lc = sunUp
       ? [SUN_ILLUMINANCE[0] * T[0] * fade, SUN_ILLUMINANCE[1] * T[1] * fade, SUN_ILLUMINANCE[2] * T[2] * fade]
       : [moonIllum * 0.75 * T[0] * fade, moonIllum * 0.85 * T[1] * fade, moonIllum * T[2] * fade];

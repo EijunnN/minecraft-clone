@@ -60,6 +60,7 @@ import { NETHER_STRUCTURE_GENERATORS } from './genNetherStructures'; // Fase 8.4
 import { NETHER_GOODS_GENERATORS } from './genNetherGoods'; // Fase 8.5 (lo que da el Nether)
 import { END_GENERATORS } from './genEnd'; // Fase 8.6 (el End)
 import { FROG_GENERATORS } from './genFrog';
+import { WITHER_GENERATORS } from './genWither'; // Fase 8.7
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -112,6 +113,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...NETHER_GOODS_GENERATORS, // Fase 8.5 (lo que da el Nether)
   ...END_GENERATORS, // Fase 8.6 (el End)
   ...FROG_GENERATORS, // luces de rana
+  ...WITHER_GENERATORS, // Fase 8.7: la rosa marchita
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

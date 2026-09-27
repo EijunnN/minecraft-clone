@@ -115,3 +115,8 @@ export const END_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('ender_dragon', 'dragón de ender', [28, 28, 28], [224, 121, 250]),
   egg('shulker', 'shulker', [148, 103, 148], [77, 56, 82]),
 ];
+
+/** Fase 8.7: el huevo del Wither (se registra al final de items.ts). */
+export const WITHER_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
+  egg('wither', 'wither', [21, 21, 21], [79, 84, 94]),
+];

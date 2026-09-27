@@ -481,6 +481,7 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...['ender_chest_side', 'ender_chest_top', 'ender_chest_front', 'ender_chest_lock'].map((name): TextureDef => ({ name })),
   // Luces de rana.
   ...['ochre', 'verdant', 'pearlescent'].flatMap((k) => ['top', 'side'].map((p): TextureDef => ({ name: `${k}_froglight_${p}`, sss: 0.4 }))),
+  { name: 'wither_rose', wave: 2, sss: 0.4, cutout: true }, // Fase 8.7
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

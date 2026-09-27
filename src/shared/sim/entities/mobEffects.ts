@@ -5,6 +5,8 @@
 // quema) y resistencia (menos daño). Alrededor de quien lleva efectos salen remolinos de su color.
 // Fase 7 (efectos): Brillo (bit de estado: los clientes dibujan su contorno), Marchitamiento (daño que
 // sí mata) y Levitación (sube despacio).
+import { MOB_ZOMBIFIED_PIGLIN, MOB_ZOGLIN } from '../../netherMobs';
+import { MOB_WITHER } from '../../witherMobs';
 import {
   EFFECTS, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_INSTANT_HEALTH, EFFECT_INSTANT_DAMAGE, EFFECT_SPEED, EFFECT_SLOWNESS,
   EFFECT_INVISIBILITY, EFFECT_FIRE_RESISTANCE, EFFECT_RESISTANCE, EFFECT_SLOW_FALLING, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, instantHeal, instantHarm,
@@ -33,6 +35,7 @@ export interface MobEffect {
 const UNDEAD: ReadonlySet<number> = new Set([
   MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_DROWNED, MOB_ZOMBIE_VILLAGER, MOB_PHANTOM,
   MOB_SKELETON_HORSE, MOB_ZOMBIE_HORSE, // Fase 7.5 (fauna)
+  MOB_WITHER_SKELETON, MOB_ZOMBIFIED_PIGLIN, MOB_ZOGLIN, MOB_WITHER, // los del Nether y el Wither (etiqueta undead)
 ]);
 
 export function isUndead(type: number): boolean {
@@ -59,6 +62,7 @@ export class MobEffects {
     }
     if (isUndead(e.type) && (id === EFFECT_POISON || id === EFFECT_REGENERATION)) return;
     if (id === EFFECT_WITHER && e.type === MOB_WITHER_SKELETON) return; // Fase 8.3: el esqueleto wither no se marchita
+    if (e.type === MOB_WITHER) return; // Fase 8.7: al Wither no le afecta ningún efecto (addEffect → false)
     if (!(seconds > 0)) return;
     seconds = Math.min(MAX_EFFECT_SECONDS, seconds);
     const list = (e.effects ??= new Map());

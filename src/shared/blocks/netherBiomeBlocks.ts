@@ -124,6 +124,10 @@ export function isNylium(id: number): boolean {
 
 /** Tierras de la etiqueta supports_vegetation de Java (substrate_overworld y la tierra de cultivo). */
 const VEGETATION_SOIL = new Set<number>([DIRT, COARSE_DIRT, ROOTED_DIRT, MUD, MUDDY_MANGROVE_ROOTS, MOSS_BLOCK, GRASS, SNOWY_GRASS, PODZOL, MYCELIUM]);
+/** ¿Es tierra de la etiqueta supports_vegetation de Java (o la de cultivo)? */
+export function isVegetationSoil(b: number): boolean {
+  return VEGETATION_SOIL.has(b) || isFarmland(b);
+}
 /** ¿Puede crecer ahí una planta del Nether? (supports_warped_fungus / roots / nether_sprouts de Java). */
 function netherPlantSoil(b: number, fungus: boolean): boolean {
   if (b < 0) return true; // sin cargar
