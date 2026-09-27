@@ -379,7 +379,8 @@ export class Commands {
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, /jefes <auto|java|duros>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar [criatura], ' +
           '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
-          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether> [x y z], /setblock, /fill',
+          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether> [x y z], /setblock, /fill, ' +
+          '/voz [on|off|silenciar|activar|volumen], /grupo <nombre|salir> (chat de voz: V para hablar, B para susurrar)',
         );
         return;
       default:

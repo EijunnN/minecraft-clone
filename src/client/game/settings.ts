@@ -24,6 +24,8 @@ export interface Settings {
   voiceThreshold: number;
   /** Volumen de las voces de los demás (0..2). */
   voiceVolume: number;
+  /** Volumen de cada jugador por su nombre en minúsculas (0 silenciado; sin entrada, 1). */
+  voicePlayers: Record<string, number>;
 }
 
 const KEY = 'voxelcraft:settings:v1';
@@ -53,6 +55,7 @@ export function defaultSettings(preset: PresetName = 'medio'): Settings {
     voiceMode: 'ptt',
     voiceThreshold: 0.25,
     voiceVolume: 1,
+    voicePlayers: {},
   };
 }
 
@@ -67,6 +70,7 @@ export function loadSettings(fallbackPreset: PresetName): Settings {
       ...s,
       render: { ...def.render, ...(s.render ?? {}) },
       keys: sanitizeKeybinds(s.keys),
+      voicePlayers: s.voicePlayers && typeof s.voicePlayers === 'object' && !Array.isArray(s.voicePlayers) ? s.voicePlayers : {},
     };
   } catch {
     return def;

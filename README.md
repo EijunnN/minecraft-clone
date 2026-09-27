@@ -195,6 +195,12 @@ Objects). Pensado para PC (teclado y ratón).
 - **Multijugador**: comparte el enlace del mundo. Cada mundo es un Durable Object que ejecuta el
   servidor de juego (20 ticks por segundo mientras haya alguien conectado) y guarda en SQLite los
   cambios, los cofres y hornos, el estado de cada jugador y los animales.
+- **Chat de voz por proximidad**: la voz va directa de navegador a navegador (WebRTC; el servidor sólo
+  presenta a los jugadores) y suena como un sonido más del mundo: sale de la cabeza de quien habla, se apaga
+  con la distancia hasta los 48 bloques (24 susurrando), las paredes la amortiguan según el material (la lana
+  casi del todo, el cristal y las hojas poco), retumba en cuevas y salas, suena ahogada bajo el agua y sólo se
+  oye a los de la misma dimensión. Pulsar para hablar (V) o micrófono que se abre al hablar, volumen o silencio
+  por jugador y **grupos** que se oyen a cualquier distancia (`/grupo`).
 - **Un jugador sin conexión**: el mismo servidor de juego se ejecuta en un Web Worker y el mundo se
   guarda en el navegador (IndexedDB). Se activa con la casilla del menú o automáticamente si no se
   puede contactar con el servidor.
@@ -270,6 +276,7 @@ pulsación). Estas son las de por defecto:
 | E | Inventario (en creativo, selector de bloques y objetos) |
 | T, Enter, / | Chat y comandos: al escribir «/» se abre una ventanita con los comandos y sus argumentos (objetos con icono, criaturas, efectos, estructuras, jugadores…); ↑↓ eligen, Tab o → completan, Enter acepta lo elegido y Esc la cierra. Sin la ventanita, ↑↓ recorren lo enviado antes |
 | Tab | Lista de jugadores |
+| V · B | Chat de voz: hablar · susurrar (mantener; la primera vez pide el micrófono) |
 | F1 · F2 · F3 · F5 | Ocultar HUD · captura de pantalla · información de depuración · tercera persona |
 | Esc | Pausa / ajustes |
 
@@ -283,6 +290,8 @@ pulsación). Estas son las de por defecto:
 | `/invocar <criatura>` | Hace aparecer una criatura delante (`cerdo`, `zombi`, `creeper`…) |
 | `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
 | `/efecto <efecto> [segundos] [nivel]` | Da un efecto (`/efecto velocidad 60 2`); `/efecto quitar` los quita todos |
+| `/voz [on\|off]` · `/voz silenciar\|activar <jugador>` · `/voz volumen <jugador> <0-200>` | Chat de voz: estado, activarlo, silenciar o subir a alguien |
+| `/grupo <nombre>` · `/grupo salir` | Grupo de voz: los del mismo grupo os oís a cualquier distancia en la dimensión |
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
 | `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`, `monumento`, `ruinas`, `tesoro`, `fortaleza`; en el End, `ciudad_del_end`) |
 | `/asalto` · `/patrulla` | Desatar un asalto en la aldea más cercana · hacer aparecer una patrulla de saqueadores |

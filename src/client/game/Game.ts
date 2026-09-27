@@ -274,6 +274,7 @@ export class Game {
     this.time = w.time;
     this.voice.onWelcome();
     for (const p of w.players) this.network.addRemote(p, false);
+    this.ui.voicePlayers = () => this.voice.voicePlayers();
     this.mode = w.mode;
     this.difficulty = w.diff;
     if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
@@ -493,6 +494,7 @@ export class Game {
     this.world?.dispose();
     this.portalFx.dispose(); // Fase 8
     this.voice.dispose();
+    this.ui.voicePlayers = null;
     this.input.exitLock();
     this.input.dispose();
     this.ui.updateNameTags([]);
@@ -509,13 +511,15 @@ export class Game {
   /** Chat de voz: la tecla de hablar (la primera vez pide el micrófono) y las voces del fotograma. */
   private updateVoice(cam: [number, number, number]): void {
     const input = this.input;
-    const key = this.cfg.settings.keys.voice;
+    const { voice: key, whisper } = this.cfg.settings.keys;
     const canTalk = input.locked && !this.ui.isChatOpen();
-    if (canTalk && input.wasPressed(key) && this.voice.active && this.voice.micState === 'none') void this.voice.requestMic();
-    this.voice.update(canTalk && input.isDown(key), cam);
+    const pressed = input.wasPressed(key) || input.wasPressed(whisper);
+    if (canTalk && pressed && this.voice.active && this.voice.micState === 'none') void this.voice.requestMic();
+    this.voice.update(canTalk && input.isDown(key), canTalk && input.isDown(whisper), cam);
   }
 
   private sendChat(text: string): void {
+    if (this.voice.command(text)) return; // /voz y /grupo: los resuelve el chat de voz
     if (text.startsWith('/tp ')) {
       const target = text.slice(4).trim().toLowerCase();
       for (const rp of this.remote.values()) {

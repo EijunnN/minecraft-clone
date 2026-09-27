@@ -757,6 +757,21 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   - Pendiente de la fase 8 (a propósito): el Poema del End y los créditos; las animaciones de la tapa de las cajas de
     shulker y de la mandíbula de la cabeza de dragón; la maceta con bambú.
 
+### Extra — Chat de voz por proximidad · ✅ hecho
+
+- ✅ **Base:** WebRTC directo entre navegadores (STUN de Cloudflare y Google, sin repetidor); el Durable Object
+  sólo reparte quién tiene la voz y pasa las señales validadas, dentro de la misma dimensión. Pulsar para hablar
+  (V, configurable) o micrófono que se abre al hablar con su sensibilidad; el micrófono se pide la primera vez
+  que se usa. Voz en 3D (HRTF) desde la cabeza de quien habla, entera hasta 2,5 bloques y apagada a los 48.
+  Indicador del micrófono propio y altavoz verde en el nombre de quien habla; volumen de las voces en ajustes.
+- ✅ **Entorno:** rayos por los bloques entre las cabezas (y paralelos por encima, a los lados y a los pies): cada
+  material deja pasar y quita agudos a su manera (piedra 30 %, lana 16 %, cristal 55 %, hojas 85 %; losas,
+  puertas y vallas en parte; el agua y la lava también); eco según el hueco de quien habla (fuera casi nada,
+  salas y cuevas grandes más); voz ahogada de quien habla bajo el agua; cada dimensión se oye aparte.
+- ✅ **Extras:** susurro (B: la mitad de alcance, en azul), volumen y silencio por jugador (ajustes y `/voz`,
+  guardados por nombre) y grupos (`/grupo`): se oyen a cualquier distancia en la dimensión, sin paredes.
+- Pendiente si hiciera falta: un servidor TURN para quien esté detrás de redes muy cerradas.
+
 ### Fase 9 — Metajuego y novedades recientes (L)
 Logros y estadísticas, modos aventura, espectador y extremo, reglas del juego, más comandos,
 permisos y operadores, libro de recetas, subtítulos; contenido de 2025–2026: la Edad del Cobre

@@ -23,8 +23,9 @@ export interface NameTagInfo {
   id: string;
   name: string;
   pos: [number, number] | null;
-  /** Chat de voz: está hablando. */
+  /** Chat de voz: está hablando (y si susurra). */
   talking?: boolean;
+  whisper?: boolean;
 }
 
 type InvCategory = BlockCategory | 'todo' | 'objetos' | 'pociones'; // Fase 7 (pociones)
@@ -62,6 +63,8 @@ export class UI {
   onInventoryPick: ((id: number, slot: number | null, stack?: ItemStack) => void) | null = null;
   onInventorySelectSlot: ((slot: number) => void) | null = null;
   onSettingsChanged: ((s: Settings) => void) | null = null;
+  /** Chat de voz: jugadores con la voz activada ahora (para su volumen en los ajustes). */
+  voicePlayers: (() => string[]) | null = null;
   onFullscreen: (() => void) | null = null;
   onUiSound: ((kind: 'click' | 'open' | 'close') => void) | null = null;
   /** Petición de cerrar el inventario desde la propia UI (Escape en el buscador). */
@@ -521,6 +524,7 @@ export class UI {
       }
       if (el.textContent !== t.name) el.textContent = t.name;
       el.classList.toggle('talking', !!t.talking);
+      el.classList.toggle('whisper', !!t.whisper);
       if (t.pos) {
         el.style.display = '';
         el.style.left = `${t.pos[0]}px`;
@@ -694,6 +698,11 @@ export class UI {
     return !$('settings').classList.contains('hidden');
   }
 
+  /** Guarda los ajustes cambiados desde fuera de la pantalla de ajustes (p. ej. con /voz). */
+  commitSettings(): void {
+    this.changed();
+  }
+
   private changed(): void {
     if (!this.settings) return;
     saveSettings(this.settings);
@@ -762,6 +771,15 @@ export class UI {
       this.slider('Sensibilidad (al hablar)', 1 - s.voiceThreshold, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.voiceThreshold = 1 - v; }),
       this.slider('Volumen de las voces', s.voiceVolume, 0, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.voiceVolume = v; }),
     );
+    // Volumen de cada jugador con voz que haya ahora (0 = silenciado).
+    for (const name of this.voicePlayers?.() ?? []) {
+      const key = name.toLowerCase();
+      const cur = s.voicePlayers[key] ?? 1;
+      audio.append(this.slider(`Voz de ${escapeHtml(name)}`, cur, 0, 2, 0.05, (v) => (v === 0 ? 'Silenciado' : `${Math.round(v * 100)}%`), (v) => {
+        if (v === 1) delete s.voicePlayers[key];
+        else s.voicePlayers[key] = v;
+      }));
+    }
   }
 
   /** Teclas: un botón por acción; al pulsarlo espera la tecla nueva (Esc cancela). */

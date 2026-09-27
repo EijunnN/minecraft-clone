@@ -6,6 +6,10 @@
 // Parte 2: el entorno (voiceEnvironment): las paredes la apagan y le quitan los agudos, en las cuevas y salas
 // retumba y bajo el agua suena ahogada. Cada dimensión es un servidor aparte, así que sólo se oye a los de la misma.
 //
+// Parte 3: susurrar (otra tecla: se oye a la mitad de distancia), el volumen o el silencio de cada jugador (por su
+// nombre, se guarda) y los grupos: los de un mismo grupo se oyen a cualquier distancia dentro de la dimensión. El
+// susurro y el grupo viajan por un canal de datos de la propia conexión, sin pasar por el servidor.
+//
 // Se escucha a los demás en cuanto se entra (con la voz activada en los ajustes); el micrófono sólo se pide la
 // primera vez que se pulsa la tecla de hablar (o al elegir el modo «por voz»).
 import type { RtcSignal, ServerMsg } from '../../shared/protocol';
@@ -17,6 +21,14 @@ import { voiceOcclusion, voiceReverb, type BlockAt } from './voiceEnvironment';
 
 /** Alcance de la voz (bloques): a partir de aquí no se oye. */
 export const VOICE_RANGE = 48;
+/** Alcance del susurro. */
+export const WHISPER_RANGE = VOICE_RANGE / 2;
+/** Los de un mismo grupo se oyen al menos a este volumen, estén donde estén (y sin paredes). */
+const GROUP_GAIN = 0.85;
+/** Nombre de un grupo: corto y sin espacios raros. */
+export function cleanGroup(raw: string): string {
+  return raw.trim().toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}_-]/gu, '').slice(0, 24);
+}
 /** Hasta esta distancia se oye a todo volumen. */
 const VOICE_NEAR = 2.5;
 /** Conexiones como mucho (la malla crece con el cuadrado de los jugadores). */
@@ -87,6 +99,10 @@ interface Peer {
   stream: MediaStream | null;
   talkUntil: number;
   env: PeerEnv;
+  /** Canal de datos: el susurro y el grupo del otro. */
+  dc: RTCDataChannel | null;
+  whisper: boolean;
+  group: string;
 }
 
 export type MicState = 'none' | 'asking' | 'ready' | 'denied';
@@ -104,6 +120,12 @@ export class VoiceChat {
   private buf = new Float32Array(512);
   /** Estamos mandando voz ahora (tecla pulsada o voz por encima del umbral). */
   transmitting = false;
+  /** Susurrando (con la tecla de susurrar): los demás nos oyen a la mitad de distancia. */
+  whispering = false;
+  /** Grupo de voz ('' sin grupo). */
+  group = '';
+  /** Último estado mandado por los canales de datos. */
+  private sentState = '';
   /** Nivel del micrófono (0..1) para el medidor de los ajustes. */
   micLevel = 0;
   private vadUntil = 0;
@@ -193,7 +215,7 @@ export class VoiceChat {
   }
 
   /** Cada fotograma: presentarse, conexiones con quien toque, quién habla y dónde suena cada voz. */
-  update(pttDown: boolean, cam: readonly [number, number, number]): void {
+  update(pttDown: boolean, whisperDown: boolean, cam: readonly [number, number, number]): void {
     const net = this.g.net;
     if (!this.active || !net) {
       if (this.announced && net) net.send({ t: 'voice', on: false });
@@ -209,14 +231,15 @@ export class VoiceChat {
     }
     // Modo «por voz»: el micrófono se pide al activarlo (desde los ajustes) o aquí si ya se había concedido.
     if (this.settings.voiceMode === 'vad' && this.micState === 'none') void this.requestMic();
-    this.updateMic(pttDown);
+    this.updateMic(pttDown, whisperDown);
     if (net.id) this.syncPeers(net.id);
+    this.shareState();
     this.placeVoices(cam);
     this.renderHud();
   }
 
   /** Pulsar para hablar o voz por encima del umbral: el micrófono sólo manda sonido mientras tanto. */
-  private updateMic(pttDown: boolean): void {
+  private updateMic(pttDown: boolean, whisperDown: boolean): void {
     const track = this.mic?.getAudioTracks()[0];
     const now = performance.now();
     let level = 0;
@@ -236,9 +259,10 @@ export class VoiceChat {
       // El umbral de los ajustes (0..1) va de muy sensible a sólo voz fuerte.
       const threshold = 0.004 + this.settings.voiceThreshold * 0.08;
       if (level > threshold) this.vadUntil = now + 450;
-      on = now < this.vadUntil;
-    } else on = pttDown;
+      on = now < this.vadUntil || whisperDown;
+    } else on = pttDown || whisperDown;
     this.transmitting = on && !!track && track.readyState === 'live';
+    this.whispering = this.transmitting && whisperDown;
     if (track && track.enabled !== this.transmitting) track.enabled = this.transmitting;
   }
 
@@ -263,6 +287,10 @@ export class VoiceChat {
     const p: Peer = {
       id, pc, pending: [], remoteSet: false, audio: null, stream: null, talkUntil: 0,
       env: { gain: 1, cutoff: 20000, reverb: 0.04, nextOcclusion: 0, nextReverb: 0 },
+      dc: null, whisper: false, group: '',
+    };
+    pc.ondatachannel = (e) => {
+      if (this.peers.get(id) === p) this.bindChannel(p, e.channel);
     };
     this.peers.set(id, p);
     pc.onicecandidate = (e) => {
@@ -291,6 +319,7 @@ export class VoiceChat {
   private async offer(id: string): Promise<void> {
     const p = this.createPeer(id);
     const tr = p.pc.addTransceiver('audio', { direction: 'sendrecv' });
+    this.bindChannel(p, p.pc.createDataChannel('estado', { ordered: true }));
     const track = this.mic?.getAudioTracks()[0];
     if (track) await tr.sender.replaceTrack(track).catch(() => {});
     try {
@@ -340,6 +369,38 @@ export class VoiceChat {
     } catch (e) {
       console.warn('Voz: señal rechazada', e);
     }
+  }
+
+  /** El canal de datos de una conexión: al abrirse manda nuestro estado; recibe el del otro. */
+  private bindChannel(p: Peer, dc: RTCDataChannel): void {
+    p.dc = dc;
+    dc.onopen = () => this.sendState(p);
+    dc.onmessage = (e) => {
+      if (typeof e.data !== 'string' || e.data.length > 200) return;
+      try {
+        const m = JSON.parse(e.data) as { w?: unknown; g?: unknown };
+        p.whisper = m.w === 1;
+        p.group = typeof m.g === 'string' ? cleanGroup(m.g) : '';
+      } catch {
+        /* mensaje roto: se ignora */
+      }
+    };
+  }
+
+  private stateJson(): string {
+    return JSON.stringify({ w: this.whispering ? 1 : 0, g: this.group });
+  }
+
+  private sendState(p: Peer): void {
+    if (p.dc?.readyState === 'open') p.dc.send(this.stateJson());
+  }
+
+  /** Si cambió el susurro o el grupo, se lo cuenta a todos. */
+  private shareState(): void {
+    const s = this.stateJson();
+    if (s === this.sentState) return;
+    this.sentState = s;
+    for (const p of this.peers.values()) this.sendState(p);
   }
 
   private async flushCandidates(p: Peer): Promise<void> {
@@ -405,18 +466,30 @@ export class VoiceChat {
       a.panner.positionY.value = hy;
       a.panner.positionZ.value = v.z;
       const d = Math.hypot(v.x - cam[0], hy - cam[1], v.z - cam[2]);
-      a.gain.gain.setTargetAtTime(voiceDistanceGain(d), t, 0.05);
-      if (get && d < VOICE_RANGE) this.updateEnv(p, a, get, cam, v.x, hy, v.z, listenerWet, now, t);
+      const range = p.whisper ? WHISPER_RANGE : VOICE_RANGE;
+      const grouped = this.group !== '' && p.group === this.group;
+      const vol = this.playerVolume(rp.name);
+      const dist = grouped ? Math.max(GROUP_GAIN, voiceDistanceGain(d, range)) : voiceDistanceGain(d, range);
+      a.gain.gain.setTargetAtTime(dist * vol, t, 0.05);
+      if (get && (grouped || d < range)) this.updateEnv(p, a, get, cam, v.x, hy, v.z, listenerWet, now, t, grouped);
       if (rms(a.analyser, this.buf) > TALK_RMS) p.talkUntil = now + TALK_HOLD;
-      this.setTalking(rp, now < p.talkUntil && d < VOICE_RANGE);
+      this.setTalking(rp, now < p.talkUntil && vol > 0 && (grouped || d < range), p.whisper);
     }
     for (const rp of this.g.remote.values()) if (!this.peers.has(rp.id)) this.setTalking(rp, false);
   }
 
   /** Paredes en medio, eco del sitio y agua: el filtro, lo que llega de frente y lo que retumba. */
   private updateEnv(p: Peer, a: PeerAudio, get: BlockAt, cam: readonly [number, number, number],
-    x: number, y: number, z: number, listenerWet: boolean, now: number, t: number): void {
+    x: number, y: number, z: number, listenerWet: boolean, now: number, t: number, grouped: boolean): void {
     const env = p.env;
+    if (grouped) {
+      // En grupo la voz llega limpia (como por radio): sin paredes ni agua, con un poco de su eco.
+      env.nextOcclusion = 0;
+      a.direct.gain.setTargetAtTime(1, t, 0.12);
+      a.filter.frequency.setTargetAtTime(20000, t, 0.12);
+      a.send.gain.setTargetAtTime(0.04, t, 0.3);
+      return;
+    }
     if (now >= env.nextOcclusion) {
       // Repartidos en el tiempo para no calcular todas las voces en el mismo fotograma.
       env.nextOcclusion = now + OCCLUSION_MS * (0.8 + Math.random() * 0.4);
@@ -441,8 +514,96 @@ export class VoiceChat {
     a.send.gain.setTargetAtTime(wet, t, 0.3);
   }
 
-  private setTalking(rp: RemotePlayer, on: boolean): void {
+  private setTalking(rp: RemotePlayer, on: boolean, whisper = false): void {
     rp.talking = on;
+    rp.whispering = on && whisper;
+  }
+
+  /** Volumen elegido para un jugador (0 silenciado, 1 normal, hasta 2). */
+  playerVolume(name: string): number {
+    const v = this.settings.voicePlayers[name.toLowerCase()];
+    return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(2, v)) : 1;
+  }
+
+  private setPlayerVolume(name: string, v: number): void {
+    const key = name.toLowerCase();
+    if (v === 1) delete this.settings.voicePlayers[key];
+    else this.settings.voicePlayers[key] = Math.max(0, Math.min(2, v));
+    this.g.ui.commitSettings();
+  }
+
+  /** Jugadores de la dimensión con la voz activada (para los ajustes y /voz). */
+  voicePlayers(): string[] {
+    return [...this.g.remote.values()].filter((r) => r.voice).map((r) => r.name);
+  }
+
+  /**
+   * Comandos del chat de voz (los resuelve el propio cliente): /voz [on|off|silenciar|activar|volumen] y
+   * /grupo [nombre|salir]. Devuelve false si el texto no es uno de ellos.
+   */
+  command(text: string): boolean {
+    const parts = text.trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    if (cmd !== '/voz' && cmd !== '/grupo') return false;
+    const say = (m: string) => this.g.ui.addChat(null, m);
+    const findName = (raw: string | undefined): string | null => {
+      if (!raw) return null;
+      const r = [...this.g.remote.values()].find((p) => p.name.toLowerCase() === raw.toLowerCase());
+      return r ? r.name : raw;
+    };
+    if (cmd === '/grupo') {
+      const arg = parts.slice(1).join(' ');
+      if (!arg) {
+        say(this.group ? `Estás en el grupo «${this.group}». /grupo salir para dejarlo.` : 'No estás en ningún grupo. Uso: /grupo <nombre> (los del mismo grupo os oís a cualquier distancia).');
+      } else if (arg.toLowerCase() === 'salir') {
+        say(this.group ? `Has dejado el grupo «${this.group}».` : 'No estabas en ningún grupo.');
+        this.group = '';
+      } else {
+        const g = cleanGroup(arg);
+        if (!g) say('Ese nombre de grupo no vale: usa letras, números, _ o -.');
+        else {
+          this.group = g;
+          const mates = [...this.peers.values()].filter((p) => p.group === g).map((p) => this.g.remote.get(p.id)?.name).filter(Boolean);
+          say(`Ahora estás en el grupo «${g}»${mates.length ? ` con ${mates.join(', ')}` : ''}. Os oís a cualquier distancia en esta dimensión.`);
+        }
+      }
+      return true;
+    }
+    const sub = (parts[1] ?? '').toLowerCase();
+    const s = this.settings;
+    if (sub === 'on' || sub === 'off') {
+      s.voiceEnabled = sub === 'on';
+      this.g.ui.commitSettings();
+      say(s.voiceEnabled ? 'Chat de voz activado.' : 'Chat de voz desactivado.');
+    } else if (sub === 'silenciar' || sub === 'activar') {
+      const name = findName(parts[2]);
+      if (!name) say(`Uso: /voz ${sub} <jugador>`);
+      else {
+        this.setPlayerVolume(name, sub === 'silenciar' ? 0 : 1);
+        say(sub === 'silenciar' ? `Ya no oyes a ${name}.` : `Vuelves a oír a ${name}.`);
+      }
+    } else if (sub === 'volumen') {
+      const name = findName(parts[2]);
+      const pct = Number(parts[3]);
+      if (!name || !Number.isFinite(pct)) say('Uso: /voz volumen <jugador> <0-200>');
+      else {
+        this.setPlayerVolume(name, Math.round(Math.max(0, Math.min(200, pct))) / 100);
+        say(`Voz de ${name} al ${Math.round(this.playerVolume(name) * 100)} %.`);
+      }
+    } else if (sub === '') {
+      if (!this.active) say(this.g.offline ? 'El chat de voz sólo funciona en un mundo con servidor.' : 'El chat de voz está desactivado (/voz on).');
+      else {
+        const mode = s.voiceMode === 'vad' ? 'se abre al hablar' : `pulsa ${keyLabel(s.keys.voice)} para hablar`;
+        const list = [...this.g.remote.values()].filter((r) => r.voice).map((r) => {
+          const vol = this.playerVolume(r.name);
+          const state = !this.connected(r.id) ? 'conectando' : vol === 0 ? 'silenciado' : `${Math.round(vol * 100)} %`;
+          return `${r.name} (${state})`;
+        });
+        say(`Chat de voz: ${mode}, ${keyLabel(s.keys.whisper)} para susurrar${this.group ? `, grupo «${this.group}»` : ''}. ` +
+          (list.length ? `Con voz: ${list.join(', ')}.` : 'Nadie más tiene la voz activada en esta dimensión.'));
+      }
+    } else say('Uso: /voz [on|off], /voz silenciar <jugador>, /voz activar <jugador>, /voz volumen <jugador> <0-200>');
+    return true;
   }
 
   private closePeer(id: string): void {
@@ -451,6 +612,11 @@ export class VoiceChat {
     this.peers.delete(id);
     p.pc.onicecandidate = null;
     p.pc.ontrack = null;
+    p.pc.ondatachannel = null;
+    if (p.dc) {
+      p.dc.onopen = null;
+      p.dc.onmessage = null;
+    }
     p.pc.onconnectionstatechange = null;
     p.pc.close();
     if (p.audio) {
@@ -461,7 +627,7 @@ export class VoiceChat {
       p.audio.el.srcObject = null;
     }
     const rp = this.g.remote.get(id);
-    if (rp) rp.talking = false;
+    if (rp) rp.talking = rp.whispering = false;
   }
 
   /** Conectados de verdad (para la lista de jugadores y la depuración). */
@@ -480,12 +646,14 @@ export class VoiceChat {
       this.hud.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/><path class="slash" d="M4 4l16 16"/></svg><span></span>';
       hudRoot.appendChild(this.hud);
     }
-    const st = !this.active ? 'off' : this.micState === 'denied' ? 'denied' : this.transmitting ? 'talking' : 'idle';
-    if (this.hud.dataset.state !== st) {
+    const st = !this.active ? 'off' : this.micState === 'denied' ? 'denied' : this.whispering ? 'whisper' : this.transmitting ? 'talking' : 'idle';
+    const key = this.settings.keys.voice;
+    const text = st === 'denied' ? 'Sin micrófono' : st === 'whisper' ? 'Susurro'
+      : (st === 'idle' && this.settings.voiceMode === 'ptt' ? keyLabel(key) : '') + (this.group ? ` · ${this.group}` : '');
+    if (this.hud.dataset.state !== st || this.hud.dataset.text !== text) {
       this.hud.dataset.state = st;
-      const key = this.settings.keys.voice;
-      const label = this.hud.querySelector('span')!;
-      label.textContent = st === 'denied' ? 'Sin micrófono' : st === 'idle' && this.settings.voiceMode === 'ptt' ? keyLabel(key) : '';
+      this.hud.dataset.text = text;
+      this.hud.querySelector('span')!.textContent = text.replace(/^ · /, '');
     }
   }
 

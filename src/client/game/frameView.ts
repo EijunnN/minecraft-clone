@@ -216,7 +216,7 @@ export function updateNameTags(g: Game, cam: CameraPose): void {
     const v = rp.view;
     const d = Math.hypot(v.x - camX, v.y - camY, v.z - camZ);
     const visible = d < 72 && !g.hudHidden && !(rp.state & (STATE_DEAD | STATE_INVISIBLE)); // Fase 7: sin nombre si es invisible
-    tags.push({ id: rp.id, name: rp.name, pos: visible ? g.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null, talking: rp.talking });
+    tags.push({ id: rp.id, name: rp.name, pos: visible ? g.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null, talking: rp.talking, whisper: rp.whispering });
   }
   // Fase 6.5 (remate): criaturas con nombre (etiqueta), hasta 16 bloques.
   for (const e of g.ents.list.values()) {

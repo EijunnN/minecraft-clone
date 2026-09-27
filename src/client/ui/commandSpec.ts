@@ -133,6 +133,25 @@ export const COMMAND_SPECS: CommandSpec[] = [
   },
   { name: 'matar', aliases: ['kill'], desc: 'Te mata al instante', args: [] },
   {
+    name: 'voz', desc: 'Chat de voz: estado, activarlo o no, y silenciar o subir el volumen de un jugador',
+    args: [
+      {
+        name: 'acción', optional: true, desc: 'Qué hacer (sin nada, dice cómo está)',
+        options: () => [
+          { value: 'on', label: 'Activar el chat de voz' }, { value: 'off', label: 'Desactivarlo' },
+          { value: 'silenciar', label: 'Dejar de oír a un jugador' }, { value: 'activar', label: 'Volver a oírle' },
+          { value: 'volumen', label: 'Volumen de un jugador (0-200)' },
+        ],
+      },
+      { name: 'jugador', optional: true, desc: 'A quién', options: (players) => players.map((p) => ({ value: p })) },
+      { name: 'volumen', optional: true, desc: 'Porcentaje (100 normal, 0 silenciado, hasta 200)' },
+    ],
+  },
+  {
+    name: 'grupo', desc: 'Grupo de voz: los del mismo grupo os oís a cualquier distancia en la dimensión',
+    args: [{ name: 'nombre', optional: true, desc: 'Nombre del grupo, o «salir» para dejarlo', options: () => [{ value: 'salir', label: 'Dejar el grupo' }] }],
+  },
+  {
     name: 'tp', desc: 'Te lleva junto a otro jugador',
     args: [{ name: 'jugador', desc: 'A quién ir', options: (players) => players.map((p) => ({ value: p })) }],
   },

@@ -740,6 +740,21 @@ kbd {
   box-shadow: 0 0 12px rgba(93, 255, 138, 0.45);
 }
 
+/* Susurro: en azul claro (se oye a la mitad de distancia). */
+#voice-hud[data-state='whisper'] {
+  color: #9fd8ff;
+  background: rgba(10, 26, 40, 0.62);
+  box-shadow: 0 0 12px rgba(159, 216, 255, 0.4);
+}
+
+.nametag.talking.whisper {
+  box-shadow: 0 0 0 1.5px #9fd8ff, 0 0 10px rgba(159, 216, 255, 0.5);
+}
+
+.nametag.talking.whisper::before {
+  background: #9fd8ff;
+}
+
 #voice-hud[data-state='denied'] {
   color: #ffb3b3;
 }

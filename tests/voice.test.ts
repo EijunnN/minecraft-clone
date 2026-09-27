@@ -88,3 +88,14 @@ test('entorno: las paredes apagan la voz según el material, las cuevas retumban
   assert.ok(room > 0.3, `sala ${room}`);
   assert.ok(cave > room, `cueva ${cave} > sala ${room}`);
 });
+
+test('extras: el susurro llega a la mitad, los nombres de grupo se limpian', async () => {
+  const { voiceDistanceGain, WHISPER_RANGE, cleanGroup } = await import('../src/client/voice/VoiceChat');
+  assert.equal(WHISPER_RANGE, 24);
+  assert.equal(voiceDistanceGain(30, WHISPER_RANGE), 0);
+  assert.ok(voiceDistanceGain(30) > 0);
+  assert.equal(cleanGroup('  Los Mineros! '), 'losmineros');
+  assert.equal(cleanGroup('Niño_2'), 'niño_2');
+  assert.equal(cleanGroup('x'.repeat(40)).length, 24);
+  assert.equal(cleanGroup('¡¿?!'), '');
+});

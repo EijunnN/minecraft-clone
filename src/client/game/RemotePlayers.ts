@@ -74,6 +74,7 @@ export class RemotePlayer {
   /** Chat de voz: tiene la voz activada y está hablando ahora (lo decide el volumen de lo que llega). */
   voice = false;
   talking = false;
+  whispering = false;
 
   constructor(info: PlayerInfo) {
     this.id = info.id;
