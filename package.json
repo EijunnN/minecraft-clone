@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "npm run build && vite preview",
     "deploy": "npm run build && wrangler deploy",
+    "build:vps": "WRANGLER_CONFIG=wrangler.vps.jsonc vite build",
+    "deploy:vps": "npm run build:vps && ocd wrangler deploy",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json && tsc --noEmit -p tsconfig.test.json",
     "cf-typegen": "wrangler types",
     "test": "tsx --test \"tests/*.test.ts\""

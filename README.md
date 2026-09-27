@@ -404,6 +404,19 @@ VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no t
 - Los objetos del suelo y los monstruos no se guardan si el servidor se reinicia sin nadie
   conectado (los animales, los cofres y lo construido sí).
 
+## Desplegar en un VPS propio (open-compute)
+
+También se puede levantar todo (web, multijugador y mundos guardados) en un VPS con
+[open-compute](https://open-compute.dev), una plataforma compatible con Cloudflare Workers que corre en una sola
+máquina. La guía paso a paso (instalación, dominio con HTTPS, actualizaciones y copias) está en
+[docs/despliegue-vps.md](docs/despliegue-vps.md); en corto:
+
+```bash
+curl -fsSL https://open-compute.dev/install.sh | sudo sh && sudo ocd setup --system --yes
+git clone https://github.com/EijunnN/minecraft-clone.git voxelcraft && cd voxelcraft && npm ci
+npm run deploy:vps
+```
+
 ## Calidad gráfica
 
 En **Ajustes** hay cuatro perfiles (Bajo, Medio, Alto, Ultra) y control individual de distancia de
