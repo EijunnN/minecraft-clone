@@ -214,6 +214,7 @@ export class IllagerAI {
       const tx = fx(foe), ty = fy(foe), tz = fz(foe);
       const dx = tx - e.x, dz = tz - e.z;
       const dist = Math.hypot(dx, dz) || 1;
+      const dist3 = Math.hypot(dx, ty - e.y, dz); // la distancia de verdad, para los ataques a distancia
       lookAt = [tx, ty + fh(foe) * 0.85, tz];
       const los = dist < 24 && lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, tx, ty + fh(foe) * 0.6, tz);
       const chase = (): void => {
@@ -229,14 +230,15 @@ export class IllagerAI {
             mx = -dx / dist;
             mz = -dz / dist;
             speed = def.walk;
-          } else if (dist > 12 || !los) chase();
+          } else if (dist3 > 8 || !los) chase();
           else {
             const side = Math.sin(e.age * 0.6 + e.id) > 0 ? 1 : -1;
             mx = (-dz / dist) * side;
             mz = (dx / dist) * side;
             speed = def.walk * 0.5;
           }
-          if (los && dist < 16) {
+          // RangedCrossbowAttackGoal(8): dispara a 8 bloques como mucho.
+          if (los && dist3 <= 8) {
             acting = ai.shootCd < CROSSBOW_CHARGE;
             if (ai.shootCd <= 0) {
               ai.shootCd = CROSSBOW_CHARGE + 1.2 + this.m.rand() * 1.2;
@@ -272,7 +274,7 @@ export class IllagerAI {
             s.casting -= dt;
             acting = true;
             mx = mz = speed = 0;
-          } else if (los && dist < 20) {
+          } else if (los && dist3 < 20) {
             if (s.vexCd <= 0 && this.vexNear(e) < MAX_VEX) {
               s.vexCd = VEX_EVERY + this.m.rand() * 4;
               s.casting = 1.2;

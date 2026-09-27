@@ -140,7 +140,8 @@ export class MountLife {
   }
 
   /**
-   * Llama enfadada: no muerde; se acerca hasta unos 8 bloques y escupe (1 de daño) cada 2 s. Cada
+   * Llama enfadada: no muerde; se acerca hasta unos 8 bloques y escupe (1 de daño) cada 2 s, a 20 bloques como
+   * mucho (RangedAttackGoal; `dist`, en 3D). Cada
    * escupitajo la calma un poco. Devuelve [dirX, dirZ, velocidad, saltar].
    */
   llamaFight(e: Entity, target: PlayerView, dist: number, los: boolean, dt: number): [number, number, number, boolean] {
@@ -150,7 +151,7 @@ export class MountLife {
       const [mx, mz, jump] = this.m.mobs.followPath(e, target, dt);
       out = [mx, mz, MOBS[e.type].walk * 1.3, jump];
     }
-    if (los && dist < 12 && ai.attackCd <= 0) {
+    if (los && dist <= 20 && ai.attackCd <= 0) {
       ai.attackCd = 2;
       ai.angry -= 8;
       const d = dist || 1;

@@ -232,7 +232,8 @@ export class MobGear {
     const sx = e.x, sy = e.y + e.height * 0.85, sz = e.z;
     const dx = t.x - sx, dz = t.z - sz;
     const horiz = Math.hypot(dx, dz);
-    if (horiz < 3 || horiz > 18 || !lineOfSight(this.m.w, sx, sy, sz, t.x, t.y + 1.4, t.z)) return;
+    // DrownedTridentAttackGoal: a 10 bloques como mucho, en 3D.
+    if (horiz < 1 || Math.hypot(dx, t.y - e.y, dz) > 10 || !lineOfSight(this.m.w, sx, sy, sz, t.x, t.y + 1.4, t.z)) return;
     e.throwCd = 2 + this.m.rand() * 1.5;
     const time = Math.max(0.05, horiz / TRIDENT_SPEED);
     const vy = (t.y + 1.2 - sy) / time + 0.5 * 20 * time;

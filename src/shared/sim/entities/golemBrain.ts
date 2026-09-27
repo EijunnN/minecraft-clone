@@ -64,13 +64,13 @@ export class GolemBrain {
     }
     const mon = this.nearestMonster(e, SNOW_SIGHT, true);
     if (!mon) return false;
-    const dist = Math.hypot(mon.x - e.x, mon.z - e.z);
+    const dist = Math.hypot(mon.x - e.x, mon.y - e.y, mon.z - e.z); // en 3D, como RangedAttackGoal
     ai.lookAt = [mon.x, mon.y + mon.height * 0.7, mon.z];
     if (dist > SNOW_SIGHT * 0.8) {
       const [mx, mz, jump] = this.m.mobs.followPath(e, { id: '', name: '', x: mon.x, y: mon.y, z: mon.z, alive: true, creative: false, lookingAt: -1 }, dt);
       ai.goalDir = [mx, mz, MOBS[e.type].walk, jump ? 1 : 0];
     } else ai.goalDir = [0, 0, 0, 0];
-    if (ai.shootCd <= 0) {
+    if (ai.shootCd <= 0 && dist <= SNOW_SIGHT) {
       ai.shootCd = 1;
       this.throwSnowball(e, mon);
     }

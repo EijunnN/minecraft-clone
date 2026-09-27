@@ -417,7 +417,8 @@ export class MonsterAI {
           mz = (dx / dist) * side;
           speed = def.walk * 0.5;
         }
-        if (los && dist < 12 && ai.shootCd <= 0) {
+        // RangedAttackGoal de la bruja: a 10 bloques como mucho (en 3D, no sólo en horizontal).
+        if (los && Math.hypot(dx, target.y - e.y, dz) <= 10 && ai.shootCd <= 0) {
           ai.shootCd = 2.5 + this.m.rand() * 1.5;
           this.throwPotion(e, target, dist);
         }

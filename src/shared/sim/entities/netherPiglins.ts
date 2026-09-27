@@ -457,7 +457,7 @@ export class PiglinAI {
     }
     const main = gearMain(e.gear);
     const crossbow = main === CROSSBOW || main === CROSSBOW_CHARGED;
-    const dist = Math.hypot(t.x - e.x, t.z - e.z);
+    const dist = Math.hypot(t.x - e.x, t.y - e.y, t.z - e.z); // en 3D, como en Java
     const sees = this.ai.canSee(e, t);
     this.ai.lookAt(e, t.x, t.y + (t.p ? 1.62 : t.h * 0.85), t.z);
     if (crossbow) {

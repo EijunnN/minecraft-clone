@@ -230,6 +230,8 @@ export class MobBrain {
       const dx = target.x - e.x, dz = target.z - e.z;
       const dist = Math.hypot(dx, dz);
       const dy = target.y - e.y;
+      // Distancia de verdad (en 3D), como distanceToSqr en Java: la que cuenta para los ataques a distancia.
+      const dist3 = Math.hypot(dx, dy, dz);
       lookAt = [target.x, target.y + 1.6, target.z];
       const reach = def.width / 2 + 1.1;
       const los = dist < 20 && lineOfSight(w, e.x, e.y + e.height * 0.85, e.z, target.x, target.y + 1.5, target.z);
@@ -249,31 +251,35 @@ export class MobBrain {
           moveZ = (dx / dist) * side;
           speed = def.walk * 0.6;
         }
-        if (los && dist < 16 && ai.shootCd <= 0) {
+        // RangedBowAttackGoal: dispara a 15 bloques como mucho.
+        if (los && dist3 <= 15 && ai.shootCd <= 0) {
           ai.shootCd = 1.6 + this.m.rand() * 1.2;
           this.shootAt(e, target);
         }
       } else if (e.type === MOB_CREEPER) {
-        if (dist < 3.2 && los) {
-          ai.fuse += dt;
-          if (ai.fuse === dt) this.m.host.fx('creeper_fuse', e.x, e.y + 1, e.z);
+        // SwellGoal: empieza a hincharse con su presa a menos de 3 bloques (en 3D) y, ya hinchándose, sigue
+        // mientras la vea a 7 como mucho; si no, se deshincha. Hinchándose no anda. 30 ticks: explota.
+        if (ai.fuse > 0 || (dist3 < 3 && los)) {
           speed = 0;
-          if (ai.fuse >= 1.5) {
-            this.m.remove(e.id);
-            // Fase 6.5 (colecciones): el creeper cargado explota el doble de fuerte.
-            this.m.explode(e.x, e.y + 0.5, e.z, e.charged ? CHARGED_POWER : 3, !!e.charged);
-            return;
+          if (dist3 > 7 || !los) ai.fuse = Math.max(0, ai.fuse - dt);
+          else {
+            if (ai.fuse === 0) this.m.host.fx('creeper_fuse', e.x, e.y + 1, e.z);
+            ai.fuse += dt;
+            if (ai.fuse >= 1.5) {
+              this.m.remove(e.id);
+              // Fase 6.5 (colecciones): el creeper cargado explota el doble de fuerte.
+              this.m.explode(e.x, e.y + 0.5, e.z, e.charged ? CHARGED_POWER : 3, !!e.charged);
+              return;
+            }
           }
-        } else {
-          if (dist > 7) ai.fuse = Math.max(0, ai.fuse - dt);
-          if (ai.fuse <= 0) {
-            [moveX, moveZ, jump] = this.followPath(e, target, dt);
-            speed = def.run;
-          }
+        }
+        if (ai.fuse <= 0) {
+          [moveX, moveZ, jump] = this.followPath(e, target, dt);
+          speed = def.run;
         }
       } else if (e.type === MOB_LLAMA || isLlamaLike(e.type)) {
         // Fase 6 (monturas): la llama no muerde, escupe (Fase 7.5: también la llama de comerciante).
-        [moveX, moveZ, speed, jump] = this.m.mounts.llamaFight(e, target, dist, los, dt);
+        [moveX, moveZ, speed, jump] = this.m.mounts.llamaFight(e, target, dist3, los, dt);
       } else {
         // Cuerpo a cuerpo.
         if (dist < 2.5 && Math.abs(dy) < 1.5 && los) {
