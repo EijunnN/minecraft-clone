@@ -2,6 +2,8 @@
 // experiencia, huevos lanzados y flotadores de pesca. Este gestor guarda la lista, crea y retira
 // entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
 // projectiles, mobBrain, animalLife, spawner y xpOrbs.
+import { isPushableMob, pushStep, boxesOverlap } from '../../push'; // empujar criaturas
+import { PLAYER_WIDTH, PLAYER_HEIGHT } from '../../constants';
 import { ShulkerAI } from './shulkers'; // Fase 8.6
 import { MOB_SHULKER } from '../../endMobs';
 import {
@@ -471,8 +473,28 @@ export class Entities {
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id) && e.mountId === undefined)); // Fase 8.3: los jinetes van encima
+    this.pushedByPlayers(active, players, dt);
     this.spawner.spawnTick(dt, players);
     this.aquatic.spawnTick(dt, players); // Fase 6 (acuáticos).
+  }
+
+  /**
+   * Los jugadores apartan a las criaturas con las que se solapan (Entity.push de Java: hasta 0,05 bloques por tick,
+   * que aquí se suman a su velocidad). A las que van montadas o llevan jinete, no.
+   */
+  private pushedByPlayers(mobs: Entity[], players: PlayerView[], dt: number): void {
+    const k = 20 * dt * 20; // bloques por tick → velocidad (bloques/s), por los ticks de este paso
+    for (const p of players) {
+      if (!p.alive) continue;
+      for (const e of mobs) {
+        if (e.dead || e.rider || e.mountId !== undefined || !isPushableMob(e.type)) continue;
+        if (!boxesOverlap(p.x, p.y, p.z, PLAYER_WIDTH, PLAYER_HEIGHT, e.x, e.y, e.z, e.width, e.height)) continue;
+        const v = pushStep(p.x, p.z, e.x, e.z);
+        if (!v) continue;
+        e.vx += v[0] * k;
+        e.vz += v[1] * k;
+      }
+    }
   }
 
   /** Empuje entre criaturas que se solapan (sólo las que se simulan). */

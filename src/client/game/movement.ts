@@ -7,6 +7,13 @@ import { potionPhysics } from './potionClient';
 import { effectsPhysics } from './effectsClient';
 import type { Game } from './Game';
 import { canGlideWith } from '../../shared/elytra'; // Fase 8.6
+import { isPushableMob, pushStep, boxesOverlap, PUSH_STEP } from '../../shared/push';
+import { MOBS } from '../../shared/mobs';
+import { EF_BABY } from '../../shared/protocol';
+import { PLAYER_WIDTH } from '../../shared/constants';
+
+/** Aceleración del empuje de una criatura (bloques/s² por cada 0,05 bloques por tick de Entity.push). */
+const PUSH_ACCEL = 15.4;
 import { glideWindLevel } from '../audio/glideWind';
 
 /** Lo que el resto del frame necesita saber del movimiento. */
@@ -26,6 +33,27 @@ export class Movement {
   private stepDist = 0;
 
   constructor(private g: Game) {}
+
+  /**
+   * Entity.push de Java con cada criatura cuya caja se solapa con la del jugador: hasta 0,05 bloques por tick, que
+   * aquí van al impulso externo (con la fuerza que da, frenando como frena ese impulso, el mismo desplazamiento).
+   */
+  private pushedByMobs(dt: number): void {
+    const g = this.g, p = g.player;
+    if (g.survival.dead || p.flying) return;
+    for (const e of g.ents.list.values()) {
+      if (e.gone || e.deathT >= 0 || !isPushableMob(e.type)) continue;
+      const def = MOBS[e.type];
+      const s = e.flags & EF_BABY ? 0.5 : 1;
+      if (!boxesOverlap(p.x, p.y, p.z, PLAYER_WIDTH, p.height, e.x, e.y, e.z, def.width * s, def.height * s)) continue;
+      const v = pushStep(e.x, e.z, p.x, p.z);
+      if (!v) continue;
+      // En Java el paso se frena ×0,546 por tick en el suelo: 0,05 b/tick dan ~2,2 b/s; el impulso de aquí se
+      // frena ×e^(−7 s): hacen falta ~15 b/s² por cada 0,05 b/tick para llegar a lo mismo.
+      p.kx += (v[0] / PUSH_STEP) * PUSH_ACCEL * dt;
+      p.kz += (v[1] / PUSH_STEP) * PUSH_ACCEL * dt;
+    }
+  }
 
   update(dt: number): MoveResult {
     const g = this.g;
@@ -86,6 +114,7 @@ export class Movement {
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
     // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
     g.vehicles.collidePlayer(dt); // Fase 7 (remate): barcas sólidas y vagonetas que apartan
+    if (!g.riding.active && !g.vehicles.active) this.pushedByMobs(dt); // las criaturas con las que se solapa le apartan
     if (!g.riding.update(dt, controls, active) && !g.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
     g.mechanisms.update(); // Fase 7 (mecanismos): los bloques que empujan los pistones apartan al jugador
     const moved = g.riding.active || g.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz);
