@@ -1,5 +1,6 @@
 // Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
 // disparos, teletransporte del enderman, paseo y movimiento con física.
+import { shotVelocity, mobUncertainty } from './aim'; // cómo apuntan (Projectile.shoot)
 import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA, MOB_ENDERMITE } from '../../mobs';
 import { isVillagerType } from '../../mobs'; // Fase 6 (aldeanos)
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
@@ -251,8 +252,8 @@ export class MobBrain {
           moveZ = (dx / dist) * side;
           speed = def.walk * 0.6;
         }
-        // RangedBowAttackGoal: dispara a 15 bloques como mucho.
-        if (los && dist3 <= 15 && ai.shootCd <= 0) {
+        // RangedBowAttackGoal: dispara siempre que ve a su presa (la que sigue, a 16 bloques).
+        if (los && dist3 <= 16 && ai.shootCd <= 0) {
           ai.shootCd = 1.6 + this.m.rand() * 1.2;
           this.shootAt(e, target);
         }
@@ -539,18 +540,14 @@ export class MobBrain {
   }
 
   shootAt(e: Entity, target: PlayerView): void {
-    const sx = e.x, sy = e.y + e.height * 0.8, sz = e.z;
-    const tx = target.x, ty = target.y + 1.2, tz = target.z;
-    const dx = tx - sx, dz = tz - sz;
-    const horiz = Math.max(1e-3, Math.hypot(dx, dz));
-    const speed = 30;
-    const t = Math.max(0.05, horiz / speed);
-    // Compensar la gravedad (20 m/s²) y añadir imprecisión según la dificultad.
-    const spread = [0.12, 0.09, 0.06, 0.03][this.m.host.difficulty()] ?? 0.06;
-    const vy = (ty - sy) / t + 0.5 * 20 * t;
-    const vx = dx / t + (this.m.rand() - 0.5) * spread * speed;
-    const vz = dz / t + (this.m.rand() - 0.5) * spread * speed;
-    const arrow = this.m.spawnArrow(sx + (dx / horiz) * 0.6, sy, sz + (dz / horiz) * 0.6, vx, vy + (this.m.rand() - 0.5) * spread * speed, vz, e.id, 2);
+    // AbstractSkeleton.performRangedAttack: desde sus ojos, hacia un tercio de la altura de su presa más 0,2 × la
+    // distancia, a 1,6 bloques por tick y con 14 − 4 × dificultad de incertidumbre.
+    const sx = e.x, sy = e.y + e.height * 0.88 - 0.1, sz = e.z;
+    const dx = target.x - sx, dz = target.z - sz;
+    const horiz = Math.hypot(dx, dz);
+    const yd = target.y + 1.8 / 3 - sy;
+    const [vx, vy, vz] = shotVelocity(dx, yd + horiz * 0.2, dz, 1.6, mobUncertainty(this.m.host.difficulty()), () => this.m.rand());
+    const arrow = this.m.spawnArrow(sx, sy, sz, vx, vy, vz, e.id, 2);
     // Fase 7 (pociones): las flechas de los esqueletos glaciales dan 30 s de Lentitud (como en Minecraft).
     if (e.type === MOB_STRAY) arrow.arrowPotion = PT_LONG_SLOWNESS;
     this.m.host.fx('mob_shoot', sx, sy, sz, e.type);

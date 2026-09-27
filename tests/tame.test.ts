@@ -197,7 +197,7 @@ test('el gólem de nieve tira bolas de nieve a los monstruos', () => {
   const z = E.spawnMob(MOB_ZOMBIE, bx + 4 + 0.5, by, bz + 0.5)!;
   let thrown = 0;
   let hit = false;
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 200; i++) { // con su puntería de Java (imprecisión 12) no acierta siempre
     h.tick(1);
     for (const e of E.list.values()) if (e.type === ENT_THROWN && e.stack?.id === SNOWBALL && e.shooter === g.id && e.age < 0.06) thrown++;
     if (z.hurt < 0.06) hit = true;
