@@ -2,7 +2,7 @@
 // tortugas que reman, ajolotes y renacuajos que culebrean, ranas que encogen las patas al saltar,
 // peces que dan coletazos fuera del agua y el pez globo que se hincha.
 import { mat4 } from 'gl-matrix';
-import { MOB_PUFFERFISH, type MobDef } from '../../shared/mobs';
+import { MOB_PUFFERFISH, MOB_FROG, type MobDef } from '../../shared/mobs';
 import { EF_ACTION, EF_ANGRY } from '../../shared/protocol';
 import type { ClientEntity } from '../game/ClientEntities';
 
@@ -52,7 +52,7 @@ export function animateAquatic(def: MobDef, e: ClientEntity, time: number, name:
       const jump = Math.min(1, e.walkAmount * 1.5);
       if (name === 'legR' || name === 'legL') out[0] = jump * 0.9;
       else if (name === 'armR' || name === 'armL') out[0] = -jump * 0.6;
-      else if (name === 'head') out[0] = -Math.abs(Math.sin(time * 1.3 + e.seed * 5)) * 0.06;
+      else if (name === 'head') out[0] = e.flags & EF_ACTION ? -0.35 : -Math.abs(Math.sin(time * 1.3 + e.seed * 5)) * 0.06; // cazando: la boca abierta
       break;
     }
   }
@@ -60,6 +60,7 @@ export function animateAquatic(def: MobDef, e: ClientEntity, time: number, name:
 
 /** ¿Se oculta esta parte? (las espinas del pez globo sólo se ven cuando está hinchado). */
 export function hiddenAquaticPart(def: MobDef, e: ClientEntity, name: string): boolean {
+  if (def.id === MOB_FROG && name === 'tongue') return !(e.flags & EF_ACTION); // la lengua, sólo cazando
   return def.id === MOB_PUFFERFISH && name.startsWith('spike') && !(e.flags & EF_ANGRY);
 }
 

@@ -38,6 +38,8 @@ export interface Session {
   /** Fase 7.6: escudo decorado en cada mano (clave de la decoración). */
   hs?: string;
   os?: string;
+  /** Color de cada pieza de armadura teñida (PlayerInfo.ac). */
+  ac?: number[];
   mode: GameMode;
   lookAt: number;
   lookUntil: number;

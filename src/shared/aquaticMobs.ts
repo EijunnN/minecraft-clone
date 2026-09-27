@@ -2,6 +2,13 @@
 // rana, renacuajo y calamar brillante. Aquí van sus ids, estadísticas, botín y modelos por cajas;
 // mobs.ts los registra. Las UV de cada modelo se reparten solas en el atlas (packParts), así no
 // hay que colocarlas a mano ni se solapan.
+import {
+  BIOME_DESERT, BIOME_WARM_OCEAN, BIOME_JUNGLE, BIOME_SPARSE_JUNGLE, BIOME_BAMBOO_JUNGLE, BIOME_SAVANNA, BIOME_SAVANNA_PLATEAU,
+  BIOME_WINDSWEPT_SAVANNA, BIOME_BADLANDS, BIOME_ERODED_BADLANDS, BIOME_WOODED_BADLANDS, BIOME_MANGROVE_SWAMP, BIOME_NETHER_WASTES,
+  BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS, BIOME_SNOWY_PLAINS, BIOME_ICE_SPIKES,
+  BIOME_FROZEN_PEAKS, BIOME_JAGGED_PEAKS, BIOME_SNOWY_PEAKS, BIOME_FROZEN_OCEAN, BIOME_DEEP_FROZEN_OCEAN, BIOME_GROVE, BIOME_FROZEN_RIVER,
+  BIOME_SNOWY, BIOME_SNOWY_BEACH, BIOME_THE_END, BIOME_END_HIGHLANDS, BIOME_END_MIDLANDS, BIOME_SMALL_END_ISLANDS, BIOME_END_BARRENS,
+} from './world/biomeIds'; // variedades de rana
 import type { MobDef, ModelPart } from './mobs';
 import {
   COD, SALMON, TROPICAL_FISH, PUFFERFISH, COD_BUCKET, SALMON_BUCKET, TROPICAL_FISH_BUCKET, PUFFERFISH_BUCKET,
@@ -17,6 +24,23 @@ export const MOB_DOLPHIN = 34;
 export const MOB_TURTLE = 35;
 export const MOB_AXOLOTL = 36;
 export const MOB_FROG = 37;
+/** Variedades de rana (frog_variant de Java): templada (naranja), cálida (blanca) y fría (verde). */
+export const FROG_TEMPERATE = 0, FROG_WARM = 1, FROG_COLD = 2;
+const WARM_FROG_BIOMES = new Set([
+  BIOME_DESERT, BIOME_WARM_OCEAN, BIOME_JUNGLE, BIOME_SPARSE_JUNGLE, BIOME_BAMBOO_JUNGLE, BIOME_SAVANNA, BIOME_SAVANNA_PLATEAU,
+  BIOME_WINDSWEPT_SAVANNA, BIOME_BADLANDS, BIOME_ERODED_BADLANDS, BIOME_WOODED_BADLANDS, BIOME_MANGROVE_SWAMP, BIOME_NETHER_WASTES,
+  BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS,
+]);
+const COLD_FROG_BIOMES = new Set([
+  BIOME_SNOWY_PLAINS, BIOME_ICE_SPIKES, BIOME_FROZEN_PEAKS, BIOME_JAGGED_PEAKS, BIOME_SNOWY_PEAKS, BIOME_FROZEN_OCEAN,
+  BIOME_DEEP_FROZEN_OCEAN, BIOME_GROVE, BIOME_FROZEN_RIVER, BIOME_SNOWY, BIOME_SNOWY_BEACH, BIOME_THE_END, BIOME_END_HIGHLANDS,
+  BIOME_END_MIDLANDS, BIOME_SMALL_END_ISLANDS, BIOME_END_BARRENS,
+]);
+/** La variedad de la rana que aparece (o crece) en ese bioma (spawns_warm/cold_variant_frogs; el Deep Dark, fría). */
+export function frogVariantFor(biome: number, deepDark = false): number {
+  if (deepDark || COLD_FROG_BIOMES.has(biome)) return FROG_COLD;
+  return WARM_FROG_BIOMES.has(biome) ? FROG_WARM : FROG_TEMPERATE;
+}
 export const MOB_TADPOLE = 38;
 export const MOB_GLOW_SQUID = 39;
 
@@ -235,6 +259,8 @@ export const AQUATIC_MOBS: MobDef[] = [
       { name: 'armL', pivot: [-3, 2, -3], from: [-1, -2, -1], size: [2, 2, 2], share: 'armR' },
       { name: 'legR', pivot: [3.5, 2, 2], from: [-1, -2, -2], size: [3, 2, 5] },
       { name: 'legL', pivot: [-3.5, 2, 2], from: [-2, -2, -2], size: [3, 2, 5], share: 'legR' },
+      // La lengua (sólo se ve mientras caza: FrogModel, 4 × 7 en el suelo de la boca).
+      { name: 'tongue', parent: 'body', pivot: [0, 3.1, -4], from: [-2, 0, -7], size: [4, 0.01, 7] },
     ],
   ),
   model(

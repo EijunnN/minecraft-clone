@@ -1,6 +1,7 @@
 // Registro de objetos. Los objetos de bloque comparten id con su bloque (1..255 y, para las familias
 // con estados como losas o puertas, el estado base a partir de 1024); el resto va de 256 a 1023 y usa
 // un sprite 16x16 del atlas de objetos.
+import { AMETHYST_BUD, AMETHYST_BUD_ITEM_KEYS } from './blocks'; // los brotes de amatista
 import { SHULKER_BOXES, SHULKER_BOX_COLORS } from './blocks'; // Fase 8.6
 import { NETHER_WART_CROP } from './blocks'; // Fase 8.4
 import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
@@ -105,6 +106,10 @@ for (let id = 1; id < BLOCK_COUNT; id++) {
   if (!b || b.render === R_NONE || b.level !== 0 || baseBlock(id) !== id || b.noItem) continue;
   ITEMS[id] = { id, key: b.key, name: b.name, stack: 64, block: id };
 }
+// Los brotes de amatista: cada tamaño, su objeto con la clave de Java.
+AMETHYST_BUD_ITEM_KEYS.forEach((k, s) => {
+  if (ITEMS[AMETHYST_BUD + s]) ITEMS[AMETHYST_BUD + s].key = k;
+});
 // Puertas y camas se ven como un dibujo plano (como en Minecraft); la cama no se apila.
 for (const [wood, id] of Object.entries(DOORS)) ITEMS[id].sprite = `${wood}_door`;
 // Camas y carteles también se ven planos; las camas no se apilan y los carteles, de 16 en 16.

@@ -51,6 +51,8 @@ export interface RemotePlayerView {
   light: [number, number];
   /** Armadura puesta: ids [cabeza, pecho, piernas, pies] (0 = nada). */
   armor?: number[];
+  /** Color de cada pieza teñida (0xRRGGBB, −1 sin teñir). */
+  armorDye?: number[];
   /** Fase 6 (monturas): sentado en una montura (piernas hacia delante). */
   riding?: boolean;
   /** Fase 7 (encantamientos): qué brilla (bit 0 mano, 1 mano secundaria, 2..5 armadura de la cabeza a los pies). */
@@ -168,15 +170,7 @@ export class EntityRenderer {
     // pasada a nuestros ejes (x e y al revés que en Java).
     this.wingMeshes = [mk([-1, -21, -1], [11, 1, 3], ELYTRA_LAYOUT), mk([-1, -21, -1], [11, 1, 3], ELYTRA_LAYOUT, true)];
     for (const mat of [...ALL_ARMOR_MATERIALS, 'elytra' as const]) {
-      const t = mat === 'elytra' ? generateElytraTexture() : generateArmorTexture(mat);
-      const tex = gl.createTexture()!;
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, t.width, t.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, t.rgba);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      const tex = this.armorUpload(mat === 'elytra' ? generateElytraTexture() : generateArmorTexture(mat));
       if (mat === 'elytra') this.elytraTex = tex;
       else this.armorTex.set(mat, tex);
     }
@@ -322,6 +316,37 @@ export class EntityRenderer {
     return out;
   }
 
+  /** Sube la textura de una armadura. */
+  private armorUpload(t: { width: number; height: number; rgba: Uint8Array }): WebGLTexture {
+    const gl = this.gl;
+    const tex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, t.width, t.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, t.rgba);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return tex;
+  }
+
+  /** Textura de una pieza: la de su material o, el cuero teñido, la de su color (se hacen al verlas, hasta 48). */
+  private armorTexOf(mat: ArmorMaterial, dye: number): WebGLTexture {
+    if (mat !== 'leather' || dye < 0) return this.armorTex.get(mat)!;
+    let tex = this.dyedLeather.get(dye);
+    if (!tex) {
+      if (this.dyedLeather.size >= 48) {
+        const [old, t] = this.dyedLeather.entries().next().value!;
+        this.gl.deleteTexture(t);
+        this.dyedLeather.delete(old);
+      }
+      tex = this.armorUpload(generateArmorTexture('leather', dye));
+      this.dyedLeather.set(dye, tex);
+    }
+    return tex;
+  }
+  private dyedLeather = new Map<number, WebGLTexture>();
+
   /** Material de la pieza de cada ranura (null = nada o id que no encaja), o null sin armadura. */
   private armorOf(p: RemotePlayerView): (ArmorMaterial | null)[] | null {
     const a = p.armor;
@@ -338,14 +363,16 @@ export class EntityRenderer {
 
   /** Cajas de armadura de un jugador con la matriz de su parte del cuerpo (misma animación que la piel). */
   private forEachArmor(
-    p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (mesh: PartMesh, mat: ArmorMaterial, m: mat4, slot: number) => void,
+    p: RemotePlayerView, camX: number, camY: number, camZ: number,
+    fn: (mesh: PartMesh, mat: ArmorMaterial, m: mat4, slot: number, tex: WebGLTexture) => void,
   ): void {
     const mats = this.armorOf(p);
     if (!mats) return;
+    const texs = mats.map((mat, slot) => (mat ? this.armorTexOf(mat, p.armorDye?.[slot] ?? -1) : null));
     this.forEachPart(p, camX, camY, camZ, (part, m) => {
       for (const box of this.armorParts.get(part) ?? []) {
         const mat = mats[box.slot];
-        if (mat) fn(box.mesh, mat, m, box.slot);
+        if (mat) fn(box.mesh, mat, m, box.slot, texs[box.slot]!);
       }
     });
   }
@@ -420,14 +447,14 @@ export class EntityRenderer {
     // Armadura encima de la piel, con el brillo de cada material.
     let armor: Program | null = null;
     for (const p of players) {
-      let bound: ArmorMaterial | null = null;
-      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m, slot) => {
+      let bound: WebGLTexture | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m, slot, tex) => {
         if (!armor) armor = bindLighting(this.pArmor.use()).f1('uTime', glintTime());
         if (!bound) armor.f2('uLightLevel', p.light[0], p.light[1]);
-        if (mat !== bound) {
+        if (tex !== bound) {
           const sh = ARMOR_SHINE[mat];
-          armor.tex2D('uSkin', this.armorTex.get(mat)!).f3('uMat', sh.rough, sh.metal, sh.sheen);
-          bound = mat;
+          armor.tex2D('uSkin', tex).f3('uMat', sh.rough, sh.metal, sh.sheen);
+          bound = tex;
         }
         armor.f1('uGlint', (p.glint ?? 0) & (4 << slot) ? 1 : 0); // Fase 7 (encantamientos)
         this.drawMesh(armor, mesh, m);
@@ -455,10 +482,10 @@ export class EntityRenderer {
         prog.tex2D('uSkin', this.skinFor(p));
         this.forEachPart(p, camX, camY, camZ, (part, m) => this.drawMesh(prog, this.parts[part], m));
       }
-      let bound: ArmorMaterial | null = null;
-      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
-        if (mat !== bound) prog.tex2D('uSkin', this.armorTex.get(mat)!);
-        bound = mat;
+      let bound: WebGLTexture | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, _mat, m, _slot, tex) => {
+        if (tex !== bound) prog.tex2D('uSkin', tex);
+        bound = tex;
         this.drawMesh(prog, mesh, m);
       });
     }
@@ -471,14 +498,14 @@ export class EntityRenderer {
     if (views.length === 0) return;
     let armor: Program | null = null;
     for (const p of views) {
-      let bound: ArmorMaterial | null = null;
-      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m, slot) => {
+      let bound: WebGLTexture | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m, slot, tex) => {
         if (!armor) armor = bindLighting(this.pArmor.use()).f1('uTime', glintTime());
         if (!bound) armor.f2('uLightLevel', p.light[0], p.light[1]);
-        if (mat !== bound) {
+        if (tex !== bound) {
           const sh = ARMOR_SHINE[mat];
-          armor.tex2D('uSkin', this.armorTex.get(mat)!).f3('uMat', sh.rough, sh.metal, sh.sheen);
-          bound = mat;
+          armor.tex2D('uSkin', tex).f3('uMat', sh.rough, sh.metal, sh.sheen);
+          bound = tex;
         }
         armor.f1('uGlint', (p.glint ?? 0) & (4 << slot) ? 1 : 0); // Fase 7 (encantamientos)
         this.drawMesh(armor, mesh, m);
@@ -493,10 +520,10 @@ export class EntityRenderer {
     if (views.length === 0) return;
     const prog = this.pEntityShadow.use();
     for (const p of views) {
-      let bound: ArmorMaterial | null = null;
-      this.forEachArmor(p, camX, camY, camZ, (mesh, mat, m) => {
-        if (mat !== bound) prog.tex2D('uSkin', this.armorTex.get(mat)!);
-        bound = mat;
+      let bound: WebGLTexture | null = null;
+      this.forEachArmor(p, camX, camY, camZ, (mesh, _mat, m, _slot, tex) => {
+        if (tex !== bound) prog.tex2D('uSkin', tex);
+        bound = tex;
         this.drawMesh(prog, mesh, m);
       });
     }

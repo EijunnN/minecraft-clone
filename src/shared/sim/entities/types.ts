@@ -208,6 +208,8 @@ export interface Entity extends Body {
   standArmor?: number[];
   /** Fase 7 (encantamientos): piezas del soporte que brillan (bit 0 cabeza … 3 pies). */
   standGlint?: number;
+  /** Color de cada pieza teñida del soporte (0xRRGGBB, −1 sin teñir). */
+  standDye?: number[];
   /** Punto del que tira su correa ahora mismo (lo pone el sistema de correas cada tick). */
   leashTo?: [number, number, number];
   /** Fase 6.5 (colecciones): creeper cargado por un rayo. */
@@ -217,6 +219,8 @@ export interface Entity extends Body {
   gear?: number;
   /** Desgaste de la armadura para lobo. */
   gearDmg?: number;
+  /** Color de la armadura teñida (armadura de cuero para caballo, armadura para lobo). */
+  gearDye?: number;
   /** Velocidad con la que el jinete guía al cerdo con la caña con zanahoria (junto con leashTo). */
   steerSpeed?: number;
   /** Cabra: fase de la embestida (s; > 0 en curso), dirección, cuernos que le quedan y espera. */

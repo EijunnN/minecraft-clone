@@ -2,6 +2,7 @@
 // predice, y el servidor, que las aplica): losas dobles, escaleras invertidas, puertas de dos
 // bloques con bisagra, trampillas, portillos, escaleras de mano y antorchas en la pared, camas,
 // carteles (de pie o en la pared), cofres que se unen en dobles y fogatas encendidas.
+import { isAmethystBudItem, amethystBudAt, AMETHYST_BUD } from './blocks'; // los brotes de amatista
 import { isShulkerBox, ENDER_CHEST } from './blocks'; // Fase 8.6
 import { NETHER_WART_CROP, SOUL_SAND } from './blocks'; // Fase 8.4
 import { MIN_Y, MAX_Y } from './constants';
@@ -219,6 +220,11 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 8.6: la vara del End apunta hacia la cara en la que se pone (contra otra igual, al revés).
   // Fase 8.6: el marco del portal del End mira hacia quien lo pone (sin ojo).
   if (base === END_PORTAL_FRAME) return one(stateOf(base, { facing: (facing + 2) & 3, eye: 0 }));
+  // Los brotes de amatista, apuntando hacia fuera de la cara en la que se ponen (AmethystClusterBlock.getStateForPlacement).
+  if (isAmethystBudItem(item)) {
+    const dir = hit.ny > 0 ? 1 : hit.ny < 0 ? 0 : hit.nz < 0 ? 2 : hit.nz > 0 ? 3 : hit.nx < 0 ? 4 : 5;
+    return one(amethystBudAt(item - AMETHYST_BUD, dir));
+  }
   // Fase 8.6: la caja de shulker, con la tapa hacia la cara en la que se pone; el cofre de ender, hacia quien lo pone.
   if (isShulkerBox(base)) return one(base + (hit.ny > 0 ? 2 : hit.ny < 0 ? 3 : hit.nx > 0 ? 0 : hit.nx < 0 ? 1 : hit.nz > 0 ? 4 : 5));
   if (base === ENDER_CHEST) return one(stateOf(base, { facing: (facing + 2) & 3 }));

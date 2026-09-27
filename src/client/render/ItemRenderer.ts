@@ -1,5 +1,7 @@
 // Objetos en 3D: cubos de bloque y sprites extruidos (como en Minecraft). Dibuja los objetos
 // tirados, los bloques que caen, las flechas, el objeto de la mano y las grietas de minado.
+import { dyedSpriteRGBA, parseDyeKey } from './dyeArt'; // el cuero teñido
+import { isDyeable } from '../../shared/dyedColor';
 import { mat4 } from 'gl-matrix';
 import { Program, type GL, type GLCaps } from '../engine/gl';
 import { ITEM3D_VS, ITEM3D_FS, ITEM3D_SHADOW_VS, ITEM3D_SHADOW_FS } from './shaders/items';
@@ -173,6 +175,12 @@ export class ItemRenderer {
    */
   model(id: number, dmg = 0, decor: string | null = null): ItemModel | null {
     if (decor && id === SHIELD) return this.shieldModel(decor); // Fase 7.6
+    // El cuero teñido (y la armadura para lobo): su dibujo con el color.
+    const dye = decor && isDyeable(id) ? parseDyeKey(decor) : null;
+    if (dye !== null) {
+      const s = itemSpriteIndex(id);
+      return s < 0 ? null : this.decorModel(`${id}${decor}`, () => dyedSpriteRGBA(this.spriteRGBA, s * 256 * 4, id, dye));
+    }
     const layer = dmg > 0 ? potionSpriteLayer(id, dmg) : -1;
     if (layer >= 0 && layer !== itemSpriteIndex(id)) {
       const pk = 'p' + layer;
@@ -218,15 +226,20 @@ export class ItemRenderer {
    * atlas; cuando se acaban, la menos usada deja su sitio.
    */
   private shieldModel(decor: string): ItemModel | null {
+    const d = parseShieldKey(decor);
+    const s = itemSpriteIndex(SHIELD);
+    if (!d || s < 0) return null;
+    return this.decorModel(decor, () => decoratedShieldRGBA(this.spriteRGBA, s * 256 * 4, d.base, d.layers));
+  }
+
+  /** Modelo con un dibujo propio (`make`) guardado en una de las capas libres del atlas con la clave `decor`. */
+  private decorModel(decor: string, make: () => Uint8Array): ItemModel {
     const key = 'sh' + decor;
     const hit = this.cache.get(key);
     if (hit) {
       this.shieldSlots.push(this.shieldSlots.splice(this.shieldSlots.indexOf(decor), 1)[0]);
       return hit;
     }
-    const d = parseShieldKey(decor);
-    const s = itemSpriteIndex(SHIELD);
-    if (!d || s < 0) return null;
     let slot = this.shieldSlots.length;
     if (slot >= SHIELD_SLOTS) {
       const old = this.shieldSlots.shift()!;
@@ -235,7 +248,7 @@ export class ItemRenderer {
       this.cache.delete('sh' + old);
     }
     const layer = this.shieldBase + slot;
-    const rgba = decoratedShieldRGBA(this.spriteRGBA, s * 256 * 4, d.base, d.layers);
+    const rgba = make();
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.spriteTex);
     gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, 16, 16, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);

@@ -1,9 +1,10 @@
 // Vegetación que cambia sola: ticks aleatorios (brotes que crecen, hierba que se extiende o muere,
 // cactus y caña que crecen) y hojas que se caen cuando se tala su árbol. Otros sistemas (la granja)
 // añaden sus propios manejadores de ticks aleatorios.
+import { DIR_VEC, amethystBudAt, amethystBudInfo } from '../../blocks'; // los brotes de amatista
 import {
   AIR, GRASS, DIRT, SNOWY_GRASS, CACTUS, SUGAR_CANE, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_RENDER, BLOCK_REPLACEABLE,
-  R_CROSS, MYCELIUM, isVine, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, familyBase, WATER, ICE, PACKED_ICE,
+  R_CROSS, MYCELIUM, isVine, BUDDING_AMETHYST, CAVE_VINES, familyBase, WATER, ICE, PACKED_ICE,
   SNOW_LAYER, isSnowLayer, BLOCK_FLUID_LEVEL,
 } from '../../blocks';
 import { rainAt } from '../../weather';
@@ -171,11 +172,15 @@ export class Nature {
         if (top <= ny + 1 || LEAVES.has(w.getBlock(nx, top, nz))) w.setBlock(nx, ny, nz, spread);
       }
     } else if (id === BUDDING_AMETHYST) {
-      // La amatista con brotes echa un brote encima que crece hasta ser un racimo.
-      if (rand() > 0.2) return;
-      const up = w.getBlock(x, y + 1, z);
-      if (up === AIR) w.setBlock(x, y + 1, z, AMETHYST_BUD);
-      else if (familyBase(up) === AMETHYST_BUD && up - AMETHYST_BUD < 3) w.setBlock(x, y + 1, z, up + 1);
+      // BuddingAmethystBlock.randomTick: 1 de cada 5, hacia una cara al azar: si está libre (aire o agua quieta), un
+      // brote pequeño que apunta hacia allí; si ya hay un brote que apunta hacia allí, crece un tamaño.
+      if (rand() >= 0.2) return;
+      const dir = Math.floor(rand() * 6);
+      const [dx, dy, dz] = DIR_VEC[dir];
+      const at = w.getBlock(x + dx, y + dy, z + dz);
+      const bud = amethystBudInfo(at);
+      if (at === AIR || at === WATER) w.setBlock(x + dx, y + dy, z + dz, amethystBudAt(0, dir));
+      else if (bud && bud.dir === dir && bud.stage < 3) w.setBlock(x + dx, y + dy, z + dz, amethystBudAt(bud.stage + 1, dir));
     } else if (id === CAVE_VINES) {
       // Las enredaderas de cueva dan bayas luminosas de vez en cuando.
       if (rand() < 0.1) w.setBlock(x, y, z, CAVE_VINES + 1);

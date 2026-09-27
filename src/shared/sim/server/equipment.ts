@@ -6,6 +6,7 @@
 // - Caña con zanahoria: el cerdo ensillado que se monta va hacia donde mira el jinete; con 'boost'
 //   acelera un rato (y la caña se gasta).
 // - Armaduras de caballo y de lobo (clic derecho sobre el animal): ver entities/mobGear.ts.
+import { dyedColor } from '../../dyedColor';
 import { STATE_DEAD, STATE_SNEAK, type ClientMsg } from '../../protocol';
 import { MOB_PIG, MOB_STRIDER, FUNGUS_STICK_WEAR } from '../../mobs';
 import { TRIDENT, FIREWORK_ROCKET, CARROT_ON_A_STICK, WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, ITEMS } from '../../items';
@@ -154,7 +155,9 @@ export class Equipment {
   onInteract(s: Session, e: Entity, msg: Extract<ClientMsg, { t: 'interact' }>): InteractResult | null {
     const item = Number(msg.item);
     if (!Number.isInteger(item)) return null;
-    return this.ctx.entities.gear.interact(e, item, s.name, Number(msg.d) || 0, (s.s & STATE_SNEAK) !== 0);
+    // El color de la armadura teñida va en la pila entera (si el cliente la manda y es el mismo objeto).
+    const full = msg.st && Number(msg.st.id) === item ? sanitizeStack({ ...msg.st, count: 1 }) : null;
+    return this.ctx.entities.gear.interact(e, item, s.name, Number(msg.d) || 0, (s.s & STATE_SNEAK) !== 0, dyedColor(full));
   }
 
   /** Cada tick: el cerdo va hacia donde mira quien lo monta con la caña en la mano. */

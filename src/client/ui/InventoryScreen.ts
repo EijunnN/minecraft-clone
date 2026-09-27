@@ -29,10 +29,11 @@ import { EnchantPanel, AnvilPanel, GrindstonePanel, type WorkHost, type WorkPane
 import { SmithingPanel } from './smithingScreen'; // Fase 8.5 (lo que da el Nether)
 import { BeaconPanel } from './beaconScreen'; // Fase 8.5
 // Fase 7.6: mesa de cartografía, ampliar mapas en la mesa de trabajo, reparar juntando dos y escudo con estandarte.
-import { cartographyResult, mapExtendCraft } from '../../shared/mapOps';
+import { cartographyResult, mapExtendCraft, mapCloneCraft } from '../../shared/mapOps';
 import { FILLED_MAP, EMPTY_MAP, PAPER } from '../../shared/items';
 import { GLASS_PANE } from '../../shared/blocks';
-import { repairCraft, shieldDecorCraft, shulkerDyeCraft } from '../../shared/craftSpecials';
+import { repairCraft, shieldDecorCraft, shulkerDyeCraft, bannerCopyCraft } from '../../shared/craftSpecials';
+import { dyeArmorCraft } from '../../shared/dyedColor';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom'
   | 'brewing' // Fase 7 (pociones): alambique
@@ -391,7 +392,8 @@ export class InventoryScreen {
     if (this.kind === 'cartography') return cartographyResult(this.grid[0], this.grid[1]); // Fase 7.6
     if (this.kind !== 'player' && this.kind !== 'table') return null;
     // Fase 7.6: ampliar un mapa con papel, reparar juntando dos objetos y el escudo con estandarte.
-    const special = (this.kind === 'table' ? mapExtendCraft(this.grid) : null) ?? repairCraft(this.grid) ?? shieldDecorCraft(this.grid) ?? shulkerDyeCraft(this.grid); // Fase 8.6: teñir la caja de shulker
+    const special = (this.kind === 'table' ? mapExtendCraft(this.grid) : null) ?? repairCraft(this.grid) ?? shieldDecorCraft(this.grid) ?? shulkerDyeCraft(this.grid) // Fase 8.6: teñir la caja de shulker
+      ?? mapCloneCraft(this.grid) ?? bannerCopyCraft(this.grid)?.out ?? dyeArmorCraft(this.grid) ?? null; // clonar un mapa, copiar un estandarte y teñir el cuero
     if (special) return special;
     // Fase 6.5 (equipo): los fuegos artificiales miran las pilas (los colores de las estrellas).
     const fw = fireworkCraft(this.grid);
@@ -592,8 +594,12 @@ export class InventoryScreen {
     }
     const copy = matchRecipe(this.grid.map((s) => (s ? s.id : 0)), this.gridSize) ? null : bookCopy(this.grid);
     const original = copy ? cloneStack(this.grid[copy.original]) : null;
+    // La copia de un estandarte también deja el original.
+    const banner = bannerCopyCraft(this.grid);
+    const bannerOriginal = banner ? cloneStack(this.grid[banner.keep]) : null;
     this.consumeGrid();
     if (copy && original) this.grid[copy.original] = original;
+    if (banner && bannerOriginal) this.grid[banner.keep] = bannerOriginal;
   }
 
   private consumeGrid(): void {

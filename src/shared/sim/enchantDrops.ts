@@ -7,11 +7,12 @@
 //   piedra luminosa, las rodajas de sandía, los cristales del farol marino, las bayas y las semillas de
 //   la hierba, da más tiradas a los cultivos maduros y sube la probabilidad del pedernal de la grava y
 //   de los brotes, palos y manzanas de las hojas.
+import { amethystBudInfo } from '../blocks'; // los brotes de amatista
 import { NETHER_WART_CROP, NETHER_WART_MAX_AGE } from '../blocks'; // Fase 8.4
 import {
   BLOCKS, GRASS, SNOWY_GRASS, GRAVEL, COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, EMERALD_ORE,
   COPPER_ORE, SURFACE_ORE, GLOWSTONE, SEA_LANTERN, MELON, SHORT_GRASS, FERN, WHEAT_CROP, CARROTS, POTATOES, BEETROOTS,
-  OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, AMETHYST_BUD, INFESTED_OF, SNOW_LAYER, isSnowLayer, isLeaves, isMatureCrop,
+  OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, INFESTED_OF, SNOW_LAYER, isSnowLayer, isLeaves, isMatureCrop,
   familyBase, baseBlock, woodOf,
 } from '../blocks';
 import { isSweetBerryBush } from '../blocks';
@@ -27,7 +28,7 @@ const SILK_KEYS = new Set([
   'stone', 'deepslate', 'grass_block', 'snowy_grass_block', 'mycelium', 'podzol', 'gravel', 'clay', 'glass', 'glass_pane',
   'tinted_glass', 'ice', 'packed_ice', 'blue_ice', 'snow_block', 'bookshelf', 'chiseled_bookshelf', 'glowstone', 'sea_lantern',
   'melon', 'cobweb', 'campfire', 'soul_campfire', 'bee_nest', 'beehive', 'turtle_egg', 'red_mushroom_block', 'brown_mushroom_block',
-  'mushroom_stem', 'amethyst_bud', 'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'emerald_ore',
+  'mushroom_stem', 'amethyst_bud', 'amethyst_bud_side', 'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'emerald_ore',
   'copper_ore',
   'ender_chest', // Fase 8.6
   'sculk', 'sculk_vein', 'sculk_catalyst', 'sculk_sensor', 'calibrated_sculk_sensor', 'sculk_shrieker', // Fase 7.5 (abismo)
@@ -91,7 +92,7 @@ function fortuneDrops(block: number, toolId: number, fortune: number, rand: () =
     return drops;
   }
   // Racimo de amatista con pico: 4 fragmentos multiplicados.
-  if (familyBase(block) === AMETHYST_BUD && block - AMETHYST_BUD === 3 && ITEMS[toolId]?.tool?.kind === 'pickaxe') {
+  if (amethystBudInfo(block)?.stage === 3 && ITEMS[toolId]?.tool?.kind === 'pickaxe') {
     const drops = blockDrops(block, toolId, rand);
     for (const d of drops) d.count *= oreMultiplier(fortune, rand);
     return drops;

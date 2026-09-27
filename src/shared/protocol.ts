@@ -92,6 +92,8 @@ export interface PlayerInfo {
   /** Fase 7.6: escudo decorado en la mano y en la secundaria (fondo y capas del estandarte, ver shieldArt). */
   hs?: string;
   os?: string;
+  /** Color de cada pieza de armadura teñida (0xRRGGBB, −1 sin teñir); sólo si alguna lo está. */
+  ac?: number[];
 }
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
@@ -134,7 +136,8 @@ export type EntUpd = number[];
  * Fase 6.5 (remate): [id, nombre ('' sin nombre), atada a: id de jugador, [x, y, z] de una valla o 0].
  * Fase 6.5 (equipo): cuarto campo opcional, el equipo que lleva (armadura de caballo o lobo, tridente…).
  */
-export type EntExtra = [number, string, string | [number, number, number] | 0] | [number, string, string | [number, number, number] | 0, number];
+export type EntExtra = [number, string, string | [number, number, number] | 0] | [number, string, string | [number, number, number] | 0, number]
+  | [number, string, string | [number, number, number] | 0, number, number]; // (5.º: el color de la armadura teñida)
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; shirt: string; mode?: GameMode }
@@ -144,7 +147,7 @@ export type ClientMsg =
   | { t: 'respawn' }
   | {
     t: 'pos'; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number;
-    hp?: number; op?: number; hs?: string; os?: string;
+    hp?: number; op?: number; hs?: string; os?: string; ac?: number[];
   } // Fase 7: ec (pociones), g (brillo); hp y op, el tipo de poción en cada mano (remate). Fase 7.6: hs y os, escudos decorados
   /** Fase 7 (encantamientos): en, encantamientos de la herramienta (Toque de seda, Fortuna). */
   | { t: 'set'; x: number; y: number; z: number; b: number; tool?: number; en?: [number, number][] }
@@ -267,7 +270,7 @@ export type ServerMsg =
   | { t: 'leave'; id: string }
   | {
     t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number;
-    hp?: number; op?: number; hs?: string; os?: string;
+    hp?: number; op?: number; hs?: string; os?: string; ac?: number[];
   } // Fase 7; 7.6: hs y os
   | { t: 'set'; id: string; x: number; y: number; z: number; b: number }
   | { t: 'sets'; l: number[] }

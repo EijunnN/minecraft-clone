@@ -1,5 +1,6 @@
 // Envío de entidades a cada jugador: sólo las cercanas y sólo lo que cambió desde el último envío
 // (altas, actualizaciones y bajas, con quién recogió cada objeto para la animación).
+import { dyedColor } from '../../dyedColor';
 import { MOB_ENDER_DRAGON, MOB_SHULKER } from '../../mobs'; // Fase 8.6
 import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mobs';
 import type { ServerMsg, EntExtra } from '../../protocol';
@@ -69,11 +70,12 @@ export class EntitySync {
         seen.add(e.id);
         // Fase 6.5 (remate): nombre y correa (se mandan aparte, sólo cuando cambian).
         // Fase 6.5 (equipo): y el equipo que lleva (armadura de caballo o de lobo, tridente del ahogado).
-        const extra = e.customName || e.leash || e.gear ? `${e.customName ?? ''}|${Array.isArray(e.leash) ? e.leash.join(',') : e.leash ?? ''}|${e.gear ?? 0}` : '';
+        const extra = e.customName || e.leash || e.gear ? `${e.customName ?? ''}|${Array.isArray(e.leash) ? e.leash.join(',') : e.leash ?? ''}|${e.gear ?? 0}|${e.gearDye ?? -1}` : '';
         if ((sent.get(e.id) ?? '') !== extra) {
           if (extra) sent.set(e.id, extra);
           else sent.delete(e.id);
-          ex.push([e.id, e.customName ?? '', e.leash ? (Array.isArray(e.leash) ? [...e.leash] as [number, number, number] : e.leash) : 0, e.gear ?? 0]);
+          const leash = e.leash ? (Array.isArray(e.leash) ? [...e.leash] as [number, number, number] : e.leash) : 0;
+          ex.push(e.gearDye !== undefined ? [e.id, e.customName ?? '', leash, e.gear ?? 0, e.gearDye] : [e.id, e.customName ?? '', leash, e.gear ?? 0]); // (y su color)
         }
         const key = this.key(e);
         const prev = s.known.get(e.id);
@@ -83,7 +85,9 @@ export class EntitySync {
           const rec = [e.id, e.type, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), r2(e.bodyYaw), r2(e.pitch), flagsOf(e)];
           if ((e.type === ENT_ITEM || e.type === ENT_THROWN || e.type === ENT_DISPLAY) && e.stack) {
             rec.push(e.stack.id, e.stack.count);
-            if (e.stack.dmg) rec.push(e.stack.dmg); // Fase 7 (pociones): el tipo (su color)
+            const dc = dyedColor(e.stack); // el cuero teñido: su color, detrás del desgaste
+            if (e.stack.dmg || dc !== undefined) rec.push(e.stack.dmg ?? 0); // Fase 7 (pociones): el tipo (su color)
+            if (dc !== undefined) rec.push(dc);
           }
           // Fase 7 (pociones): tipo de la flecha con efecto; color y radio de la nube.
           else if (e.type === ENT_ARROW) rec.push(e.arrowPotion ?? -1);
@@ -92,7 +96,7 @@ export class EntitySync {
           else if (e.type === ENT_TNT) rec.push(e.block ?? 0, Math.round(e.fuse ?? 0)); // Fase 7 (mecanismos): bloque y mecha
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (isHangingType(e.type)) rec.push(e.variant ?? 0); // Fase 6.5: variante del cuadro u objeto del marco
-          else if (e.type === ENT_ARMOR_STAND) rec.push(...(e.standArmor ?? [0, 0, 0, 0])); // Fase 6.5 (remate): su armadura
+          else if (e.type === ENT_ARMOR_STAND) rec.push(...(e.standArmor ?? [0, 0, 0, 0]), ...(e.standDye ?? [-1, -1, -1, -1])); // Fase 6.5 (remate): su armadura (y su color)
           else if (isVehicleType(e.type)) rec.push(e.variant ?? 0); // Fase 7 (transporte): madera de la barca
           else if (e.ai) rec.push(Math.round(e.health), e.variant ?? 0); // Fase 6: variante (pelaje o profesión)
           add.push(rec);

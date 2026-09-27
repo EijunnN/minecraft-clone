@@ -10,6 +10,7 @@ import {
 import { TOOLS, DIAMOND, COAL, COPPER_INGOT, EMERALD, AMETHYST_SHARD, GLOW_BERRIES, IRON_INGOT, ITEMS, STICK } from '../src/shared/items';
 import { matchRecipe } from '../src/shared/recipes';
 import { blockDrops } from '../src/shared/sim/drops';
+import { amethystBudAt } from '../src/shared/blocks';
 import { planPlacement } from '../src/shared/placement';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { blockIndex, MIN_Y } from '../src/shared/constants';
@@ -57,7 +58,8 @@ test('colocar: bayas bajo el techo y espeleotemas arriba o abajo', () => {
   assert.equal(planPlacement(get, top, CAVE_VINES, 0), null, 'no encima del bloque');
   assert.deepEqual(planPlacement(get, top, POINTED_DRIPSTONE, 0), [[0, 11, 0, stateOf(POINTED_DRIPSTONE, { dir: 0, part: 0 })]]);
   assert.deepEqual(planPlacement(get, under, POINTED_DRIPSTONE, 0), [[0, 9, 0, stateOf(POINTED_DRIPSTONE, { dir: 1, part: 0 })]]);
-  assert.equal(planPlacement(get, under, AMETHYST_BUD, 0), null, 'los brotes de amatista van en el suelo');
+  // AmethystClusterBlock: en cualquier cara; bajo el techo, colgando (hacia abajo).
+  assert.deepEqual(planPlacement(get, under, AMETHYST_BUD, 0), [[0, 9, 0, amethystBudAt(0, 0)]], 'los brotes de amatista cuelgan del techo');
 });
 
 test('generación: pizarra profunda, menas, cuevas frondosas y de goteo, acuíferos y geodas', () => {

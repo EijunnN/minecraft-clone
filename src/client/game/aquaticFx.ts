@@ -34,6 +34,11 @@ export function aquaticFx(g: Game, kind: string, p: [number, number, number]): b
     case 'tadpole_grow':
       g.audio.playPlace('grass', p);
       return true;
+    // La rana saca la lengua y se come un cubo pequeño.
+    case 'frog_tongue':
+    case 'frog_eat':
+      g.audio.playEquipSfx(kind, p);
+      return true;
   }
   return false;
 }

@@ -3,6 +3,8 @@
 // envenena, delfines que respiran en la superficie y siguen a los jugadores, tortugas que vuelven a
 // su playa a poner huevos, ajolotes que cazan peces, ranas que saltan, renacuajos que crecen a rana,
 // cubos con criatura y la aparición de todas ellas según el bioma.
+import { MOB_SLIME_SMALL } from '../../mobs'; // lo que caza la rana
+import { MOB_MAGMA_CUBE_SMALL } from '../../netherMobs';
 import {
   MOBS, MOB_SQUID, MOB_COD, MOB_SALMON, MOB_TROPICAL_FISH, MOB_PUFFERFISH, MOB_DOLPHIN, MOB_TURTLE, MOB_AXOLOTL, MOB_FROG,
   MOB_TADPOLE, MOB_GLOW_SQUID, MOB_BUCKETS, mobInBucket, isFish, isWaterAmbient,
@@ -16,7 +18,7 @@ import { EF_ACTION, EF_ANGRY } from '../../protocol';
 import { EFFECT_POISON } from '../../effects';
 import { EFFECT_DOLPHINS_GRACE, DOLPHIN_GRACE_RANGE, DOLPHIN_GRACE_SECONDS } from '../../effects'; // Fase 7 (efectos)
 import { MIN_Y } from '../../constants';
-import { moveBody } from '../physics';
+import { moveBody, lineOfSight } from '../physics';
 import { GRAVITY, GROW_SECONDS, TAU, lerpAngle, type PlayerView, type InteractResult, type Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -33,6 +35,10 @@ const TURTLE_LAY_MIN = 900, TURTLE_LAY_RAND = 900, TURTLE_TRIP = 180;
 const AXOLOTL_REST = 20;
 
 interface AquaState {
+  /** Rana: el cubo que caza, cuánto lleva cazándolo y cuánto lleva la lengua fuera (s). */
+  frogPrey?: number;
+  huntTime?: number;
+  tongue?: number;
   /** Segundos que le quedan fuera del agua antes de ahogarse o secarse. */
   air: number;
   /** Delfín: aire bajo el agua. */
@@ -593,6 +599,7 @@ export class AquaticLife {
   private frog(e: Entity, st: AquaState, dt: number): void {
     const ai = e.ai!;
     const def = MOBS[e.type];
+    if (this.frogHunt(e, st, dt)) return;
     if (e.inWater) {
       if (ai.think <= 0) {
         ai.think = 2 + this.m.rand() * 3;
@@ -633,6 +640,78 @@ export class AquaticLife {
     moveBody(e, this.m.w, dt, 0.6);
     e.yaw = e.bodyYaw;
     e.pitch = 0;
+  }
+
+  /**
+   * ShootTongue de Java: la rana va a por el cubo pequeño (slime o de magma de tamaño 1) más cercano a 10 bloques que
+   * vea; a 1,75 le lanza la lengua (lo atrae a 0,75 bloques por tick) y a los 6 ticks se lo come (10 de daño: lo
+   * mata; kill() pone lo que suelta). Si en 100 ticks no llega, lo deja. Devuelve true si está cazando (se mueve sola).
+   */
+  private frogHunt(e: Entity, st: AquaState, dt: number): boolean {
+    const m = this.m;
+    let prey = st.frogPrey !== undefined ? m.list.get(st.frogPrey) : undefined;
+    if (prey && (prey.dead || (st.huntTime ?? 0) > 5)) {
+      st.frogPrey = undefined;
+      prey = undefined;
+    }
+    if (!prey) {
+      st.tongue = 0;
+      if (m.rand() > dt * 2) return false;
+      let best: Entity | undefined, bd = 100;
+      for (const o of m.list.values()) {
+        if (o.dead || (o.type !== MOB_SLIME_SMALL && o.type !== MOB_MAGMA_CUBE_SMALL)) continue;
+        const d = (o.x - e.x) ** 2 + (o.y - e.y) ** 2 + (o.z - e.z) ** 2;
+        if (d < bd && lineOfSight(m.w, e.x, e.y + 0.4, e.z, o.x, o.y + 0.3, o.z)) {
+          bd = d;
+          best = o;
+        }
+      }
+      if (!best) return false;
+      prey = best;
+      st.frogPrey = best.id;
+      st.huntTime = 0;
+      st.tongue = 0;
+    }
+    st.huntTime = (st.huntTime ?? 0) + dt;
+    const dx = prey.x - e.x, dz = prey.z - e.z;
+    const d = Math.hypot(dx, prey.y - e.y, dz);
+    e.bodyYaw = e.yaw = Math.atan2(-dx, -dz);
+    if ((st.tongue ?? 0) > 0) {
+      // Lengua fuera: la presa viene hacia la boca y, a los 6 ticks, se la come.
+      st.tongue! += dt;
+      e.flags |= EF_ACTION;
+      const k = 15 / (d || 1);
+      prey.vx = -dx * k;
+      prey.vz = -dz * k;
+      prey.vy = -(prey.y - e.y) * k;
+      if (st.tongue! >= 0.3) {
+        m.host.fx('frog_eat', e.x, e.y + 0.3, e.z);
+        m.damage(prey, 10, e.x, e.z, e.id, 0);
+        if (prey.dead) m.remove(prey.id);
+        st.frogPrey = undefined;
+        st.tongue = 0;
+      }
+    } else if (d < 1.75) {
+      st.tongue = dt;
+      m.host.fx('frog_tongue', e.x, e.y + 0.3, e.z);
+    } else if (e.onGround) {
+      // Hacia ella, a saltitos (o nadando, que lo hace frog()).
+      if (e.inWater) return false;
+      st.hop -= dt;
+      e.vx *= Math.max(0, 1 - dt * 10);
+      e.vz *= Math.max(0, 1 - dt * 10);
+      if (st.hop <= 0) {
+        st.hop = 0.5;
+        const l = Math.hypot(dx, dz) || 1;
+        e.vy = 5;
+        e.vx = (dx / l) * MOBS[e.type].run;
+        e.vz = (dz / l) * MOBS[e.type].run;
+        m.host.fx('frog_hop', e.x, e.y, e.z);
+      }
+    }
+    e.vy -= GRAVITY * dt;
+    moveBody(e, m.w, dt, 0.6);
+    return true;
   }
 
   /** Camina en tierra hacia `goal` (o se queda quieta), saltando los escalones. */
@@ -680,7 +759,7 @@ export class AquaticLife {
 
   /** El renacuajo se convierte en rana. */
   private growUp(e: Entity): void {
-    const frog = this.m.spawnMob(MOB_FROG, e.x, e.y, e.z);
+    const frog = this.m.spawnMob(MOB_FROG, e.x, e.y, e.z); // (con la variedad del bioma donde crece)
     if (frog) {
       frog.yaw = frog.bodyYaw = e.bodyYaw;
       frog.health = frog.maxHealth;

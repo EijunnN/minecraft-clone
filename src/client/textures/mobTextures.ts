@@ -12,6 +12,8 @@
 // trata alpha 128–250 como brillo propio). Las zonas del atlas sin uso quedan
 // transparentes (alpha 0).
 
+import { frogPainter } from './aquaticMobTextures'; // las variedades de rana
+import { MOB_FROG } from '../../shared/mobs';
 import {
   MOBS, boxFaces, MOB_PIG, MOB_COW, MOB_SHEEP, MOB_CHICKEN, MOB_ZOMBIE, MOB_HUSK, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_SPIDER, MOB_ENDERMAN, MOB_SQUID,
   MOB_FOX, MOB_GOAT, MOB_POLAR_BEAR, MOB_RABBIT, MOB_WOLF,
@@ -1485,6 +1487,7 @@ function camel(t: Texel): Paint {
 const VARIANT_PAINTERS: Record<number, (variant: number) => Painter> = {
   [MOB_HORSE]: horsePainter,
   [MOB_LLAMA]: (v) => (t) => llama(t, LLAMA_COATS[((v % LLAMA_COATS.length) + LLAMA_COATS.length) % LLAMA_COATS.length]),
+  [MOB_FROG]: (v) => frogPainter(v) as Painter, // las tres variedades de rana
 };
 
 // ---------------------------------------------------------------------------

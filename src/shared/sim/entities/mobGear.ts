@@ -7,6 +7,7 @@
 //   pata de conejo; la escama de la tortuga al crecer.
 // - Cabras: de vez en cuando embisten a quien tengan cerca; si chocan contra piedra, troncos, cobre
 //   o menas, se les cae un cuerno (tienen dos).
+import { isDyeable, sanitizeDyeColor } from '../../dyedColor'; // la armadura teñida
 import { shotVelocity, mobUncertainty } from './aim'; // cómo apuntan (Projectile.shoot)
 import { MOBS, MOB_HORSE, MOB_WOLF, MOB_DROWNED, MOB_PILLAGER, MOB_RABBIT, MOB_TURTLE, MOB_GOAT } from '../../mobs';
 import {
@@ -96,20 +97,22 @@ export class MobGear {
    * Usar un objeto sobre una criatura: poner o quitar su armadura. null si no le toca a este sistema.
    * `dmg`: el desgaste de la pila de la mano (armadura para lobo); `sneaking`: agachado (quitar la del caballo).
    */
-  interact(e: Entity, item: number, who: string, dmg = 0, sneaking = false): InteractResult | null {
+  interact(e: Entity, item: number, who: string, dmg = 0, sneaking = false, dye?: number): InteractResult | null {
     if (e.dead || !e.ai) return null;
     const baby = (e.growAge ?? 0) > 0;
     if (e.type === MOB_HORSE) {
       if (isHorseArmor(item)) {
         if (!e.tamed || baby || e.gear) return { ok: false };
         e.gear = item;
+        e.gearDye = item === HORSE_ARMOR.leather ? dye : undefined;
         this.m.host.fx('horse_armor', e.x, e.y + 1, e.z);
         return { ok: true, take: 1 };
       }
       // Agachado con la mano vacía: se le quita la armadura.
       if (item === 0 && sneaking && e.gear && e.tamed) {
-        const give: ItemStack = { id: e.gear, count: 1 };
+        const give = this.gearStack(e);
         e.gear = undefined;
+        e.gearDye = undefined;
         this.m.host.fx('horse_armor', e.x, e.y + 1, e.z);
         return { ok: true, give };
       }
@@ -121,13 +124,15 @@ export class MobGear {
         if (!mine || baby || e.gear) return { ok: false };
         e.gear = WOLF_ARMOR;
         e.gearDmg = Math.max(0, Math.min(WOLF_ARMOR_DURABILITY - 1, dmg | 0));
+        e.gearDye = dye;
         this.m.host.fx('wolf_armor', e.x, e.y + 0.6, e.z);
         return { ok: true, take: 1 };
       }
       if (item === SHEARS && e.gear === WOLF_ARMOR && mine) {
-        const give: ItemStack = { id: WOLF_ARMOR, count: 1, ...(e.gearDmg ? { dmg: e.gearDmg } : {}) };
+        const give = this.gearStack(e);
         e.gear = undefined;
         e.gearDmg = undefined;
+        e.gearDye = undefined;
         this.m.host.fx('wolf_armor', e.x, e.y + 0.6, e.z);
         return { ok: true, give, wear: 1 };
       }
@@ -149,6 +154,7 @@ export class MobGear {
       if (e.gearDmg >= WOLF_ARMOR_DURABILITY) {
         e.gear = undefined;
         e.gearDmg = undefined;
+        e.gearDye = undefined;
         this.m.host.fx('wolf_armor_break', e.x, e.y + 0.6, e.z);
       }
       return 0;
@@ -163,7 +169,7 @@ export class MobGear {
     const out: ItemStack[] = [];
     const r = () => this.m.rand();
     if (e.gear && (isHorseArmor(e.gear) || e.gear === WOLF_ARMOR)) {
-      out.push({ id: e.gear, count: 1, ...(e.gearDmg ? { dmg: e.gearDmg } : {}) });
+      out.push(this.gearStack(e));
     } else if (e.type === MOB_DROWNED) {
       if (e.gear === NAUTILUS_SHELL) out.push({ id: NAUTILUS_SHELL, count: 1 });
       if (e.gear === TRIDENT && r() < DROWNED_TRIDENT_DROP) out.push(this.worn(TRIDENT));
@@ -172,7 +178,16 @@ export class MobGear {
     if (adult && e.type === MOB_PILLAGER && r() < PILLAGER_CROSSBOW_DROP) out.push(this.worn(CROSSBOW));
     if (adult && e.type === MOB_RABBIT && r() < RABBIT_FOOT_DROP) out.push({ id: RABBIT_FOOT, count: 1 });
     e.gear = undefined;
+    e.gearDye = undefined;
     if (out.length) this.m.dropStacks(out, e.x, e.y + 0.3, e.z);
+  }
+
+  /** La pila de la armadura que lleva puesta (con su desgaste y su color). */
+  private gearStack(e: Entity): ItemStack {
+    const s: ItemStack = { id: e.gear!, count: 1 };
+    if (e.gearDmg) s.dmg = e.gearDmg;
+    if (e.gearDye !== undefined) s.data = { dc: e.gearDye };
+    return s;
   }
 
   /**
@@ -190,19 +205,20 @@ export class MobGear {
   // ------------------------------------------------------------------ guardado
 
   /** Lo que se guarda con el animal (armadura puesta), o null. */
-  save(e: Entity): { gear: number; gd?: number } | null {
+  save(e: Entity): { gear: number; gd?: number; gc?: number } | null {
     if (!e.gear || !(isHorseArmor(e.gear) || e.gear === WOLF_ARMOR)) return null;
-    return e.gearDmg ? { gear: e.gear, gd: e.gearDmg } : { gear: e.gear };
+    return { gear: e.gear, ...(e.gearDmg ? { gd: e.gearDmg } : {}), ...(e.gearDye !== undefined ? { gc: e.gearDye } : {}) };
   }
 
   restore(e: Entity, row: unknown[]): void {
-    const g = row.find((c) => !!c && typeof c === 'object' && !Array.isArray(c) && 'gear' in (c as object)) as { gear?: unknown; gd?: unknown } | undefined;
+    const g = row.find((c) => !!c && typeof c === 'object' && !Array.isArray(c) && 'gear' in (c as object)) as { gear?: unknown; gd?: unknown; gc?: unknown } | undefined;
     if (!g) return;
     const id = Number(g.gear);
     if ((e.type === MOB_HORSE && isHorseArmor(id)) || (e.type === MOB_WOLF && id === WOLF_ARMOR)) {
       e.gear = id;
       const d = Number(g.gd);
       if (id === WOLF_ARMOR && Number.isInteger(d) && d > 0) e.gearDmg = Math.min(WOLF_ARMOR_DURABILITY - 1, d);
+      if (isDyeable(id)) e.gearDye = sanitizeDyeColor(g.gc);
     }
   }
 

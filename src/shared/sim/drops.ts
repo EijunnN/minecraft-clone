@@ -1,4 +1,5 @@
 // Qué suelta cada bloque al romperse en supervivencia (según la herramienta usada).
+import { amethystBudInfo } from '../blocks'; // los brotes de amatista
 import { NETHER_WART_CROP, NETHER_WART_MAX_AGE, isNetherWartCrop } from '../blocks'; // Fase 8.4
 import { isEnderChest, OBSIDIAN } from '../blocks'; // Fase 8.6
 import { NETHER_WART, CHORUS_FRUIT } from '../items';
@@ -6,7 +7,7 @@ import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, isLeaves, isVine, woodOf, MYCELIUM, PACKED_ICE,
   RED_MUSHROOM_BLOCK, BROWN_MUSHROOM_BLOCK, RED_MUSHROOM, BROWN_MUSHROOM, DEEPSLATE, COBBLED_DEEPSLATE, SURFACE_ORE,
-  EMERALD_ORE, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, COBWEB, MOB_SPAWNER, SNOW_LAYER, SNOW_BLOCK, isSnowLayer,
+  EMERALD_ORE, BUDDING_AMETHYST, CAVE_VINES, COBWEB, MOB_SPAWNER, SNOW_LAYER, SNOW_BLOCK, isSnowLayer,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
   PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE, SOUL_CAMPFIRE, SOUL_SOIL, CHORUS_PLANT, CHORUS_FLOWER, isChorusFlower,
@@ -100,8 +101,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   // La amatista con brotes no se puede recoger (como sin toque de seda).
   if (block === BUDDING_AMETHYST) return [];
   // Brotes de amatista: sólo el racimo suelta fragmentos (4 con pico, 2 a mano).
-  if (familyBase(block) === AMETHYST_BUD) {
-    if (block - AMETHYST_BUD < 3) return [];
+  const bud = amethystBudInfo(block); // (en cualquiera de las seis caras)
+  if (bud) {
+    if (bud.stage < 3) return [];
     return one(AMETHYST_SHARD, tool?.kind === 'pickaxe' ? 4 : 2);
   }
   if (familyBase(block) === CAVE_VINES) return block === CAVE_VINES + 1 ? one(GLOW_BERRIES) : [];

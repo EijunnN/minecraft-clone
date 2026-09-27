@@ -6,6 +6,7 @@ import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // 
 import { FILLED_MAP } from '../../shared/items';
 import { STRUCTURE_MAPS, structureMapArea } from '../../shared/structureMapData'; // Fase 7.5 (mansión)
 import './itemTooltip.css';
+import { dyedColor } from '../../shared/dyedColor'; // el cuero teñido
 import { ITEMS, itemName, type ItemStack } from '../../shared/items';
 import { EFFECTS, effectLevel } from '../../shared/effects';
 import { attackDamage, attackSpeed } from '../../shared/combat';
@@ -43,6 +44,7 @@ export function itemTooltipHtml(s: ItemStack): string {
   for (const [id, lvl] of sortedForTooltip([...enchantsOf(s), ...storedOf(s)])) {
     lines.push(`<span class="${ENCHANTS[id]?.curse ? 'tt-bad' : 'tt-dim'}">${esc(enchantName(id, lvl))}</span>`);
   }
+  if (dyedColor(s) !== undefined) lines.push('<span class="tt-dim"><i>Teñido</i></span>'); // DyedItemColor (tras los encantamientos)
   if (s.id === EXPERIENCE_BOTTLE) lines.push('<span class="tt-dim">Clic derecho: lanzarla (suelta experiencia)</span>');
   const tool = def?.tool;
   if (tool && WEAPONS.has(tool.kind)) {

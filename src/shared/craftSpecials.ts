@@ -40,6 +40,26 @@ export function shulkerDyeCraft(grid: readonly (ItemStack | null)[]): ItemStack 
 }
 const DYE_OF = new Map<number, DyeColor>(DYE_COLORS.map((c) => [DYES[c], c]));
 
+/**
+ * BannerDuplicateRecipe: un estandarte con dibujos y otro liso del mismo color dan una copia; el original se queda en
+ * su hueco (`keep`). null si no es esta receta.
+ */
+export function bannerCopyCraft(grid: readonly (ItemStack | null)[]): { out: ItemStack; keep: number } | null {
+  let patterned = -1, blank = -1;
+  for (let i = 0; i < grid.length; i++) {
+    const s = grid[i];
+    if (!s) continue;
+    if (!isBannerItem(s.id)) return null;
+    const layers = s.data?.layers?.length ?? 0;
+    if (layers > 0 && patterned < 0) patterned = i;
+    else if (layers === 0 && blank < 0) blank = i;
+    else return null;
+  }
+  if (patterned < 0 || blank < 0 || grid[patterned]!.id !== grid[blank]!.id) return null;
+  const src = grid[patterned]!;
+  return { out: { ...src, count: 1, data: { ...src.data, layers: src.data!.layers!.map((l): [number, number] => [l[0], l[1]]) } }, keep: patterned };
+}
+
 /** Escudo decorado con un estandarte (null si no es esta receta). */
 export function shieldDecorCraft(grid: readonly (ItemStack | null)[]): ItemStack | null {
   const items = filled(grid);

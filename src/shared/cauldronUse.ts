@@ -8,6 +8,7 @@ import { BUCKET, WATER_BUCKET, LAVA_BUCKET, POWDER_SNOW_BUCKET, type ItemStack }
 import { bannerLayers } from './bannerPatterns';
 import { GLASS_BOTTLE, POTION } from './items'; // Fase 7 (pociones)
 import { potionStack, potionType, PT_WATER } from './potions';
+import { washDye, isDyeable } from './dyedColor'; // correcciones: lavar el cuero teñido
 
 const BANNER_ITEMS = new Set<number>(Object.values(BANNERS));
 
@@ -63,6 +64,11 @@ export function cauldronUse(id: number, held: ItemStack | null): CauldronResult 
   if (isShulkerBox(item) && shulkerBoxColor(item) !== '' && f.kind === CAULDRON_WATER && f.level > 0) {
     return { block: cauldronOf(CAULDRON_WATER, f.level - 1), held: { ...held, id: SHULKER_BOXES[''], count: 1 }, sound: 'wash' };
   }
+  // CauldronInteraction.DYED_ITEM: el objeto teñido (cuero, armadura para lobo) pierde el color y baja un nivel.
+  if (isDyeable(item) && f.kind === CAULDRON_WATER && f.level > 0) {
+    const washed = washDye(held);
+    if (washed) return { block: cauldronOf(CAULDRON_WATER, f.level - 1), held: washed, sound: 'wash' };
+  }
   return null;
 }
 
@@ -71,6 +77,7 @@ export function cauldronUseServer(id: number, item: number): number {
   const f = cauldronFill(id);
   if (!f) return -1;
   if (BANNER_ITEMS.has(item)) return f.kind === CAULDRON_WATER && f.level > 0 ? cauldronOf(CAULDRON_WATER, f.level - 1) : -1;
+  if (isDyeable(item)) return f.kind === CAULDRON_WATER && f.level > 0 ? cauldronOf(CAULDRON_WATER, f.level - 1) : -1; // (el cliente sabe si está teñido)
   if (isShulkerBox(item)) return shulkerBoxColor(item) !== '' && f.kind === CAULDRON_WATER && f.level > 0 ? cauldronOf(CAULDRON_WATER, f.level - 1) : -1; // Fase 8.6
   return cauldronUse(id, { id: item, count: 1 })?.block ?? -1;
 }

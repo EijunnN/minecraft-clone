@@ -398,7 +398,7 @@ export class MobRenderer {
         gl.drawElements(gl.TRIANGLES, aura.count, gl.UNSIGNED_SHORT, 0);
       }
       // Fase 6.5 (equipo): la armadura del caballo o del lobo, encima y con la misma pose.
-      const gear = e.gear ? this.gearSkin(def, e.gear) : null;
+      const gear = e.gear ? this.gearSkin(def, e.gear, e.gearDye) : null;
       if (gear) {
         const gm = this.mesh(def, GEAR_INFLATE);
         p.tex2D('uSkin', gear);
@@ -449,10 +449,10 @@ export class MobRenderer {
   }
 
   /** Fase 6.5 (equipo): textura de la armadura `gear` de una criatura (null si no le va). */
-  private gearSkin(def: MobDef, gear: number): WebGLTexture | null {
-    const key = `${def.id}:${gear}`;
+  private gearSkin(def: MobDef, gear: number, dye?: number): WebGLTexture | null {
+    const key = `${def.id}:${gear}:${dye ?? -1}`;
     if (this.gearSkins.has(key)) return this.gearSkins.get(key)!;
-    const src = gearTexture(def, gear);
+    const src = gearTexture(def, gear, dye);
     let t: WebGLTexture | null = null;
     if (src) {
       const gl = this.gl;

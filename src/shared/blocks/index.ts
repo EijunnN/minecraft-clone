@@ -96,7 +96,7 @@ export const INVENTORY_ORDER: readonly number[] = [
   // Fase 5: subsuelo.
   DEEPSLATE, COBBLED_DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE,
   ...Object.values(DEEPSLATE_ORE), EMERALD_BLOCK, MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, AMETHYST_BLOCK,
-  BUDDING_AMETHYST, AMETHYST_BUD + 3, TINTED_GLASS,
+  BUDDING_AMETHYST, AMETHYST_BUD, AMETHYST_BUD + 1, AMETHYST_BUD + 2, AMETHYST_BUD + 3, TINTED_GLASS,
   // Fase 5: estructuras.
   MOB_SPAWNER, COBWEB, CHISELED_SANDSTONE, CUT_SANDSTONE, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, NETHERRACK, CRYING_OBSIDIAN,
   SNOW_LAYER,
@@ -237,3 +237,9 @@ export * from './netherGoodsBlocks';
 import { END_INVENTORY } from './endBlocks';
 export * from './endBlocks';
 (INVENTORY_ORDER as number[]).push(...END_INVENTORY);
+// Correcciones: las luces de rana (ids nuevos, al final).
+import { FROG_INVENTORY } from './frogBlocks';
+export * from './frogBlocks';
+(INVENTORY_ORDER as number[]).push(...FROG_INVENTORY);
+// Correcciones: los brotes de amatista en las seis caras (ids nuevos, al final).
+export * from './amethystBuds';

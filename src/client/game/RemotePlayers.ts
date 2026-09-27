@@ -39,6 +39,13 @@ function armorFrom(a: unknown): number[] {
   return [0, 1, 2, 3].map((i) => (Number.isInteger(src[i]) && src[i] > 0 ? src[i] : 0));
 }
 
+/** Color de cada pieza de armadura teñida que llega de la red (−1 sin teñir); undefined si ninguna lo está. */
+function armorDyeFrom(a: unknown): number[] | undefined {
+  if (!Array.isArray(a)) return undefined;
+  const out = [0, 1, 2, 3].map((i) => (Number.isInteger(a[i]) && a[i] >= 0 && a[i] <= 0xffffff ? (a[i] as number) : -1));
+  return out.some((c) => c >= 0) ? out : undefined;
+}
+
 /** Id de objeto que llega de la red (0 = nada). */
 function itemFrom(v: unknown): number {
   return Number.isInteger(v) && (v as number) > 0 ? (v as number) : 0;
@@ -78,6 +85,7 @@ export class RemotePlayer {
       glint: (Number(info.g) | 0) & 0x3f, // Fase 7 (encantamientos)
       heldDmg: potionFrom(info.hp), offhandDmg: potionFrom(info.op), // Fase 7 (remate)
       heldDecor: info.hs ?? null, offhandDecor: info.os ?? null, // Fase 7.6: escudos decorados
+      armorDye: armorDyeFrom(info.ac), // el cuero teñido
     };
     this.lastX = info.p[0];
     this.lastY = info.p[1];
@@ -86,7 +94,7 @@ export class RemotePlayer {
 
   push(
     p: [number, number, number], r: [number, number], s: number, a?: number[], h?: number, o?: number, g?: number, hp?: number, op?: number,
-    hs?: string, os?: string,
+    hs?: string, os?: string, ac?: number[],
   ): void {
     if (!Array.isArray(p) || !Array.isArray(r) || ![p[0], p[1], p[2], r[0], r[1]].every(Number.isFinite)) return;
     this.view.glint = (Number(g) | 0) & 0x3f; // Fase 7 (encantamientos): cada 'pos' trae el brillo (sin él, nada)
@@ -95,6 +103,7 @@ export class RemotePlayer {
     this.view.offhandDmg = potionFrom(op);
     this.view.heldDecor = typeof hs === 'string' ? hs : null; // Fase 7.6
     this.view.offhandDecor = typeof os === 'string' ? os : null;
+    this.view.armorDye = armorDyeFrom(ac); // (cada 'pos' lo trae si alguna pieza está teñida)
     // La armadura y lo que lleva en las manos se cambian al instante (no se interpolan).
     if (a !== undefined) this.view.armor = armorFrom(a);
     if (h !== undefined) this.view.held = itemFrom(h);

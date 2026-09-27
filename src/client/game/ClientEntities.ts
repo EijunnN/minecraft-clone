@@ -63,6 +63,10 @@ export interface ClientEntity {
   armor?: number[];
   /** Fase 6.5 (equipo): armadura puesta (caballo, lobo) u objeto en la mano (tridente del ahogado). */
   gear?: number;
+  /** Color del cuero teñido: el objeto en el suelo, cada pieza del soporte (−1 sin teñir) y la armadura puesta. */
+  dye?: number;
+  armorDye?: number[];
+  gearDye?: number;
   /** Fase 7 (pociones): desgaste o tipo de la pila (objetos y pociones lanzadas), tipo de la flecha con efecto (−1 normal) y nube de efecto (color 0xRRGGBB y radio). */
   dmg?: number;
   potion?: number;
@@ -71,6 +75,11 @@ export interface ClientEntity {
 }
 
 const DELAY = 0.11;
+
+/** Color que llega de la red (undefined si no vale). */
+function dyeFrom(v: unknown): number | undefined {
+  return Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 0xffffff ? (v as number) : undefined;
+}
 
 const wrap = (a: number) => {
   let d = a % (Math.PI * 2);
@@ -88,7 +97,7 @@ export class ClientEntities {
 
   apply(msg: { a?: EntAdd[]; u?: EntUpd[]; rm?: (number | [number, string])[]; ex?: EntExtra[] }, now: number): void {
     for (const a of msg.a ?? []) {
-      const [id, type, x, y, z, yaw, body, pitch, flags, e1, e2, e3] = a;
+      const [id, type, x, y, z, yaw, body, pitch, flags, e1, e2, e3, e4] = a;
       const prev = this.list.get(id);
       if (prev && !prev.gone) {
         this.push(prev, now, x, y, z, yaw, body, pitch, flags);
@@ -104,7 +113,11 @@ export class ClientEntities {
         actionT: flags & EF_ACTION ? 0 : -1,
         collector: null, collectT: 0, gone: false, seed: (id * 2654435761) % 1000 / 1000, lastX: x, lastZ: z,
       };
-      if (type === ENT_ARMOR_STAND) e.armor = [0, 1, 2, 3].map((k) => Number(a[9 + k]) || 0); // Fase 6.5 (remate)
+      if (type === ENT_ARMOR_STAND) {
+        e.armor = [0, 1, 2, 3].map((k) => Number(a[9 + k]) || 0); // Fase 6.5 (remate)
+        e.armorDye = [0, 1, 2, 3].map((k) => dyeFrom(a[13 + k]) ?? -1); // (y el color de cada pieza teñida)
+      }
+      if (type === ENT_ITEM) e.dye = dyeFrom(e4); // el cuero teñido
       // Fase 7 (pociones): tipo de la poción lanzada, de la flecha con efecto y color y radio de la nube.
       if ((type === ENT_ITEM || type === ENT_THROWN || type === ENT_DISPLAY) && Number.isInteger(e3) && e3 > 0) e.dmg = e3;
       else if (type === ENT_ARROW && Number.isInteger(e1)) e.potion = e1;
@@ -124,10 +137,11 @@ export class ClientEntities {
       else if (e.type === ENT_EFFECT_CLOUD && u.length > 8) e.cloudRadius = Math.max(0, Math.min(8, u[8] / 100)); // Fase 7 (pociones)
     }
     // Fase 6.5 (remate): nombre y correa.
-    for (const [id, name, leash, gear] of msg.ex ?? []) {
+    for (const [id, name, leash, gear, gearDye] of msg.ex ?? []) {
       const e = this.list.get(id);
       if (!e) continue;
       e.gear = Number.isInteger(gear) ? gear : 0; // Fase 6.5 (equipo)
+      e.gearDye = dyeFrom(gearDye); // (su color, si está teñida)
       e.name = typeof name === 'string' ? name.slice(0, 32) : '';
       e.leash = typeof leash === 'string' || (Array.isArray(leash) && leash.length === 3) ? leash : 0;
     }

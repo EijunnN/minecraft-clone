@@ -2,6 +2,7 @@
 // (en los metadatos del mundo) y retira. Se ponen con 'stand' sobre un bloque; clic derecho con una pieza
 // de armadura la viste (o la cambia por la que tenía) y con la mano vacía se quita la de más arriba; un
 // golpe lo tira (suelta el soporte y su armadura). Si le quitan el suelo, cae hasta el siguiente.
+import { dyedColor } from '../../dyedColor';
 import { BLOCK_SOLID, BLOCK_COLLIDE } from '../../blocks';
 import { ITEMS, ARMOR_STAND, type ItemStack } from '../../items';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
@@ -60,6 +61,7 @@ export class ArmorStands {
     e.bodyYaw = st.yaw;
     e.standArmor = st.armor.map((a) => a?.id ?? 0);
     e.standGlint = st.armor.reduce((m, a, i) => (hasGlint(a) ? m | (1 << i) : m), 0); // Fase 7 (encantamientos)
+    e.standDye = st.armor.map((a) => dyedColor(a) ?? -1); // el cuero teñido
     st.ent = e.id;
     this.byEnt.set(e.id, st);
     const k = `${Math.floor(st.x)},${Math.floor(st.z)}`;
@@ -118,8 +120,10 @@ export class ArmorStands {
     if (piece) {
       const old = st.armor[piece.slot];
       // La pieza de la mano (con su desgaste) y, si había otra, a la mano.
+      // La pila entera (encantamientos, color) si el cliente la manda y es la misma pieza; si no, sólo el desgaste.
+      const full = msg.st && Number(msg.st.id) === item ? sanitizeStack({ ...msg.st, count: 1 }) : null;
       const dmg = Math.max(0, Math.min(piece.durability - 1, Math.floor(Number(msg.d) || 0)));
-      st.armor[piece.slot] = dmg ? { id: item, count: 1, dmg } : { id: item, count: 1 };
+      st.armor[piece.slot] = full ?? (dmg ? { id: item, count: 1, dmg } : { id: item, count: 1 });
       this.spawn(st);
       this.ctx.fx('stand_equip', st.x, st.y + 1, st.z);
       return old ? { ok: true, take: 1, give: old } : { ok: true, take: 1 };

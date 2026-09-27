@@ -1,6 +1,9 @@
 // Aldeanos (fase 6): profesiones, bloque de trabajo de cada una, niveles y ofertas de comercio.
 // Lo usan el servidor (autoridad del comercio), el cliente (pantalla de comercio y texturas) y las
 // pruebas. Todo es determinista: las ofertas salen de la profesión, el nivel y la semilla del aldeano.
+import { RABBIT_HIDE, TURTLE_SCUTE, SADDLE } from './items'; // el peletero de 26.3
+import { DYE_COLORS } from './blocks';
+import { applyDyes } from './dyedColor';
 import {
   EMERALD, WHEAT, POTATO, CARROT, BEETROOT, BREAD, APPLE, PUMPKIN_PIE, GOLDEN_APPLE, RAW_CHICKEN, RAW_PORKCHOP,
   RAW_MUTTON, RAW_BEEF, COOKED_PORKCHOP, COOKED_CHICKEN, COOKED_MUTTON, STEAK, COAL, IRON_INGOT, LAVA_BUCKET, DIAMOND,
@@ -32,6 +35,8 @@ export interface TradeOffer {
    * busca desde el aldeano; si no hay ninguna, la oferta no sale).
    */
   explorer?: string;
+  /** Se tiñe al crear la oferta (set_random_dyes: 1 tinte más una binomial(2; 0,75), cada uno al azar). */
+  dye?: true;
 }
 
 export interface Profession {
@@ -49,6 +54,8 @@ export interface Profession {
 const buy = (id: number, n: number, em = 1, max = 16, xp = 2): TradeOffer => ({ cost: [id, n], result: [EMERALD, em], max, xp });
 /** Venta: el aldeano da `n` objetos por `em` esmeraldas. */
 const sell = (id: number, n: number, em: number, max = 12, xp = 1): TradeOffer => ({ cost: [EMERALD, em], result: [id, n], max, xp });
+/** Venta de una pieza teñida al azar. */
+const sellDyed = (id: number, em: number, xp = 1): TradeOffer => ({ ...sell(id, 1, em, 12, xp), dye: true });
 
 export const PROF_NONE = 0;
 export const PROF_FARMER = 1;
@@ -168,11 +175,12 @@ export const PROFESSIONS: readonly Profession[] = [
   },
   {
     id: PROF_LEATHERWORKER, key: 'leatherworker', name: 'Peletero', block: CAULDRON, pool: [
-      [buy(LEATHER, 6), sell(ARMOR.leather.leggings, 1, 3, 12), sell(ARMOR.leather.chestplate, 1, 7, 12)],
-      [buy(FLINT, 26, 1, 12, 10), sell(ARMOR.leather.helmet, 1, 5, 12, 5), sell(ARMOR.leather.boots, 1, 4, 12, 5)],
-      [buy(STRING, 14, 1, 12, 20)],
-      [buy(RAW_BEEF, 10, 1, 12, 30)],
-      [sell(LEATHER, 6, 2, 12, 30)],
+      // villager_trade/leatherworker de 26.3: la armadura de cuero, teñida al azar.
+      [buy(LEATHER, 6), sellDyed(ARMOR.leather.leggings, 3), sellDyed(ARMOR.leather.chestplate, 7)],
+      [buy(FLINT, 26, 1, 12, 10), sellDyed(ARMOR.leather.helmet, 5, 5), sellDyed(ARMOR.leather.boots, 4, 5)],
+      [buy(RABBIT_HIDE, 9, 1, 12, 20), sellDyed(ARMOR.leather.chestplate, 7)],
+      [buy(TURTLE_SCUTE, 4, 1, 12, 30), sellDyed(HORSE_ARMOR.leather, 6, 15)],
+      [sell(SADDLE, 1, 6, 12, 30), sellDyed(ARMOR.leather.helmet, 5, 5)],
     ],
   },
 ];
@@ -253,7 +261,7 @@ export function offersFor(prof: number, level: number, seed: number): Offer[] {
   for (let lvl = 0; lvl < Math.min(level, p.pool.length); lvl++) {
     (EXPLORER_TRADES[prof]?.[lvl] ?? []).forEach((o, i) => out.push({ ...o, key: lvl * 16 + 12 + i }));
   }
-  return out.map((o) => (o.enchant ? enchantOffer(o, seed) : o)); // Fase 7 (encantamientos)
+  return out.map((o) => (o.enchant ? enchantOffer(o, seed) : o.dye ? dyeOffer(o, seed) : o)); // Fase 7 (encantamientos); el cuero teñido
 }
 
 /** Ofertas del comerciante ambulante (5, según su semilla). */
@@ -283,15 +291,13 @@ export function villagerTitle(prof: number, trader: boolean): string {
 }
 
 // Fase 6.5 (equipo): el armero vende cota de malla (aprendiz: grebas y botas; oficial: casco y peto),
-// el flechero, ballestas, y el peletero, la armadura de cuero para caballo.
+// y el flechero, ballestas (la armadura de cuero para caballo del peletero ya va en su nivel).
 import { CROSSBOW, HORSE_ARMOR } from './items';
 {
   const prof = (id: number) => PROFESSIONS.find((p) => p.id === id)!;
   prof(PROF_ARMORER).pool[0].push(sell(ARMOR.chainmail.leggings, 1, 3, 12, 1), sell(ARMOR.chainmail.boots, 1, 1, 12, 1));
   prof(PROF_ARMORER).pool[1].push(sell(ARMOR.chainmail.helmet, 1, 1, 12, 5), sell(ARMOR.chainmail.chestplate, 1, 4, 12, 5));
   prof(PROF_FLETCHER).pool[2].push(sell(CROSSBOW, 1, 3, 12, 10));
-  const leather = prof(PROF_LEATHERWORKER).pool;
-  if (leather[2]) leather[2].push(sell(HORSE_ARMOR.leather, 1, 6, 12, 15));
 }
 
 // Fase 7 (encantamientos): libros encantados del bibliotecario (uno por nivel, de novato a experto: un
@@ -356,6 +362,17 @@ function enchantOffer(o: Offer, seed: number): Offer {
   const { enchant: _e, ...rest } = o;
   void _e;
   return { ...rest, cost: [o.cost[0], price], result: [stack.id, 1], ...(stack.data ? { data: stack.data } : {}) };
+}
+
+/** La pieza teñida concreta de una oferta (siempre la misma para su semilla y la oferta). */
+function dyeOffer(o: Offer, seed: number): Offer {
+  const r = rng(seed ^ Math.imul(o.key + 1, 0x51ed270b));
+  const n = 1 + (r() < 0.75 ? 1 : 0) + (r() < 0.75 ? 1 : 0);
+  const dyes = Array.from({ length: n }, () => DYE_COLORS[Math.floor(r() * DYE_COLORS.length)]);
+  const stack = applyDyes({ id: o.result[0], count: 1 }, dyes);
+  const { dye: _d, ...rest } = o;
+  void _d;
+  return { ...rest, data: stack.data };
 }
 
 // ------------------------------------------------------------------ Fase 7.5 (mansión)

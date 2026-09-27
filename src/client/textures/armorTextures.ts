@@ -16,6 +16,7 @@
 // casco); 128..255 = opaco, y cuanto más alto más pulido (el shader de armaduras
 // lo usa para el brillo especular).
 
+import { tintRamp } from '../render/dyeArt'; // el cuero teñido
 import { boxUV } from '../render/PlayerSkin';
 import type { SuitMaterial as ArmorMaterial, ArmorSlot } from '../../shared/armor';
 
@@ -287,10 +288,10 @@ function chainHole(mat: ArmorMaterial, t: Texel): boolean {
 }
 
 /** Atlas de la armadura de un material. */
-export function generateArmorTexture(mat: ArmorMaterial): ArmorTexture {
+export function generateArmorTexture(mat: ArmorMaterial, dye?: number): ArmorTexture {
   const S = ARMOR_TEX_SIZE;
   const rgba = new Uint8Array(S * S * 4);
-  const ramp = RAMPS[mat];
+  const ramp = mat === 'leather' && dye !== undefined ? tintRamp(RAMPS.leather, dye) : RAMPS[mat]; // el cuero teñido
   const grain = GRAIN[mat];
   ARMOR_BOXES.forEach((box, bi) => {
     const { u, v, w, h, d } = box.layout;

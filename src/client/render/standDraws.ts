@@ -38,7 +38,7 @@ export function standArmorView(e: ClientEntity, light: [number, number]): Remote
   if (!e.armor?.some(Boolean)) return null;
   return {
     id: `stand${e.id}`, name: '', shirt: '', x: e.x, y: e.y, z: e.z, bodyYaw: e.yaw, headYaw: e.yaw, pitch: 0,
-    walkPhase: 0, walkAmount: 0, swing: 0, sneaking: false, light, armor: e.armor,
+    walkPhase: 0, walkAmount: 0, swing: 0, sneaking: false, light, armor: e.armor, armorDye: e.armorDye,
     glint: ((e.flags >> EF_GLINT_ARMOR_SHIFT) & 15) << 2, // Fase 7 (encantamientos)
   };
 }

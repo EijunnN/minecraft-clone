@@ -479,6 +479,8 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...['', 'white_', 'orange_', 'magenta_', 'light_blue_', 'yellow_', 'lime_', 'pink_', 'gray_', 'light_gray_', 'cyan_', 'purple_', 'blue_',
     'brown_', 'green_', 'red_', 'black_'].flatMap((c) => ['top', 'lid', 'base', 'bottom'].map((p): TextureDef => ({ name: `${c}shulker_box_${p}` }))),
   ...['ender_chest_side', 'ender_chest_top', 'ender_chest_front', 'ender_chest_lock'].map((name): TextureDef => ({ name })),
+  // Luces de rana.
+  ...['ochre', 'verdant', 'pearlescent'].flatMap((k) => ['top', 'side'].map((p): TextureDef => ({ name: `${k}_froglight_${p}`, sss: 0.4 }))),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

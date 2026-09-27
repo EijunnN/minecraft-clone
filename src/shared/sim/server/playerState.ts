@@ -1,6 +1,7 @@
 // Lo que manda cada cliente de su jugador, validado: la posición (con lo que se ve de él: manos,
 // armadura, brillo, efectos) y el estado que se guarda (inventario, vida, hambre, efectos…). El
 // inventario y la vida los lleva el navegador (confianza entre amigos), pero nada llega sin acotar.
+import { isDyeable, sanitizeDyeColor } from '../../dyedColor'; // el cuero teñido
 import {
   STATE_MASK, STATE_GLIDE, stackFromWire, stackToWire, type ClientMsg, type PlayerInfo, type PlayerSave, type WireStack,
 } from '../../protocol';
@@ -21,12 +22,14 @@ function heldPotionType(item: number, raw: unknown): number {
 /** Fase 7.6: decoración del escudo de una mano ('fondo:dibujo.color,...'), sólo si lleva un escudo. */
 const SHIELD_DECOR = /^\d{1,2}(:(\d{1,2}\.\d{1,2}(,\d{1,2}\.\d{1,2}){0,5})?)?$/;
 function shieldDecor(item: number, raw: unknown): string | undefined {
+  if (isDyeable(item) && typeof raw === 'string' && DYE_DECOR.test(raw)) return raw; // el cuero teñido: 'd' y su color
   return item === SHIELD && typeof raw === 'string' && raw.length <= 40 && SHIELD_DECOR.test(raw) ? raw : undefined;
 }
+const DYE_DECOR = /^d[0-9a-f]{6}$/;
 
 /** Fase 7 (remate): campos hp y op de un jugador (sólo los que no son agua). Fase 7.6: y los escudos decorados. */
-export function handPotions(s: Session): { hp?: number; op?: number; hs?: string; os?: string } {
-  return { ...(s.hp ? { hp: s.hp } : {}), ...(s.op ? { op: s.op } : {}), ...(s.hs ? { hs: s.hs } : {}), ...(s.os ? { os: s.os } : {}) };
+export function handPotions(s: Session): { hp?: number; op?: number; hs?: string; os?: string; ac?: number[] } {
+  return { ...(s.hp ? { hp: s.hp } : {}), ...(s.op ? { op: s.op } : {}), ...(s.hs ? { hs: s.hs } : {}), ...(s.os ? { os: s.os } : {}), ...(s.ac ? { ac: s.ac } : {}) };
 }
 
 /** Lo que los demás saben de un jugador. */
@@ -61,6 +64,9 @@ export function applyPos(s: Session, msg: Extract<ClientMsg, { t: 'pos' }>): boo
     const id = Number(a[slot]);
     return Number.isInteger(id) && isValidItem(id) && ITEMS[id]?.armor?.slot === slot ? id : 0;
   });
+  // El color de cada pieza teñida (sólo las que se pueden teñir); nada si ninguna lo está.
+  const ac = Array.isArray(msg.ac) ? s.a.map((id, i) => (isDyeable(id) ? sanitizeDyeColor(msg.ac![i]) ?? -1 : -1)) : [];
+  s.ac = ac.some((c) => c >= 0) ? ac : undefined;
   // Fase 7 (encantamientos): qué brilla (mano, mano secundaria y cada pieza de armadura).
   const g = Number(msg.g);
   s.g = Number.isInteger(g) ? g & 0x3f : 0;

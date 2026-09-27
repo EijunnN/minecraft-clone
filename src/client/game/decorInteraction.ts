@@ -54,7 +54,7 @@ export function decorUse(
     if (heldId && !piece) return true;
     const q = ++ia.interactQ;
     ia.pendingInteract.set(q, { slot: g.selected, item: heldId });
-    g.net?.send({ t: 'interact', e: target.id, item: heldId, q, ...(held?.dmg ? { d: held.dmg } : {}) });
+    g.net?.send({ t: 'interact', e: target.id, item: heldId, q, ...(held?.dmg ? { d: held.dmg } : {}), ...(held?.data ? { st: held } : {}) }); // (la pila entera: encantamientos y color)
     g.swing(true);
     return true;
   }

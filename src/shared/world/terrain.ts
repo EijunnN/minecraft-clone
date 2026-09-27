@@ -1,6 +1,7 @@
 // Generador de terreno procedural determinista. Se ejecuta en los Web Workers.
 // Todos los clientes generan exactamente el mismo mundo a partir de la semilla; el servidor
 // sólo guarda las modificaciones de los jugadores.
+import { DIR_VEC, amethystBudAt } from '../blocks'; // los brotes de amatista
 import {
   AIR, STONE, GRASS, DIRT, SAND, GRAVEL, OAK_LOG, OAK_LEAVES, WATER, COAL_ORE, IRON_ORE, GOLD_ORE,
   DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, SANDSTONE, SNOWY_GRASS, SNOW_BLOCK, ICE, CLAY, CACTUS,
@@ -10,7 +11,7 @@ import {
   ACACIA_LEAVES, DARK_OAK_LOG, DARK_OAK_LEAVES, CHERRY_LOG, CHERRY_LEAVES, horizontalLog, AXIS_X, AXIS_Z, VINE, LILY_PAD, MYCELIUM, RED_MUSHROOM_BLOCK,
   BROWN_MUSHROOM_BLOCK, MUSHROOM_STEM, RED_SAND, COLORED_TERRACOTTA, PACKED_ICE, FLOWERS, PINK_PETALS, isLeaves,
   DEEPSLATE, TUFF, CALCITE, SMOOTH_BASALT, DRIPSTONE_BLOCK, POINTED_DRIPSTONE, COPPER_ORE, EMERALD_ORE, DEEPSLATE_ORE,
-  MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, CAVE_VINES, AMETHYST_BLOCK, BUDDING_AMETHYST, AMETHYST_BUD,
+  MOSS_BLOCK, MOSS_CARPET, AZALEA, FLOWERING_AZALEA, CAVE_VINES, AMETHYST_BLOCK, BUDDING_AMETHYST,
   BLOCK_OPAQUE, SNOW_LAYER, COARSE_DIRT, PODZOL, MOSSY_COBBLESTONE,
 } from '../blocks';
 import { CHUNK_SIZE, CHUNK_VOLUME, SEA_LEVEL, MIN_Y, MAX_Y, blockIndex, hash2, hash3, hashToFloat } from '../constants';
@@ -1622,23 +1623,31 @@ export class TerrainGenerator {
               const i = blockIndex(x - x0, y, z - z0);
               if (d > R - 1) blocks[i] = SMOOTH_BASALT;
               else if (d > R - 2) blocks[i] = CALCITE;
-              else if (d > R - 3) blocks[i] = (j >>> 8) % 5 === 0 ? BUDDING_AMETHYST : AMETHYST_BLOCK;
+              // GeodeFeature (amethyst_geode): el 8,3 % de la capa de dentro, amatista con brotes.
+              else if (d > R - 3) blocks[i] = (j >>> 8) % 1000 < 83 ? BUDDING_AMETHYST : AMETHYST_BLOCK;
               else blocks[i] = AIR;
             }
           }
         }
-        // Racimos de amatista en el suelo de la geoda (hacia arriba).
-        for (let y = oy - R + 1; y <= oy + R; y++) {
+        // Los brotes (GeodeFeature): el 35 % de las amatistas con brotes echa uno de tamaño al azar en la primera cara
+        // libre (abajo, arriba, norte, sur, oeste, este: casi siempre cuelgan del techo o crecen del suelo). Lo libre se
+        // mira con la forma de la geoda, así sale igual aunque la amatista y su brote caigan en chunks distintos.
+        const shellD = (x: number, y: number, z: number) => Math.hypot(x - ox, (y - oy) * 1.1, z - oz) + (hash3(x, y, z, seed ^ 0x9e0) % 5) * 0.08;
+        for (let y = oy - R; y <= oy + R; y++) {
           if (y <= MIN_Y + 5) continue;
-          for (let z = Math.max(z0, oz - R); z <= Math.min(z0 + 15, oz + R); z++) {
-            for (let x = Math.max(x0, ox - R); x <= Math.min(x0 + 15, ox + R); x++) {
-              const i = blockIndex(x - x0, y, z - z0);
-              const below = blocks[i - 256];
-              if (blocks[i] !== AIR || (below !== BUDDING_AMETHYST && below !== AMETHYST_BLOCK)) continue;
+          for (let z = oz - R; z <= oz + R; z++) {
+            for (let x = ox - R; x <= ox + R; x++) {
+              const d = shellD(x, y, z);
+              if (d > R - 2 || d <= R - 3 || (hash3(x, y, z, seed ^ 0x9e0) >>> 8) % 1000 >= 83) continue;
               const k = hash3(x, y, z, seed ^ 0xa3e);
-              // Sobre la amatista con brotes siempre; sobre la normal, a veces (racimos que ya no crecen).
-              if (below === AMETHYST_BLOCK && (k >>> 4) % 100 >= 35) continue;
-              blocks[i] = AMETHYST_BUD + (k % 4);
+              if ((k >>> 4) % 100 >= 35) continue;
+              for (let dir = 0; dir < 6; dir++) {
+                const [dx, dy, dz] = DIR_VEC[dir];
+                const nx = x + dx, ny = y + dy, nz = z + dz;
+                if (shellD(nx, ny, nz) > R - 3) continue;
+                if (nx >= x0 && nx < x0 + 16 && nz >= z0 && nz < z0 + 16 && ny > MIN_Y + 4) blocks[blockIndex(nx - x0, ny, nz - z0)] = amethystBudAt(k % 4, dir);
+                break;
+              }
             }
           }
         }

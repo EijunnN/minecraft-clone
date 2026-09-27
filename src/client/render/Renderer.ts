@@ -9,6 +9,7 @@
 //  6. Composición atmosférica (niebla, bruma, nubes, rayos de luz)
 //  7. TAA → contorno de selección y bloque en la mano
 //  8. Exposición automática, bloom, tonemapping ACES (+ FXAA si no hay TAA)
+import { dyeDecorKey } from './dyeArt'; // el cuero teñido
 import { mat4, vec3 } from 'gl-matrix';
 import {
   createContext, Program, RenderTarget, UniformBuffer, FullscreenTriangle, FULLSCREEN_VS, type GL, type GLCaps,
@@ -919,7 +920,7 @@ export class Renderer {
       const rx = e.x - s.camX, ry = e.y - s.camY, rz = e.z - s.camZ;
       if (rx * rx + ry * ry + rz * rz > 96 * 96) continue;
       if (e.type === ENT_ITEM) {
-        const model = this.items.model(e.item, e.dmg); // Fase 7 (pociones): con el color de su tipo
+        const model = this.items.model(e.item, e.dmg, dyeDecorKey(e.dye)); // Fase 7 (pociones): con el color de su tipo; el cuero teñido
         if (!model) continue;
         const copies = e.count <= 1 ? 1 : e.count <= 16 ? 2 : e.count <= 32 ? 3 : 4;
         const bob = Math.sin(e.age * 2.4 + e.seed * 6.28) * 0.05;

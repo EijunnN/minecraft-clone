@@ -48,6 +48,22 @@ export function cartographyResult(map: ItemStack | null, mat: ItemStack | null):
   return null;
 }
 
+/**
+ * Clonar un mapa en la cuadrícula (map_cloning: crafting_transmute con add_material_count_to_result): un mapa lleno y
+ * de 1 a 8 mapas vacíos dan tantos mapas iguales como mapas había (null si no es esta receta).
+ */
+export function mapCloneCraft(grid: readonly (ItemStack | null)[]): ItemStack | null {
+  let map: ItemStack | null = null, empties = 0;
+  for (const s of grid) {
+    if (!s) continue;
+    if (s.id === FILLED_MAP && s.dmg && !map) map = s;
+    else if (s.id === EMPTY_MAP) empties++;
+    else return null;
+  }
+  if (!map || empties < 1 || empties > 8) return null;
+  return withData(map, empties + 1, {});
+}
+
 /** Mesa de trabajo: un mapa en el centro rodeado de 8 papeles lo amplía (null si no es esta receta). */
 export function mapExtendCraft(grid: readonly (ItemStack | null)[]): ItemStack | null {
   if (grid.length !== 9) return null;

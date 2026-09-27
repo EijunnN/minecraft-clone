@@ -47,7 +47,7 @@ export function equipmentUse(
     const baby = (target.flags & EF_BABY) !== 0;
     if (target.type === MOB_HORSE && HORSE_ARMORS.has(heldId)) {
       if (!(target.flags & EF_TAMED) || baby) g.ui.toast('Primero tienes que domarlo.');
-      else if (!target.gear) ia.interactEntity(target, heldId);
+      else if (!target.gear) ia.interactEntity(target, heldId, undefined, held?.data ? held : undefined); // (con su color)
       return true;
     }
     if (target.type === MOB_HORSE && !heldId && g.player.sneaking && target.gear) {
@@ -56,7 +56,7 @@ export function equipmentUse(
     }
     if (target.type === MOB_WOLF && heldId === WOLF_ARMOR) {
       if (!target.gear && !baby) {
-        ask(ia, g, heldId, (q) => g.net?.send({ t: 'interact', e: target.id, item: heldId, q, ...(held?.dmg ? { d: held.dmg } : {}) }));
+        ask(ia, g, heldId, (q) => g.net?.send({ t: 'interact', e: target.id, item: heldId, q, ...(held?.dmg ? { d: held.dmg } : {}), ...(held?.data ? { st: held } : {}) }));
         g.swing(true);
       }
       return true;

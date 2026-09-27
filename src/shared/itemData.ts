@@ -12,6 +12,7 @@ import { isPotionType, SPECTRAL_ARROW_TYPE } from './potions'; // Fase 7 (remate
 import { FILLED_MAP, SHIELD, COMPASS } from './items';
 import { isShulkerBox } from './blocks'; // Fase 8.6
 import { sanitizeStructureMap, STRUCTURE_MAPS, type StructureMapData } from './structureMapData';
+import { isDyeable, sanitizeDyeColor } from './dyedColor'; // correcciones: el cuero teñido
 
 export interface ItemData {
   /** Libros: el texto de cada página. */
@@ -44,6 +45,8 @@ export interface ItemData {
   lode?: [number, number, number, number];
   /** Fase 8.6: caja de shulker: el hueco (0..26) de cada pila que lleva dentro (en `bag`, en el mismo orden). */
   slots?: number[];
+  /** Objetos teñibles (cuero, armadura para lobo): el color teñido, 0xRRGGBB (ver dyedColor.ts). */
+  dc?: number;
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -167,6 +170,10 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
     const layers = sanitizeLayers(r.layers);
     return layers ? { sb, layers } : { sb };
   }
+  if (isDyeable(id)) {
+    const dc = sanitizeDyeColor(r.dc);
+    return dc !== undefined ? { dc } : undefined;
+  }
   return undefined;
 }
 
@@ -190,6 +197,7 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.lock) c.lock = 1;
   if (d.sb !== undefined) c.sb = d.sb;
   if (d.lode) c.lode = [d.lode[0], d.lode[1], d.lode[2], d.lode[3]]; // Fase 8.5
+  if (d.dc !== undefined) c.dc = d.dc;
   return c;
 }
 

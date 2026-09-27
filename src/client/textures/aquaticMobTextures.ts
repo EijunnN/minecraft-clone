@@ -301,11 +301,20 @@ function axolotl(t: AquaTexel): Paint {
 // Rana y renacuajo
 // ---------------------------------------------------------------------------
 
-const FROG_SKIN: RGB = [192, 118, 62];
-const FROG_DARK: RGB = [140, 78, 40];
-const FROG_BELLY: RGB = [230, 212, 160];
+/** Las tres variedades: [piel, manchas, panza]: templada (naranja), cálida (blanca con motas ocres) y fría (verde). */
+const FROG_COLORS: readonly (readonly [RGB, RGB, RGB])[] = [
+  [[192, 118, 62], [140, 78, 40], [230, 212, 160]],
+  [[226, 214, 190], [196, 150, 96], [246, 238, 222]],
+  [[96, 146, 72], [58, 98, 48], [206, 220, 170]],
+];
 
-function frog(t: AquaTexel): Paint {
+/** La rana de la variedad `v` (la lengua, rosa). */
+export function frogPainter(v: number): (t: AquaTexel) => Paint {
+  return (t) => (t.g === 'tongue' ? [222, 110, 128] : frog(t, v));
+}
+
+function frog(t: AquaTexel, v = 0): Paint {
+  const [FROG_SKIN, FROG_DARK, FROG_BELLY] = FROG_COLORS[v] ?? FROG_COLORS[0];
   const skin = (seed: number): RGB => grain(vnoise(t.x, t.y, t.z, 1.4, seed) > 0.68 ? FROG_DARK : FROG_SKIN, t, seed + 1, 0.07);
   switch (t.g) {
     case 'eye':

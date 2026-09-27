@@ -2,6 +2,12 @@
 // experiencia, huevos lanzados y flotadores de pesca. Este gestor guarda la lista, crea y retira
 // entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
 // projectiles, mobBrain, animalLife, spawner y xpOrbs.
+import { MOB_FROG, frogVariantFor } from '../../aquaticMobs'; // la rana y sus variedades
+import { isDeepDark } from '../../world/deepDark';
+import { MOB_SLIME_SMALL } from '../../mobs';
+import { MOB_MAGMA_CUBE_SMALL } from '../../netherMobs';
+import { OCHRE_FROGLIGHT, PEARLESCENT_FROGLIGHT, VERDANT_FROGLIGHT } from '../../blocks';
+import { SLIME_BALL } from '../../items';
 import { isPushableMob, pushStep, boxesOverlap } from '../../push'; // empujar criaturas
 import { PLAYER_WIDTH, PLAYER_HEIGHT } from '../../constants';
 import { ShulkerAI } from './shulkers'; // Fase 8.6
@@ -151,6 +157,8 @@ export class Entities {
     this.gear.onSpawn(e); // Fase 6.5 (equipo)
     this.allays.init(e); // Fase 7.5 (mansión)
     if (type === MOB_SHULKER) this.shulkers.init(e); // Fase 8.6: en el centro de su celda, pegado abajo
+    // La rana, de la variedad de su bioma (la templada, la cálida o la fría).
+    if (type === MOB_FROG) e.variant = frogVariantFor(this.w.gen.biomeAt(Math.floor(x), Math.floor(z)), isDeepDark(this.w.gen, Math.floor(x), Math.floor(y), Math.floor(z)));
     this.list.set(e.id, e);
     return e;
   }
@@ -344,6 +352,14 @@ export class Entities {
     e.deathTime = 0;
     e.health = 0;
     this.host.fx('mob_death', e.x, e.y + e.height / 2, e.z, e.type);
+    // La rana se come los cubos pequeños: el slime deja una bola de slime y el de magma, una luz de rana de su color.
+    const frog = typeof this.killer === 'number' ? this.list.get(this.killer) : undefined;
+    if (drops && frog?.type === MOB_FROG && (e.type === MOB_SLIME_SMALL || e.type === MOB_MAGMA_CUBE_SMALL)) {
+      const light = [OCHRE_FROGLIGHT, PEARLESCENT_FROGLIGHT, VERDANT_FROGLIGHT][frog.variant ?? 0] ?? OCHRE_FROGLIGHT;
+      this.dropStacks([{ id: e.type === MOB_SLIME_SMALL ? SLIME_BALL : light, count: 1 }], e.x, e.y + 0.2, e.z);
+      this.xp.onMobKilled(e);
+      return;
+    }
     if (drops && e.ai && !((e.growAge ?? 0) > 0)) {
       const def = MOBS[e.type];
       const stacks: ItemStack[] = [];

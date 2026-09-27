@@ -1,6 +1,7 @@
 // Lo que se dibuja en cada frame: los demás jugadores (y uno mismo en tercera persona), la mano, las
 // entidades, las grietas del bloque que se mina, los carteles, estandartes, rayos, sedales y correas;
 // después, las etiquetas de nombre y el texto de depuración (F3).
+import { dyedColor } from '../../shared/dyedColor';
 import { newGlidePose, stepGlidePose, glideScale, glideRoll } from '../render/elytraPose'; // Fase 8.6
 import { ENT_END_CRYSTAL, ENT_SHULKER_BULLET } from '../../shared/mobs'; // Fase 8.6
 import * as endFight from './endFightClient';
@@ -21,7 +22,7 @@ import { effectsView } from './effectsClient';
 import { fishingLines } from './fishingLines';
 import { leashLines } from './leashLines';
 import { guardianBeams } from './guardianBeams';
-import { shieldDecorKey } from '../render/shieldArt';
+import { itemDecorKey as shieldDecorKey } from '../render/shieldArt'; // (o el color del cuero teñido)
 import type { FrameState } from '../render/Renderer';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import type { ClientEntity } from './ClientEntities';
@@ -74,6 +75,7 @@ export function selfView(g: Game, eye: EyeLight): RemotePlayerView {
     heldDecor: shieldDecorKey(g.heldStack), offhandDecor: shieldDecorKey(g.inv.offhand), // Fase 7.6
     use: ((k) => (k === 'none' ? null : k))(useLook(g.interaction.use).kind), light: [eye.skyAtEye, (eye.le & 15) / 15],
     armor: g.inv.armorIds(),
+    armorDye: g.inv.armor.map((a) => dyedColor(a) ?? -1), // el cuero teñido
     riding: g.riding.active || g.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
     glint: g.enchant.glintBits(), // Fase 7 (encantamientos)
     invisible: g.statusEffects.invisible, // Fase 7 (remate): sin cuerpo, pero con la armadura y lo de las manos

@@ -1,9 +1,16 @@
 // Fase 7.6: el escudo decorado con un estandarte. Sobre el dibujo del escudo (16×16) la madera se cambia
 // por la tela del estandarte entera, estrechada a la forma del escudo (como las texturas de escudo de
 // Minecraft), manteniendo el sombreado de la madera; el borde de hierro se queda.
+import { dyeDecorKey } from './dyeArt';
+import { dyedColor } from '../../shared/dyedColor';
 import { bannerPixels, BANNER_W, BANNER_H } from './bannerArt';
 import type { BannerLayer } from '../../shared/bannerPatterns';
 import type { ItemStack } from '../../shared/items';
+
+/** Decoración de lo que se lleva en la mano: la del escudo o el color del cuero teñido (null si no lleva). */
+export function itemDecorKey(s: ItemStack | null | undefined): string | null {
+  return shieldDecorKey(s) ?? dyeDecorKey(dyedColor(s));
+}
 
 /** Clave de la decoración de un escudo (null si no está decorado). */
 export function shieldDecorKey(s: ItemStack | null | undefined): string | null {

@@ -4,6 +4,8 @@
 // - Caballo: cuerpo, cuello, cabeza y hocico enteros y la parte de arriba de las patas; placas con
 //   remaches y un testuz más claro en la frente. Cuero, hierro, oro o diamante.
 // - Lobo: lomo y melena enteros y el arranque de las patas, con las placas de escama de armadillo.
+import { tintRamp, tintPlates } from '../render/dyeArt'; // la armadura teñida
+import { LEATHER_COLOR } from '../../shared/dyedColor';
 import type { MobDef } from '../../shared/mobs';
 import { boxFaces, MOB_HORSE, MOB_WOLF } from '../../shared/mobs';
 import { HORSE_ARMOR, WOLF_ARMOR } from '../../shared/items';
@@ -42,22 +44,24 @@ function hash(x: number, y: number, s: number): number {
 }
 
 /** Textura de la armadura `gear` para la criatura `def` (null si no le va). */
-export function gearTexture(def: MobDef, gear: number): GearTexture | null {
+export function gearTexture(def: MobDef, gear: number, dye?: number): GearTexture | null {
   if (isNetherMob(def.id)) return netherGearTexture(def, gear); // Fase 8.3: la armadura de oro de los piglins
   const helmet = helmetTexture(def, gear); // Fase 7.5 (fauna): el casco del jinete esqueleto
   if (helmet) return helmet;
   let ramp: readonly RGB[] | null = null;
+  let plates: readonly RGB[] | null = null;
   let cover: Record<string, 'all' | number> = {};
   const wolf = def.id === MOB_WOLF && gear === WOLF_ARMOR;
   if (def.id === MOB_HORSE) {
     const mat = Object.entries(HORSE_ARMOR).find(([, id]) => id === gear)?.[0];
     if (mat) {
-      ramp = HORSE_RAMPS[mat];
+      ramp = mat === 'leather' && dye !== undefined ? tintRamp(HORSE_RAMPS.leather, dye) : HORSE_RAMPS[mat]; // el cuero teñido, de su color
       cover = HORSE_COVER;
     }
   } else if (wolf) {
     ramp = WOLF_RAMP;
     cover = WOLF_COVER;
+    if (dye !== undefined) plates = tintPlates(WOLF_RAMP, dye); // teñida: las placas, del color (los bordes, no)
   }
   if (!ramp) return null;
   const [w, h] = def.atlas;
@@ -88,7 +92,7 @@ export function gearTexture(def: MobDef, gear: number): GearTexture | null {
           }
           if (edge) tone = j === 0 ? 0 : 3;
           const n = 0.94 + hash(px, py, pi) * 0.12;
-          const col = ramp![tone];
+          const col = plates && !edge && tone <= 1 ? plates[tone] : ramp![tone];
           const o = (py * w + px) * 4;
           rgba[o] = Math.min(255, col[0] * n);
           rgba[o + 1] = Math.min(255, col[1] * n);
