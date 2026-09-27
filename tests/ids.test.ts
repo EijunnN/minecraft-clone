@@ -351,3 +351,11 @@ test('los ids de la fase 8.6 no cambian', () => {
   assert.equal(keyPrint(ITEMS.map((it) => it?.key), 644, 653), 216528252, 'huella de los objetos');
   assert.deepEqual([MOB_ENDERMITE, MOB_ENDER_DRAGON, MOB_SHULKER, ENT_END_CRYSTAL, ENT_DRAGON_FIREBALL, ENT_SHULKER_BULLET], [96, 97, 98, 123, 124, 125]);
 });
+
+// Correcciones (tras la 8.6): las tres luces de rana y los brotes de amatista de lado y colgando.
+import { OCHRE_FROGLIGHT, VERDANT_FROGLIGHT, PEARLESCENT_FROGLIGHT, AMETHYST_BUD_SIDE } from '../src/shared/blocks';
+test('los ids de las correcciones no cambian', () => {
+  assert.deepEqual([OCHRE_FROGLIGHT, VERDANT_FROGLIGHT, PEARLESCENT_FROGLIGHT, AMETHYST_BUD_SIDE], [6214, 6217, 6220, 6223]);
+  assert.ok(BLOCK_COUNT >= 6243);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 6214, 6243), 3187600550, 'huella de los bloques');
+});
