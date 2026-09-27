@@ -3,8 +3,11 @@
 // las que se conectan. Cada voz entra en el motor de audio como un sonido más del mundo: sale de la cabeza de quien
 // habla (HRTF), se apaga con la distancia hasta los 48 bloques y comparte la reverberación del resto de sonidos.
 //
-// Parte 2: el entorno (voiceEnvironment): las paredes la apagan y le quitan los agudos, en las cuevas y salas
-// retumba y bajo el agua suena ahogada. Cada dimensión es un servidor aparte, así que sólo se oye a los de la misma.
+// Parte 2: el entorno (voiceEnvironment): las paredes la apagan y le quitan los agudos, pero la voz rodea los
+// obstáculos por puertas, ventanas y pasillos (y entonces se oye desde la abertura); cada sitio suena según su
+// tamaño y sus paredes (una sala pequeña, una caverna con eco, un cuarto de lana sordo); de espaldas se oye más
+// baja y apagada, el aire se come los agudos con la distancia y bajo el agua suena ahogada. Cada dimensión es un
+// servidor aparte, así que sólo se oye a los de la misma.
 //
 // Parte 3: susurrar (otra tecla: se oye a la mitad de distancia), el volumen o el silencio de cada jugador (por su
 // nombre, se guarda) y los grupos: los de un mismo grupo se oyen a cualquier distancia dentro de la dimensión. El
@@ -17,7 +20,10 @@ import type { Game } from '../game/Game';
 import type { RemotePlayer } from '../game/RemotePlayers';
 import { keyLabel } from '../game/keybinds';
 import { BLOCK_FLUID } from '../../shared/blocks';
-import { voiceOcclusion, voiceReverb, type BlockAt } from './voiceEnvironment';
+import {
+  voiceOcclusion, roomProfile, roomWet, roomEcho, soundPath, voiceDirectivity, airCutoff, type BlockAt, type RoomProfile,
+} from './voiceEnvironment';
+import { createReverbImpulse } from '../audio/noise';
 
 /** Alcance de la voz (bloques): a partir de aquí no se oye. */
 export const VOICE_RANGE = 48;
@@ -38,9 +44,12 @@ const RETRY_MS = 4000;
 /** Nivel (RMS) a partir del cual se considera que alguien habla, y cuánto dura el «hablando» tras callar (ms). */
 const TALK_RMS = 0.012;
 const TALK_HOLD = 350;
-/** Cada cuánto se recalcula lo que tapa cada voz y cuánto retumba (ms). */
+/** Cada cuánto se recalcula lo que tapa cada voz, su camino rodeando obstáculos y cómo es su sitio (ms). */
 const OCCLUSION_MS = 120;
+const PATH_MS = 300;
 const REVERB_MS = 600;
+/** Sólo se busca un camino alrededor si lo directo llega bastante tapado. */
+const PATH_WHEN_BELOW = 0.85;
 /** Quien habla bajo el agua (y se le oye desde fuera): la voz ahogada. */
 const WATER_CUTOFF = 650;
 const WATER_GAIN = 0.6;
@@ -71,23 +80,39 @@ interface PeerAudio {
   el: HTMLAudioElement;
   src: MediaStreamAudioSourceNode;
   analyser: AnalyserNode;
-  /** Volumen por la distancia (lo comparten el sonido directo y el eco). */
+  /** El volumen elegido para ese jugador (lo comparten lo directo, la sala y el eco). */
   gain: GainNode;
-  /** Lo que llega de frente tras las paredes, con los agudos que dejan pasar. */
+  /** Lo que llega: distancia, paredes o rodeo, hacia dónde habla y agua; con los agudos que quedan. */
   direct: GainNode;
   filter: BiquadFilterNode;
   panner: PannerNode;
-  send: GainNode;
+  /** A las salas de voz: la corta (sitios pequeños) y la larga (cavernas). */
+  sendSmall: GainNode;
+  sendLarge: GainNode;
+  /** Eco de los sitios grandes: retardo con realimentación y sin agudos. */
+  echoIn: GainNode;
+  echoDelay: DelayNode;
+  echoFeedback: GainNode;
+  echoFilter: BiquadFilterNode;
 }
 
 /** El entorno de una voz (se recalcula cada poco y el audio se acerca a él con suavidad). */
 interface PeerEnv {
+  /** Lo tapado por lo directo (0..1) y su corte. */
   gain: number;
   cutoff: number;
-  reverb: number;
+  /** El rodeo por el aire (si lo hay): largo y de dónde parece venir. */
+  path: { length: number; aperture: [number, number, number] } | null;
+  room: RoomProfile;
   nextOcclusion: number;
+  nextPath: number;
   nextReverb: number;
+  /** Dónde suena ahora (se acerca poco a poco a donde toca, sin saltos). */
+  pos: [number, number, number] | null;
+  speakerWet: boolean;
 }
+
+const OPEN_ROOM: RoomProfile = { closed: 0, size: 0, reflect: 0 };
 
 interface Peer {
   id: string;
@@ -130,9 +155,11 @@ export class VoiceChat {
   micLevel = 0;
   private vadUntil = 0;
   private hud: HTMLElement | null = null;
-  /** Cuánto retumba donde estamos nosotros (se mezcla con lo de quien habla). */
-  private listenerReverb = 0.04;
+  /** Cómo es el sitio donde estamos nosotros (se mezcla con el de quien habla). */
+  private listenerRoom: RoomProfile = OPEN_ROOM;
   private nextListenerReverb = 0;
+  /** Las dos salas de voz (convoluciones): corta y larga, compartidas por todas las voces. */
+  private rooms: { small: ConvolverNode; large: ConvolverNode } | null = null;
 
   constructor(private g: Game) {}
 
@@ -286,7 +313,7 @@ export class VoiceChat {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     const p: Peer = {
       id, pc, pending: [], remoteSet: false, audio: null, stream: null, talkUntil: 0,
-      env: { gain: 1, cutoff: 20000, reverb: 0.04, nextOcclusion: 0, nextReverb: 0 },
+      env: { gain: 1, cutoff: 20000, path: null, room: OPEN_ROOM, nextOcclusion: 0, nextPath: 0, nextReverb: 0, pos: null, speakerWet: false },
       dc: null, whisper: false, group: '',
     };
     pc.ondatachannel = (e) => {
@@ -408,12 +435,34 @@ export class VoiceChat {
     for (const c of list) await p.pc.addIceCandidate(c).catch(() => {});
   }
 
-  /** La voz que llega: volumen, filtro (lo usa el entorno), posición 3D y su parte de reverberación. */
+  /** Las salas de voz: una respuesta corta (salas, pasillos) y otra larga y oscura (cavernas). */
+  private voiceRooms(ctx: AudioContext, bus: GainNode): { small: ConvolverNode; large: ConvolverNode } {
+    if (this.rooms) return this.rooms;
+    const small = ctx.createConvolver();
+    small.normalize = true;
+    small.buffer = createReverbImpulse(ctx, 0.55, 3.2);
+    const large = ctx.createConvolver();
+    large.normalize = true;
+    large.buffer = createReverbImpulse(ctx, 3.2, 2.1);
+    const dark = ctx.createBiquadFilter();
+    dark.type = 'lowpass';
+    dark.frequency.value = 3200;
+    const outSmall = ctx.createGain();
+    outSmall.gain.value = 0.7;
+    const outLarge = ctx.createGain();
+    outLarge.gain.value = 0.8;
+    small.connect(outSmall).connect(bus);
+    large.connect(dark).connect(outLarge).connect(bus);
+    return (this.rooms = { small, large });
+  }
+
+  /** La voz que llega: volumen, filtro, posición 3D, las salas y el eco. */
   private buildAudio(p: Peer): void {
     if (p.audio || !p.stream) return;
     const graph = this.g.audio.voiceGraph();
     if (!graph) return; // se vuelve a intentar en placeVoices
-    const { ctx, bus, reverb } = graph;
+    const { ctx, bus } = graph;
+    const rooms = this.voiceRooms(ctx, bus);
     const el = new Audio();
     el.muted = true;
     el.srcObject = p.stream;
@@ -422,25 +471,41 @@ export class VoiceChat {
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
     const gain = ctx.createGain();
-    gain.gain.value = 0;
+    gain.gain.value = 1;
     const direct = ctx.createGain();
-    direct.gain.value = p.env.gain;
+    direct.gain.value = 0;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 20000;
     filter.Q.value = 0.5;
     const panner = ctx.createPanner();
     panner.panningModel = 'HRTF';
-    // La distancia la aplica voiceDistanceGain (con el alcance exacto); el panner sólo coloca la voz.
+    // La distancia (o el largo del rodeo) la aplica el nivel de lo directo; el panner sólo coloca la voz.
     panner.distanceModel = 'linear';
     panner.rolloffFactor = 0;
-    // El eco sale antes de las paredes: tras un muro se oye sobre todo la sala en la que habla el otro.
-    const send = ctx.createGain();
-    send.gain.value = p.env.reverb;
+    const sendSmall = ctx.createGain();
+    sendSmall.gain.value = 0;
+    const sendLarge = ctx.createGain();
+    sendLarge.gain.value = 0;
+    const echoIn = ctx.createGain();
+    echoIn.gain.value = 0;
+    const echoDelay = ctx.createDelay(0.5);
+    echoDelay.delayTime.value = 0.1;
+    const echoFeedback = ctx.createGain();
+    echoFeedback.gain.value = 0;
+    const echoFilter = ctx.createBiquadFilter();
+    echoFilter.type = 'lowpass';
+    echoFilter.frequency.value = 2600;
     src.connect(analyser);
-    src.connect(gain).connect(direct).connect(filter).connect(panner).connect(bus);
-    gain.connect(send).connect(reverb);
-    p.audio = { el, src, analyser, gain, direct, filter, panner, send };
+    src.connect(gain);
+    gain.connect(direct).connect(filter).connect(panner).connect(bus);
+    gain.connect(sendSmall).connect(rooms.small);
+    gain.connect(sendLarge).connect(rooms.large);
+    // El eco: entra, se retarda, pierde agudos, sale y vuelve a entrar (cada rebote más flojo).
+    gain.connect(echoIn).connect(echoDelay).connect(echoFilter);
+    echoFilter.connect(echoFeedback).connect(echoDelay);
+    echoFilter.connect(bus);
+    p.audio = { el, src, analyser, gain, direct, filter, panner, sendSmall, sendLarge, echoIn, echoDelay, echoFeedback, echoFilter };
   }
 
   private placeVoices(cam: readonly [number, number, number]): void {
@@ -452,7 +517,7 @@ export class VoiceChat {
     const get: BlockAt | null = world ? (x, y, z) => world.getBlock(x, y, z) : null;
     if (get && now >= this.nextListenerReverb) {
       this.nextListenerReverb = now + REVERB_MS;
-      this.listenerReverb = voiceReverb(get, cam[0], cam[1], cam[2]);
+      this.listenerRoom = roomProfile(get, cam[0], cam[1], cam[2]);
     }
     const listenerWet = get ? BLOCK_FLUID[get(Math.floor(cam[0]), Math.floor(cam[1]), Math.floor(cam[2]))] === 1 : false;
     for (const p of this.peers.values()) {
@@ -462,33 +527,42 @@ export class VoiceChat {
       if (!a || !rp) continue;
       const v = rp.view;
       const hy = v.y + (v.sneaking ? 1.27 : 1.62);
-      a.panner.positionX.value = v.x;
-      a.panner.positionY.value = hy;
-      a.panner.positionZ.value = v.z;
       const d = Math.hypot(v.x - cam[0], hy - cam[1], v.z - cam[2]);
       const range = p.whisper ? WHISPER_RANGE : VOICE_RANGE;
       const grouped = this.group !== '' && p.group === this.group;
       const vol = this.playerVolume(rp.name);
-      const dist = grouped ? Math.max(GROUP_GAIN, voiceDistanceGain(d, range)) : voiceDistanceGain(d, range);
-      a.gain.gain.setTargetAtTime(dist * vol, t, 0.05);
-      if (get && (grouped || d < range)) this.updateEnv(p, a, get, cam, v.x, hy, v.z, listenerWet, now, t, grouped);
+      a.gain.gain.setTargetAtTime(vol, t, 0.05);
+      const heard = get ? this.updateEnv(p, a, get, cam, v.x, hy, v.z, v.headYaw, d, range, listenerWet, now, t, grouped) : grouped || d < range;
       if (rms(a.analyser, this.buf) > TALK_RMS) p.talkUntil = now + TALK_HOLD;
-      this.setTalking(rp, now < p.talkUntil && vol > 0 && (grouped || d < range), p.whisper);
+      this.setTalking(rp, now < p.talkUntil && vol > 0 && heard, p.whisper);
     }
     for (const rp of this.g.remote.values()) if (!this.peers.has(rp.id)) this.setTalking(rp, false);
   }
 
-  /** Paredes en medio, eco del sitio y agua: el filtro, lo que llega de frente y lo que retumba. */
+  /**
+   * El entorno de una voz: lo directo tras las paredes o el rodeo por el aire (lo que llegue más fuerte, y desde
+   * donde llegue), hacia dónde habla, el aire, el agua, la sala y el eco. Devuelve si se oye.
+   */
   private updateEnv(p: Peer, a: PeerAudio, get: BlockAt, cam: readonly [number, number, number],
-    x: number, y: number, z: number, listenerWet: boolean, now: number, t: number, grouped: boolean): void {
+    x: number, y: number, z: number, yaw: number, d: number, range: number, listenerWet: boolean, now: number, t: number, grouped: boolean): boolean {
     const env = p.env;
+    const smooth = (target: [number, number, number]) => {
+      const k = env.pos ? 0.25 : 1;
+      env.pos ??= [target[0], target[1], target[2]];
+      for (let i = 0; i < 3; i++) env.pos[i] += (target[i] - env.pos[i]) * k;
+      a.panner.positionX.value = env.pos[0];
+      a.panner.positionY.value = env.pos[1];
+      a.panner.positionZ.value = env.pos[2];
+    };
     if (grouped) {
-      // En grupo la voz llega limpia (como por radio): sin paredes ni agua, con un poco de su eco.
-      env.nextOcclusion = 0;
-      a.direct.gain.setTargetAtTime(1, t, 0.12);
+      // En grupo la voz llega limpia (como por radio): sin paredes ni agua, desde quien habla, con poca sala.
+      smooth([x, y, z]);
+      a.direct.gain.setTargetAtTime(Math.max(GROUP_GAIN, voiceDistanceGain(d, range)), t, 0.1);
       a.filter.frequency.setTargetAtTime(20000, t, 0.12);
-      a.send.gain.setTargetAtTime(0.04, t, 0.3);
-      return;
+      a.sendSmall.gain.setTargetAtTime(0.03, t, 0.3);
+      a.sendLarge.gain.setTargetAtTime(0, t, 0.3);
+      a.echoIn.gain.setTargetAtTime(0, t, 0.3);
+      return true;
     }
     if (now >= env.nextOcclusion) {
       // Repartidos en el tiempo para no calcular todas las voces en el mismo fotograma.
@@ -496,22 +570,65 @@ export class VoiceChat {
       const occ = voiceOcclusion(get, cam[0], cam[1], cam[2], x, y, z);
       env.gain = occ.gain;
       env.cutoff = occ.cutoff;
-      // Quien habla bajo el agua suena ahogado desde fuera (si los dos están dentro, ya lo apaga el filtro general).
-      const speakerWet = BLOCK_FLUID[get(Math.floor(x), Math.floor(y), Math.floor(z))] === 1;
-      if (speakerWet && !listenerWet) {
-        env.gain *= WATER_GAIN;
-        env.cutoff = Math.min(env.cutoff, WATER_CUTOFF);
-      }
+      env.speakerWet = BLOCK_FLUID[get(Math.floor(x), Math.floor(y), Math.floor(z))] === 1;
+    }
+    if (now >= env.nextPath) {
+      env.nextPath = now + PATH_MS * (0.8 + Math.random() * 0.4);
+      // El rodeo por el aire (puertas, ventanas, pasillos), sólo si lo directo llega tapado.
+      env.path = env.gain < PATH_WHEN_BELOW && d < range + 8 ? soundPath(get, cam[0], cam[1], cam[2], x, y, z, range + 16) : null;
     }
     if (now >= env.nextReverb) {
       env.nextReverb = now + REVERB_MS * (0.8 + Math.random() * 0.4);
-      env.reverb = voiceReverb(get, x, y, z);
+      env.room = roomProfile(get, x, y, z);
     }
-    // El eco: sobre todo el del sitio de quien habla, algo del nuestro.
-    const wet = 0.7 * env.reverb + 0.3 * this.listenerReverb;
-    a.direct.gain.setTargetAtTime(env.gain, t, 0.12);
-    a.filter.frequency.setTargetAtTime(env.cutoff, t, 0.12);
-    a.send.gain.setTargetAtTime(wet, t, 0.3);
+    // Lo directo (a través de lo que haya) frente al rodeo: se oye lo que llegue más fuerte, y desde ahí.
+    const directLevel = voiceDistanceGain(d, range) * env.gain;
+    let level = directLevel, cutoff = env.cutoff, carry = env.gain;
+    let from: [number, number, number] = [x, y, z];
+    if (env.path) {
+      const excess = Math.max(0, env.path.length - d);
+      const pathLevel = voiceDistanceGain(env.path.length, range) * Math.exp(-excess / 30) * 0.92;
+      if (pathLevel > directLevel) {
+        level = pathLevel;
+        carry = Math.exp(-excess / 30) * 0.92;
+        // Doblar una esquina le quita agudos (difracción): más cuanto más largo el rodeo.
+        cutoff = Math.max(900, 18000 * Math.exp(-excess / 10));
+        // Suena desde la abertura, a la distancia del camino.
+        const ap = env.path.aperture;
+        const ax = ap[0] - cam[0], ay = ap[1] - cam[1], az = ap[2] - cam[2];
+        const al = Math.hypot(ax, ay, az) || 1;
+        from = [cam[0] + (ax / al) * env.path.length, cam[1] + (ay / al) * env.path.length, cam[2] + (az / al) * env.path.length];
+      }
+    }
+    smooth(from);
+    // Hacia dónde habla: de frente se oye entera; de espaldas, más baja y apagada.
+    const tx = cam[0] - x, tz = cam[2] - z;
+    const tl = Math.hypot(tx, tz) || 1;
+    const facing = (-Math.sin(yaw) * tx - Math.cos(yaw) * tz) / tl;
+    const dir = voiceDirectivity(facing);
+    level *= dir.gain;
+    cutoff = Math.min(cutoff, dir.cutoff, airCutoff(d));
+    // Quien habla bajo el agua suena ahogado desde fuera (si los dos están dentro, ya lo apaga el filtro general).
+    if (env.speakerWet && !listenerWet) {
+      level *= WATER_GAIN;
+      cutoff = Math.min(cutoff, WATER_CUTOFF);
+    }
+    a.direct.gain.setTargetAtTime(level, t, 0.1);
+    a.filter.frequency.setTargetAtTime(cutoff, t, 0.12);
+    // La sala: sobre todo la de quien habla y algo la nuestra. La cola llega aunque haya una pared (más floja).
+    const s = env.room, l = this.listenerRoom;
+    const wet = 0.7 * roomWet(s) + 0.3 * roomWet(l);
+    const size = 0.7 * s.size + 0.3 * l.size;
+    const large = Math.max(0, Math.min(1, (size - 6) / 12));
+    const reach = Math.sqrt(voiceDistanceGain(d * 0.85, range)) * Math.max(0.3, Math.sqrt(carry));
+    a.sendSmall.gain.setTargetAtTime(wet * (1 - large) * reach, t, 0.3);
+    a.sendLarge.gain.setTargetAtTime(wet * large * reach, t, 0.3);
+    // El eco de los sitios grandes (con la distancia real hasta sus paredes).
+    const echo = roomEcho(s);
+    a.echoDelay.delayTime.setTargetAtTime(echo.delay, t, 0.5);
+    a.echoFeedback.gain.setTargetAtTime(echo.feedback, t, 0.3);
+    a.echoIn.gain.setTargetAtTime(echo.level * reach, t, 0.3);
+    return level > 0.002;
   }
 
   private setTalking(rp: RemotePlayer, on: boolean, whisper = false): void {
@@ -623,7 +740,10 @@ export class VoiceChat {
       p.audio.src.disconnect();
       p.audio.gain.disconnect();
       p.audio.panner.disconnect();
-      p.audio.send.disconnect();
+      p.audio.sendSmall.disconnect();
+      p.audio.sendLarge.disconnect();
+      p.audio.echoFilter.disconnect();
+      p.audio.echoFeedback.disconnect();
       p.audio.el.srcObject = null;
     }
     const rp = this.g.remote.get(id);

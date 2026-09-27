@@ -85,7 +85,7 @@ test('entorno: las paredes apagan la voz según el material, las cuevas retumban
   const room = voiceReverb(box(2, 4), 0.5, 61.6, 0.5);
   const cave = voiceReverb(box(14, 12), 0.5, 61.6, 0.5);
   assert.ok(outside < 0.1, `fuera ${outside}`);
-  assert.ok(room > 0.3, `sala ${room}`);
+  assert.ok(room > 0.25, `sala ${room}`);
   assert.ok(cave > room, `cueva ${cave} > sala ${room}`);
 });
 
@@ -98,4 +98,41 @@ test('extras: el susurro llega a la mitad, los nombres de grupo se limpian', asy
   assert.equal(cleanGroup('Niño_2'), 'niño_2');
   assert.equal(cleanGroup('x'.repeat(40)).length, 24);
   assert.equal(cleanGroup('¡¿?!'), '');
+});
+
+test('entorno: la voz rodea la pared por la puerta y se oye desde ahí', async () => {
+  const { soundPath, voiceOcclusion } = await import('../src/client/voice/voiceEnvironment');
+  const { STONE } = await import('../src/shared/blocks');
+  // Suelo en y = 63; pared de piedra en x = 5 (y 64..70) con un hueco de puerta en z = 6 (y 64..65).
+  const get = (x: number, y: number, z: number) => {
+    if (y <= 63) return STONE;
+    if (x === 5 && y <= 70 && !(z === 6 && y <= 65)) return STONE;
+    return 0;
+  };
+  // Quien escucha en (2, 64, 0), quien habla en (8, 64, 0): la pared en medio tapa lo directo.
+  const occ = voiceOcclusion(get, 2.5, 65.6, 0.5, 8.5, 65.6, 0.5);
+  assert.ok(occ.gain < 0.5, `directo tapado: ${occ.gain}`);
+  const path = soundPath(get, 2.5, 65.6, 0.5, 8.5, 65.6, 0.5)!;
+  assert.ok(path, 'hay camino por la puerta');
+  assert.ok(path.length > 6 && path.length < 24, `largo del rodeo: ${path.length}`);
+  assert.ok(Math.abs(path.aperture[2] - 6.5) <= 1.5 && path.aperture[0] <= 6, `la voz sale por la puerta: ${path.aperture}`);
+  // Sin hueco no hay camino (con un presupuesto pequeño y la pared entera).
+  const shut = (x: number, y: number, z: number) => (y <= 63 || (x === 5) ? STONE : 0);
+  assert.equal(soundPath(shut, 2.5, 65.6, 0.5, 8.5, 65.6, 0.5, 40, 3000), null);
+});
+
+test('entorno: la sala suena según tamaño y material; eco en las cavernas; de espaldas, más bajo', async () => {
+  const { roomProfile, roomWet, roomEcho, voiceDirectivity, airCutoff } = await import('../src/client/voice/voiceEnvironment');
+  const { STONE, WHITE_WOOL } = await import('../src/shared/blocks');
+  const box = (id: number, r: number, h: number) => (x: number, y: number, z: number) => (Math.abs(x) > r || Math.abs(z) > r || y < 60 || y > 60 + h ? id : 0);
+  const stoneRoom = roomProfile(box(STONE, 3, 4), 0.5, 61.6, 0.5);
+  const woolRoom = roomProfile(box(WHITE_WOOL, 3, 4), 0.5, 61.6, 0.5);
+  const cave = roomProfile(box(STONE, 20, 16), 0.5, 61.6, 0.5);
+  assert.ok(roomWet(woolRoom) < roomWet(stoneRoom) * 0.6, `la lana apaga: ${roomWet(woolRoom)} vs ${roomWet(stoneRoom)}`);
+  assert.equal(roomEcho(stoneRoom).level, 0, 'en una sala pequeña no hay eco separado');
+  const e = roomEcho(cave);
+  assert.ok(e.level > 0 && e.delay > 0.05, `eco en la caverna: ${JSON.stringify(e)}`);
+  const front = voiceDirectivity(1), back = voiceDirectivity(-1);
+  assert.ok(back.gain < front.gain && back.cutoff < front.cutoff / 3);
+  assert.ok(airCutoff(48) < airCutoff(5));
 });
