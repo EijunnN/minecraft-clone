@@ -452,10 +452,13 @@ export class AudioEngine {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildExplosion(ctx, noise, dest, now, power), 0.55));
   }
 
-  /** Trueno de un rayo a `distance` bloques: llega con retraso (343 bloques/s) y más flojo de lejos. */
-  playThunder(distance: number): void {
+  /**
+   * Trueno de un rayo a `distance` bloques: llega con retraso (343 bloques/s) y más flojo de lejos. `sky` (0..1) es
+   * cuánto cielo ve el jugador: bajo tierra llega muy apagado y sin el chasquido (sólo el retumbar grave).
+   */
+  playThunder(distance: number, sky = 1): void {
     const delay = Math.min(4, distance / 343);
-    const loud = Math.max(0.15, Math.min(1, 1 - distance / 260));
+    const loud = Math.max(0.15, Math.min(1, 1 - distance / 260)) * (0.1 + 0.9 * Math.max(0, Math.min(1, sky)));
     this.safe(() => this.spawnLocal(0.6, (ctx, noise, dest, now) => buildThunder(ctx, noise, dest, now, delay, loud)));
   }
 

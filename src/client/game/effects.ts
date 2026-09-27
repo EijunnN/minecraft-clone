@@ -48,9 +48,11 @@ export class Effects {
         const d = Math.hypot(p[0] - pl.x, p[2] - pl.z);
         if (d > 300) break;
         this.g.bolts.push({ x: p[0], y: p[1], z: p[2], age: 0, seed: (Math.random() * 2 ** 31) | 0 });
+        // Bajo tierra o en una casa sin ventanas no se ve el destello y el trueno llega apagado y grave.
+        const sky = this.g.camera.eyeSky;
         this.g.flash = Math.max(this.g.flash, Math.max(0.15, 1 - d / 200));
-        this.g.audio.playThunder(d);
-        if (d < 24) this.g.shake = Math.max(this.g.shake, 0.5 * (1 - d / 24));
+        this.g.audio.playThunder(d, sky);
+        if (d < 24) this.g.shake = Math.max(this.g.shake, 0.5 * (1 - d / 24) * (0.3 + 0.7 * sky));
         break;
       }
       // Fase 6.5 (decoración): campana, cuadros y marcos.

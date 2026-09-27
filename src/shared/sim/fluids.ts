@@ -6,9 +6,9 @@
 // actualiza cada 10 ticks en vez de 30.
 import { MIN_Y, MAX_Y } from '../constants';
 import {
-  AIR, OBSIDIAN, COBBLESTONE, STONE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, R_TORCH, R_CROP,
-  FLUID_MAX_LEVEL, fluidBlock,
+  AIR, OBSIDIAN, COBBLESTONE, STONE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, FLUID_MAX_LEVEL, fluidBlock,
 } from '../blocks';
+import { washedByFluids } from './fluidWash';
 import { posKey, keyX, keyY, keyZ } from './posKey';
 
 export interface FluidWorld {
@@ -95,9 +95,7 @@ export class FluidSim {
     const fl = BLOCK_FLUID[id];
     if (fl === f) return BLOCK_FLUID_LEVEL[id] !== 0;
     if (fl) return true;
-    if (BLOCK_SOLID[id]) return false;
-    const r = BLOCK_RENDER[id];
-    return r === R_CROSS || r === R_TORCH || r === R_CROP;
+    return washedByFluids()[id] === 1;
   }
 
   private update(world: FluidWorld, x: number, y: number, z: number): void {
@@ -156,7 +154,8 @@ export class FluidSim {
   }
 
   private spread(world: FluidWorld, x: number, y: number, z: number, f: number, level: number): void {
-    if (y > 0) {
+    // El mundo baja hasta MIN_Y (−64): también cae por debajo de y = 0 (cuevas profundas y minas).
+    if (y > MIN_Y) {
       const below = world.getBlock(x, y - 1, z);
       if (this.canFlowInto(below, f)) {
         const isSameFall = BLOCK_FLUID[below] === f && BLOCK_FLUID_LEVEL[below] === 8;

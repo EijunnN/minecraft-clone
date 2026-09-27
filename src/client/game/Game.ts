@@ -929,7 +929,9 @@ export class Game {
         this.flashEl.id = 'lightning-flash';
         document.body.appendChild(this.flashEl);
       }
-      this.flashEl.style.opacity = String(Math.min(0.75, this.flash * 0.75));
+      // Sólo se ve lo que entra por donde se ve el cielo: en una cueva, nada.
+      const sky = Math.max(0, (this.camera.eyeSky - 0.15) / 0.85);
+      this.flashEl.style.opacity = String(Math.min(0.75, this.flash * 0.75 * sky));
     }
     if (this.wantShot) {
       this.wantShot = false;
