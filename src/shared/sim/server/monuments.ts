@@ -6,6 +6,8 @@
 // - Maldición del anciano: cada minuto, cada guardián anciano da fatiga minera III durante 5 minutos a los
 //   jugadores a menos de 50 bloques que no la tengan ya (con al menos un minuto por delante), y les
 //   enseña su cara fantasmal con su lamento.
+import { isNetherMob, MOB_PIGLIN, packGear } from '../../netherMobs'; // Fase 8.4
+import { CROSSBOW, TOOLS } from '../../items';
 import { MOB_GUARDIAN, MOB_ELDER_GUARDIAN, CURSE_EVERY, CURSE_RANGE, CURSE_SECONDS, CURSE_AMP } from '../../oceanMobs';
 import { EFFECT_MINING_FATIGUE } from '../../effects';
 import { BLOCK_FLUID, BLOCK_OPAQUE } from '../../blocks';
@@ -30,8 +32,15 @@ export class OceanMonuments {
   spawnStructureMobs(list: StructureMob[]): void {
     for (const m of list) {
       const e = this.ctx.entities.spawnMob(m.type, m.x, m.y, m.z);
-      if (e) e.persist = true;
-      if (e && m.variant !== undefined) e.variant = m.variant; // Fase 7.5 (fauna): el gato negro de la cabaña
+      if (!e) continue;
+      e.persist = true;
+      if (isNetherMob(m.type)) {
+        // Fase 8.4: las del bastión, con el arma de su plantilla (el piglin: ballesta o espada de oro) y lo demás de
+        // finalizeSpawn con motivo STRUCTURE (armadura de oro al azar, la casa del bruto…).
+        if (m.type === MOB_PIGLIN) e.gear = packGear(m.variant === 1 ? CROSSBOW : TOOLS.golden.sword, 0, 0);
+        this.ctx.entities.mobs.nether.finalizeSpawn(e, 'structure');
+        e.yaw = e.bodyYaw = this.ctx.rand() * Math.PI * 2;
+      } else if (m.variant !== undefined) e.variant = m.variant; // Fase 7.5 (fauna): el gato negro de la cabaña
     }
   }
 

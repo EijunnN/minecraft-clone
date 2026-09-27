@@ -133,6 +133,15 @@ export const BOOK_SPRITES: Record<string, SpriteDef> = {
     '.xx.xx.',
     '...x...',
   ]),
+  piglin_banner_pattern: patternSheet([ // Fase 8.4
+    '.......',
+    '.xxxxx.',
+    'xx.x.xx',
+    'xx.x.xx',
+    '.xxxxx.',
+    'x.....x',
+    '.......',
+  ]),
   globe_banner_pattern: patternSheet([
     '..xxx..',
     '.x.x.x.',

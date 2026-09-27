@@ -2,7 +2,7 @@
 // capas [dibujo, color] encima de su color de fondo. En el telar se pone el estandarte, un tinte y, si
 // se quiere, un diseño de estandarte; se elige el dibujo y sale el estandarte con una capa más del color
 // del tinte (se gastan el estandarte y el tinte; el diseño no). Sin diseño se eligen los dibujos básicos;
-// con uno, sólo el suyo. Los del Nether y los de las cámaras de desafío no están.
+// con uno, sólo el suyo. Fase 8.4: el del hocico (piglin), de los bastiones; los de las cámaras de desafío no están.
 //
 // El índice de cada dibujo en BANNER_PATTERNS se guarda en los mundos: sólo se añaden al final.
 import { DYES, BANNER_PATTERN_ITEMS, type ItemStack } from './items';
@@ -62,6 +62,7 @@ export const BANNER_PATTERNS: readonly BannerPattern[] = [
   { key: 'skull', name: 'Calavera', item: BANNER_PATTERN_ITEMS.skull },
   { key: 'thing', name: 'Cosa', item: BANNER_PATTERN_ITEMS.thing },
   { key: 'globe', name: 'Globo', item: BANNER_PATTERN_ITEMS.globe },
+  { key: 'piglin', name: 'Hocico', item: (BANNER_PATTERN_ITEMS as Record<string, number>).piglin }, // Fase 8.4: de los bastiones
 ];
 
 /** Color (índice en DYE_COLORS) de cada estandarte (objeto o bloque, de pie o de pared). */

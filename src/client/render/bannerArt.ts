@@ -118,6 +118,14 @@ export const PATTERN_MASKS: Readonly<Record<string, Mask>> = {
     const inner = hex < 1 && ((dy < 0 && Math.abs(dy + Math.abs(dx) * 0.55) < 0.9) || (dy >= 0 && Math.abs(dx) < 0.8));
     return b(ring || inner);
   },
+  // Fase 8.4: el hocico de piglin (una placa redondeada con los dos orificios y los colmillos a los lados).
+  piglin: (x, y) => {
+    const dx = x + 0.5 - 10, dy = y + 0.5 - 18;
+    const plate = Math.abs(dx) <= 5.5 && Math.abs(dy) <= 3.5 && !(Math.abs(dx) > 4.5 && Math.abs(dy) > 2.5);
+    const nostril = Math.abs(dy) < 1.4 && Math.abs(Math.abs(dx) - 2.2) < 0.9;
+    const tusk = Math.abs(Math.abs(dx) - 6.5) < 0.6 && dy > 1.5 && dy < 5.5;
+    return b((plate && !nostril) || tusk);
+  },
   globe: (x, y) => {
     const dx = x + 0.5 - 10, dy = y + 0.5 - 18, r = Math.hypot(dx, dy);
     const edge = r < 7.5 && r > 6.3;

@@ -8,7 +8,7 @@ import {
   MOBS, ENT_ITEM, MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_ZOMBIFIED_PIGLIN, MOB_GHAST, MOB_BLAZE, MOB_MAGMA_CUBE,
   MOB_MAGMA_CUBE_MEDIUM, MOB_MAGMA_CUBE_SMALL, MOB_HOGLIN, MOB_ZOGLIN, MOB_STRIDER, MOB_WITHER_SKELETON, ENT_LARGE_FIREBALL,
   ENT_SMALL_FIREBALL, BARTER, NETHER_SPAWNS, rollBarter, isPiglinLoved, isBarterCurrency, isGoldArmor, isGuardedByPiglins,
-  isPiglinRepellentBlock, packGear, gearMain, gearOff, gearArmor, javaGroundSpeed, isNetherMob, magmaSize, type Entity,
+  isPiglinRepellentBlock, packGear, gearMain, gearOff, gearArmor, javaGroundSpeed, isNetherMob, magmaSize,
 } from '../src/shared/mobs';
 import {
   ITEMS, SPAWN_EGGS, GOLD_INGOT, GOLD_NUGGET, TOOLS, ARMOR, CROSSBOW, WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW,
@@ -23,6 +23,7 @@ import { EFFECT_WITHER } from '../src/shared/effects';
 import { DIM_NETHER } from '../src/shared/dimensions';
 import { NO_SPAWN_EGG, NETHER_SPAWN_EGG_DEFS } from '../src/shared/spawnEggs';
 import { skullDisguises } from '../src/shared/collections';
+import type { Entity } from '../src/shared/sim/entities/types';
 import { makeServer, type Harness } from './harness';
 import type { WorldSim } from '../src/shared/sim/WorldSim';
 
@@ -127,7 +128,7 @@ test('objetos de la 8.3: recetas, cabezas, velocidad de alma y disco', () => {
   assert.equal(BLOCKS[SKULLS.piglin].key, 'piglin_head');
   assert.equal(ENCHANTS[SOUL_SPEED].max, 3);
   assert.ok(ENCHANTS[SOUL_SPEED].treasure && ENCHANTS[SOUL_SPEED].special);
-  assert.equal(MUSIC_DISCS[MUSIC_DISCS.length - 1], MUSIC_DISC_TEARS);
+  assert.equal(MUSIC_DISCS[14], MUSIC_DISC_TEARS); // Fase 8.4: detrás va Pigstep
   assert.ok(isNetherMob(MOB_STRIDER) && !isNetherMob(ENT_LARGE_FIREBALL));
 });
 

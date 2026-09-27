@@ -9,7 +9,7 @@ import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, effectByName } from '../..
 import type { ServerContext, Session } from './context';
 import type { Raids } from './raids'; // Fase 6 (asaltos)
 import { locateStructure, STRUCTURE_NAMES, LOCATE_REGIONS } from '../../world/structures';
-import { locateNetherStructure, NETHER_STRUCTURE_NAMES } from '../../world/netherStructures'; // Fase 8.4
+import { locateNetherStructure, NETHER_STRUCTURE_NAMES, NETHER_STRUCTURE_OF } from '../../world/netherStructures'; // Fase 8.4
 import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
 import { DIM_OVERWORLD, DIM_NETHER, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
 import { BLOCKS, isValidBlockId } from '../../blocks';
@@ -241,7 +241,8 @@ export class Commands {
           reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion|ciudad_antigua|fortaleza|bastion>');
           return;
         }
-        const type = STRUCTURE_ALIASES[key];
+        // Fase 8.4: en el Nether, «fosil» y «portal_en_ruinas» son los suyos.
+        const type = ctx.dim === DIM_NETHER ? NETHER_STRUCTURE_OF[STRUCTURE_ALIASES[key]] ?? STRUCTURE_ALIASES[key] : STRUCTURE_ALIASES[key];
         // Fase 8.4: en el Nether, las suyas (fortalezas, bastiones…); en el mundo normal, las demás.
         const netherType = NETHER_STRUCTURE_NAMES[type] !== undefined;
         if (netherType !== (ctx.dim === DIM_NETHER) || (ctx.dim !== DIM_OVERWORLD && ctx.dim !== DIM_NETHER)) {
@@ -251,8 +252,9 @@ export class Commands {
         if (netherType) {
           const q = locateNetherStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS);
           const name = NETHER_STRUCTURE_NAMES[type];
-          if (!q) reply(`No hay ninguna ${name.toLowerCase()} cerca.`);
-          else reply(`${name} más cercana: x ${q[0]}, y ${q[1]}, z ${q[2]} (a ${Math.round(Math.hypot(q[0] - s.p[0], q[2] - s.p[2]))} bloques).`);
+          const fem = type === 'fortress'; // «ninguna fortaleza», «ningún bastión / fósil / portal»
+          if (!q) reply(`No hay ${fem ? 'ninguna' : 'ningún'} ${name.toLowerCase()} cerca.`);
+          else reply(`${name} más ${fem ? 'cercana' : 'cercano'}: x ${q[0]}, y ${q[1]}, z ${q[2]} (a ${Math.round(Math.hypot(q[0] - s.p[0], q[2] - s.p[2]))} bloques).`);
           return;
         }
         const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS); // Fase 7.5: como en Minecraft

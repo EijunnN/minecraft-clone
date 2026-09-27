@@ -6,14 +6,14 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 
 ## 1. Resumen
 
-Estado al terminar la fase 8.3 (2026-09-26). Los recuentos salen de `docs/cobertura.md`, que cruza el
+Estado al terminar la fase 8.4 (2026-09-26). Los recuentos salen de `docs/cobertura.md`, que cruza el
 catálogo exportado de la 26.3 con el registro del juego.
 
 | | Minecraft 26.3 | VoxelCraft hoy |
 | --- | --- | --- |
 | Dimensiones | 3 (Mundo normal, Nether, End) | 🟡 2 (Mundo normal y Nether) |
 | Biomas | 67 (53 del mundo normal, 3 de cueva y el Deep Dark, 5 del Nether, 5 del End y el vacío) | 🟡 58 (faltan el jardín pálido, el bosque moteado, las cuevas de azufre, el End y el vacío) |
-| Estructuras | 22 (más elementos decorativos: geodas, mazmorras, fósiles…) | 🟡 14 del mundo normal (y 4 elementos decorativos); las del Nether y el End están por hacer |
+| Estructuras | 22 (más elementos decorativos: geodas, mazmorras, fósiles…) | 🟡 18: 14 del mundo normal y las 4 del Nether (y 4 elementos decorativos); las del End están por hacer |
 | Criaturas | 86 vivas, incluidos 2 jefes | 🟡 70 |
 | Bloques | 1.286 | 🟡 ~1.020 |
 | Objetos | 1.658 | 🟡 ~1.280 (bloques incluidos) |
@@ -55,8 +55,8 @@ desierto, cofre de bonificación, plataformas y pilares del End.
 
 **VoxelCraft** 🟡: del mundo normal, todas salvo la fortaleza (8.6), las cámaras de desafío, las ruinas
 de senderos y el campamento abandonado (fase 9); geodas, mazmorras, fósiles y pozos del desierto. Todas
-con los cofres de botín de Minecraft y localizables con `/localizar`. Las del Nether son la fase 8.4 y
-las del End, la 8.6.
+con los cofres de botín de Minecraft y localizables con `/localizar`. Del Nether, las cuatro (8.4):
+fortaleza, bastión (los cuatro tipos), fósil y portal en ruinas. Las del End son la 8.6.
 
 ### 2.3 Criaturas
 
@@ -144,7 +144,7 @@ Mesa de encantamientos con librerías, libros encantados, yunque, afiladora, ~40
 soporte para pociones, verruga del Nether, más de 30 efectos de estado, pociones arrojadizas y
 persistentes, flechas con efecto. **VoxelCraft:** ✅ (39 encantamientos, 42 pociones, 33 efectos,
 flecha espectral); faltan los encantamientos de la maza y la lanza y las pociones de las cámaras de
-desafío (fase 9). La verruga del Nether sólo se consigue en creativo hasta las fortalezas (8.4).
+desafío (fase 9). La verruga del Nether sale en las fortalezas (8.4).
 
 ### 2.10 Transporte y exploración
 
@@ -164,7 +164,7 @@ Portal de obsidiana, 5 biomas del Nether (desiertos, valle de almas, bosques car
 deltas de basalto), fortalezas y bastiones, piglins y trueque con oro, netherita. En el End: ojos de
 ender para encontrar la fortaleza, el portal del End, combate contra el dragón, islas exteriores,
 ciudades del End, élitros y shulkers. **VoxelCraft: 🟡** el portal, los 5 biomas del Nether portados
-de la 26.3 y sus criaturas con el trueque (8.1–8.3). Faltan las estructuras del Nether (8.4), la
+de la 26.3, sus criaturas con el trueque (8.1–8.3) y sus cuatro estructuras (8.4). Faltan la
 netherita y lo que da el Nether (8.5), el End (8.6) y el Wither (8.7).
 
 ### 2.12 Bloques de construcción y decoración
@@ -544,7 +544,7 @@ Lo que quedaba del mundo normal sin fase (salvo lo de 2024–2026, que es de la 
   bloquear con un panel de cristal; también ampliar en la mesa de trabajo con 8 papeles), escudo con
   estandarte (se ve en la mano, en el inventario y en los demás jugadores) y reparar juntando dos
   objetos iguales (+5 %, sólo conserva las maldiciones). La cabeza de esqueleto en la pared ya existía
-  (sólo cambia el nombre interno) y los discos que faltan son de las fases 8 (Pigstep, Tears) y 9
+  (sólo cambia el nombre interno) y los discos que faltan son de las fases 8 (Pigstep y Tears, ya hechos) y 9
   (Relic, Creator, Precipice, Bounce, Lava Chicken). Como los mapas se dibujan en vivo, uno bloqueado
   deja de cambiar una vez dibujado en esa sesión (no guarda los píxeles).
 - ✅ **Ciudad antigua** con edificios más detallados: casas y barracones con zócalo, pilastras, franjas,
@@ -619,8 +619,34 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   resplandor del mar de lava; la penumbra es direccional y deja leer lo oscuro (arena de alma, basalto); lo oscuro
   ya no se vuelve azul; suben pavesas del mar de lava; y la luz de alma (fuego, antorchas y faroles de alma) alumbra
   en turquesa, por su propio canal de luz (en Java toda la luz de bloque es del mismo color).
-- **8.4 Estructuras del Nether:** fortalezas (generadores de blazes, verruga del Nether), bastiones (los 4
-  tipos), fósiles del Nether y portales en ruinas en el Nether.
+- ✅ **8.4 Estructuras del Nether:** las cuatro de la 26.3, con su rejilla (StructureSet), su botín y
+  `/localizar` (fortaleza, bastion, fosil y portal_en_ruinas en el Nether).
+  - **Fortalezas** portadas de NetherFortressPieces: los mismos tipos de pieza con sus pesos, topes,
+    «pieza anterior» y choques, a menos de 112 bloques del inicio y movidas entre y = 48 y 70; puentes con
+    pilares hasta el suelo, cruces, escaleras, tronos con generador de blazes, entradas, pasillos del
+    castillo con balcones y las salas de cultivo con verruga del Nether sobre arena de alma. Comparten
+    rejilla con los bastiones (nether_complexes, pesos 2 : 3; en los deltas de basalto, fortaleza). Dentro
+    de sus piezas manda su lista de monstruos (blazes, esqueletos wither, cubos de magma…) y el generador
+    saca blazes. La verruga del Nether se planta en arena de alma, crece con los ticks aleatorios y da de
+    2 a 4 (con fortuna, más).
+  - **Bastiones** de los cuatro tipos (viviendas, establos de hoglins, puente y sala del tesoro): el
+    montaje de piezas portado de JigsawPlacement (grupos con pesos, conectores con su prioridad, espacio
+    libre, profundidad 6 y ±80 bloques) sobre los tamaños, conectores y grupos de las plantillas de la 26.3
+    (sólo esos datos: el contenido de cada pieza está construido aquí), con los procesadores de envejecido
+    de cada grupo. Piglins con ballesta o espada de oro, brutos y hoglins de guardia (persistentes) y los
+    cofres del bastión con su botín (puente, establos, tesoro y los demás), donde salen el disco «Pigstep»
+    y el diseño de estandarte del hocico.
+  - **Fósiles del Nether**: catorce esqueletos de hueso con los tamaños de los de Java, en el valle de
+    almas (rejilla de 2 chunks), a una altura al azar que baja hasta el primer suelo firme.
+  - **Portales en ruinas del Nether** (configuración «in_nether»): marcos de obsidiana rotos (un 15 % de
+    obsidiana llorosa), gigantes un 5 %, la mitad buscados bajo el mar de lava (quedan medio hundidos),
+    todo lo de piedra en piedra negra, la mancha de rocanegra con magma alrededor, oro y su cofre.
+  - **Entorno:** el mar de lava ya no es una baldosa repetida: costras que se enfrían y derivan despacio
+    y vetas vivas (en Java se ven rayas de lejos).
+  - Pendiente para su fase: el ghast seco junto a los fósiles (con el ghast feliz, fase 9); la piedra
+    imán, la netherita, los escombros ancestrales y la plantilla de mejora de los cofres del bastión
+    (8.5); la lanza, las plantillas de adorno «costilla» y «hocico» y la armadura de cobre para caballo
+    (fase 9). Las estructuras se dibujan después de la decoración (en Java se intercalan por pasos).
 - **8.5 Lo que da el Nether:** netherita (escombros ancestrales, plantilla de mejora y mesa de herrería),
   ancla de reaparición, piedra imán, faro, fogata de alma, columnas de burbujas y lo apuntado en la fase 7
   (la velocidad de alma, la carga de fuego y la flecha espectral llegaron con la 8.3, porque las da el

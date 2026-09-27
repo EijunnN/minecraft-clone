@@ -53,7 +53,7 @@ export function isMusicDisc(id: number): boolean {
 
 /** Discos que puede soltar un creeper (todos menos otherside, que sólo sale en los cofres). */
 // Fase 7.5 (abismo): el 5, tampoco; Fase 8.3: ni Tears (lo suelta el ghast). La etiqueta creeper_drop_music_discs.
-export const CREEPER_DISCS: readonly number[] = MUSIC_DISCS.filter((_, i) => DISCS[i].key !== 'otherside' && DISCS[i].key !== '5' && DISCS[i].key !== 'tears');
+export const CREEPER_DISCS: readonly number[] = MUSIC_DISCS.filter((_, i) => DISCS[i].key !== 'otherside' && DISCS[i].key !== '5' && DISCS[i].key !== 'tears' && DISCS[i].key !== 'pigstep');
 
 /** Título de un disco para la descripción (null si no es un disco). */
 export function discTitle(id: number): string | null {

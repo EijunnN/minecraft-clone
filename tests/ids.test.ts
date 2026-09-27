@@ -293,7 +293,6 @@ test('los ids de la fase 8.2 no cambian', () => {
 
 // Fase 8.3 (criaturas del Nether): cráneo de esqueleto wither y cabeza de piglin; caña con hongo distorsionado,
 // carga de fuego, flecha espectral, disco «Tears» y los huevos; velocidad de alma y las criaturas del Nether.
-import { SKULLS } from '../src/shared/blocks';
 import { WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, MUSIC_DISC_TEARS } from '../src/shared/items';
 import { SOUL_SPEED } from '../src/shared/enchantments';
 import {
@@ -312,4 +311,16 @@ test('los ids de la fase 8.3 no cambian', () => {
     [84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
   );
   assert.deepEqual([ENT_LARGE_FIREBALL, ENT_SMALL_FIREBALL], [121, 122]);
+});
+
+// Fase 8.4 (estructuras del Nether): la verruga del Nether plantada, el disco «Pigstep» y el diseño del hocico.
+import { NETHER_WART_CROP } from '../src/shared/blocks';
+import { MUSIC_DISC_PIGSTEP, PIGLIN_BANNER_PATTERN } from '../src/shared/items';
+import { BANNER_PATTERNS } from '../src/shared/bannerPatterns';
+test('los ids de la fase 8.4 no cambian', () => {
+  assert.equal(NETHER_WART_CROP, 5990);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 5990, 5994), 2559539490, 'huella de los bloques');
+  assert.deepEqual([MUSIC_DISC_PIGSTEP, PIGLIN_BANNER_PATTERN], [628, 629]);
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 628, 630), 620859315, 'huella de los objetos');
+  assert.equal(BANNER_PATTERNS.findIndex((p) => p.key === 'piglin'), 39);
 });

@@ -36,6 +36,14 @@ Objects). Pensado para PC (teclado y ratón).
   la lava y se montan con silla y una caña con hongo distorsionado; y **esqueletos wither**. Los piglins
   y hoglins que salen del Nether se zombifican. Con ellos llegan la carga de fuego, la flecha espectral,
   la velocidad de alma, el disco «Tears», el cráneo de esqueleto wither y la cabeza de piglin.
+- **Estructuras del Nether** (portadas de Java 26.3): **fortalezas** de ladrillo del Nether con sus
+  puentes sobre el mar de lava, pasillos, tronos con generador de blazes, balcones y salas de cultivo
+  con verruga del Nether (que ya se planta en arena de alma y crece); **bastiones en ruinas** de los
+  cuatro tipos (viviendas, establos de hoglins, puente y sala del tesoro con sus cascadas de lava),
+  montados pieza a pieza como en Java, con piglins, brutos y hoglins de guardia y los cofres del
+  bastión (el disco «Pigstep» y el diseño de estandarte del hocico); **fósiles** de hueso en el valle
+  de almas y **portales en ruinas** del Nether, a veces medio hundidos en la lava. El mar de lava tiene
+  costras que se enfrían y derivan despacio en lugar de una baldosa repetida.
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus
@@ -61,7 +69,7 @@ Objects). Pensado para PC (teclado y ratón).
   las criaturas, correas (al jugador o a una valla) y sacos para llevar varios objetos en una ranura;
   nuevas comidas, 52 huevos generadores, catalejo y reloj. También fuego y mechero, ballesta, tridente,
   armaduras de caballo y de lobo, cohetes, conducto, cabezas de criaturas (con creepers cargados),
-  tocadiscos con 13 discos de música propia, libros que se escriben y se leen en el atril, estandartes
+  tocadiscos con 16 discos de música propia, libros que se escriben y se leen en el atril, estandartes
   con dibujos (telar), calderos, nieve polvo, bloque de slime que rebota y los suelos que faltaban.
 - **Supervivencia**: vida, hambre y saturación, aire bajo el agua, daño por caída, lava, fuego,
   ahogamiento, vacío y asfixia, regeneración, muerte con pérdida del inventario y reaparición.
@@ -211,6 +219,8 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Bosque distorsionado con sus hongos gigantes y un enderman](docs/screenshots/warped_forest.png) | ![Un ghast sobre el valle de almas, con el mar de lava encendido abajo](docs/screenshots/soul_sand_valley.png) |
 | ![Cubos de magma saltando en los deltas de basalto](docs/screenshots/basalt_deltas.png) | ![Strider con un piglin zombificado de jinete, por el mar de lava](docs/screenshots/strider.png) |
 | ![Piglin admirando el lingote de oro del trueque](docs/screenshots/barter.png) | ![Blaze, esqueleto wither y piglin bruto peleando](docs/screenshots/nether_mobs.png) |
+| ![Puentes de una fortaleza del Nether sobre los deltas de basalto](docs/screenshots/nether_fortress.png) | ![Muros de un bastión en ruinas con sus cascadas de lava](docs/screenshots/bastion.png) |
+| ![Fósil de hueso en el valle de almas](docs/screenshots/nether_fossil.png) | ![Portal en ruinas del Nether con su cofre, oro y la mancha de rocanegra](docs/screenshots/nether_ruined_portal.png) |
 
 ## Controles
 
@@ -345,8 +355,7 @@ VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no t
 
 - 70 de las 86 criaturas de Minecraft: faltan las del End, los jefes y las de 2024–2026 (sniffer,
   breeze, creaking…).
-- Sin End, y el Nether aún no tiene sus estructuras (fortalezas, bastiones): la verruga del Nether
-  sólo se consigue en creativo.
+- Sin End, y del Nether falta lo que da (netherita, piedra imán, ancla de reaparición…).
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores

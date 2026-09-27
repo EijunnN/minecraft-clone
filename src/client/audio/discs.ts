@@ -629,10 +629,41 @@ const tears: Composer = (seconds, rng) => {
   return s.song();
 };
 
+/** pigstep: funk del Nether, con el bajo a saltos, batería con swing, metales y un piano eléctrico a contratiempo. */
+const pigstep: Composer = (seconds, rng) => {
+  const s = new Score(rng, 45, 'dorian', 86, 4, seconds);
+  const prog = [0, 0, 3, 4];
+  const turn = [5, 4, 3, 4];
+  const riff = s.motif(16, 7, 3), horn = s.motif(8, 4, 2);
+  const beat = { kick: 'x..x..x...x.x...', snare: '....x.......x..o', hat: 'x.xox.xox.xox.xo', openhat: '..............x.' };
+  const total = s.bars;
+  let bar = 0;
+  const part = (n: number, p: readonly number[], lead: boolean, hornOn: boolean, drums: boolean) => {
+    n = Math.min(n, total - bar);
+    if (n <= 0) return;
+    s.bass(bar, n, p, 'syncop', 'bass', -2, 0.6);
+    s.arp(bar, n, p, 'epiano', 0, 0.12, [-1, -1, 0, -1, -1, -1, 2, -1, -1, 1, -1, -1, 0, -1, -1, -1], 16, 0.6, true);
+    if (lead) s.melody(bar, n, p, riff, 16, 'lead', 0, 0.18, 4, 0.6);
+    if (hornOn) s.melody(bar, n, p, horn, 8, 'sax', 0, 0.16, 2, 0.9);
+    if (drums) s.drums(bar, n, beat, 0.75);
+    bar += n;
+  };
+  part(2, prog, false, false, true);
+  part(8, prog, true, false, true);
+  part(8, prog, true, true, true);
+  part(4, turn, false, true, false);
+  part(8, prog, true, true, true);
+  part(8, turn, false, true, true);
+  while (bar < total) part(4, prog, true, bar % 8 === 0, true);
+  s.at(seconds - 2.5, 2, 'drone', mtof(s.deg(0, -2)), 0.25);
+  return s.song();
+};
+
 const COMPOSERS: Readonly<Record<string, Composer>> = {
   '13': thirteen, cat, blocks, chirp, far, mall, mellohi, stal, strad, ward, '11': eleven, wait, otherside,
   '5': five, // Fase 7.5 (abismo)
   tears, // Fase 8.3 (criaturas del Nether)
+  pigstep, // Fase 8.4 (estructuras del Nether)
 };
 
 const cache = new Map<number, Song>();

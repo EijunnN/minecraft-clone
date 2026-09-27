@@ -24,11 +24,12 @@ import { makeServer, type Client, type Harness } from './harness';
 const RED = DYE_COLORS.indexOf('red'), BLUE = DYE_COLORS.indexOf('blue');
 
 test('registro: dibujos, diseños de estandarte y sus sprites', () => {
-  // Claves únicas; cada dibujo con su máscara en el cliente; los del Nether y las cámaras, fuera.
+  // Claves únicas; cada dibujo con su máscara en el cliente; los de las cámaras, fuera (Fase 8.4: el hocico, dentro).
   const keys = BANNER_PATTERNS.map((p) => p.key);
   assert.equal(new Set(keys).size, keys.length);
   for (const k of keys) assert.ok(PATTERN_MASKS[k], `máscara: ${k}`);
-  for (const k of ['piglin', 'flow', 'guster']) assert.ok(!keys.includes(k), `sin ${k}`);
+  for (const k of ['flow', 'guster']) assert.ok(!keys.includes(k), `sin ${k}`);
+  assert.equal(keys.indexOf('piglin'), 39);
   // Los índices se guardan: los primeros no se mueven.
   assert.deepEqual(keys.slice(0, 3), ['stripe_bottom', 'stripe_top', 'stripe_left']);
   assert.equal(keys.indexOf('globe'), 38);

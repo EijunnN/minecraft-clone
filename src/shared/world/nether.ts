@@ -89,6 +89,15 @@ export class NetherGenerator extends TerrainGenerator {
   }
 
   /** Bloque base en (x, y, z) (-1 fuera del alto del Nether). */
+  baseBlockAt(x: number, y: number, z: number): number {
+    return this.baseAt(x, y, z);
+  }
+
+  /** ¿Es firme por arriba este bloque del terreno base? (todo lo que no es aire ni lava). */
+  isSturdyBase(id: number): boolean {
+    return id > 0 && id !== LAVA;
+  }
+
   private baseAt(x: number, y: number, z: number): number {
     if (y < 0 || y >= NETHER_HEIGHT) return -1;
     return this.base(x >> 4, z >> 4)[baseIndex(x & 15, y, z & 15)];

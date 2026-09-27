@@ -308,6 +308,20 @@ void main() {
   vec3 f0 = metal ? albedo : vec3(sp.g);
   float sss = max(sp.b, vProps.b / 255.0);
   float emission = sp.a;
+  // Fase 8.4 (entorno del Nether): la lava no es una baldosa repetida: manchas grandes de costra enfriada (roja
+  // oscura, apagada) que derivan despacio y zonas más vivas, con las vetas más brillantes de la textura siempre
+  // encendidas. Rompe la repetición de 16 píxeles que de lejos se ve como rayas.
+  if (special == 2) {
+    float lt = uCamPos.w;
+    float m1 = texture(uCloudWeather, vWorld.xz / 34.0 + vec2(lt * 0.0035, lt * 0.0022)).g;
+    float m2 = texture(uCloudWeather, vWorld.xz / 9.0 - vec2(lt * 0.0060, -lt * 0.0045)).g;
+    float m = m1 * 0.6 + m2 * 0.4;
+    float veins = smoothstep(0.8, 1.0, emission);
+    float crust = smoothstep(0.4, 0.58, m) * (1.0 - 0.7 * veins);
+    albedo = mix(albedo, albedo * vec3(0.5, 0.16, 0.05), crust);
+    emission *= mix(1.0, 0.18, crust);
+    emission *= 1.0 + 0.25 * smoothstep(0.38, 0.26, m); // lo más caliente, algo más encendido
+  }
 
   vec3 V = normalize(-vRel);
   vec3 L = uLightDir.xyz;

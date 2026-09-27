@@ -1,6 +1,7 @@
 // Fase 8.4 (estructuras del Nether): la fortaleza portada de NetherFortressPieces (piezas, topes, alturas, lo que
 // dibuja cada chunk y su botín), la verruga del Nether plantada, el generador de blazes y los monstruos de la
-// fortaleza (su lista manda dentro de sus piezas).
+// fortaleza (su lista manda dentro de sus piezas); los bastiones (montaje de piezas portado de JigsawPlacement, sus
+// cofres y criaturas), los fósiles del Nether y los portales en ruinas del Nether.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fortressPieces } from '../src/shared/world/netherFortress';
@@ -18,6 +19,15 @@ import { blockIndex } from '../src/shared/constants';
 import { DIM_NETHER } from '../src/shared/dimensions';
 import { makeServer } from './harness';
 import { mulberry32 } from '../src/shared/world/noise';
+import { bastionPieces, bastionBounds } from '../src/shared/world/bastion';
+import { BASTION_PIECES } from '../src/shared/world/bastionData';
+import { NETHER_LOOT } from '../src/shared/netherLoot';
+import { MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_HOGLIN } from '../src/shared/netherMobs';
+import { netherFossilAt } from '../src/shared/world/netherFossils';
+import { netherRuinedPortalAt } from '../src/shared/world/netherPortals';
+import { BONE_BLOCK, BONE_BLOCK_AXIS, OBSIDIAN, CRYING_OBSIDIAN, POLISHED_BLACKSTONE_BRICKS } from '../src/shared/blocks';
+import { MUSIC_DISC_PIGSTEP, PIGLIN_BANNER_PATTERN } from '../src/shared/items';
+import { BIOME_SOUL_SAND_VALLEY } from '../src/shared/world/biomeIds';
 
 test('fortaleza: piezas como en Java (inicio, topes por tipo, sin choques, entre y = 48 y 70)', () => {
   for (let seed = 1; seed <= 25; seed++) {
@@ -64,7 +74,8 @@ test('fortaleza: se genera en el Nether con sus ladrillos, tronos con generador,
   assert.ok(bricks > 10000, `ladrillos del Nether: ${bricks}`);
   assert.ok(spawners >= 1 && spawners <= 2, `generadores en los tronos: ${spawners}`);
   assert.ok(warts === 0 || onSoul === warts, 'las verrugas, sobre arena de alma');
-  assert.ok([...tables].every((t) => t === 'nether_bridge'), 'cofres con el botín de la fortaleza');
+  // Los de la fortaleza (y, si cae cerca, los de un bastión o un portal en ruinas).
+  assert.ok(tables.has('nether_bridge') && [...tables].every((t) => t === 'nether_bridge' || t.startsWith('bastion_') || t === 'ruined_portal'), `cofres: ${[...tables]}`);
   assert.equal(NETHER_STRUCTURE_NAMES.fortress, 'Fortaleza del Nether');
   // Dentro de una pieza manda la lista de la fortaleza; lejos, no.
   const s = complexStart(gen, Math.floor(cx0 / NETHER_COMPLEXES.spacing), Math.floor(cz0 / NETHER_COMPLEXES.spacing))!;
@@ -121,4 +132,114 @@ test('generador del trono: blazes entre ladrillos del Nether (con luz), cubos de
   W.setBlock(9, 63, 9, NETHERRACK);
   assert.equal(sp.mobOf(9, 64, 9), MOB_MAGMA_CUBE);
   void blockIndex;
+});
+
+test('bastión: las cuatro variantes se montan como en Java (inicio, tamaños, sin salirse de 80 bloques)', () => {
+  const sizes: Record<string, number[]> = {};
+  for (let seed = 1; seed <= 40; seed++) {
+    const pieces = bastionPieces(seed, 5, -3);
+    const start = pieces[0].key;
+    assert.ok(/^(units|hoglin_stable|treasure|bridge)\//.test(start), `inicio: ${start}`);
+    assert.equal(pieces[0].pos[1], 33, 'empieza en y = 33');
+    for (const p of pieces) assert.ok(BASTION_PIECES[p.key], `plantilla conocida: ${p.key}`);
+    const b = bastionBounds(pieces);
+    assert.ok(b.x1 - b.x0 <= 170 && b.z1 - b.z0 <= 170, 'dentro de ±80 del inicio');
+    (sizes[start.split('/')[0]] ??= []).push(pieces.length);
+  }
+  assert.equal(Object.keys(sizes).length, 4, 'salen las cuatro');
+  // Cuántas piezas (medido contra el montaje de referencia): viviendas 72–97, tesoro 164–180, puente 48–53, establos 88–99.
+  const range = (k: string) => [Math.min(...sizes[k]), Math.max(...sizes[k])];
+  const [u0, u1] = range('units'), [t0, t1] = range('treasure'), [b0, b1] = range('bridge'), [h0, h1] = range('hoglin_stable');
+  assert.ok(u0 >= 60 && u1 <= 110, `viviendas: ${u0}–${u1}`);
+  assert.ok(t0 >= 150 && t1 <= 195, `tesoro: ${t0}–${t1}`);
+  assert.ok(b0 >= 40 && b1 <= 62, `puente: ${b0}–${b1}`);
+  assert.ok(h0 >= 75 && h1 <= 110, `establos: ${h0}–${h1}`);
+  assert.deepEqual(bastionPieces(9, 0, 0).map((p) => [p.key, ...p.pos, p.rot]), bastionPieces(9, 0, 0).map((p) => [p.key, ...p.pos, p.rot]), 'determinista');
+});
+
+test('bastión: en el mundo, con sus ladrillos, cofres con su botín, piglins, brutos y hoglins', () => {
+  const gen = new NetherGenerator(777);
+  const f = locateNetherStructure(gen, 'bastion_remnant', 0, 0, 30);
+  assert.ok(f, 'hay un bastión cerca');
+  assert.equal(NETHER_STRUCTURE_NAMES.bastion_remnant, 'Bastión en ruinas');
+  let bricks = 0;
+  const tables = new Set<string>(), mobs = new Set<number>();
+  const cx0 = Math.floor(f![0] / 16), cz0 = Math.floor(f![2] / 16);
+  for (let dz = -6; dz <= 6; dz++) {
+    for (let dx = -6; dx <= 6; dx++) {
+      const r = gen.generate(cx0 + dx, cz0 + dz);
+      for (const c of r.chests) tables.add(c.table);
+      for (const m of r.mobs) mobs.add(m.type);
+      for (let i = 0; i < r.blocks.length; i++) if (r.blocks[i] === POLISHED_BLACKSTONE_BRICKS) bricks++;
+    }
+  }
+  assert.ok(bricks > 2000, `ladrillos de piedra negra pulida: ${bricks}`);
+  assert.ok([...tables].some((t) => t.startsWith('bastion_')), `cofres: ${[...tables]}`);
+  for (const t of tables) assert.ok(LOOT_TABLES[t], `tabla conocida: ${t}`);
+  assert.ok(mobs.has(MOB_PIGLIN), 'piglins');
+  assert.ok([...mobs].every((m) => m === MOB_PIGLIN || m === MOB_PIGLIN_BRUTE || m === MOB_HOGLIN), 'sólo piglins, brutos y hoglins');
+});
+
+test('botín de los bastiones: Pigstep y el diseño del hocico sólo en los demás cofres; el tesoro, con diamantes', () => {
+  const r = mulberry32(84);
+  const seen = new Set<number>();
+  for (let i = 0; i < 400; i++) for (const s of rollLoot(NETHER_LOOT.bastion_other, r)) seen.add(s.id);
+  assert.ok(seen.has(MUSIC_DISC_PIGSTEP) && seen.has(PIGLIN_BANNER_PATTERN), 'Pigstep y el hocico');
+  const t = rollLoot(NETHER_LOOT.bastion_treasure, r);
+  assert.ok(t.length >= 6, 'tres del tesoro y de tres a cuatro más');
+  for (const k of ['bastion_bridge', 'bastion_hoglin_stable', 'bastion_treasure', 'nether_bridge']) {
+    for (let i = 0; i < 100; i++) for (const s of rollLoot(NETHER_LOOT[k], r)) assert.ok(ITEMS[s.id] && s.count >= 1, `${k}: ${s.id}`);
+  }
+});
+
+test('fósiles del Nether: sólo en el valle de almas, de hueso, sobre el suelo', () => {
+  const gen = new NetherGenerator(4242);
+  let found = 0;
+  for (let rz = -30; rz <= 30; rz++) {
+    for (let rx = -30; rx <= 30; rx++) {
+      const f = netherFossilAt(gen.seed, gen, rx, rz);
+      if (!f) continue;
+      found++;
+      assert.equal(gen.biomeAt(f.x, f.z), BIOME_SOUL_SAND_VALLEY);
+      assert.ok(f.y > 32 && f.y < 126, `altura: ${f.y}`);
+      assert.ok(gen.isSturdyBase(gen.baseBlockAt(f.x, f.y, f.z)) && gen.baseBlockAt(f.x, f.y + 1, f.z) === AIR, 'sobre suelo firme');
+    }
+  }
+  assert.ok(found > 0, 'hay fósiles');
+  const q = locateNetherStructure(gen, 'nether_fossil', 0, 0)!;
+  assert.ok(q, 'se localizan');
+  let bones = 0;
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const b = gen.generate((q[0] >> 4) + dx, (q[2] >> 4) + dz).blocks;
+      for (let i = 0; i < b.length; i++) if (b[i] === BONE_BLOCK || (b[i] >= BONE_BLOCK_AXIS && b[i] < BONE_BLOCK_AXIS + 3)) bones++;
+    }
+  }
+  assert.ok(bones >= 5, `huesos: ${bones}`);
+});
+
+test('portales en ruinas del Nether: marco de obsidiana, cofre del portal y buena parte bajo el mar de lava', () => {
+  const gen = new NetherGenerator(4242);
+  let low = 0;
+  const n = 40;
+  for (let rx = 0; rx < n; rx++) {
+    const p = netherRuinedPortalAt(gen.seed, gen, rx, 2)!;
+    assert.ok(p && p.y >= 15 && p.y <= 100, `altura: ${p.y}`);
+    if (p.y < 31) low++;
+  }
+  assert.ok(low > n * 0.25 && low < n * 0.95, `bajo la lava: ${low} de ${n}`);
+  const q = locateNetherStructure(gen, 'ruined_portal_nether', 0, 0)!;
+  assert.ok(q, 'se localizan');
+  let obs = 0;
+  const tables: string[] = [];
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const r = gen.generate((q[0] >> 4) + dx, (q[2] >> 4) + dz);
+      for (const c of r.chests) tables.push(c.table);
+      for (let i = 0; i < r.blocks.length; i++) if (r.blocks[i] === OBSIDIAN || r.blocks[i] === CRYING_OBSIDIAN) obs++;
+    }
+  }
+  assert.ok(obs >= 6, `obsidiana: ${obs}`);
+  assert.ok(tables.every((t) => t === 'ruined_portal' || t.startsWith('bastion_') || t === 'nether_bridge'), `cofres: ${tables}`);
+  assert.equal(NETHER_STRUCTURE_NAMES.ruined_portal_nether, 'Portal en ruinas');
 });

@@ -452,7 +452,7 @@ export const GLOW_INK_SAC = item('glow_ink_sac', 'Saco de tinta brillante');
 export const GLOW_ITEM_FRAME = item('glow_item_frame', 'Marco brillante');
 /** Discos de música, en el orden de DISCS (discs.ts); el título va en la descripción. */
 // Fase 7.5 (abismo): el disco 5 se registra al final (su objeto no puede ir aquí sin mover los ids de detrás).
-export const MUSIC_DISCS: readonly number[] = DISCS.filter((d) => d.key !== '5' && d.key !== 'tears').map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
+export const MUSIC_DISCS: readonly number[] = DISCS.filter((d) => d.key !== '5' && d.key !== 'tears' && d.key !== 'pigstep').map((d) => item(`music_disc_${d.key}`, 'Disco de música', { stack: 1 }));
 // Las cabezas se llevan en el hueco del casco (sin puntos de armadura ni desgaste).
 for (const k of ALL_SKULL_KINDS) ITEMS[SKULLS[k]].armor = { slot: 0, material: 'leather', points: 0, toughness: 0, durability: 0 };
 
@@ -596,6 +596,12 @@ export const SPECTRAL_ARROW = item('spectral_arrow', 'Flecha espectral');
 export const MUSIC_DISC_TEARS = item('music_disc_tears', 'Disco de música', { stack: 1 });
 (MUSIC_DISCS as number[]).push(MUSIC_DISC_TEARS);
 for (const e of NETHER_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
+// Fase 8.4 (estructuras del Nether): el disco «Pigstep» y el diseño de estandarte del hocico, sólo en los cofres de
+// los bastiones.
+export const MUSIC_DISC_PIGSTEP = item('music_disc_pigstep', 'Disco de música', { stack: 1 });
+(MUSIC_DISCS as number[]).push(MUSIC_DISC_PIGSTEP);
+export const PIGLIN_BANNER_PATTERN = item('piglin_banner_pattern', 'Diseño de estandarte (Hocico)', { stack: 1 });
+(BANNER_PATTERN_ITEMS as Record<string, number>).piglin = PIGLIN_BANNER_PATTERN;
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -818,3 +824,6 @@ smelt(BASALT, SMOOTH_BASALT);
 // El strider se cría con hongos distorsionados y el hoglin con hongos carmesíes (y los siguen).
 Object.assign(BREED_FOOD as Record<string, readonly number[]>, { strider: [WARPED_FUNGUS], hoglin: [CRIMSON_FUNGUS] });
 (CREATIVE_ITEMS as number[]).push(WARPED_FUNGUS_ON_A_STICK, FIRE_CHARGE, SPECTRAL_ARROW, MUSIC_DISC_TEARS, ...NETHER_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));
+
+// ------------------------------------------------------------------ Fase 8.4 (estructuras del Nether)
+(CREATIVE_ITEMS as number[]).push(MUSIC_DISC_PIGSTEP, PIGLIN_BANNER_PATTERN);
