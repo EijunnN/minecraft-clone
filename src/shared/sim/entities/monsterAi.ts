@@ -30,6 +30,7 @@ import {
 import { EF_ACTION } from '../../protocol';
 import { felineNear } from './critters'; // Fase 7.5 (fauna): los phantoms no se acercan a gatos ni ocelotes
 import { moveBody, lineOfSight } from '../physics';
+import { canMeleeHit } from './meleeReach'; // alcance y línea de visión de Java
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 import type { MobBrain } from './mobBrain';
@@ -183,14 +184,13 @@ export class MonsterAI {
     return t;
   }
 
-  /** Golpe cuerpo a cuerpo si la presa está al alcance. */
-  private melee(e: Entity, target: PlayerView, dyMax = 1.6): boolean {
+  /** Golpe cuerpo a cuerpo si la presa está al alcance y a la vista (MeleeAttackGoal.canPerformAttack). */
+  private melee(e: Entity, target: PlayerView): boolean {
     const def = MOBS[e.type];
     const ai = e.ai!;
     const dx = target.x - e.x, dz = target.z - e.z;
     const dist = Math.hypot(dx, dz);
-    const dy = target.y - e.y;
-    if (def.damage <= 0 || ai.attackCd > 0 || dist >= def.width / 2 + 1.1 || Math.abs(dy) >= dyMax) return false;
+    if (def.damage <= 0 || ai.attackCd > 0 || !canMeleeHit(this.m.w, e, target.x, target.y, target.z, 0.6, 1.8, 1.62)) return false;
     ai.attackCd = 1;
     const d = dist || 1;
     this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (dx / d) * 5, 4, (dz / d) * 5, def.key, e); // Fase 7: e (Espinas)
@@ -340,7 +340,7 @@ export class MonsterAI {
       mz = dz / d;
       speed = 2.6;
       lookAt = [target.x, target.y + 1.6, target.z];
-      this.melee(e, target, 2);
+      this.melee(e, target);
     } else {
       if (ai.think <= 0) {
         ai.think = 3 + this.m.rand() * 4;
@@ -492,8 +492,8 @@ export class MonsterAI {
     e.fallStart = e.y;
     if (target) {
       const dx = target.x - e.x, dz = target.z - e.z;
-      const dy = target.y - e.y;
-      if (def.damage > 0 && ai.attackCd <= 0 && Math.hypot(dx, dz) < def.width / 2 + 0.6 && dy > -1.8 && dy < e.height) {
+      // Slime.dealDamage: al alcance (la caja de ataque de Java) y viéndolo.
+      if (def.damage > 0 && ai.attackCd <= 0 && canMeleeHit(this.m.w, e, target.x, target.y, target.z, 0.6, 1.8, 1.62)) {
         ai.attackCd = 1;
         const d = Math.hypot(dx, dz) || 1;
         this.m.host.hurtPlayer(target.id, def.damage * this.m.difficultyScale(), (dx / d) * 4, 3, (dz / d) * 4, 'slime', e); // Fase 7: e (Espinas)

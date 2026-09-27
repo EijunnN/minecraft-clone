@@ -4,6 +4,7 @@
 //   ahogado no se recoge: desaparece al golpear).
 // - Cohete de fuegos artificiales: sube acelerando y, al acabarse la mecha (o al chocar), estalla con
 //   los colores de sus estrellas (el cliente pone las partículas y el sonido).
+import { clipSegment, CLIP_CELL } from '../../collide'; // choque contra la forma real de los bloques
 import { ITEMS, type ItemStack } from '../../items';
 import { BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
 import { MOBS, isRaider } from '../../mobs';
@@ -110,13 +111,12 @@ export class GearShots {
     const steps = Math.max(1, Math.ceil((speed * dt) / 0.25));
     for (let s = 0; s < steps; s++) {
       const nx = e.x + (e.vx * dt) / steps, ny = e.y + (e.vy * dt) / steps, nz = e.z + (e.vz * dt) / steps;
-      const id = m.w.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz));
-      if (id < 0 || BLOCK_SOLID[id]) {
+      if (clipSegment(m.w, e.x, e.y, e.z, nx, ny, nz) >= 0) {
         e.stuck = true;
         e.age = 0;
         e.vx = e.vy = e.vz = 0;
         m.host.fx('trident_hit', nx, ny, nz);
-        m.host.projectileHit?.('trident', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z); // Fase 7 (redstone)
+        m.host.projectileHit?.('trident', CLIP_CELL[0], CLIP_CELL[1], CLIP_CELL[2], e.x, e.y, e.z); // Fase 7 (redstone)
         return;
       }
       e.x = nx;

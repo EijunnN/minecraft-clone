@@ -1,5 +1,6 @@
 // Física de lo que no son criaturas: objetos tirados (se fusionan, se recogen, arden en lava),
 // flechas (vuelan, se clavan, hieren) y bloques que caen (arena y grava).
+import { clipSegment, CLIP_CELL } from '../../collide'; // choque contra la forma real de los bloques
 import { MOBS, ENT_ITEM, ENT_ARROW, isRaider , MOB_ENDER_DRAGON } from '../../mobs';
 import { ITEMS, ARROW, maxStack, sameKind, type ItemStack } from '../../items';
 import { AIR, BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
@@ -135,14 +136,20 @@ export class ItemPhysics {
     const steps = Math.max(1, Math.ceil((speed * dt) / 0.25));
     for (let s = 0; s < steps; s++) {
       const nx = e.x + (e.vx * dt) / steps, ny = e.y + (e.vy * dt) / steps, nz = e.z + (e.vz * dt) / steps;
-      const id = this.m.w.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz));
-      if (id < 0 || BLOCK_SOLID[id]) {
+      // Choca con la forma de colisión (como en Java): pasa por encima de una losa o por una puerta abierta.
+      const hit = clipSegment(this.m.w, e.x, e.y, e.z, nx, ny, nz);
+      if (hit >= 0) {
+        // Se queda clavada en el punto del choque, un poco hacia atrás.
+        const back = Math.max(0, hit - 0.05 / Math.max(1e-6, Math.hypot(nx - e.x, ny - e.y, nz - e.z)));
+        e.x += (nx - e.x) * back;
+        e.y += (ny - e.y) * back;
+        e.z += (nz - e.z) * back;
         e.stuck = true;
         e.age = 0;
         e.vx = e.vy = e.vz = 0;
         e.flags = typeof e.shooter === 'string' && !e.noPickup ? EF_PICKABLE : 0;
-        this.m.host.fx('arrow_hit', nx, ny, nz);
-        this.m.host.projectileHit?.('arrow', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z, !!e.arrowFire || e.fire > 0); // Fase 7 (redstone y mecanismos)
+        this.m.host.fx('arrow_hit', e.x, e.y, e.z);
+        this.m.host.projectileHit?.('arrow', CLIP_CELL[0], CLIP_CELL[1], CLIP_CELL[2], e.x, e.y, e.z, !!e.arrowFire || e.fire > 0); // Fase 7 (redstone y mecanismos)
         return;
       }
       e.x = nx;

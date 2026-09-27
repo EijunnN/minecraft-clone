@@ -3,6 +3,7 @@
 // golpes (quién es el enemigo de cada uno), aporta los bits de estado y guarda/restaura su estado.
 // También tiene la persecución y el golpe cuerpo a cuerpo contra criaturas o jugadores, que usan
 // tanto los gólems de hierro como los lobos.
+import { canMeleeHit } from './meleeReach'; // alcance y línea de visión de Java
 import { MOBS, MOB_WOLF, MOB_CAT, MOB_CREEPER, MOB_IRON_GOLEM, MOB_SNOW_GOLEM } from '../../mobs';
 import { EF_TAMED, EF_SITTING, EF_ANGRY, EF_ACTION } from '../../protocol';
 import { isGolem, isTameable, variantBits, CAT_SKINS } from '../../companions';
@@ -157,7 +158,7 @@ export class Companions {
       const [mx, mz, jump] = this.m.mobs.followPath(e, viewAt(foe.x, foe.y, foe.z), dt);
       ai.goalDir = [mx, mz, speed, jump ? 1 : 0];
     } else ai.goalDir = [0, 0, 0, 0];
-    if (dist < reach && Math.abs(foe.y - e.y) < 2 && ai.attackCd <= 0) {
+    if (ai.attackCd <= 0 && canMeleeHit(this.m.w, e, foe.x, foe.y, foe.z, foe.width, foe.height, foe.player ? 1.62 : foe.height * 0.85)) {
       ai.attackCd = cooldown;
       this.strike(e, foe, damage, launch);
     }

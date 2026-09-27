@@ -165,3 +165,77 @@ export function moveBox(
     onGround: (dy < 0 && ry > dy + EPS) || (stepHeight > 0 && ry > 0 && dy <= 0),
   };
 }
+
+/** Celda del último choque de clipSegment (x, y, z). */
+export const CLIP_CELL: [number, number, number] = [0, 0, 0];
+const clipBoxes: number[] = [];
+
+/** Entrada (0..1) del segmento o → o + d en la caja [x0..x1] del mundo, o Infinity si no la toca. */
+function rayBox(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number,
+  x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): number {
+  let tmin = 0, tmax = 1;
+  const o = [ox, oy, oz], d = [dx, dy, dz], mn = [x0, y0, z0], mx = [x1, y1, z1];
+  for (let k = 0; k < 3; k++) {
+    if (Math.abs(d[k]) < 1e-12) {
+      if (o[k] < mn[k] || o[k] > mx[k]) return Infinity;
+      continue;
+    }
+    let a = (mn[k] - o[k]) / d[k], b = (mx[k] - o[k]) / d[k];
+    if (a > b) { const t = a; a = b; b = t; }
+    if (a > tmin) tmin = a;
+    if (b < tmax) tmax = b;
+    if (tmin > tmax) return Infinity;
+  }
+  return tmin;
+}
+
+/** Choque del segmento con las cajas de un bloque concreto (Infinity si no). */
+function cellHit(w: BlockGetter, x: number, y: number, z: number, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tall: boolean): number {
+  const id = w.getBlock(x, y, z);
+  if (id < 0 || BLOCK_COLLIDE[id] === 1) {
+    if (tall) return Infinity;
+    return rayBox(ox, oy, oz, dx, dy, dz, x, y, z, x + 1, y + 1, z + 1);
+  }
+  if (BLOCK_COLLIDE[id] !== 2) return Infinity;
+  const boxes = blockCollisionBoxes(id, x, y, z, w, clipBoxes);
+  let best = Infinity;
+  for (let i = 0; i < boxes.length; i += 6) {
+    // Desde la celda de abajo sólo cuenta lo que sobresale (vallas y muros miden 1,5).
+    if (tall && boxes[i + 4] <= 1) continue;
+    const t = rayBox(ox, oy, oz, dx, dy, dz, x + boxes[i], y + boxes[i + 1], z + boxes[i + 2], x + boxes[i + 3], y + boxes[i + 4], z + boxes[i + 5]);
+    if (t < best) best = t;
+  }
+  return best;
+}
+
+/**
+ * Primer choque (0..1) del segmento a → b con las formas de colisión de los bloques (como el clip COLLIDER de
+ * Java: una puerta abierta, una losa o un panel sólo tapan donde están), o -1 si llega limpio. La celda del
+ * choque queda en CLIP_CELL. Los chunks sin cargar cuentan como sólidos.
+ */
+export function clipSegment(w: BlockGetter, ax: number, ay: number, az: number, bx: number, by: number, bz: number): number {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  let x = Math.floor(ax), y = Math.floor(ay), z = Math.floor(az);
+  const ex = Math.floor(bx), ey = Math.floor(by), ez = Math.floor(bz);
+  const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1, sz = dz > 0 ? 1 : -1;
+  const tdx = dx !== 0 ? Math.abs(1 / dx) : Infinity;
+  const tdy = dy !== 0 ? Math.abs(1 / dy) : Infinity;
+  const tdz = dz !== 0 ? Math.abs(1 / dz) : Infinity;
+  let tx = dx !== 0 ? (dx > 0 ? x + 1 - ax : ax - x) * tdx : Infinity;
+  let ty = dy !== 0 ? (dy > 0 ? y + 1 - ay : ay - y) * tdy : Infinity;
+  let tz = dz !== 0 ? (dz > 0 ? z + 1 - az : az - z) * tdz : Infinity;
+  for (let i = 0; i < 512; i++) {
+    if (y < MAX_Y) {
+      const t = Math.min(cellHit(w, x, y, z, ax, ay, az, dx, dy, dz, false), cellHit(w, x, y - 1, z, ax, ay, az, dx, dy, dz, true));
+      if (t <= 1) {
+        CLIP_CELL[0] = x; CLIP_CELL[1] = y; CLIP_CELL[2] = z;
+        return t;
+      }
+    }
+    if (x === ex && y === ey && z === ez) break;
+    if (tx < ty && tx < tz) { if (tx > 1) break; x += sx; tx += tdx; }
+    else if (ty < tz) { if (ty > 1) break; y += sy; ty += tdy; }
+    else { if (tz > 1) break; z += sz; tz += tdz; }
+  }
+  return -1;
+}

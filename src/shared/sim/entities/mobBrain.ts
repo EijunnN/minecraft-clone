@@ -5,6 +5,7 @@ import { isVillagerType } from '../../mobs'; // Fase 6 (aldeanos)
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
 import { moveBody, lineOfSight } from '../physics';
+import { canMeleeHit } from './meleeReach'; // alcance y línea de visión de Java
 import { findPath, standable } from '../pathfind';
 import { GRAVITY, TAU, angleTo, lerpAngle, type PlayerView, type AI, type Entity } from './types';
 import type { Entities } from './Entities';
@@ -233,7 +234,6 @@ export class MobBrain {
       // Distancia de verdad (en 3D), como distanceToSqr en Java: la que cuenta para los ataques a distancia.
       const dist3 = Math.hypot(dx, dy, dz);
       lookAt = [target.x, target.y + 1.6, target.z];
-      const reach = def.width / 2 + 1.1;
       const los = dist < 20 && lineOfSight(w, e.x, e.y + e.height * 0.85, e.z, target.x, target.y + 1.5, target.z);
       if (e.type === MOB_SKELETON || e.type === MOB_STRAY) {
         // Mantener distancia y disparar.
@@ -293,7 +293,8 @@ export class MobBrain {
           e.vx += (dx / dist) * 4;
           e.vz += (dz / dist) * 4;
         }
-        if (dist < reach && Math.abs(dy) < 1.6 && ai.attackCd <= 0) {
+        // MeleeAttackGoal.canPerformAttack: al alcance y viéndolo (no a través de puertas, cristales ni paredes).
+        if (ai.attackCd <= 0 && canMeleeHit(w, e, target.x, target.y, target.z, 0.6, 1.8, 1.62)) {
           ai.attackCd = 1;
           const dmg = def.damage * this.m.difficultyScale();
           this.m.host.hurtPlayer(target.id, dmg, (dx / (dist || 1)) * 5, 4, (dz / (dist || 1)) * 5, def.key, e); // Fase 7: e (Espinas)

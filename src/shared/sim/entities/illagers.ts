@@ -20,6 +20,7 @@ import { OMINOUS_BOTTLE } from '../../items';
 import { BLOCK_SOLID, BLOCK_FLUID, isLeaves, isCrop } from '../../blocks';
 import { EF_ACTION, EF_CAPTAIN } from '../../protocol';
 import { lineOfSight } from '../physics';
+import { canMeleeHit } from './meleeReach'; // alcance y línea de visión de Java
 import { TAU, angleTo, lerpAngle, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 import type { MobBrain } from './mobBrain';
@@ -256,7 +257,7 @@ export class IllagerAI {
             s.roared = foe.p?.id ?? foe.e!.id;
             this.m.host.fx('ravager_roar', e.x, e.y + 1.8, e.z, e.type);
           }
-          if (dist < reach && Math.abs(ty - e.y) < 2 && ai.attackCd <= 0) {
+          if (ai.attackCd <= 0 && canMeleeHit(this.m.w, e, fx(foe), fy(foe), fz(foe), foe.e ? foe.e.width : 0.6, fh(foe), foe.e ? fh(foe) * 0.85 : 1.62)) {
             ai.attackCd = e.type === MOB_RAVAGER ? 2 : 1;
             this.hit(e, foe, def.damage, e.type === MOB_RAVAGER ? 2.2 : 1);
           }

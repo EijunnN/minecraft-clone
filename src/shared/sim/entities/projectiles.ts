@@ -1,5 +1,6 @@
 // Proyectiles que no son flechas: huevos lanzados (se rompen al chocar y a veces nace un pollito) y el
 // flotador de la caña de pescar (vuela, flota en el agua y avisa cuando pica un pez).
+import { clipSegment, CLIP_CELL } from '../../collide'; // choque contra la forma real de los bloques
 import { MOB_CHICKEN, MOB_ENDERMITE, ENDERMITE_PEARL_CHANCE } from '../../mobs';
 import { EGG, FISHING_ROD, SNOWBALL, ENDER_EYE, ENDER_PEARL } from '../../items';
 import { BLOCK_SOLID, BLOCK_FLUID, fluidHeight } from '../../blocks';
@@ -43,9 +44,8 @@ export class Projectiles {
     const steps = Math.max(1, Math.ceil((speed * dt) / 0.25));
     for (let s = 0; s < steps; s++) {
       const nx = e.x + (e.vx * dt) / steps, ny = e.y + (e.vy * dt) / steps, nz = e.z + (e.vz * dt) / steps;
-      const id = this.m.w.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz));
-      if (id < 0 || BLOCK_SOLID[id]) {
-        this.m.host.projectileHit?.('thrown', Math.floor(nx), Math.floor(ny), Math.floor(nz), e.x, e.y, e.z); // Fase 7 (redstone)
+      if (clipSegment(this.m.w, e.x, e.y, e.z, nx, ny, nz) >= 0) {
+        this.m.host.projectileHit?.('thrown', CLIP_CELL[0], CLIP_CELL[1], CLIP_CELL[2], e.x, e.y, e.z); // Fase 7 (redstone)
         this.shatter(e, null);
         return;
       }

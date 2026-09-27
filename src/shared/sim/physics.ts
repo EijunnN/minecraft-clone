@@ -1,6 +1,6 @@
 // Física de cajas (AABB) contra la rejilla de bloques, compartida por criaturas, objetos y flechas.
 import { BLOCK_SOLID, BLOCK_FLUID, COBWEB } from '../blocks';
-import { moveBox, boxBlocked } from '../collide';
+import { moveBox, boxBlocked, clipSegment } from '../collide';
 import { blockUnder, groundSpeed, slimeBounce, inPowderSnow, POWDER_SINK_SPEED, POWDER_WALK_FACTOR } from '../materialPhysics'; // Fase 6.5 (materiales)
 import { SLOW_FALL_SPEED } from '../effects'; // Fase 7 (pociones)
 import { levitate } from '../effects'; // Fase 7 (efectos)
@@ -110,15 +110,11 @@ export function updateFluids(b: Body, w: BlockGetter): void {
   b.inLava = lava;
 }
 
-/** ¿Hay línea de visión entre dos puntos? (paso de 0.25 bloques). */
+/**
+ * ¿Hay línea de visión entre dos puntos? Como hasLineOfSight de Java (clip COLLIDER): cuenta la forma de colisión
+ * de cada bloque, así que se ve por una puerta abierta o por encima de una losa, pero no a través de una puerta
+ * cerrada, un panel de cristal o una pared.
+ */
 export function lineOfSight(w: BlockGetter, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): boolean {
-  const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
-  const len = Math.hypot(dx, dy, dz);
-  const n = Math.ceil(len / 0.25);
-  for (let i = 1; i < n; i++) {
-    const t = i / n;
-    const id = w.getBlock(Math.floor(x0 + dx * t), Math.floor(y0 + dy * t), Math.floor(z0 + dz * t));
-    if (id < 0 || (BLOCK_SOLID[id] === 1)) return false;
-  }
-  return true;
+  return clipSegment(w, x0, y0, z0, x1, y1, z1) < 0;
 }
