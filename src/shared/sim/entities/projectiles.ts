@@ -1,6 +1,5 @@
 // Proyectiles que no son flechas: huevos lanzados (se rompen al chocar y a veces nace un pollito) y el
 // flotador de la caña de pescar (vuela, flota en el agua y avisa cuando pica un pez).
-import { SPLASH_POTION, LINGERING_POTION } from '../../items';
 import { MOB_CHICKEN, MOB_ENDERMITE, ENDERMITE_PEARL_CHANCE } from '../../mobs';
 import { EGG, FISHING_ROD, SNOWBALL, ENDER_EYE, ENDER_PEARL } from '../../items';
 import { BLOCK_SOLID, BLOCK_FLUID, fluidHeight } from '../../blocks';
@@ -13,9 +12,6 @@ import { EXPERIENCE_BOTTLE } from '../../items';
 
 /** Fase 7 (encantamientos): gravedad de la botella con experiencia (Minecraft: 0,07 por tick). */
 const XP_BOTTLE_GRAVITY = 28;
-/** Pociones arrojadizas y persistentes (ThrownSplashPotion: 0,05 bloques por tick²). */
-const POTION_GRAVITY = 20;
-const isPotionItem = (id: number | undefined) => id === SPLASH_POTION || id === LINGERING_POTION;
 import type { PlayerView, Entity } from './types';
 import type { Entities } from './Entities';
 
@@ -38,8 +34,7 @@ export class Projectiles {
       this.m.remove(e.id);
       return;
     }
-    // Fase 7: la botella cae más; las pociones arrojadizas, también (0,05 por tick², como en Java).
-    e.vy -= (e.stack?.id === EXPERIENCE_BOTTLE ? XP_BOTTLE_GRAVITY : isPotionItem(e.stack?.id) ? POTION_GRAVITY : THROWN_GRAVITY) * dt;
+    e.vy -= (e.stack?.id === EXPERIENCE_BOTTLE ? XP_BOTTLE_GRAVITY : THROWN_GRAVITY) * dt; // Fase 7: la botella cae más
     const drag = Math.pow(e.inWater ? 0.8 : 0.99, dt * 20);
     e.vx *= drag;
     e.vy *= drag;

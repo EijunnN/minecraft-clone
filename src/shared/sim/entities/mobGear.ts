@@ -8,7 +8,6 @@
 // - Cabras: de vez en cuando embisten a quien tengan cerca; si chocan contra piedra, troncos, cobre
 //   o menas, se les cae un cuerno (tienen dos).
 import { isDyeable, sanitizeDyeColor } from '../../dyedColor'; // la armadura teñida
-import { shotVelocity, mobUncertainty } from './aim'; // cómo apuntan (Projectile.shoot)
 import { MOBS, MOB_HORSE, MOB_WOLF, MOB_DROWNED, MOB_PILLAGER, MOB_RABBIT, MOB_TURTLE, MOB_GOAT } from '../../mobs';
 import {
   ITEMS, HORSE_ARMOR, WOLF_ARMOR, TRIDENT, NAUTILUS_SHELL, CROSSBOW, RABBIT_FOOT, TURTLE_SCUTE, GOAT_HORN, SHEARS,
@@ -19,7 +18,7 @@ import { armorReduce } from '../../armor';
 import { EF_ACTION } from '../../protocol';
 import {
   HORSE_ARMOR_POINTS, HORSE_ARMOR_TOUGHNESS, WOLF_ARMOR_DURABILITY, DROWNED_TRIDENT_CHANCE, DROWNED_TRIDENT_DROP, DROWNED_SHELL_CHANCE,
-  PILLAGER_CROSSBOW_DROP, RABBIT_FOOT_DROP, TURTLE_SCUTES_ON_GROW, GOAT_HORN_TUNES,
+  PILLAGER_CROSSBOW_DROP, RABBIT_FOOT_DROP, TURTLE_SCUTES_ON_GROW, GOAT_HORN_TUNES, TRIDENT_SPEED,
 } from '../../equipment';
 import { moveBody, lineOfSight } from '../physics';
 import { GRAVITY, angleTo, lerpAngle, type PlayerView, type InteractResult, type Entity } from './types';
@@ -249,12 +248,12 @@ export class MobGear {
     const sx = e.x, sy = e.y + e.height * 0.85, sz = e.z;
     const dx = t.x - sx, dz = t.z - sz;
     const horiz = Math.hypot(dx, dz);
-    // DrownedTridentAttackGoal (RangedAttackGoal de 40 ticks): lo lanza si ve a su presa, hacia un tercio de su altura
-    // más 0,2 × la distancia, a 1,6 bloques por tick y con 14 − 4 × dificultad de incertidumbre.
-    if (!lineOfSight(this.m.w, sx, sy, sz, t.x, t.y + 1.4, t.z)) return;
-    e.throwCd = 2;
-    const [vx, vy, vz] = shotVelocity(dx, t.y + 0.6 - sy + horiz * 0.2, dz, 1.6, mobUncertainty(this.m.host.difficulty()), () => this.m.rand());
-    this.m.gearShots.spawnTrident(sx, sy, sz, vx, vy, vz, e.id, { id: TRIDENT, count: 1 });
+    // DrownedTridentAttackGoal: a 10 bloques como mucho, en 3D.
+    if (horiz < 1 || Math.hypot(dx, t.y - e.y, dz) > 10 || !lineOfSight(this.m.w, sx, sy, sz, t.x, t.y + 1.4, t.z)) return;
+    e.throwCd = 2 + this.m.rand() * 1.5;
+    const time = Math.max(0.05, horiz / TRIDENT_SPEED);
+    const vy = (t.y + 1.2 - sy) / time + 0.5 * 20 * time;
+    this.m.gearShots.spawnTrident(sx + (dx / horiz) * 0.5, sy, sz + (dz / horiz) * 0.5, dx / time, vy, dz / time, e.id, { id: TRIDENT, count: 1 });
     this.m.host.fx('trident_throw', sx, sy, sz);
   }
 

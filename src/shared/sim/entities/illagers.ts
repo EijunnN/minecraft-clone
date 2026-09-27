@@ -12,7 +12,6 @@
 // - Colmillos: salen del suelo, muerden una vez a lo que tengan encima y desaparecen.
 // - Zombis: sin jugadores cerca, van a por los aldeanos; en normal y difícil, a veces los convierten
 //   en aldeanos zombi.
-import { shotVelocity, mobUncertainty } from './aim'; // cómo apuntan (Projectile.shoot)
 import {
   MOBS, MOB_VILLAGER, MOB_WANDERING_TRADER, MOB_IRON_GOLEM, MOB_ZOMBIE, MOB_HUSK, MOB_ZOMBIE_VILLAGER, MOB_DROWNED,
   MOB_PILLAGER, MOB_VINDICATOR, MOB_EVOKER, MOB_VEX, MOB_RAVAGER, MOB_EVOKER_FANGS, isRaider, isVillagerType,
@@ -321,14 +320,17 @@ export class IllagerAI {
 
   /** Virote de ballesta hacia la presa (más rápido y tenso que la flecha del esqueleto). */
   private shoot(e: Entity, f: Foe): void {
-    // CrossbowAttackMob.shootCrossbowProjectile: hacia un tercio de la altura del objetivo más 0,2 × la distancia, a
-    // 1,6 bloques por tick y con 14 − 4 × dificultad de incertidumbre.
-    const sx = e.x, sy = e.y + e.height * 0.85 - 0.1, sz = e.z;
-    const tx = fx(f), ty = fy(f) + fh(f) / 3, tz = fz(f);
+    const sx = e.x, sy = e.y + e.height * 0.78, sz = e.z;
+    const tx = fx(f), ty = fy(f) + fh(f) * 0.6, tz = fz(f);
     const dx = tx - sx, dz = tz - sz;
-    const horiz = Math.hypot(dx, dz);
-    const [vx, vy, vz] = shotVelocity(dx, ty - sy + horiz * 0.2, dz, 1.6, mobUncertainty(this.m.host.difficulty()), () => this.m.rand());
-    this.m.spawnArrow(sx, sy, sz, vx, vy, vz, e.id, 2.2);
+    const horiz = Math.max(1e-3, Math.hypot(dx, dz));
+    const speed = 36;
+    const t = Math.max(0.05, horiz / speed);
+    const spread = [0.1, 0.07, 0.05, 0.025][this.m.host.difficulty()] ?? 0.05;
+    const vy = (ty - sy) / t + 0.5 * 20 * t;
+    const vx = dx / t + (this.m.rand() - 0.5) * spread * speed;
+    const vz = dz / t + (this.m.rand() - 0.5) * spread * speed;
+    this.m.spawnArrow(sx + (dx / horiz) * 0.6, sy, sz + (dz / horiz) * 0.6, vx, vy + (this.m.rand() - 0.5) * spread * speed, vz, e.id, 2.2);
     this.m.host.fx('crossbow_shoot', sx, sy, sz, e.type);
   }
 

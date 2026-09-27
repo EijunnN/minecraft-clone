@@ -12,7 +12,6 @@
 // - Phantom: vuela en círculos sobre su presa y se lanza en picado de vez en cuando.
 // - Lepisma: si un jugador la hiere, al poco despierta a las de los bloques infestados cercanos.
 // - Araña de cueva: su mordisco envenena (normal 7 s, difícil 15 s).
-import { shotVelocity } from './aim'; // cómo apuntan (Projectile.shoot)
 import {
   MOBS, MOB_ZOMBIE, MOB_HUSK, MOB_SPIDER, MOB_DROWNED, MOB_WITCH, MOB_SLIME, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL, MOB_PHANTOM,
   MOB_SILVERFISH, MOB_CAVE_SPIDER, MOB_ZOMBIE_VILLAGER, MOB_ENDERMITE, ENDERMITE_LIFE_TICKS,
@@ -48,6 +47,8 @@ export const SLIME_SPLIT: Readonly<Record<number, number>> = {
   [MOB_SLIME]: MOB_SLIME_MEDIUM,
   [MOB_SLIME_MEDIUM]: MOB_SLIME_SMALL,
 };
+/** Gravedad de los objetos lanzados (la misma que usa projectiles.ts). */
+const THROWN_GRAVITY = 12;
 
 /** Arañas (normal y de cueva): trepan, saltan al atacar y sólo son hostiles a oscuras. */
 export function isSpiderLike(type: number): boolean {
@@ -60,8 +61,6 @@ export function isSlime(type: number): boolean {
 
 /** Estado propio de cada monstruo (no se guarda: los monstruos no se guardan). */
 interface MonsterState {
-  /** Bruja: ticks que lleva viendo a su presa (RangedAttackGoal.seeTime). */
-  seeTime?: number;
   /** Zombis: segundos con la cabeza sumergida. */
   underwater: number;
   /** Bruja: segundos que le quedan bebiendo, qué bebe y cuándo podrá volver a beber. */
@@ -401,19 +400,26 @@ export class MonsterAI {
       const dx = target.x - e.x, dz = target.z - e.z;
       const dist = Math.hypot(dx, dz) || 1;
       lookAt = [target.x, target.y + 1.6, target.z];
-      const los = lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, target.x, target.y + 1.5, target.z);
-      // RangedAttackGoal(1.0, 60, 10): se para si lo tiene a 10 bloques (en 3D) y lo ve desde hace 5 ticks; si no,
-      // va hacia él. Lanza cada 60 ticks si lo ve, esté donde esté (la poción no llega lejos hacia arriba).
-      s.seeTime = los ? (s.seeTime ?? 0) + dt * 20 : 0;
+      const los = dist < 20 && lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, target.x, target.y + 1.5, target.z);
       if (s.drink <= 0) {
-        if (!(Math.hypot(dx, target.y - e.y, dz) <= 10 && s.seeTime >= 5)) {
+        if (dist < 5) {
+          mx = -dx / dist;
+          mz = -dz / dist;
+          speed = def.walk;
+        } else if (dist > 10 || !los) {
           const [fx, fz] = this.brain.followPath(e, target, dt);
           mx = fx;
           mz = fz;
-          speed = def.walk;
+          speed = def.run;
+        } else {
+          const side = Math.sin(e.age * 0.5 + e.id) > 0 ? 1 : -1;
+          mx = (-dz / dist) * side;
+          mz = (dx / dist) * side;
+          speed = def.walk * 0.5;
         }
-        if (los && ai.shootCd <= 0) {
-          ai.shootCd = 3;
+        // RangedAttackGoal de la bruja: a 10 bloques como mucho (en 3D, no sólo en horizontal).
+        if (los && Math.hypot(dx, target.y - e.y, dz) <= 10 && ai.shootCd <= 0) {
+          ai.shootCd = 2.5 + this.m.rand() * 1.5;
           this.throwPotion(e, target, dist);
         }
       }
@@ -432,14 +438,12 @@ export class MonsterAI {
     const type = dist >= 8 && !has(EFFECT_SLOWNESS) ? PT_SLOWNESS
       : (target.hp ?? 20) >= 8 && !has(EFFECT_POISON) ? PT_POISON
         : dist <= 3 && !has(EFFECT_WEAKNESS) && this.m.rand() < 0.25 ? PT_WEAKNESS : PT_HARMING;
-    // Witch.performRangedAttack: desde sus ojos, hacia la cara de su presa (−1,1) más 0,2 × la distancia, a 0,75
-    // bloques por tick (0,45 de muy cerca) y con 8 de incertidumbre.
-    const sx = e.x, sy = e.y + 1.62 - 0.1, sz = e.z;
-    const dx = target.x - e.x, dz = target.z - e.z;
-    const horiz = Math.hypot(dx, dz);
-    const yd = target.y + 1.62 - 1.1 - e.y;
-    const [vx, vy, vz] = shotVelocity(dx, yd + horiz * 0.2, dz, horiz <= 2 ? 0.45 : 0.75, 8, () => this.m.rand());
-    const p = this.m.spawnThrown(SPLASH_POTION, sx, sy, sz, vx, vy, vz, '', type);
+    const sx = e.x, sy = e.y + e.height * 0.8, sz = e.z;
+    const dx = target.x - sx, dz = target.z - sz;
+    const horiz = Math.max(1e-3, Math.hypot(dx, dz));
+    const t = Math.max(0.15, horiz / 12);
+    const vy = (target.y + 1 - sy) / t + 0.5 * THROWN_GRAVITY * t;
+    const p = this.m.spawnThrown(SPLASH_POTION, sx + (dx / horiz) * 0.5, sy, sz + (dz / horiz) * 0.5, dx / t, vy, dz / t, '', type);
     p.shooter = e.id;
     this.m.host.fx('throw', sx, sy, sz);
     return p;

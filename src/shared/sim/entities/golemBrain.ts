@@ -3,7 +3,6 @@
 //   también se vuelve contra quien le pegue. Se cura con lingotes de hierro.
 // - Gólem de nieve: tira bolas de nieve a los monstruos, deja capas de nieve al andar donde hace frío
 //   y se derrite con el calor, la lluvia o el agua.
-import { shotVelocity } from './aim'; // cómo apuntan (Projectile.shoot)
 import { MOBS, MOB_CREEPER, MOB_ENDERMAN } from '../../mobs';
 import { IRON_INGOT, SNOWBALL } from '../../items';
 import { AIR, BLOCK_OPAQUE, SNOW_LAYER } from '../../blocks';
@@ -17,6 +16,9 @@ import type { Companions } from './companions';
 const IRON_SIGHT = 16;
 /** Radio en el que el gólem de nieve dispara. */
 const SNOW_SIGHT = 10;
+/** Velocidad de salida de las bolas de nieve (bloques/s) y gravedad de los objetos lanzados. */
+const SNOWBALL_SPEED = 20;
+const THROWN_GRAVITY = 12;
 
 export class GolemBrain {
   constructor(private m: Entities, private c: Companions) {}
@@ -77,14 +79,13 @@ export class GolemBrain {
 
   /** Bola de nieve hacia la criatura (tiro parabólico). */
   throwSnowball(e: Entity, t: Entity): void {
-    // SnowGolem.performRangedAttack: hacia los ojos del objetivo (−1,1) más 0,2 × la distancia, a 1,6 bloques por tick
-    // y con 12 de incertidumbre.
-    const sx = e.x, sy = e.y + e.height * 0.85 - 0.1, sz = e.z;
-    const dx = t.x - e.x, dz = t.z - e.z;
-    const horiz = Math.hypot(dx, dz);
-    const yd = t.y + t.height * 0.85 - 1.1 + horiz * 0.2 - sy;
-    const [vx, vy, vz] = shotVelocity(dx, yd, dz, 1.6, 12, () => this.m.rand());
-    const ball = this.m.spawnThrown(SNOWBALL, sx, sy, sz, vx, vy, vz, '');
+    const sx = e.x, sy = e.y + e.height * 0.8, sz = e.z;
+    const dx = t.x - sx, dz = t.z - sz;
+    const horiz = Math.max(1e-3, Math.hypot(dx, dz));
+    const time = Math.max(0.05, horiz / SNOWBALL_SPEED);
+    const ty = t.y + t.height * 0.6;
+    const vy = (ty - sy) / time + 0.5 * THROWN_GRAVITY * time;
+    const ball = this.m.spawnThrown(SNOWBALL, sx + (dx / horiz) * 0.7, sy, sz + (dz / horiz) * 0.7, dx / time, vy, dz / time, '');
     ball.shooter = e.id;
     this.m.host.fx('throw', sx, sy, sz);
   }
