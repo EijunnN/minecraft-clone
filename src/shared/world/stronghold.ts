@@ -518,7 +518,7 @@ function drawRoomCrossing(d: StrongholdDrawer, p: StrongholdPiece): void {
         d.place(COBBLESTONE, 4, y, 6);
         d.place(COBBLESTONE, 6, y, 6);
       }
-      d.place(TORCH, 5, 3, 5);
+      d.place(d.torch(N), 5, 3, 5);
       for (let z = 2; z <= 8; z++) {
         d.place(OAK_PLANKS, 2, 3, z);
         d.place(OAK_PLANKS, 3, 3, z);

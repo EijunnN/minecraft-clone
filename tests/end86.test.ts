@@ -263,7 +263,7 @@ test('puertas del End: la del anillo lleva lejos (y deja una de vuelta); el huev
   // El huevo: al usarlo salta a otro sitio.
   W.ensureChunk(0, 0, h.clock.now);
   const y = 100;
-  for (let x = -16; x < 16; x++) for (let z = -16; z < 16; z++) for (let yy = y - 8; yy < y + 8; yy++) if (W.isLoaded(x >> 4, z >> 4)) W.setBlock(x, yy, z, AIR);
+  for (let x = -16; x < 16; x++) for (let z = -16; z < 16; z++) for (let yy = y - 8; yy < y + 8; yy++) if (W.isLoaded(x >> 4, z >> 4)) W.setBlock(x, yy, z, yy === y - 1 ? STONE : AIR);
   W.setBlock(2, y, 2, DRAGON_EGG);
   c.pos(2.5, y, 4.5);
   c.send({ t: 'use', x: 2, y, z: 2, yaw: 0, item: 0 });

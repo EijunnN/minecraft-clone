@@ -157,9 +157,9 @@ export class Explosives {
           this.hitVehicle(e, dmg);
           continue;
         }
-        // Fase 8.6: los cristales del End estallan también (en cadena).
+        // Fase 8.6: el cristal del End que alcanza una explosión se rompe (sin estallar: no hay cadena).
         if (e.type === ENT_END_CRYSTAL) {
-          ents.dragon.crystalHit(e, null);
+          ents.dragon.crystalHit(e, null, true);
           continue;
         }
         if (e.type === ENT_ITEM) {

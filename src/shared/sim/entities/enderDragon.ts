@@ -9,7 +9,7 @@
 //   cristales, más a menudo). Posado: OTEA (si hay alguien a 20 bloques, le RUGE y le ECHA EL ALIENTO; si no, despega
 //   o SE LANZA contra el más cercano), y tras cuatro alientos DESPEGA. Muriendo, vuela al podio y allí se consume.
 // - Partes (EnderDragonPart): cabeza, cuello, cuerpo, tres de cola y dos alas; las alas empujan (y hieren 5 si no
-//   está posado), la cabeza y el cuello hieren 10. Los golpes que no dan en la cabeza hacen un cuarto (+1).
+//   está posado), la cabeza y el cuello hieren 10. Los golpes que no dan en la cabeza o el cuello hacen un cuarto (+1).
 // - Se cura 1 cada 10 ticks con el cristal más cercano (a 32 bloques); si ése estalla, el dragón pierde 10.
 import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL, ENT_DRAGON_FIREBALL, EF_DRAGON_SITTING, EF_DRAGON_LANDING, DRAGON_HEALTH, DRAGON_PARTS, DRAGON_XP_FIRST, DRAGON_XP_AGAIN } from '../../mobs';
 import {
@@ -178,11 +178,11 @@ export class EnderDragonAI {
     return this.nodes[i];
   }
 
-  /** findClosestNode(x, y, z): el nodo más cercano (los de dentro sólo si no quedan cristales, como en Java). */
+  /** findClosestNode(x, y, z): el nodo más cercano a menos de 100 bloques (sin cristales, sólo los de dentro). */
   private closestNode(x: number, y: number, z: number): number {
     const crystals = this.fight?.crystalsAlive() ?? 0;
-    let best = 0, bd = Infinity;
-    for (let i = crystals === 0 ? 0 : 0; i < 24; i++) {
+    let best = 0, bd = 10000;
+    for (let i = crystals === 0 ? 12 : 0; i < 24; i++) {
       const [nx, ny, nz] = this.node(i);
       const d = (nx - x) ** 2 + (ny - y) ** 2 + (nz - z) ** 2;
       if (d < bd) {
@@ -296,7 +296,7 @@ export class EnderDragonAI {
   private turnSpeed(s: DragonState): number {
     const rot = Math.hypot(s.vel[0], s.vel[2]) + 1;
     const dist = Math.min(rot, 40);
-    return s.phase === 'landing' || s.phase === 'takeoff' ? dist / rot : 0.7 / dist / rot;
+    return s.phase === 'landing' ? dist / rot : 0.7 / dist / rot;
   }
 
   private nearestPlayer(x: number, y: number, z: number, range: number, filter?: (p: PlayerView) => boolean): PlayerView | null {
@@ -357,18 +357,33 @@ export class EnderDragonAI {
       const p = this.nearestPlayer(podium[0], podium[1], podium[2], 128);
       const dist = p ? ((p.x - podium[0]) ** 2 + (p.y - podium[1]) ** 2 + (p.z - podium[2]) ** 2) / 512 : 64;
       if (p && (Math.floor(this.m.rand() * (Math.abs(dist) + 2)) === 0 || Math.floor(this.m.rand() * (crystals + 2)) === 0)) {
-        this.setPhase(e, s, 'strafe');
-        s.attackTarget = p.id;
+        this.strafe(e, s, p);
         return;
       }
     }
     if (s.path.length === 0) {
       const cur = this.closestNode(e.x, e.y, e.z);
-      if (this.m.rand() < 1 / 8) s.clockwise = !s.clockwise;
-      let to = cur + (s.clockwise ? 1 : -1);
+      let to = cur;
+      if (this.m.rand() < 1 / 8) {
+        // Al cambiar de sentido cruza al otro lado del anillo.
+        s.clockwise = !s.clockwise;
+        to = cur + 6;
+      }
+      to += s.clockwise ? 1 : -1;
       to = ((to % 12) + 12) % 12;
       this.findPath(cur, to, null, s);
     }
+    this.nextNode(s);
+  }
+
+  /** DragonStrafePlayerPhase.setTarget: camino al nodo del jugador y, al final, encima de él. */
+  private strafe(e: Entity, s: DragonState, p: PlayerView): void {
+    this.setPhase(e, s, 'strafe');
+    s.attackTarget = p.id;
+    const cur = this.closestNode(e.x, e.y, e.z), to = this.closestNode(p.x, p.y, p.z);
+    const fx = Math.floor(p.x), fz = Math.floor(p.z);
+    const sd = Math.hypot(fx - e.x, fz - e.z);
+    this.findPath(cur, to, [fx, Math.floor(p.y + Math.min(0.4 + sd / 80 - 1, 10)), fz], s);
     this.nextNode(s);
   }
 
@@ -392,8 +407,13 @@ export class EnderDragonAI {
         if (d < 100 || d > 22500) {
           if (s.path.length === 0) {
             const cur = this.closestNode(e.x, e.y, e.z);
-            if (this.m.rand() < 1 / 8) s.clockwise = !s.clockwise;
-            this.findPath(cur, (((cur + (s.clockwise ? 1 : -1) + 6) % 12) + 12) % 12, null, s);
+            let to = cur;
+            if (this.m.rand() < 1 / 8) {
+              s.clockwise = !s.clockwise;
+              to = cur + 6;
+            }
+            to += s.clockwise ? 1 : -1;
+            this.findPath(cur, (this.fight?.crystalsAlive() ?? 0) > 0 ? ((to % 12) + 12) % 12 : (((to - 12) & 7) + 12), null, s);
           }
           this.nextNode(s);
         }
@@ -497,7 +517,7 @@ export class EnderDragonAI {
           const cur = this.closestNode(e.x, e.y, e.z);
           const fx = Math.sin(s.yRot * DEG), fz = -Math.cos(s.yRot * DEG);
           let to = this.closestNode(fx * 40, 105, fz * 40);
-          if ((this.fight?.crystalsAlive() ?? 0) > 0) to = (((to - 12) & 7) + 12);
+          to = (this.fight?.crystalsAlive() ?? 0) > 0 ? ((to % 12) + 12) % 12 : (((to - 12) & 7) + 12);
           this.findPath(cur, to, null, s);
           this.nextNode(s);
         }
@@ -553,7 +573,9 @@ export class EnderDragonAI {
       return;
     }
     this.checkCrystals(e, s);
+    const was = s.phase;
     this.phaseTick(e, s);
+    if (s.phase !== was && e.health > 0) this.phaseTick(e, s); // la fase nueva actúa en el mismo tick
     if (e.health <= 0) return;
     const t = s.target;
     if (t && !SITTING.has(s.phase)) {
@@ -704,7 +726,7 @@ export class EnderDragonAI {
     const s = this.state(e);
     if (s.phase === 'dying' || e.health <= 0) return false;
     if (SITTING.has(s.phase) && arrow) return false;
-    if (part !== 0) amount = amount / 4 + Math.min(amount, 1);
+    if (part !== 0 && part !== 1) amount = amount / 4 + Math.min(amount, 1);
     if (amount < 0.01) return false;
     if (typeof attacker !== 'string' && attacker !== null) return false;
     const before = e.health;
@@ -778,6 +800,9 @@ export class EnderDragonAI {
         s.crystal = null;
         this.hurt(e, 0, 10, attacker);
       }
+      // En las vueltas, va a por quien lo rompió (DragonHoldingPatternPhase.onCrystalDestroyed).
+      const p = attacker ? this.m.host.players().find((q) => q.id === attacker && q.alive && !q.creative) : undefined;
+      if (s.phase === 'holding' && p && e.health > 0) this.strafe(e, s, p);
     }
   }
 
@@ -790,13 +815,16 @@ export class EnderDragonAI {
     if (this.fight && this.m.w.getBlock(x, y, z) === AIR) this.m.host.igniteBlock?.(x, y, z);
   }
 
-  /** El cristal recibe un golpe (lo que sea): estalla con potencia 6. */
-  crystalHit(e: Entity, attacker: string | null): void {
-    if (e.dead || !this.m.list.has(e.id)) return;
+  /**
+   * EndCrystal.hurtServer: el cristal (si no es invulnerable) se rompe; si no fue una explosión, estalla con
+   * potencia 6 (así no hay reacción en cadena: el que alcanza una explosión sólo desaparece).
+   */
+  crystalHit(e: Entity, attacker: string | null, byExplosion = false): void {
+    if (e.dead || !this.m.list.has(e.id) || e.invulnerable) return;
     this.m.remove(e.id);
     this.onCrystalDestroyed(e, attacker);
     this.onCrystalGone?.(e);
-    this.m.explode(e.x, e.y, e.z, 6);
+    if (!byExplosion) this.m.explode(e.x, e.y, e.z, 6);
   }
 
   /** Aviso al combate de que se fue un cristal (para la reaparición del dragón). */
