@@ -82,6 +82,9 @@ export class AudioEngine {
   private reverbSend!: GainNode;
   private convolver!: ConvolverNode;
   private reverbReturn!: GainNode;
+  /** Chat de voz: bus de las voces de los demás jugadores (con su propio volumen). */
+  private voiceBus!: GainNode;
+  private voiceVolume = 1;
 
   private noise: NoiseBuffers | null = null;
   private ambience: AmbienceController | null = null;
@@ -203,6 +206,24 @@ export class AudioEngine {
     this.reverbReturn = ctx.createGain();
     this.reverbReturn.gain.value = 0.5;
     this.reverbSend.connect(this.convolver).connect(this.reverbReturn).connect(this.masterGain);
+
+    this.voiceBus = ctx.createGain();
+    this.voiceBus.gain.value = this.voiceVolume;
+    this.voiceBus.connect(this.masterGain);
+  }
+
+  /** Chat de voz: el contexto de audio, el bus de las voces y el envío a la reverberación (null si el audio no arrancó). */
+  voiceGraph(): { ctx: AudioContext; bus: GainNode; reverb: GainNode } | null {
+    return this.ctx ? { ctx: this.ctx, bus: this.voiceBus, reverb: this.reverbSend } : null;
+  }
+
+  setVoiceVolume(v: number): void {
+    this.voiceVolume = Math.max(0, Math.min(2, v));
+    this.safe(() => {
+      const ctx = this.ctx;
+      if (!ctx) return;
+      this.voiceBus.gain.setTargetAtTime(this.voiceVolume, ctx.currentTime, 0.05);
+    });
   }
 
   private safe(fn: () => void): void {

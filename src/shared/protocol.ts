@@ -5,7 +5,7 @@ import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import type { BannerLayer } from './bannerPatterns';
 
-export const PROTOCOL_VERSION = 18; // Fase 8.7: el Wither, su calavera, la rosa marchita y el color de la barra del jefe
+export const PROTOCOL_VERSION = 19; // chat de voz por proximidad: presencia de voz y señales de WebRTC
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -94,6 +94,14 @@ export interface PlayerInfo {
   os?: string;
   /** Color de cada pieza de armadura teñida (0xRRGGBB, −1 sin teñir); sólo si alguna lo está. */
   ac?: number[];
+  /** Chat de voz: tiene la voz activada. */
+  v?: 1;
+}
+
+/** Señal de WebRTC entre dos jugadores: una descripción de sesión (oferta o respuesta) o un candidato ICE. */
+export interface RtcSignal {
+  sdp?: { type: 'offer' | 'answer'; sdp: string };
+  ice?: { candidate: string; sdpMid?: string; sdpMLineIndex?: number };
 }
 
 /** Pila en la red: [id, cantidad] o [id, cantidad, desgaste]. */
@@ -175,6 +183,9 @@ export type ClientMsg =
   | { t: 'chat'; m: string }
   | { t: 'swing' }
   | { t: 'ping'; c: number }
+  /** Chat de voz: el jugador activa o desactiva su voz, y las señales de WebRTC para conectar con otro jugador. */
+  | { t: 'voice'; on: boolean }
+  | { t: 'rtc'; to: string; d: RtcSignal }
   /** b: daño extra por efectos (Fuerza +3 por nivel, Debilidad −4). */
   /** Fase 7 (encantamientos): en, encantamientos del arma; sw, golpe que barre (espada, cargado, en el suelo). */
   | { t: 'attack'; e: number; item: number; crit?: boolean; b?: number; en?: [number, number][]; sw?: number; k?: number }
@@ -268,6 +279,9 @@ export type ServerMsg =
   }
   | { t: 'join'; p: PlayerInfo }
   | { t: 'leave'; id: string }
+  /** Chat de voz: otro jugador activa o desactiva su voz, y las señales de WebRTC que manda. */
+  | { t: 'voice'; id: string; on: boolean }
+  | { t: 'rtc'; from: string; d: RtcSignal }
   | {
     t: 'pos'; id: string; p: [number, number, number]; r: [number, number]; s: number; h?: number; o?: number; a?: number[]; ec?: number; g?: number;
     hp?: number; op?: number; hs?: string; os?: string; ac?: number[];

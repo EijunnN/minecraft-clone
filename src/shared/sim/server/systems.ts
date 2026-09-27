@@ -5,6 +5,7 @@
 //
 // Los enganches entre sistemas van por puntos con nombre (ver hooks.ts): los rayos (`storms.strikes`),
 // el clic derecho sobre entidades (`farming.interactions`), lo que enciende un bloque (`fire.igniters`)…
+import { VoiceRelay } from './voice'; // chat de voz
 import { isShulkerBox } from '../../blocks'; // Fase 8.6
 import { sanitizeStack } from '../../containers';
 import { stackFromWire } from '../../protocol';
@@ -97,6 +98,8 @@ export class ServerSystems {
   readonly golems: Golems;
   /** Fase 8.7: invocar al Wither, su barra y la rosa marchita. */
   readonly witherBoss: WitherBoss;
+  /** Chat de voz: quién tiene la voz y las señales de WebRTC. */
+  readonly voice: VoiceRelay;
   /** Fase 6 (asaltos): puestos, patrullas, Mal presagio y asaltos. */
   readonly raids: Raids;
   /** Fase 6.5 (colores): hormigón en polvo que se endurece en el agua. */
@@ -181,6 +184,7 @@ export class ServerSystems {
     this.monsters = new Monsters(ctx, store);
     this.golems = new Golems(ctx, store);
     this.witherBoss = new WitherBoss(ctx);
+    this.voice = new VoiceRelay(ctx);
     this.raids = new Raids(ctx, store);
     this.trading.heroAmp = (name) => this.raids.heroAmp(name);
     this.commands.raids = this.raids;

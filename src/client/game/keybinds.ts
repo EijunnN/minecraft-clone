@@ -3,7 +3,7 @@
 
 export type KeyAction =
   | 'forward' | 'back' | 'left' | 'right' | 'jump' | 'sneak' | 'sprint'
-  | 'inventory' | 'drop' | 'swapHands' | 'chat' | 'command' | 'playerList' | 'perspective';
+  | 'inventory' | 'drop' | 'swapHands' | 'chat' | 'command' | 'playerList' | 'perspective' | 'voice';
 
 export type Keybinds = Record<KeyAction, string>;
 
@@ -23,6 +23,7 @@ export const KEY_ACTIONS: readonly [KeyAction, string, string][] = [
   ['command', 'Comando', 'Slash'],
   ['playerList', 'Lista de jugadores', 'Tab'],
   ['perspective', 'Cambiar cámara', 'F5'],
+  ['voice', 'Hablar (chat de voz)', 'KeyV'],
 ];
 
 /** Teclas que no se pueden asignar (las usa el juego para otra cosa). */

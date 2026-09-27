@@ -24,6 +24,7 @@ export class ServerEvents {
     if (this.g.books.onMessage(msg)) return; // Fase 6.5 (libros y estandartes): 'banner' y 'lbook'
     if (this.g.enchant.onServer(msg)) return; // Fase 7 (encantamientos): /encantar
     if (this.g.mechanisms.onMessage(msg)) return; // Fase 7 (mecanismos): armadura que pone un dispensador
+    if (this.g.voice.onMessage(msg)) return; // chat de voz: quién la tiene y las señales de WebRTC
     switch (msg.t) {
       case 'join':
         this.addRemote(msg.p, true);
@@ -244,6 +245,7 @@ export class ServerEvents {
       return;
     }
     this.g.time = w.time;
+    this.g.voice.onWelcome();
     this.g.remote.clear();
     this.g.ents.clear();
     for (const p of w.players) this.addRemote(p, false);

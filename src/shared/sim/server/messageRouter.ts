@@ -36,6 +36,9 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
     if ([x, y, z].every(Number.isInteger) && h.ctx.reachOk(s, x, y, z, 3)) h.sys.farming.trample(x, y, z);
   }),
   chat: route<'chat'>(0, (h, s, m) => h.onChat(s, m.m)),
+  // Chat de voz: activarla y las señales de WebRTC entre jugadores.
+  voice: route<'voice'>(1, (h, s, m) => h.sys.voice.onVoice(s, m)),
+  rtc: route<'rtc'>(0.25, (h, s, m) => h.sys.voice.onRtc(s, m)),
   swing: route<'swing'>(0.5, (h, s) => h.ctx.broadcast({ t: 'swing', id: s.id }, s)),
   // Los golpes a cuadros, marcos, soportes, barcas y vagonetas los atiende su sistema.
   attack: route<'attack'>(1, (h, s, m) => {

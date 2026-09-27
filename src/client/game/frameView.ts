@@ -30,6 +30,7 @@ import type { ClientEntity } from './ClientEntities';
 import type { CameraPose, EyeLight } from './cameraRig';
 import type { SkyState } from './environment';
 import type { Game } from './Game';
+import type { NameTagInfo } from '../ui/UI';
 
 /** Color sRGB (0..255) a lineal. */
 function srgbToLin(v: number): number {
@@ -209,13 +210,13 @@ export function frameState(g: Game, f: FrameInput): FrameState {
 
 /** Etiquetas de nombre: jugadores (a menos de 72 bloques, no invisibles) y criaturas con nombre (16). */
 export function updateNameTags(g: Game, cam: CameraPose): void {
-  const tags: { id: string; name: string; pos: [number, number] | null }[] = [];
+  const tags: NameTagInfo[] = [];
   const { camX, camY, camZ } = cam;
   for (const rp of g.remote.values()) {
     const v = rp.view;
     const d = Math.hypot(v.x - camX, v.y - camY, v.z - camZ);
     const visible = d < 72 && !g.hudHidden && !(rp.state & (STATE_DEAD | STATE_INVISIBLE)); // Fase 7: sin nombre si es invisible
-    tags.push({ id: rp.id, name: rp.name, pos: visible ? g.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null });
+    tags.push({ id: rp.id, name: rp.name, pos: visible ? g.renderer.project(v.x, v.y + (v.sneaking ? 1.85 : 2.1), v.z) : null, talking: rp.talking });
   }
   // Fase 6.5 (remate): criaturas con nombre (etiqueta), hasta 16 bloques.
   for (const e of g.ents.list.values()) {

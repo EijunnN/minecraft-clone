@@ -667,6 +667,87 @@ kbd {
   will-change: transform, left, top;
 }
 
+/* Chat de voz: quien habla lleva un altavoz verde junto al nombre y el borde encendido. */
+.nametag.talking {
+  box-shadow: 0 0 0 1.5px #5dff8a, 0 0 10px rgba(93, 255, 138, 0.55);
+}
+
+.nametag.talking::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  background: #5dff8a;
+  clip-path: polygon(0 32%, 35% 32%, 75% 0, 75% 100%, 35% 68%, 0 68%);
+  animation: voice-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes voice-pulse {
+  from { opacity: 0.65; }
+  to { opacity: 1; }
+}
+
+/* Indicador del micrófono propio (abajo a la izquierda). */
+#voice-hud {
+  position: absolute;
+  left: 14px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.38);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+}
+
+#voice-hud svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+#voice-hud svg rect {
+  fill: currentColor;
+  stroke: none;
+}
+
+#voice-hud .slash {
+  display: none;
+  stroke: #ff6b6b;
+}
+
+#voice-hud span:empty {
+  display: none;
+}
+
+#voice-hud[data-state='off'] {
+  display: none;
+}
+
+#voice-hud[data-state='talking'] {
+  color: #5dff8a;
+  background: rgba(10, 40, 18, 0.62);
+  box-shadow: 0 0 12px rgba(93, 255, 138, 0.45);
+}
+
+#voice-hud[data-state='denied'] {
+  color: #ffb3b3;
+}
+
+#voice-hud[data-state='denied'] .slash {
+  display: inline;
+}
+
 #chat {
   position: absolute;
   left: 12px;

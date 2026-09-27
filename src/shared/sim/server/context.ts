@@ -41,6 +41,8 @@ export interface Session {
   os?: string;
   /** Color de cada pieza de armadura teñida (PlayerInfo.ac). */
   ac?: number[];
+  /** Chat de voz: tiene la voz activada (PlayerInfo.v). */
+  voice?: boolean;
   mode: GameMode;
   lookAt: number;
   lookUntil: number;

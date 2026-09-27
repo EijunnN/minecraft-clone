@@ -71,9 +71,13 @@ export class RemotePlayer {
   private lastY = 0;
   /** Fase 7 (pociones): color de los remolinos de sus efectos (0xRRGGBB; 0 sin efectos). */
   effectColor = 0;
+  /** Chat de voz: tiene la voz activada y está hablando ahora (lo decide el volumen de lo que llega). */
+  voice = false;
+  talking = false;
 
   constructor(info: PlayerInfo) {
     this.id = info.id;
+    this.voice = info.v === 1;
     this.name = info.name;
     this.shirt = info.shirt;
     const now = performance.now();

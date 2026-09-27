@@ -16,6 +16,14 @@ export interface Settings {
   /** Agacharse y correr con una pulsación (alternar) en vez de mantener la tecla. */
   toggleSneak: boolean;
   toggleSprint: boolean;
+  /** Chat de voz por proximidad: oír a los jugadores cercanos (y hablar con la tecla o por voz). */
+  voiceEnabled: boolean;
+  /** Pulsar la tecla para hablar, o que el micrófono se abra solo al hablar. */
+  voiceMode: 'ptt' | 'vad';
+  /** Modo por voz: cuánto hay que hablar para que se abra el micrófono (0 muy sensible, 1 sólo voz fuerte). */
+  voiceThreshold: number;
+  /** Volumen de las voces de los demás (0..2). */
+  voiceVolume: number;
 }
 
 const KEY = 'voxelcraft:settings:v1';
@@ -41,6 +49,10 @@ export function defaultSettings(preset: PresetName = 'medio'): Settings {
     keys: defaultKeybinds(),
     toggleSneak: false,
     toggleSprint: false,
+    voiceEnabled: true,
+    voiceMode: 'ptt',
+    voiceThreshold: 0.25,
+    voiceVolume: 1,
   };
 }
 

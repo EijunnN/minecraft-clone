@@ -100,6 +100,7 @@ async function boot(): Promise<void> {
     audio.setMasterVolume(settings.master);
     audio.setMusicVolume(settings.music);
     audio.setAmbientVolume(settings.ambient);
+    audio.setVoiceVolume(settings.voiceVolume);
   };
   applyAudio();
   ui.onSettingsChanged = (s) => {

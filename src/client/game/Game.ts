@@ -68,6 +68,7 @@ import { EnchantBooks } from './enchantBooks';
 import { Beacons } from './beacons'; // Fase 8.5 (lo que da el Nether)
 import { EndAtmosphere } from './endAtmosphere'; // Fase 8.6 (el End)
 import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
+import { VoiceChat } from '../voice/VoiceChat'; // chat de voz por proximidad
 import { itemDecorKey as shieldDecorKey } from '../render/shieldArt'; // (o el color del cuero teñido) // Fase 7.6
 
 export interface GameConfig {
@@ -111,6 +112,8 @@ export class Game {
   readonly vehicles = new VehicleClient(this); // Fase 7 (transporte): barcas y vagonetas
   /** Fase 6 (aldeanos): comercio con los aldeanos. */
   readonly trading = new Trading(this);
+  /** Chat de voz por proximidad. */
+  readonly voice = new VoiceChat(this);
   readonly xp = new Experience();
   readonly statusEffects = new StatusEffects();
   /** Fase 6 (asaltos): asalto cercano (para la barra) o null. */
@@ -269,6 +272,7 @@ export class Game {
     const w = welcome as Welcome | null;
     if (!w) throw new Error('El servidor no envió la bienvenida.');
     this.time = w.time;
+    this.voice.onWelcome();
     for (const p of w.players) this.network.addRemote(p, false);
     this.mode = w.mode;
     this.difficulty = w.diff;
@@ -362,6 +366,7 @@ export class Game {
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
     this.world.loadEdits(w.edits);
     this.time = w.time;
+    this.voice.onWelcome(); // otra dimensión: otro servidor, otras voces
     this.remote.clear();
     this.ents.clear();
     this.bobbers.clear();
@@ -487,6 +492,7 @@ export class Game {
     }, 150);
     this.world?.dispose();
     this.portalFx.dispose(); // Fase 8
+    this.voice.dispose();
     this.input.exitLock();
     this.input.dispose();
     this.ui.updateNameTags([]);
@@ -499,6 +505,15 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ red
+
+  /** Chat de voz: la tecla de hablar (la primera vez pide el micrófono) y las voces del fotograma. */
+  private updateVoice(cam: [number, number, number]): void {
+    const input = this.input;
+    const key = this.cfg.settings.keys.voice;
+    const canTalk = input.locked && !this.ui.isChatOpen();
+    if (canTalk && input.wasPressed(key) && this.voice.active && this.voice.micState === 'none') void this.voice.requestMic();
+    this.voice.update(canTalk && input.isDown(key), cam);
+  }
 
   private sendChat(text: string): void {
     if (text.startsWith('/tp ')) {
@@ -922,6 +937,7 @@ export class Game {
     // --- Audio ---
     const fwd: [number, number, number] = [dir[0], dir[1], dir[2]];
     this.audio.setListener([cam.camX, cam.camY, cam.camZ], fwd, [0, 1, 0]);
+    this.updateVoice([cam.camX, cam.camY, cam.camZ]);
     let waterNear = 0;
     if (p.y < SEA_LEVEL + 6) {
       for (const [ox2, oz2] of [[4, 0], [-4, 0], [0, 4], [0, -4], [0, 0]]) {

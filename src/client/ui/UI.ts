@@ -23,6 +23,8 @@ export interface NameTagInfo {
   id: string;
   name: string;
   pos: [number, number] | null;
+  /** Chat de voz: está hablando. */
+  talking?: boolean;
 }
 
 type InvCategory = BlockCategory | 'todo' | 'objetos' | 'pociones'; // Fase 7 (pociones)
@@ -518,6 +520,7 @@ export class UI {
         this.nameTags.set(t.id, el);
       }
       if (el.textContent !== t.name) el.textContent = t.name;
+      el.classList.toggle('talking', !!t.talking);
       if (t.pos) {
         el.style.display = '';
         el.style.left = `${t.pos[0]}px`;
@@ -754,6 +757,10 @@ export class UI {
       this.slider('Volumen general', s.master, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.master = v; }),
       this.slider('Música', s.music, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.music = v; }),
       this.slider('Ambiente', s.ambient, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.ambient = v; }),
+      this.toggle('Chat de voz por proximidad', s.voiceEnabled, (v) => { s.voiceEnabled = v; }),
+      this.select('Micrófono', s.voiceMode === 'vad' ? 1 : 0, [[0, `Pulsar para hablar (${keyLabel(s.keys.voice)})`], [1, 'Se abre al hablar']], (v) => { s.voiceMode = v === 1 ? 'vad' : 'ptt'; }),
+      this.slider('Sensibilidad (al hablar)', 1 - s.voiceThreshold, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.voiceThreshold = 1 - v; }),
+      this.slider('Volumen de las voces', s.voiceVolume, 0, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => { s.voiceVolume = v; }),
     );
   }
 

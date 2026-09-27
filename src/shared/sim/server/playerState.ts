@@ -34,7 +34,7 @@ export function handPotions(s: Session): { hp?: number; op?: number; hs?: string
 
 /** Lo que los demás saben de un jugador. */
 export function playerInfo(s: Session): PlayerInfo {
-  return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.g ? { g: s.g } : {}), ...handPotions(s) }; // Fase 7: g
+  return { id: s.id, name: s.name, shirt: s.shirt, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.g ? { g: s.g } : {}), ...handPotions(s), ...(s.voice ? { v: 1 as const } : {}) }; // Fase 7: g; v, la voz
 }
 
 /** Aplica al jugador la posición que manda su cliente; devuelve false si el mensaje no vale. */
