@@ -35,6 +35,8 @@ uniform sampler2D uSkin;
 uniform vec2 uLightLevel;
 uniform vec3 uTint;
 uniform float uFlash;
+/** Fase 8.6: desintegración del dragón al morir (0..1): se van los píxeles al azar, con el borde encendido. */
+uniform float uDissolve;
 in vec3 vRel;
 in vec3 vNormal;
 in vec2 vUV;
@@ -42,6 +44,13 @@ layout(location = 0) out vec4 outColor;
 void main() {
   vec4 tex = texture(uSkin, vUV);
   if (tex.a < 0.5) discard;
+  float burn = 0.0;
+  if (uDissolve > 0.0) {
+    vec2 px = floor(vUV * 256.0);
+    float n = fract(sin(dot(px, vec2(12.9898, 78.233))) * 43758.5453);
+    if (n < uDissolve) discard;
+    burn = 1.0 - smoothstep(0.0, 0.08, n - uDissolve);
+  }
   // Alfa entre 128 y 250: píxel emisivo (ojos de araña y enderman).
   bool emissive = tex.a < 0.99;
   vec3 albedo = srgbToLinear(tex.rgb);
@@ -68,6 +77,7 @@ void main() {
   if (emissive) col = max(col, albedo * 2.5);
   // Destello blanco (mecha del creeper).
   col = mix(col, vec3(1.2) * (0.3 + dot(amb + lightCol, vec3(0.33))), uFlash);
+  col += vec3(3.0, 1.2, 3.6) * burn * step(0.0001, uDissolve);
   outColor = vec4(col, 1.0);
 }
 `;

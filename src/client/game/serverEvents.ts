@@ -1,5 +1,6 @@
 // Mensajes del servidor: otros jugadores, cambios de bloques, chat, tiempo, entidades, contenedores,
 // modo de juego, camas y respuestas a las interacciones.
+import { onBossMsg } from './endFightClient'; // Fase 8.6
 import { RemotePlayer } from './RemotePlayers';
 import type { Welcome } from '../net/Net';
 import { AIR, BLOCKS, BLOCK_FLUID, isValidBlockId, BLOCK_COLLIDE, furnaceVariant, isBarrel } from '../../shared/blocks';
@@ -125,6 +126,9 @@ export class ServerEvents {
         this.g.sendPos(true);
         break;
       }
+      case 'boss': // Fase 8.6: la barra del dragón
+        onBossMsg(msg);
+        break;
       case 'respawnAt': // Fase 8.5: el servidor decidió dónde reaparece (el nexo o el punto de aparición)
         if (Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isFinite)) this.g.life.respawnAt(msg.p);
         break;

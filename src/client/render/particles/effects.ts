@@ -196,6 +196,26 @@ export class ParticleFx {
     });
   }
 
+  /** Fase 8.6: bocanada del aliento del dragón: una llama violeta que sale disparada y se abre (DRAGON_BREATH). */
+  dragonBreath(x: number, y: number, z: number, vx: number, vy: number, vz: number): void {
+    const life = rnd(0.8, 1.6);
+    this.ps.spawn({
+      x, y, z, vx, vy, vz, life, size: rnd(0.12, 0.22), size1: rnd(0.35, 0.6), sprite: SPRITE.glow, r: 2.2, g: 0.7, b: 2.8, r1: 0.9, g1: 0.2, b1: 1.4,
+      a: 0.9, drag: 1.6, grav: -0.4, flags: PF.EMISSIVE | PF.FADE_IN,
+    });
+  }
+
+  /** Fase 8.6: el resplandor de la bola de fuego del dragón (dura un instante: se renueva cada frame). */
+  dragonOrb(x: number, y: number, z: number): void {
+    this.ps.spawn({
+      x, y, z, life: 0.12, size: rnd(0.55, 0.7), size1: 0.4, sprite: SPRITE.glow, r: 2.4, g: 0.8, b: 3.0, a: 0.9, flags: PF.EMISSIVE,
+    });
+    this.ps.spawn({
+      x: x + rnd(-0.3, 0.3), y: y + rnd(-0.3, 0.3), z: z + rnd(-0.3, 0.3), vx: rnd(-0.4, 0.4), vy: rnd(-0.2, 0.6), vz: rnd(-0.4, 0.4), life: rnd(0.5, 1),
+      size: rnd(0.08, 0.14), size1: 0.02, sprite: SPRITE.glow, r: 1.8, g: 0.5, b: 2.6, drag: 1, flags: PF.EMISSIVE,
+    });
+  }
+
   /** Espora flotante (micelio, cuevas frondosas…). */
   spore(x: number, y: number, z: number, r: number, g: number, b: number, emissive = false): void {
     this.ps.spawn({

@@ -1,5 +1,6 @@
 // Comandos del chat (/modo, /dificultad, /time, /invocar, /dar, /matar, /seed, /lista, /ayuda).
 // /tp lo resuelve el cliente.
+import { MOB_ENDER_DRAGON } from '../../mobs'; // Fase 8.6
 import type { GameMode } from '../../protocol';
 import { ITEMS, maxStack } from '../../items';
 import { MOBS, MOB_TYPES } from '../../mobs';
@@ -175,9 +176,29 @@ export class Commands {
         return;
       }
       case 'kill':
-      case 'matar':
+      case 'matar': {
+        // Fase 8.6: /matar <criatura> (como /kill @e[type=…]): las de ese tipo a menos de 256 bloques; el dragón muere
+        // como en el combate (va al podio y se consume).
+        const v = norm(args.join('_'));
+        if (v) {
+          const def = MOB_TYPES.map((t) => MOBS[t]).find((m) => m.key === v || norm(m.name) === v || norm(m.name).replace(/\s+/g, '_') === v);
+          if (!def) {
+            reply('No conozco esa criatura.');
+            return;
+          }
+          let n = 0;
+          for (const e of [...ctx.entities.list.values()]) {
+            if (e.type !== def.id || e.dead || Math.hypot(e.x - s.p[0], e.z - s.p[2]) > 256) continue;
+            if (e.type === MOB_ENDER_DRAGON) ctx.entities.dragon.hurt(e, 0, 1e6, s.id);
+            else ctx.entities.kill(e, true);
+            n++;
+          }
+          reply(n ? `Eliminadas: ${n}.` : 'No hay ninguna cerca.');
+          return;
+        }
         ctx.send(s, { t: 'hurt', a: 1000, k: [0, 0, 0], c: 'kill' });
         return;
+      }
       case 'summon':
       case 'invocar': {
         const v = norm(args[0] ?? '');
@@ -327,7 +348,7 @@ export class Commands {
       case 'ayuda':
         reply(
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
-          '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar, ' +
+          '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar [criatura], ' +
           '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
           '/experiencia <n> [puntos|niveles], /dimension <overworld|nether> [x y z], /setblock, /fill',
         );

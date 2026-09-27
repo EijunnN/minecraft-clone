@@ -473,6 +473,7 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...['chorus_plant', 'chorus_flower', 'chorus_flower_dead'].map((name): TextureDef => ({ name, sss: 0.3 })),
   ...['end_portal_frame_top', 'end_portal_frame_side', 'end_portal_frame_eye'].map((name): TextureDef => ({ name })),
   { name: 'end_portal', special: 6 },
+  { name: 'dragon_egg' },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

@@ -49,6 +49,7 @@ import { BannerRenderer, type BannerDraw } from './BannerRenderer'; // Fase 6.5 
 import { LightningRenderer, type Bolt } from './LightningRenderer';
 import { GuardianBeamRenderer, type GuardianBeam } from './GuardianBeamRenderer'; // Fase 7.5 (océano)
 import { BeaconBeamRenderer } from './BeaconBeamRenderer'; // Fase 8.5 (lo que da el Nether)
+import { EndFxRenderer, type DragonRays, type CrystalBeam } from './EndFxRenderer'; // Fase 8.6 (el End)
 import type { BeaconBeam } from '../game/beacons';
 import { EffectView, type SightFog } from './effectView'; // Fase 7 (efectos)
 import type { FishLine } from '../game/fishingLines';
@@ -178,6 +179,12 @@ export interface FrameState {
   guardianBeams?: GuardianBeam[];
   /** Fase 8.5: los haces de los faros encendidos. */
   beaconBeams?: BeaconBeam[];
+  /** Fase 8.6: rayos de la muerte del dragón, haces de los cristales del End y de las puertas del End. */
+  endRays?: DragonRays[];
+  crystalBeams?: CrystalBeam[];
+  gatewayBeams?: BeaconBeam[];
+  /** Fase 8.6: niebla del combate con el jefe (0..1). */
+  bossFog?: number;
   /** Fase 8.6: el destello del End: [dirección x, y, z, intensidad]. */
   endFlash?: [number, number, number, number];
   /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
@@ -224,6 +231,7 @@ export class Renderer {
   readonly lightning: LightningRenderer;
   private beams: GuardianBeamRenderer; // Fase 7.5 (océano)
   private beaconBeams: BeaconBeamRenderer; // Fase 8.5
+  private endFx: EndFxRenderer; // Fase 8.6
   /** Fase 7 (efectos): náuseas, ceguera, oscuridad y contorno del Brillo. */
   private effectView: EffectView;
   settings: RenderSettings;
@@ -318,6 +326,7 @@ export class Renderer {
     this.lightning = new LightningRenderer(gl);
     this.beams = new GuardianBeamRenderer(gl); // Fase 7.5 (océano)
     this.beaconBeams = new BeaconBeamRenderer(gl); // Fase 8.5
+    this.endFx = new EndFxRenderer(gl); // Fase 8.6
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
     this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
@@ -525,7 +534,7 @@ export class Renderer {
     // Fase 8: la dimensión (cielo, niebla y penumbra). La niebla se cierra antes que el borde normal.
     const dd = dimensionDef(s.dim ?? 0);
     const lin = (c: number) => Math.pow(c / 255, 2.2);
-    d[156] = dd.sky ? 1 : 0; d[157] = dd.lavaSea ?? 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = dd.skyLight ? 0 : 1;
+    d[156] = dd.sky ? 1 : 0; d[157] = dd.lavaSea ?? 0; d[158] = dd.sky ? 0 : (1.3 / (R * dd.fogDistance)) * (1 + (s.bossFog ?? 0) * 1.6); d[159] = dd.skyLight ? 0 : 1;
     // Fase 8.2: la niebla es la del bioma (mezclada con los de alrededor) y la penumbra toma su tono.
     const fog = s.fog ?? dd.fog;
     d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = dd.skybox === 'end' ? 1 : 0;
@@ -693,7 +702,9 @@ export class Renderer {
     this.atmosphere.drawSky();
     this.lightning.draw(s.bolts ?? [], s.camX, s.camY, s.camZ);
     this.beams.draw(s.guardianBeams ?? [], s.camX, s.camY, s.camZ); // Fase 7.5 (océano)
-    this.beaconBeams.draw(s.beaconBeams ?? [], s.camX, s.camY, s.camZ, performance.now() / 1000); // Fase 8.5: el haz de los faros
+    const beacons = s.gatewayBeams ? [...(s.beaconBeams ?? []), ...s.gatewayBeams] : s.beaconBeams ?? []; // Fase 8.6: y los de las puertas del End
+    this.beaconBeams.draw(beacons, s.camX, s.camY, s.camZ, performance.now() / 1000); // Fase 8.5: el haz de los faros
+    this.endFx.draw(s.endRays ?? [], s.crystalBeams ?? [], s.camX, s.camY, s.camZ, performance.now() / 1000); // Fase 8.6
 
     // --- 4. Agua ---
     if (this.terrain.visibleTranslucent.length > 0) {

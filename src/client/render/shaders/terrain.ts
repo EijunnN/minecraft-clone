@@ -237,20 +237,22 @@ vec3 endHash3(vec2 p) {
   q += dot(q, q.yxz + 33.33);
   return fract((q.xxy + q.yzz) * q.zyx);
 }
-vec3 endPortalSky(vec3 world, vec3 view, float t) {
-  // Por cada bloque de hondura, cuánto se desplaza lo que se ve (mirando de lado, más; se limita la rasante).
-  float vy = max(abs(view.y), 0.12);
-  vec2 slide = view.xz / vy;
+vec3 endPortalSky(vec3 world, vec3 view, vec3 N, vec3 T, vec3 B, float t) {
+  // Coordenadas en el plano de la cara y, por cada bloque de hondura (hacia dentro de la cara), cuánto se desplaza lo
+  // que se ve (mirando de lado, más; se limita la rasante).
+  float vn = max(abs(dot(view, N)), 0.12);
+  vec2 base = vec2(dot(world, T), dot(world, B));
+  vec2 slide = vec2(dot(view, T), dot(view, B)) / vn;
   // Fondo: el vacío verdoso con una nebulosa que deriva despacio a mucha hondura.
-  vec2 deep = world.xz + slide * 9.0;
+  vec2 deep = base + slide * 9.0;
   float neb = texture(uCloudWeather, deep / 26.0 + vec2(t * 0.004, -t * 0.003)).g;
   float neb2 = texture(uCloudWeather, deep / 9.0 - vec2(t * 0.007, t * 0.005)).g;
   vec3 col = END_LAYER[0] * 0.06 + mix(vec3(0.004, 0.018, 0.024), vec3(0.020, 0.008, 0.030), neb2) * smoothstep(0.4, 0.8, neb) * 0.35;
-  float pxw = max(fwidth(world.x) + fwidth(world.z), 1e-3);
+  float pxw = max(fwidth(base.x) + fwidth(base.y), 1e-3);
   for (int i = 1; i < 16; i++) {
     float fi = float(i);
     float depth = 0.25 + fi * 0.45;
-    vec2 p = world.xz + slide * depth;
+    vec2 p = base + slide * depth;
     float a = (fi * fi * 4321.0 + fi * 9.0) * 0.0349 + t * 0.012 * (1.0 + fi * 0.15);
     float ca = cos(a), sa = sin(a);
     p = mat2(ca, sa, -sa, ca) * p + vec2(17.0 / fi, (2.0 + fi / 1.5) * t * 0.02);
@@ -278,7 +280,9 @@ void main() {
   vec2 uv = vUV;
   int special = int(vProps.a + 0.5);
   if (special == 6) {
-    outColor = vec4(endPortalSky(vWorld, normalize(vRel), uCamPos.w) * 1.4, 1.0);
+    vec3 pN, pT, pB;
+    faceFrame(vNormal, pN, pT, pB);
+    outColor = vec4(endPortalSky(vWorld, normalize(vRel), pN, pT, pB, uCamPos.w) * 1.4, 1.0);
     return;
   }
   if (special == 2) {

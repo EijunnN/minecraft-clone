@@ -3,10 +3,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AIR, STONE, STONE_BRICKS, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, END_STONE, END_PORTAL_FRAME, END_PORTAL, CHORUS_PLANT, CHORUS_FLOWER, stateOf, stateProps, isEndPortalFrame,
+  AIR, STONE, STONE_BRICKS, MOSSY_STONE_BRICKS, CRACKED_STONE_BRICKS, END_STONE, OBSIDIAN, BEDROCK, END_GATEWAY, DRAGON_EGG, isFire, END_PORTAL_FRAME, END_PORTAL, CHORUS_PLANT, CHORUS_FLOWER, stateOf, stateProps, isEndPortalFrame,
 } from '../src/shared/blocks';
-import { ENDER_EYE, ENDER_PEARL, BLAZE_POWDER, itemSpriteIndex, SPAWN_EGGS, CREATIVE_ITEMS } from '../src/shared/items';
-import { MOBS, MOB_ENDERMITE } from '../src/shared/mobs';
+import { ENDER_EYE, ENDER_PEARL, END_CRYSTAL, BLAZE_POWDER, itemSpriteIndex, SPAWN_EGGS, CREATIVE_ITEMS } from '../src/shared/items';
+import { MOBS, MOB_ENDERMITE, MOB_ENDER_DRAGON, ENT_END_CRYSTAL, ENT_XP } from '../src/shared/mobs';
 import { matchRecipe } from '../src/shared/recipes';
 import { LOOT_TABLES, rollLoot } from '../src/shared/loot';
 import { mulberry32 } from '../src/shared/world/noise';
@@ -15,6 +15,8 @@ import { TerrainGenerator } from '../src/shared/world/terrain';
 import { EndGenerator, END_SPAWN } from '../src/shared/world/end';
 import { BIOME_THE_END, isEndBiome } from '../src/shared/world/biomeIds';
 import { blockIndex } from '../src/shared/constants';
+import { DIM_END } from '../src/shared/dimensions';
+import { endSpikes, gatewayPos } from '../src/shared/world/endIsland';
 import { makeServer } from './harness';
 
 test('el End: la isla central, el vacío, la plataforma de llegada y las plantas de coro en las tierras altas', () => {
@@ -146,4 +148,124 @@ test('ojo de ender lanzado vuela hacia la fortaleza; la perla lleva a su dueño 
   const moved = c.conn.take('moveTo');
   assert.equal(moved.length, 1, 'la perla lo mueve');
   assert.ok(moved[0].p[2] > 8 && moved[0].p[2] < 10.2, `junto a la columna: ${JSON.stringify(moved[0].p)}`);
+});
+
+// ------------------------------------------------------------------ Fase 8.6 (3/4): la isla del dragón
+
+test('isla del dragón: diez pilares (dos con jaula) con lecho de roca y fuego arriba, y el podio apagado', () => {
+  const gen = new EndGenerator(8605);
+  const spikes = endSpikes(8605);
+  assert.equal(spikes.length, 10);
+  assert.equal(spikes.filter((s) => s.guarded).length, 2);
+  const heights = spikes.map((s) => s.height).sort((a, b) => a - b);
+  assert.deepEqual(heights, [76, 79, 82, 85, 88, 91, 94, 97, 100, 103]);
+  const s = spikes[0];
+  const c = gen.generate(s.x >> 4, s.z >> 4);
+  const at = (x: number, y: number, z: number) => c.blocks[blockIndex(x & 15, y, z & 15)];
+  assert.equal(at(s.x, s.height - 1, s.z), OBSIDIAN);
+  assert.equal(at(s.x, s.height, s.z), BEDROCK);
+  assert.ok(isFire(at(s.x, s.height + 1, s.z)));
+  // El podio: la columna de lecho de roca en el centro y el hueco del portal (aún sin portal).
+  const y = gen.surfaceAt(0, 0);
+  const p = gen.generate(0, 0);
+  const pat = (x: number, yy: number, z: number) => p.blocks[blockIndex(x & 15, yy, z & 15)];
+  assert.equal(pat(0, y + 3, 0), BEDROCK);
+  assert.equal(pat(2, y, 0), AIR);
+  assert.equal(pat(3, y, 0), BEDROCK);
+});
+
+test('combate: cristales y dragón al llegar, daño por partes, curación y muerte con portal, huevo y puerta', () => {
+  const h = makeServer(8606, undefined, DIM_END);
+  const W = h.gs.world;
+  const c = h.join('ana', 'c');
+  c.pos(0.5, 90, 0.5);
+  h.tick(5);
+  const ents = h.gs.entities;
+  const crystals = () => [...ents.list.values()].filter((e) => e.type === ENT_END_CRYSTAL);
+  const dragon = () => [...ents.list.values()].find((e) => e.type === MOB_ENDER_DRAGON);
+  assert.equal(crystals().length, 10, 'un cristal en cada pilar');
+  const d = dragon()!;
+  assert.ok(d && d.health === 200, 'el dragón, con toda la vida');
+  assert.ok(c.conn.take('boss').length > 0, 'la barra del jefe');
+  // Vuela (y no se sale de la isla).
+  h.tick(200);
+  assert.ok(Math.hypot(d.x, d.z) < 160 && d.y > 40, `vuela sobre la isla: ${d.x.toFixed(0)}, ${d.y.toFixed(0)}, ${d.z.toFixed(0)}`);
+  // Golpe en la cabeza (entero) y en el cuerpo (un cuarto + 1).
+  const hp = d.health;
+  ents.dragon.hurt(d, 0, 20, 'ana');
+  assert.equal(d.health, hp - 20);
+  h.tick(12);
+  const hp2 = d.health;
+  ents.dragon.hurt(d, 2, 20, 'ana');
+  assert.equal(d.health, hp2 - 6);
+  // Un cristal que estalla: si era el que lo curaba, el dragón pierde 10.
+  const cr = crystals()[0];
+  ents.dragon.crystalHit(cr, 'ana');
+  assert.ok(!ents.list.has(cr.id));
+  assert.equal(crystals().length, 9);
+  // Casi muerto: va a morir al podio, sube 200 ticks y el combate termina.
+  d.health = 1;
+  ents.dragon.hurt(d, 0, 50, 'ana');
+  for (let i = 0; i < 4000 && dragon(); i++) h.tick(1);
+  assert.equal(dragon(), undefined, 'el dragón terminó de morir');
+  const y = (W.gen as EndGenerator).surfaceAt(0, 0);
+  assert.equal(W.getBlock(2, y, 0), END_PORTAL, 'portal de salida encendido');
+  assert.equal(W.getBlock(0, y + 4, 0), DRAGON_EGG, 'el huevo encima de la columna');
+  let gateway = 0;
+  for (let i = 0; i < 20; i++) {
+    const [gx, gy, gz] = gatewayPos(i);
+    if (W.getBlock(gx, gy, gz) === END_GATEWAY) gateway++;
+  }
+  assert.equal(gateway, 1, 'sale una puerta del End');
+  assert.ok([...ents.list.values()].some((e) => e.type === ENT_XP), 'suelta experiencia');
+});
+
+test('reaparición: cuatro cristales en los lados del portal rehacen los pilares y traen otro dragón', () => {
+  const h = makeServer(8607, undefined, DIM_END);
+  const W = h.gs.world;
+  const c = h.join('ana', 'c');
+  c.pos(0.5, 90, 0.5);
+  h.tick(5);
+  const ents = h.gs.entities;
+  const d = [...ents.list.values()].find((e) => e.type === MOB_ENDER_DRAGON)!;
+  d.health = 1;
+  ents.dragon.hurt(d, 0, 50, 'ana');
+  for (let i = 0; i < 4000 && ents.list.has(d.id); i++) h.tick(1);
+  const y = (W.gen as EndGenerator).surfaceAt(0, 0);
+  // Cristales sobre el borde de lecho de roca, uno en cada lado.
+  c.pos(0.5, y + 1, 4.5);
+  for (const [x, z] of [[0, -3], [3, 0], [0, 3], [-3, 0]]) {
+    assert.equal(W.getBlock(x, y, z), BEDROCK);
+    c.send({ t: 'use', x, y, z, yaw: 0, item: END_CRYSTAL });
+  }
+  h.tick(100 + 40 * 11 + 120);
+  const again = [...ents.list.values()].find((e) => e.type === MOB_ENDER_DRAGON);
+  assert.ok(again, 'un dragón nuevo');
+  assert.equal(W.getBlock(2, y, 0), AIR, 'el portal se apaga');
+});
+
+test('puertas del End: la del anillo lleva lejos (y deja una de vuelta); el huevo salta al usarlo', () => {
+  const h = makeServer(8608, undefined, DIM_END);
+  const W = h.gs.world;
+  const c = h.join('ana', 'c');
+  c.pos(0.5, 90, 0.5);
+  h.tick(5);
+  const [gx, gy, gz] = gatewayPos(3);
+  W.ensureChunk(gx >> 4, gz >> 4, h.clock.now);
+  W.setBlock(gx, gy, gz, END_GATEWAY);
+  c.conn.take('moveTo');
+  c.pos(gx + 0.5, gy, gz + 0.5);
+  h.tick(2);
+  const moved = c.conn.take('moveTo');
+  assert.equal(moved.length, 1, 'la puerta lleva a otro sitio');
+  const [tx, , tz] = moved[0].p;
+  assert.ok(Math.hypot(tx, tz) > 700, `lejos del centro: ${tx.toFixed(0)}, ${tz.toFixed(0)}`);
+  // El huevo: al usarlo salta a otro sitio.
+  W.ensureChunk(0, 0, h.clock.now);
+  const y = 100;
+  for (let x = -16; x < 16; x++) for (let z = -16; z < 16; z++) for (let yy = y - 8; yy < y + 8; yy++) if (W.isLoaded(x >> 4, z >> 4)) W.setBlock(x, yy, z, AIR);
+  W.setBlock(2, y, 2, DRAGON_EGG);
+  c.pos(2.5, y, 4.5);
+  c.send({ t: 'use', x: 2, y, z: 2, yaw: 0, item: 0 });
+  assert.notEqual(W.getBlock(2, y, 2), DRAGON_EGG, 'el huevo ya no está ahí');
 });

@@ -113,6 +113,52 @@ export function buildEquipmentSfx(ctx: AudioContext, noise: NoiseBuffers, kind: 
       }
       return out;
     }
+    // Fase 8.6: el dragón. Rugido: un gruñido grave con armónicos que se abre y un soplo ronco por encima.
+    case 'dragon_growl':
+    case 'dragon_hurt': {
+      const hurt = kind === 'dragon_hurt';
+      const f = hurt ? 95 + Math.random() * 25 : 62 + Math.random() * 18;
+      const d = hurt ? 0.9 : 2.2;
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: f, freqEnd: f * (hurt ? 0.7 : 0.8), wave: 'sawtooth', attack: 0.08, decay: d, gain: hurt ? 0.3 : 0.26 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: f * 1.5, freqEnd: f * 1.1, wave: 'sawtooth', attack: 0.1, decay: d * 0.9, gain: 0.12, detune: 14 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: f * 0.5, freqEnd: f * 0.45, wave: 'sine', attack: 0.05, decay: d, gain: 0.35 }),
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'bandpass', freq: 420, freqEnd: 260, q: 1.2, attack: 0.1, decay: d, gain: 0.35 }),
+      ];
+    }
+    case 'dragon_flap':
+      return [playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 380, freqEnd: 120, q: 0.8, attack: 0.06, decay: 0.55, gain: 0.55 })];
+    // La muerte: un alarido largo que se quiebra y cae, con el retumbo de fondo.
+    case 'dragon_death': {
+      const out: Sources = [
+        playTonalBlip(ctx, { destination: dest, now, freq: 150, freqEnd: 38, wave: 'sawtooth', attack: 0.2, decay: 6.5, gain: 0.3 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 226, freqEnd: 55, wave: 'sawtooth', attack: 0.3, decay: 6, gain: 0.14, detune: 20 }),
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 600, freqEnd: 60, q: 0.7, attack: 0.3, decay: 8, gain: 0.7 }),
+      ];
+      for (let i = 0; i < 6; i++) out.push(playTonalBlip(ctx, { destination: dest, now: now + 0.5 + i * 0.9, freq: 300 - i * 30, freqEnd: 90, wave: 'triangle', attack: 0.1, decay: 1.4, gain: 0.07 }));
+      return out;
+    }
+    case 'dragon_shoot':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 700, freqEnd: 1800, q: 1.4, attack: 0.02, decay: 0.5, gain: 0.35 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 180, freqEnd: 90, wave: 'sawtooth', attack: 0.02, decay: 0.45, gain: 0.12 }),
+      ];
+    // El aliento: un siseo largo de llama que vibra.
+    case 'dragon_breath':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'bandpass', freq: 1400, freqEnd: 700, q: 0.9, attack: 0.15, decay: 3.2, gain: 0.3 }),
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 500, q: 0.7, attack: 0.1, decay: 3, gain: 0.3 }),
+      ];
+    case 'dragon_fireball_hit':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 1800, freqEnd: 3200, q: 0.7, attack: 0.01, decay: 1.4, gain: 0.3 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 520, freqEnd: 260, wave: 'sine', attack: 0.005, decay: 1.2, gain: 0.08 }),
+      ];
+    case 'gateway_spawn':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'lowpass', freq: 300, freqEnd: 2200, q: 0.8, attack: 0.3, decay: 2.5, gain: 0.4 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 110, freqEnd: 440, wave: 'triangle', attack: 0.4, decay: 2.4, gain: 0.08 }),
+      ];
     case 'ignite':
       // Raspado del acero contra el pedernal y el soplo de la llama al prender.
       return [

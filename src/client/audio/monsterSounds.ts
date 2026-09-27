@@ -93,6 +93,12 @@ export function buildMonsterSound(ctx: AudioContext, noise: NoiseBuffers, kind: 
       return silverfishSound(ctx, noise, event, dest, now);
     case 'endermite':
       return endermiteSound(ctx, noise, event, dest, now);
+    // Fase 8.6: el dragón (sus rugidos grandes van con los efectos del End; aquí, los golpes que recibe).
+    case 'ender_dragon':
+      return event === 'hurt' || event === 'death' ? [
+        playTonalBlip(ctx, { destination: dest, now, freq: 110, freqEnd: 70, wave: 'sawtooth', attack: 0.05, decay: 0.8, gain: 0.28 }),
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'bandpass', freq: 380, q: 1.1, attack: 0.05, decay: 0.8, gain: 0.3 }),
+      ] : [];
     default:
       return [];
   }

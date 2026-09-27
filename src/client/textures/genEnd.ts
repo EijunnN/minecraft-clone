@@ -270,7 +270,32 @@ function endPortal(t: Tex): void {
   }
 }
 
+/** Huevo de dragón: negro violáceo con escamas y motas moradas que brillan un poco. */
+function dragonEgg(t: Tex): void {
+  const r = t.rng();
+  const n = new Noise(r, 4);
+  const px = pixelNoise(r);
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    const v = n.at(x, y) * 0.6 + px[i] * 0.4;
+    // Escamas: filas desplazadas con el borde de abajo más claro.
+    const sy = y % 3, sx = (x + (Math.floor(y / 3) & 1) * 2) % 4;
+    let c: RGB = mix([12, 6, 18], [30, 14, 42], v);
+    if (sy === 2 && sx !== 0) c = mix(c, [58, 26, 78], 0.6);
+    t.setI(i, c);
+    t.height[i] = sy === 2 ? 1 : 0.75 + v * 0.2;
+    t.smooth[i] = 150;
+  }
+  for (let k = 0; k < 10; k++) {
+    const i = idx(r.int(0, 15), r.int(0, 15));
+    t.setI(i, [150, 70, 200]);
+    t.emit[i] = 90;
+  }
+  t.depth = 1.1;
+}
+
 export const END_GENERATORS: Record<string, Generator> = {
+  dragon_egg: dragonEgg,
   end_portal_frame_top: endPortalFrameTop,
   end_portal_frame_side: endPortalFrameSide,
   end_portal_frame_eye: endPortalFrameEye,

@@ -6,11 +6,14 @@
 //   ChorusFlowerBlock.generatePlant, tallos que suben y se ramifican hasta cuatro veces (a menos de 8 bloques del
 //   pie) y acaban en flores muertas;
 // - la plataforma de obsidiana (end_platform, 5 × 5 en y = 48 con aire encima) donde se llega al End.
-// Los pilares de obsidiana, el portal de salida y las puertas del End llegan con el dragón (8.6, la isla central).
+// - en la isla central, los diez pilares de obsidiana y el podio del portal de salida, apagado (endIsland.ts);
+// - en las tierras altas, alguna puerta del End de vuelta (end_gateway_return: una de cada 700 chunks, de 3 a 9
+//   bloques sobre el suelo), que lleva a la plataforma de llegada.
 // Como en el Nether, la decoración de un chunk puede pasar a sus vecinos: cada chunk se decora una vez sobre el
 // terreno base y lo que pone se guarda; un chunk es su base más lo que ponen en él los nueve de alrededor.
 import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, hash2 } from '../constants';
-import { AIR, END_STONE, OBSIDIAN, CHORUS_PLANT, CHORUS_FLOWER, CHORUS_FLOWER_DEAD_AGE } from '../blocks';
+import { AIR, END_STONE, OBSIDIAN, CHORUS_PLANT, CHORUS_FLOWER, CHORUS_FLOWER_DEAD_AGE, FIRE } from '../blocks';
+import { endSpikes, drawSpike, drawPodium, drawGateway } from './endIsland';
 import { TerrainGenerator, type ColumnInfo, type GenResult } from './terrain';
 import { EndTerrain, END_HEIGHT, endBaseIndex } from './endTerrain';
 import { mulberry32 } from './noise';
@@ -168,6 +171,18 @@ export class EndGenerator extends TerrainGenerator {
             const x = x0 + Math.floor(r() * 16), z = z0 + Math.floor(r() * 16), y = 55 + Math.floor(r() * 16);
             if (this.terrain.biomeAt(x, z) === BIOME_SMALL_END_ISLANDS) endIsland(l, r, x, y, z);
           }
+        }
+      }
+      // Paso 4 (superficie): los pilares de la isla central (cada uno, en el chunk de su centro) y el podio.
+      for (const sp of endSpikes(this.seed)) if (sp.x >> 4 === ocx && sp.z >> 4 === ocz) drawSpike(l, sp, FIRE);
+      if (ocx === 0 && ocz === 0) drawPodium(l, 0, this.surfaceAt(0, 0), 0, false);
+      // Paso 4: la puerta de vuelta de las tierras altas.
+      {
+        const r = rand(4);
+        if (Math.floor(r() * 700) === 0) {
+          const x = x0 + Math.floor(r() * 16), z = z0 + Math.floor(r() * 16);
+          const top = this.surfaceAt(x, z);
+          if (top > 0 && this.terrain.biomeAt(x, z) === BIOME_END_HIGHLANDS) drawGateway(l, x, top + 3 + Math.floor(r() * 7), z);
         }
       }
       // Paso 9: plantas de coro en las tierras altas.

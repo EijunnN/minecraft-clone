@@ -3,7 +3,7 @@
 // entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
 // projectiles, mobBrain, animalLife, spawner y xpOrbs.
 import {
-  MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY,
+  MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_ENDER_DRAGON, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY,
   type MobDef,
 } from '../../mobs';
 import { ITEMS, ARROW, SADDLE, type ItemStack } from '../../items';
@@ -35,6 +35,7 @@ import { ENT_TRIDENT, ENT_FIREWORK } from '../../equipment';
 import { MobEffects } from './mobEffects';
 import { PotionLife } from './potions';
 import { ENT_EFFECT_CLOUD } from '../../potions';
+import { EnderDragonAI } from './enderDragon'; // Fase 8.6 (el End)
 import { isVehicleType } from '../../vehicles'; // Fase 7 (transporte)
 import { DolphinGuide } from './dolphinGuide'; // Fase 7.5 (océano)
 // Fase 7.5 (fauna): murciélagos (del ambiente), jinetes esqueleto y lo que se guarda de las criaturas nuevas.
@@ -93,6 +94,8 @@ export class Entities {
   // Fase 7 (mecanismos)
   /** Entidades con comportamiento de otro sistema (la dinamita encendida): tipo → su tick. */
   readonly custom = new Map<number, (e: Entity, dt: number) => void>();
+  /** Fase 8.6 (el End): el dragón de Ender, sus cristales y sus bolas de fuego. */
+  readonly dragon = new EnderDragonAI(this);
   /** Fase 7.5 (océano): delfines que llevan a los naufragios y a las ruinas. */
   readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
@@ -270,6 +273,13 @@ export class Entities {
   /** Daño a una entidad; devuelve true si murió. */
   damage(e: Entity, amount: number, fromX: number, fromZ: number, attacker: string | number | null, knock = 1): boolean {
     if (e.dead || !e.ai || MOBS[e.type].inert) return false;
+    // Fase 8.6: el dragón recibe el daño por partes (la del golpe o la más cercana a quien lo da).
+    if (e.type === MOB_ENDER_DRAGON) {
+      const part = this.dragon.pendingPart >= 0 ? this.dragon.pendingPart : this.dragon.partAt(e, fromX, e.y + 2, fromZ);
+      this.dragon.pendingPart = -1;
+      this.dragon.hurt(e, part, amount, attacker);
+      return false;
+    }
     if (e.invuln > 0) return false;
     if (this.allays.immune(e, attacker)) return false; // Fase 7.5 (mansión): su jugador no hiere al alay
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
@@ -443,7 +453,10 @@ export class Entities {
       else if (e.type === ENT_BOBBER) this.projectiles.bobberTick(e, dt, players);
       else if (e.type === ENT_DISPLAY || isHangingType(e.type) || e.type === ENT_ARMOR_STAND) e.flags = 0; // Fase 6.5: cuadros, marcos y soportes
       else if (e.type === ENT_TRIDENT || e.type === ENT_FIREWORK) this.gearShots.tick(e, dt, players); // Fase 6.5 (equipo)
-      else if (e.type === ENT_EFFECT_CLOUD) this.potions.cloudTick(e, dt, players); // Fase 7 (pociones)
+      else if (e.type === ENT_EFFECT_CLOUD) {
+        if (e.dragonBreath) this.dragon.breathTick(e, dt); // Fase 8.6: el aliento del dragón
+        else this.potions.cloudTick(e, dt, players); // Fase 7 (pociones)
+      }
       else if (e.effects) this.effects.tickWith(e, dt, () => this.mobs.mobTick(e, dt, players)); // Fase 7 (pociones)
       else if (isVehicleType(e.type)) continue; // Fase 7 (transporte): las mueve su sistema
       else if (this.custom.has(e.type)) this.custom.get(e.type)!(e, dt); // Fase 7 (mecanismos): dinamita encendida

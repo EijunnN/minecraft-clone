@@ -35,6 +35,9 @@ const NETHER_STYLES: Record<number, { scale: readonly number[]; root: number; be
   61: { scale: [0, 2, 3, 7, 8], root: 58.27, beat: [2.2, 3.2] },
 };
 
+/** Fase 8.6: el estilo de la música del combate con el dragón (en Java, «Boss»). */
+export const BOSS_STYLE = 99;
+
 export class MusicEngine {
   private countdown: number;
   /** Fase 8.2: bioma del Nether cuya música suena (−1: la del mundo normal). */
@@ -55,6 +58,8 @@ export class MusicEngine {
   setStyle(style: number): void {
     if (style === this.style) return;
     if ((style >= 0) !== (this.style >= 0)) this.countdown = Math.min(this.countdown, randRange(15, 40));
+    // Fase 8.6: la del jefe empieza enseguida; al acabar el combate, lo que suene se deja terminar.
+    if (style === BOSS_STYLE) this.countdown = Math.min(this.countdown, 1.5);
     this.style = style;
   }
 
@@ -63,6 +68,11 @@ export class MusicEngine {
     this.countdown -= dt;
     if (this.countdown <= 0) {
       const startAt = this.ctx.currentTime + 1.5;
+      if (this.style === BOSS_STYLE) {
+        // Fase 8.6: sin silencios mientras dura el combate.
+        this.countdown = this.scheduleBossPhrase(startAt) - 0.2;
+        return;
+      }
       const phraseDuration = this.style >= 0 ? this.scheduleNetherPhrase(startAt, this.style) : this.schedulePhrase(startAt);
       this.countdown = Math.max(phraseDuration + 20, randRange(120, 240));
     }
@@ -128,6 +138,35 @@ export class MusicEngine {
       this.playPianoNote(noteFreq(st.root * 2, semis), startAt + b * beat, beat * randRange(2, 4), randRange(0.05, 0.12));
     }
     return beats * beat;
+  }
+
+  /**
+   * Fase 8.6: frase del combate con el dragón: un ostinato grave en corcheas (frigio) que empuja, colchones que suben
+   * de tono cada cuatro compases y un grito agudo suelto de vez en cuando. Unos 20 s por frase, encadenadas.
+   */
+  private scheduleBossPhrase(startAt: number): number {
+    const scale = [0, 1, 3, 5, 7, 8, 10];
+    const root = 55;
+    const beat = 0.42;
+    const bars = 12;
+    const prog = [0, 0, 5, 3, 0, 0, 8, 7, 0, 5, 3, 1];
+    for (let bar = 0; bar < bars; bar++) {
+      const t0 = startAt + bar * beat * 4;
+      const shift = prog[bar];
+      for (let i = 0; i < 8; i++) {
+        const accent = i % 4 === 0;
+        const semis = shift + (i === 6 ? 12 : i === 7 ? 7 : 0);
+        this.playPianoNote(noteFreq(root, semis), t0 + i * beat * 0.5, beat * 0.5, accent ? 0.2 : 0.12);
+      }
+      if (bar % 2 === 0) {
+        for (const t of [0, 7, 12 + 3]) this.playPad(noteFreq(root * 2, shift + t), t0, beat * 8, 0.03);
+      }
+      if (Math.random() < 0.35) {
+        const semis = scale[randInt(0, scale.length - 1)] + 24 + shift;
+        this.playPianoNote(noteFreq(root, semis), t0 + beat * randInt(1, 3), beat * 2, randRange(0.07, 0.12));
+      }
+    }
+    return bars * beat * 4;
   }
 
   /** Fase 8.2: voz de colchón: dos sierras desafinadas por un filtro grave, con ataque y caída lentos. */

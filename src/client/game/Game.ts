@@ -3,6 +3,7 @@
 // (minar, colocar, usar, comer...), lifeCycle (daño, muerte, cama), serverEvents (mensajes del
 // servidor), effects (sonidos y partículas), environment (cielo, lluvia y océano lejano), hudView
 // (barras del HUD) y frameView (lo que se dibuja).
+import { bossState } from './endFightClient'; // Fase 8.6
 import { Navigation } from './navigation';
 import { Movement } from './movement';
 import { CameraRig } from './cameraRig';
@@ -938,6 +939,7 @@ export class Game {
       rain: sky.snow ? 0 : rain * Math.min(1, this.camera.eyeSky * 1.3),
       // Fase 8.2: el bioma del Nether (su ambiente y su música); 8.6: en el End, el suyo (sin los sonidos del mundo normal).
       netherBiome: this.world?.dim === DIM_END ? this.world.generator.biomeAt(Math.floor(this.player.x), Math.floor(this.player.z)) : this.netherAtmos.biome,
+      boss: this.world?.dim === DIM_END && !!bossState(), // Fase 8.6: la música del combate con el dragón
     });
 
     ui.setDebug(this.debug ? debugText(this, eye, sky, { mobs: mobs.length, drops: drops.length }, target) : null);

@@ -168,5 +168,26 @@ export const END_PORTAL = family('end_portal', 'Portal del End', [], () => {
   };
 });
 
+/**
+ * Puerta del End (EndGatewayBlock): un cubo de velo de estrellas por sus seis caras; quien entra sale lejos, en las
+ * islas exteriores (o vuelve). Ni se pica ni se toca.
+ */
+export const END_GATEWAY = family('end_gateway', 'Puerta del End', [], () => ({
+  render: R_MODEL, all: 'end_portal', solid: false, opaque: false, lightOpacity: 0, emission: 15, hardness: -1, breakable: false,
+  sound: 'glass', noItem: true, category: null, walkThrough: true, collision: [], selection: [],
+  model: [mbox(0, 0, 0, 16, 16, 16, L('end_portal'))],
+}));
+
+/** Huevo de dragón (DragonEggBlock): capas de 16 a 2 de ancho; cae como la arena y huye al tocarlo. */
+export const DRAGON_EGG = family('dragon_egg', 'Huevo de dragón', [], () => {
+  const t = L('dragon_egg');
+  const layers: [number, number, number][] = [[6, 15, 16], [5, 14, 15], [4, 13, 14], [3, 11, 13], [2, 8, 11], [1, 3, 8], [2, 1, 3], [3, 0, 1]];
+  return {
+    render: R_MODEL, opaque: false, lightOpacity: 0, emission: 1, hardness: 3, sound: 'stone', all: 'dragon_egg', category: 'decoracion',
+    model: layers.map(([m, y0, y1]) => mbox(m, y0, m, 16 - m, y1, 16 - m, t)),
+    collision: [1 / 16, 0, 1 / 16, 15 / 16, 1, 15 / 16], selection: [1 / 16, 0, 1 / 16, 15 / 16, 1, 15 / 16],
+  };
+});
+
 /** Su sitio en el inventario creativo. */
-export const END_INVENTORY: number[] = [END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD, CHORUS_PLANT, CHORUS_FLOWER, END_PORTAL_FRAME];
+export const END_INVENTORY: number[] = [END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD, CHORUS_PLANT, CHORUS_FLOWER, END_PORTAL_FRAME, DRAGON_EGG];

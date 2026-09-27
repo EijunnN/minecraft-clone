@@ -6,6 +6,8 @@ import { EF_DEAD, EF_HURT, EF_ACTION, EF_BABY, type EntAdd, type EntUpd, type En
 import { isHangingType } from '../../shared/paintings'; // Fase 6.5 (decoración): cuadros y marcos
 import { ENT_ARMOR_STAND } from '../../shared/armorStands'; // Fase 6.5 (remate)
 import { ENT_EFFECT_CLOUD } from '../../shared/potions'; // Fase 7 (pociones)
+import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL } from '../../shared/mobs'; // Fase 8.6
+import { dragonPartBoxes } from './dragonClient';
 import { isVehicleType, vehicleSize } from '../../shared/vehicles'; // Fase 7 (transporte)
 import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
 
@@ -217,11 +219,38 @@ export class ClientEntities {
   /** Rayo contra las cajas de las criaturas: devuelve la más cercana antes de maxDist. */
   raycast(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, maxDist: number, skip = -1): { e: ClientEntity; dist: number } | null {
     let best: { e: ClientEntity; dist: number } | null = null;
+    const slab = (mn: number[], mx: number[]): number => {
+      let tmin = 0, tmax = maxDist;
+      const o = [ox, oy, oz], d = [dx, dy, dz];
+      for (let k = 0; k < 3; k++) {
+        if (Math.abs(d[k]) < 1e-9) {
+          if (o[k] < mn[k] || o[k] > mx[k]) return -1;
+          continue;
+        }
+        let t1 = (mn[k] - o[k]) / d[k], t2 = (mx[k] - o[k]) / d[k];
+        if (t1 > t2) [t1, t2] = [t2, t1];
+        tmin = Math.max(tmin, t1);
+        tmax = Math.min(tmax, t2);
+        if (tmin > tmax) return -1;
+      }
+      return tmin;
+    };
     for (const e of this.list.values()) {
+      // Fase 8.6: al dragón se le apunta por partes.
+      if (e.type === MOB_ENDER_DRAGON) {
+        if (e.gone || e.variant > 0) continue;
+        for (const b of dragonPartBoxes(e)) {
+          const t = slab([b.x0, b.y0, b.z0], [b.x1, b.y1, b.z1]);
+          if (t >= 0 && (!best || t < best.dist)) best = { e, dist: t };
+        }
+        continue;
+      }
       const def = MOBS[e.type];
       // Fase 7 (transporte): las barcas y vagonetas también se apuntan (para subirse y golpearlas).
       // Fase 8.3: la bola de fuego del ghast también se apunta (un golpe la devuelve).
-      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : e.type === ENT_LARGE_FIREBALL ? ([1, 1] as const) : null;
+      // Fase 8.6: y el cristal del End (estalla).
+      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : e.type === ENT_LARGE_FIREBALL ? ([1, 1] as const)
+        : e.type === ENT_END_CRYSTAL ? ([2, 2] as const) : null;
       if ((!def && !vs) || def?.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
       const k = e.flags & EF_BABY && def ? 0.5 : 1;
       const hw = ((vs ? vs[0] : def!.width) * k) / 2 + 0.05;

@@ -1,6 +1,8 @@
 // Lo que se dibuja en cada frame: los demás jugadores (y uno mismo en tercera persona), la mano, las
 // entidades, las grietas del bloque que se mina, los carteles, estandartes, rayos, sedales y correas;
 // después, las etiquetas de nombre y el texto de depuración (F3).
+import { ENT_END_CRYSTAL } from '../../shared/mobs'; // Fase 8.6
+import * as endFight from './endFightClient';
 import { BLOCKS } from '../../shared/blocks';
 import { MOBS } from '../../shared/mobs';
 import { STATE_DEAD } from '../../shared/protocol';
@@ -86,7 +88,7 @@ export function splitEntities(g: Game): { mobs: ClientEntity[]; drops: ClientEnt
   for (const e of g.ents.list.values()) {
     // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
     // lo que llevan (lo decide MobRenderer).
-    if (MOBS[e.type] || isVehicleType(e.type)) mobs.push(e);
+    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_END_CRYSTAL) mobs.push(e); // Fase 8.6: y los cristales del End
     else drops.push(e);
   }
   return { mobs, drops };
@@ -178,6 +180,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     guardianBeams: guardianBeams(g), // Fase 7.5 (océano)
     beaconBeams: g.beacons.beams(), // Fase 8.5
     endFlash: g.endAtmos.flash ?? undefined, // Fase 8.6
+    ...endFight.frame(g), // Fase 8.6: rayos del dragón, haces de los cristales y de las puertas del End
     fishLines: fishingLines(g.bobbers, g.ents.list, g.net?.id ?? null, localRod, f.views),
     leashes: leashLines(g.ents.list, g.net?.id ?? null, localRod, f.views), // Fase 6.5 (remate)
     showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass',

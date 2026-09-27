@@ -22,6 +22,7 @@ import { Fishing } from './fishing';
 import { Campfires } from './campfires';
 import { NetherGoods } from './netherGoods'; // Fase 8.5 (lo que da el Nether)
 import { EndGoods } from './endGoods'; // Fase 8.6 (el End)
+import { EndFight } from './endFight';
 import { Signs } from './signs';
 import { ContainerSystem } from './containerSystem';
 import { BlockEdits } from './blockEdits';
@@ -105,6 +106,8 @@ export class ServerSystems {
   readonly cauldrons: Cauldrons;
   /** Fase 8.6 (el End): el coro y la plataforma de llegada. */
   readonly endGoods: EndGoods;
+  /** Fase 8.6: el combate con el dragón, las puertas del End, el cristal del End y el huevo. */
+  readonly endFight: EndFight;
   /** Fase 6.5 (remate): etiquetas y correas. */
   readonly leashes: Leashes;
   /** Fase 6.5 (remate): soportes para armadura. */
@@ -184,7 +187,8 @@ export class ServerSystems {
     this.shelves = new Shelves(ctx, store);
     this.cauldrons = new Cauldrons(ctx, this.nature);
     this.endGoods = new EndGoods(ctx, this.nature);
-    this.edits.endGoods = (s, x, y, z, id, item) => this.endGoods.use(s, x, y, z, id, item);
+    this.endFight = new EndFight(ctx, store);
+    this.edits.endGoods = (s, x, y, z, id, item) => this.endGoods.use(s, x, y, z, id, item) || this.endFight.use(s, x, y, z, id, item);
     this.edits.cauldrons = (s, x, y, z, id, item) => this.cauldrons.use(s, x, y, z, id, item);
     this.edits.netherGoods = (s, x, y, z, id, item) => this.netherGoods.use(s, x, y, z, id, item); // Fase 8.5
     this.leashes = new Leashes(ctx);
@@ -357,6 +361,7 @@ export class ServerSystems {
     this.deepDark.tick();
     this.monuments.tick();
     this.portals.tick(); // Fase 8
+    this.endFight.tick(); // Fase 8.6
     this.netherGoods.tick(DT); // Fase 8.5: columnas de burbujas
     this.entitySync.takeRemoved(ctx.entities.removed);
     ctx.entities.removed = [];
@@ -378,6 +383,7 @@ export class ServerSystems {
   /** Un jugador se va: soltar lo que tenía abierto, montado o atado. */
   onLeave(s: Session): void {
     this.trading.onLeave(s);
+    this.endFight.onLeave(s); // Fase 8.6
     this.containers.close(s); // deja de mirar el cofre trampa
     this.riding.onLeave(s);
     this.raids.onLeave(s);
@@ -409,5 +415,6 @@ export class ServerSystems {
     this.transport.flush(store);
     this.deepDark.flush(store);
     this.portals.flush(store);
+    this.endFight.flush(store); // Fase 8.6
   }
 }

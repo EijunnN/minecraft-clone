@@ -253,7 +253,7 @@ export class Effects {
         break;
       default:
         if (netherFx(this.g, kind, p, a, b)) break; // Fase 8.3 (criaturas del Nether)
-        if (endFx(this.g, kind, p)) break; // Fase 8.6 (el End)
+        if (endFx(this.g, kind, p, a, b)) break; // Fase 8.6 (el End)
         if (enchantFx(this.g, kind, p, a)) break; // Fase 7 (encantamientos)
         if (oceanFx(this.g, kind, p, a)) break; // Fase 7.5 (océano)
         if (deepDarkFx(this.g, kind, p, a, b)) break; // Fase 7.5 (abismo)

@@ -22,6 +22,8 @@ export interface AmbientState {
   rain: number;
   /** Fase 8.2: bioma del Nether en el que está el jugador (−1 o sin él, fuera del Nether). */
   netherBiome?: number;
+  /** Fase 8.6: suena la música del combate con el jefe (la barra del dragón a la vista). */
+  boss?: boolean;
 }
 
 /** Tipos de golpe/interacción para un sonido de material. */

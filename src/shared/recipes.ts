@@ -820,3 +820,7 @@ shape(['B', 'F'], { B: BRD, F: PCF }, END_ROD, 4);
 // El ojo de ender: polvo de blaze y una perla de ender.
 import { ENDER_EYE, ENDER_PEARL as EPL } from './items';
 mix([BLAZE_POWDER, EPL], ENDER_EYE);
+// El cristal del End: siete cristales alrededor de un ojo de ender, con una lágrima de ghast debajo.
+import { END_CRYSTAL, GHAST_TEAR as GTR } from './items';
+import { GLASS as GLS8 } from './blocks';
+shape(['GGG', 'GEG', 'GTG'], { G: GLS8, E: ENDER_EYE, T: GTR }, END_CRYSTAL);

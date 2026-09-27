@@ -16,7 +16,7 @@ import { REACH_CREATIVE, REACH_SURVIVAL } from './gameTypes';
 import { PF, SPRITE } from '../render/particles/ParticleSystem';
 import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, isWaterlogged } from '../../shared/blocks';
 import {
-  ARROW, TIPPED_ARROW, GLASS_BOTTLE, POTION, SPLASH_POTION, LINGERING_POTION, SPECTRAL_ARROW, type ItemStack,
+  ARROW, TIPPED_ARROW, GLASS_BOTTLE, DRAGON_BREATH, POTION, SPLASH_POTION, LINGERING_POTION, SPECTRAL_ARROW, type ItemStack,
 } from '../../shared/items';
 import { EFFECTS, jumpBoostVelocity, unpackColor, packColor } from '../../shared/effects';
 import { ENT_ARROW, MOBS } from '../../shared/mobs';
@@ -216,9 +216,29 @@ function throwPotion(g: Game, held: ItemStack, dir: number[]): void {
 }
 
 /** Frasco de cristal contra una fuente de agua: frasco de agua (los vacíos se apilan: sale aparte). */
+/** Fase 8.6: color de la nube del aliento del dragón (el que manda el servidor). */
+const DRAGON_BREATH_CLOUD = 0xb44ce8;
+
 function fillBottle(g: Game, ia: Interaction, dir: number[]): boolean {
   const world = g.world!;
   const p = g.player;
+  // Fase 8.6: cerca de una nube del aliento del dragón, el frasco lo recoge (GlassBottleItem: a 2 bloques de ella).
+  for (const e of g.ents.list.values()) {
+    if (e.type !== ENT_EFFECT_CLOUD || e.cloudColor !== DRAGON_BREATH_CLOUD || e.gone) continue;
+    if (Math.hypot(e.x - p.x, e.z - p.z) > (e.cloudRadius ?? 0) + 2 || Math.abs(e.y - p.y) > 3) continue;
+    g.net?.send({ t: 'breath', e: e.id });
+    if (!g.creative) g.inv.consume(g.selected, 1);
+    const got = { id: DRAGON_BREATH, count: 1 };
+    if (!g.inv.get(g.selected)) g.inv.set(g.selected, got);
+    else {
+      const rest = g.inv.add(got);
+      if (rest) ia.throwStack(rest, false);
+    }
+    g.inv.changed();
+    g.audio.playPotionSfx('bottle_fill', [e.x, e.y + 0.5, e.z]);
+    g.swing(false);
+    return true;
+  }
   const hit: RayHit | null = raycast(p.x, p.eyeY, p.z, dir[0], dir[1], dir[2], g.creative ? REACH_CREATIVE : REACH_SURVIVAL, (x, y, z) => world.getBlock(x, y, z), true);
   if (!hit) return false;
   const water = (BLOCK_FLUID[hit.id] === 1 && BLOCK_FLUID_LEVEL[hit.id] === 0) || isWaterlogged(hit.id);

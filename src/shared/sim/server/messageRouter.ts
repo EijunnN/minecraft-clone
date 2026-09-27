@@ -2,6 +2,7 @@
 // jugador (`cost`, fichas de allow: 0 si no se limita) y quién lo atiende. Los mensajes antes de
 // entrar al mundo (hello, ping) los atiende GameServer.
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
+import { ENT_END_CRYSTAL } from '../../mobs'; // Fase 8.6
 import type { ServerContext, Session } from './context';
 import type { ServerSystems } from './systems';
 
@@ -42,6 +43,12 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
     // Fase 8.3: un golpe a una bola de fuego del ghast la devuelve hacia donde mira el jugador.
     const fb = h.ctx.entities.list.get(e);
     if (fb && Math.hypot(fb.x - s.p[0], fb.y - s.p[1], fb.z - s.p[2]) < 7 && h.ctx.entities.mobs.nether.flyers.deflect(fb, s.id, s.r[0], s.r[1])) return;
+    // Fase 8.6: el cristal del End estalla con cualquier golpe.
+    const ent = h.ctx.entities.list.get(e);
+    if (ent?.type === ENT_END_CRYSTAL && Math.hypot(ent.x - s.p[0], ent.y + 1 - s.p[1] - 1.6, ent.z - s.p[2]) < 8) {
+      h.ctx.entities.dragon.crystalHit(ent, s.id);
+      return;
+    }
     if (!h.sys.hangings.onAttack(s, e) && !h.sys.stands.onAttack(s, e) && !h.sys.transport.onAttack(s, e, Number(m.item))) h.sys.actions.onAttack(s, m);
   }),
   pickup: route<'pickup'>(0.5, (h, s, m) => h.sys.actions.onPickup(s, Number(m.e))),
@@ -52,6 +59,12 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
     if (!h.sys.equipment.onThrow(s, m)) h.sys.actions.onThrow(s, m);
   }),
   fish: route<'fish'>(1, (h, s, m) => h.sys.fishing.onFish(s, m)),
+  // Fase 8.6: el frasco en el aliento del dragón (la nube pierde medio bloque; el frasco lo cambia el cliente).
+  breath: route<'breath'>(1, (h, s, m) => {
+    const c = h.ctx.entities.list.get(Number(m.e));
+    if (!c?.dragonBreath || Math.hypot(c.x - s.p[0], c.z - s.p[2]) > (c.cloudRadius ?? 0) + 4) return;
+    h.ctx.entities.dragon.bottleBreath(c.id);
+  }),
   sign: route<'sign'>(2, (h, s, m) => h.sys.signs.onSign(s, m)),
   open: route<'open'>(1, (h, s, m) => h.sys.containers.onOpen(s, m)),
   close: route<'close'>(0, (h, s) => h.sys.containers.close(s)), // los cofres trampa cuentan quién mira

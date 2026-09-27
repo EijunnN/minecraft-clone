@@ -3,6 +3,7 @@
 // una reverb de convolución compartida (bus de envío), timbres de materiales, ambientación
 // continua/discreta y música generativa. Ningún método debe lanzar nunca ni antes de resume()
 // ni si Web Audio no está disponible (p. ej. navegadores headless de pruebas).
+import { BOSS_STYLE } from './music'; // Fase 8.6
 import type { SoundMaterial } from '../../shared/blocks';
 import { buildRaidSfx } from './illagerSounds'; // Fase 6 (asaltos)
 import { buildAllaySfx } from './allaySounds'; // Fase 7.5 (mansión)
@@ -596,7 +597,7 @@ export class AudioEngine {
       this.masterLowpass.frequency.setTargetAtTime(targetFreq, now, 0.4);
       this.ambience?.update(dt, state, this.listenerPos);
       this.nether?.update(dt, state.netherBiome ?? -1); // Fase 8.2
-      this.music?.setStyle(state.netherBiome ?? -1);
+      this.music?.setStyle(state.boss ? BOSS_STYLE : state.netherBiome ?? -1); // Fase 8.6: la del jefe
       this.music?.update(dt);
       this.fluids?.update(dt);
       this.heartbeat?.update(dt);

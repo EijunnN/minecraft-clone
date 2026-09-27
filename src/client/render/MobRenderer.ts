@@ -26,6 +26,9 @@ import { animateAllay, allayRoot, ALLAY_HOLD } from './allayPose'; // Fase 7.5 (
 import { MOB_ALLAY } from '../../shared/allay';
 import { netherAnimate, netherPartOffset, netherRoot, netherVariant } from './netherMobPose'; // Fase 8.3 (criaturas del Nether)
 import { isNetherMob, MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_ZOMBIFIED_PIGLIN, MOB_WITHER_SKELETON } from '../../shared/netherMobs';
+import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL } from '../../shared/endMobs'; // Fase 8.6 (el End)
+import { DragonRenderer } from './DragonRenderer';
+import { dragonTexture, crystalTexture } from '../textures/dragonTextures';
 
 export interface MobTexture {
   width: number;
@@ -66,10 +69,13 @@ export class MobRenderer {
   /** Fase 6.5 (colecciones): fotogramas del aura del creeper cargado. */
   private auraSkins: WebGLTexture[] = [];
   private model = mat4.create();
+  /** Fase 8.6: el dragón de Ender y los cristales del End (se dibujan parte a parte). */
+  readonly dragon: DragonRenderer;
 
   constructor(gl: GL, texSource: (id: number, variant?: number) => MobTexture | null) {
     this.gl = gl;
     this.texSource = texSource;
+    this.dragon = new DragonRenderer(gl, (k) => (k === 'dragon' ? dragonTexture() : crystalTexture()));
     this.prog = new Program(gl, { name: 'mob', vs: MOB_VS, fs: MOB_FS });
     this.shadowProg = new Program(gl, { name: 'mob-shadow', vs: MOB_SHADOW_VS, fs: MOB_SHADOW_FS });
   }
@@ -344,6 +350,15 @@ export class MobRenderer {
     const p = bindLighting(this.prog.use());
     const bonesLoc = p.loc('uBones');
     for (const e of list) {
+      // Fase 8.6: el dragón y los cristales, con su propio modelo.
+      if (e.type === MOB_ENDER_DRAGON) {
+        this.dragon.drawDragon(p, e, camX, camY, camZ, lightAt(e), e.hurtT < 0.35 && e.variant === 0);
+        continue;
+      }
+      if (e.type === ENT_END_CRYSTAL) {
+        this.dragon.drawCrystal(p, e, camX, camY, camZ, time);
+        continue;
+      }
       const vehicle = MOBS[e.type] ? undefined : vehicleModel(e); // Fase 7 (transporte): barcas y vagonetas
       const def = MOBS[e.type] ?? vehicle?.def;
       if (!def) continue;
@@ -450,6 +465,10 @@ export class MobRenderer {
     const p = this.shadowProg.use();
     const bonesLoc = p.loc('uBones');
     for (const e of list) {
+      if (e.type === MOB_ENDER_DRAGON) {
+        this.dragon.drawDragonShadow(p, e, camX, camY, camZ); // Fase 8.6
+        continue;
+      }
       const def = MOBS[e.type] ?? vehicleModel(e)?.def; // Fase 7 (transporte)
       if (!def || e.flags & EF_INVISIBLE) continue; // Fase 7 (remate): la invisible no hace sombra
       const mesh = this.mesh(def);

@@ -1,5 +1,6 @@
 // Envío de entidades a cada jugador: sólo las cercanas y sólo lo que cambió desde el último envío
 // (altas, actualizaciones y bajas, con quién recogió cada objeto para la animación).
+import { MOB_ENDER_DRAGON } from '../../mobs'; // Fase 8.6
 import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mobs';
 import type { ServerMsg, EntExtra } from '../../protocol';
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
@@ -23,6 +24,10 @@ function flagsOf(e: Entity): number {
 
 /** Distancia a la que se envían entidades a un jugador. */
 const ENTITY_RANGE = 80;
+/** Fase 8.6: el dragón se ve desde lejos (es enorme y vuela en círculos amplios). */
+const DRAGON_RANGE = 256;
+/** Fase 8.6: color de la nube del aliento del dragón (las partículas DRAGON_BREATH). */
+const DRAGON_BREATH_COLOR = 0xb44ce8;
 
 export class EntitySync {
   /** Entidades retiradas desde el último envío: id → jugador que la recogió. */
@@ -59,7 +64,8 @@ export class EntitySync {
       const seen = new Set<number>();
       for (const e of ctx.entities.list.values()) {
         const dx = e.x - s.p[0], dz = e.z - s.p[2];
-        if (dx * dx + dz * dz > ENTITY_RANGE * ENTITY_RANGE) continue;
+        const range = e.type === MOB_ENDER_DRAGON ? DRAGON_RANGE : ENTITY_RANGE;
+        if (dx * dx + dz * dz > range * range) continue;
         seen.add(e.id);
         // Fase 6.5 (remate): nombre y correa (se mandan aparte, sólo cuando cambian).
         // Fase 6.5 (equipo): y el equipo que lleva (armadura de caballo o de lobo, tridente del ahogado).
@@ -81,7 +87,7 @@ export class EntitySync {
           }
           // Fase 7 (pociones): tipo de la flecha con efecto; color y radio de la nube.
           else if (e.type === ENT_ARROW) rec.push(e.arrowPotion ?? -1);
-          else if (e.type === ENT_EFFECT_CLOUD) rec.push(packColor(potionColor(e.cloudPotion ?? 0)), Math.round((e.cloudRadius ?? 0) * 100));
+          else if (e.type === ENT_EFFECT_CLOUD) rec.push(e.dragonBreath ? DRAGON_BREATH_COLOR : packColor(potionColor(e.cloudPotion ?? 0)), Math.round((e.cloudRadius ?? 0) * 100)); // Fase 8.6: el aliento, morado
           else if (e.type === ENT_FALLING) rec.push(e.block ?? 0);
           else if (e.type === ENT_TNT) rec.push(e.block ?? 0, Math.round(e.fuse ?? 0)); // Fase 7 (mecanismos): bloque y mecha
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
@@ -95,6 +101,7 @@ export class EntitySync {
           if (e.type === ENT_ITEM && e.stack) rec.push(e.stack.count);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (e.villager) rec.push(e.variant ?? 0); // Fase 6 (aldeanos): profesión del aldeano
+          else if (e.type === MOB_ENDER_DRAGON) rec.push(e.variant ?? 0); // Fase 8.6: los ticks de su muerte
           else if (e.type === ENT_EFFECT_CLOUD) rec.push(Math.round((e.cloudRadius ?? 0) * 100)); // Fase 7 (pociones)
           upd.push(rec);
         }

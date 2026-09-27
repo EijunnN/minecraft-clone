@@ -5,7 +5,7 @@
 import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { raycast, type RayHit } from './raycast';
 import { netherGoodsUse } from './netherGoodsUse'; // Fase 8.5
-import { endAfterEat, itemCooldown, endFrameUse, endThrow, isEndThrowable } from './endClient'; // Fase 8.6
+import { endAfterEat, itemCooldown, endFrameUse, endThrow, isEndThrowable, endEggPunch } from './endClient'; // Fase 8.6
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
@@ -125,7 +125,7 @@ export class Interaction {
           this.breakBlock(hit);
           this.breakDelay = 0.25;
         }
-      } else this.mineStep(dt, hit, input.mousePressed[0]);
+      } else if (!(input.mousePressed[0] && endEggPunch(this.g, hit))) this.mineStep(dt, hit, input.mousePressed[0]); // Fase 8.6: el huevo salta
     } else {
       this.mining = null;
       if (input.mousePressed[0]) {

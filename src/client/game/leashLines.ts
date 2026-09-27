@@ -1,5 +1,6 @@
 // Fase 6.5 (remate): correas dibujadas. De la mano de quien la lleva (o del nudo en la valla) hasta la
 // criatura atada; el renderizador las dibuja combadas, como los sedales pero más gruesas.
+import { ENT_END_CRYSTAL } from '../../shared/mobs';
 import { MOBS } from '../../shared/mobs';
 import { isBoatType, BOAT_WIDTH } from '../../shared/vehicles'; // Fase 7 (remate)
 import type { RemotePlayerView } from '../render/EntityRenderer';
@@ -20,7 +21,7 @@ export function leashLines(
   const knots: [number, number, number][] = [];
   for (const e of ents.values()) {
     const h = e.leash;
-    if (!h || e.gone) continue;
+    if (!h || e.gone || e.type === ENT_END_CRYSTAL) continue; // Fase 8.6: en el cristal, es a donde apunta su haz
     let a: [number, number, number] | null = null;
     if (Array.isArray(h)) {
       a = [h[0] + 0.5, h[1] + 0.62, h[2] + 0.5];

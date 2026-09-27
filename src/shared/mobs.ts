@@ -127,7 +127,7 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'guardian' // Fase 7.5 (océano)
   | 'allay' // Fase 7.5 (mansión)
   | 'piglin' | 'ghast' | 'blaze' | 'magma' | 'hoglin' | 'strider' | 'wither_skeleton' // Fase 8.3 (criaturas del Nether)
-  | 'endermite'; // Fase 8.6 (el End)
+  | 'endermite' | 'dragon'; // Fase 8.6 (el End)
 
 export interface MobDef {
   id: number;

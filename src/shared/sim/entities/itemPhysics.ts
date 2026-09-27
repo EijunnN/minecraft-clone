@@ -1,6 +1,6 @@
 // Física de lo que no son criaturas: objetos tirados (se fusionan, se recogen, arden en lava),
 // flechas (vuelan, se clavan, hieren) y bloques que caen (arena y grava).
-import { MOBS, ENT_ITEM, ENT_ARROW, isRaider } from '../../mobs';
+import { MOBS, ENT_ITEM, ENT_ARROW, isRaider , MOB_ENDER_DRAGON } from '../../mobs';
 import { ITEMS, ARROW, maxStack, sameKind, type ItemStack } from '../../items';
 import { AIR, BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
 import { EF_PICKABLE, EF_FIRE } from '../../protocol';
@@ -153,8 +153,10 @@ export class ItemPhysics {
       // Fase 6 (asaltos): los virotes de los asaltantes no hieren a los suyos.
       const shooter = typeof e.shooter === 'number' ? this.m.list.get(e.shooter) : undefined;
       const raiderShot = !!shooter && isRaider(shooter.type);
+      // Fase 8.6: las partes del dragón (posado, rebotan) y los cristales del End.
+      if (this.m.dragon.arrowHit(e, dmg)) return;
       for (const m of this.m.list.values()) {
-        if (!m.ai || m.dead || m.id === e.shooter || MOBS[m.type].inert || (raiderShot && isRaider(m.type))) continue;
+        if (!m.ai || m.dead || m.id === e.shooter || MOBS[m.type].inert || (raiderShot && isRaider(m.type)) || m.type === MOB_ENDER_DRAGON) continue;
         const hw = m.width / 2 + 0.1;
         if (Math.abs(m.x - e.x) < hw && Math.abs(m.z - e.z) < hw && e.y > m.y - 0.1 && e.y < m.y + m.height + 0.1) {
           // Fase 7 (encantamientos): Retroceso empuja más, Fuego prende y Perforación sigue de largo.

@@ -21,6 +21,7 @@ import { moveBody, lineOfSight } from '../physics';
 import type { Entity } from '../entities';
 import type { Redstone } from './redstone';
 import type { Transport, Vehicle } from './vehicles';
+import { ENT_END_CRYSTAL } from '../../mobs'; // Fase 8.6
 import type { ServerContext } from './context';
 
 /** Gravedad y rozamiento de la dinamita encendida (Minecraft: 0,04 por tick² y 0,98 por tick). */
@@ -154,6 +155,11 @@ export class Explosives {
         const dmg = Math.floor(((impact * impact + impact) / 2) * 7 * reach + 1);
         if (isVehicleType(e.type)) {
           this.hitVehicle(e, dmg);
+          continue;
+        }
+        // Fase 8.6: los cristales del End estallan también (en cadena).
+        if (e.type === ENT_END_CRYSTAL) {
+          ents.dragon.crystalHit(e, null);
           continue;
         }
         if (e.type === ENT_ITEM) {

@@ -16,6 +16,7 @@ const POTION_THROW_UP = (20 * Math.PI) / 180;
 import { meleeHit, shootArrows } from './enchantCombat';
 import { EXPERIENCE_BOTTLE, ENDER_EYE, ENDER_PEARL } from '../../items';
 import { DIM_OVERWORLD } from '../../dimensions'; // Fase 8.6
+import { MOB_ENDER_DRAGON } from '../../mobs';
 import { locateStructure } from '../../world/structures';
 import type { ServerContext, Session } from './context';
 
@@ -28,8 +29,17 @@ export class PlayerActions {
     const e = ctx.entities.list.get(Number(msg.e));
     if (!e || !e.ai || e.dead) return;
     const reach = ctx.local ? 8 : 6;
-    const dx = e.x - s.p[0], dy = e.y + e.height / 2 - (s.p[1] + 1.6), dz = e.z - s.p[2];
-    if (dx * dx + dy * dy + dz * dz > reach * reach) return;
+    if (e.type === MOB_ENDER_DRAGON) {
+      // Fase 8.6: al dragón se le golpea en la parte a la que se mira (y el alcance cuenta hasta esa parte).
+      const [yaw, pitch] = s.r;
+      const part = ctx.entities.dragon.partOnRay(e, s.p[0], s.p[1] + 1.62, s.p[2], -Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch), reach);
+      const near = ctx.entities.dragon.distanceToParts(e, s.p[0], s.p[1] + 1.62, s.p[2]);
+      if (near > reach) return;
+      ctx.entities.dragon.pendingPart = part >= 0 ? part : ctx.entities.dragon.partAt(e, s.p[0], s.p[1] + 1.62, s.p[2]);
+    } else {
+      const dx = e.x - s.p[0], dy = e.y + e.height / 2 - (s.p[1] + 1.6), dz = e.z - s.p[2];
+      if (dx * dx + dy * dy + dz * dz > reach * reach) return;
+    }
     const now = ctx.now();
     // Enfriamiento del ataque (como en Minecraft 1.9+): cada arma tiene su ritmo y golpear antes de
     // tiempo hace menos daño.

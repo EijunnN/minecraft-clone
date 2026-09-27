@@ -179,6 +179,8 @@ export type ClientMsg =
   | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number; w?: number; st?: ItemStack } // Fase 7: st, el tridente entero
   /** Caña de pescar: lanzar el flotador o, si ya está fuera, recogerlo. */
   | { t: 'fish'; p: [number, number, number]; d: [number, number, number]; en?: [number, number][] } // Fase 7: en, Suerte marina y Atracción
+  /** Fase 8.6: el frasco recoge aliento de la nube `e` del dragón. */
+  | { t: 'breath'; e: number }
   /** Escribir el texto de un cartel (cuatro líneas). */
   | { t: 'sign'; x: number; y: number; z: number; l: string[] }
   | { t: 'open'; x: number; y: number; z: number }
@@ -306,6 +308,8 @@ export type ServerMsg =
   | { t: 'respawnAt'; p: [number, number, number] }
   /** Fase 8.6: el servidor mueve al jugador (la perla de ender que cae). */
   | { t: 'moveTo'; p: [number, number, number] }
+  /** Fase 8.6: la barra del jefe (nombre y vida 0..1; −1, quitarla). */
+  | { t: 'boss'; n?: string; h: number }
   /** Fase 8.5: los efectos elegidos de un faro. */
   | { t: 'beacon'; x: number; y: number; z: number; p: number; s: number }
   // Fase 6 (monturas)

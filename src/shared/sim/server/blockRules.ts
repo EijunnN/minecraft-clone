@@ -4,7 +4,7 @@
 // las comprobaciones de apoyo se hagan cuando ya están todas puestas.
 import {
   AIR, SAND, RED_SAND, GRAVEL, CACTUS, SUGAR_CANE, DIRT, BLOCK_FLUID, BLOCK_SOLID, BLOCK_RENDER, BLOCK_REPLACEABLE, BLOCK_WALL,
-  BLOCK_NEEDS_SUPPORT, R_CROSS, R_TORCH, blockSupported, isFarmland,
+  BLOCK_NEEDS_SUPPORT, R_CROSS, R_TORCH, blockSupported, isFarmland, DRAGON_EGG,
 } from '../../blocks';
 import { isConcretePowder } from '../../blocks'; // Fase 6.5 (colores)
 import { isAnvil } from '../../blocks'; // Fase 7 (encantamientos)
@@ -33,7 +33,8 @@ function supportOk(id: number, below: number): boolean {
 
 function isFalling(id: number): boolean {
   return id === SAND || id === RED_SAND || id === GRAVEL || isConcretePowder(id) || // Fase 6.5 (colores): hormigón en polvo
-    isAnvil(id); // Fase 7 (encantamientos)
+    isAnvil(id) || // Fase 7 (encantamientos)
+    id === DRAGON_EGG; // Fase 8.6
 }
 
 /** ¿Puede ocupar una celda un bloque que cae (o se desplaza) sobre ella? */

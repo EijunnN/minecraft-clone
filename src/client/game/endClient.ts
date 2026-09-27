@@ -6,8 +6,8 @@
 //   el anillo queda completo); en un marco con ojo no hace nada. Si no, en el mundo normal se lanza hacia la
 //   fortaleza más cercana (en las otras dimensiones no hay).
 // - Perla de ender: se lanza como una bola de nieve y queda en espera un segundo (20 ticks).
-import { CHORUS_FRUIT, ENDER_EYE, ENDER_PEARL, type ItemStack } from '../../shared/items';
-import { BLOCK_FLUID, BLOCK_SOLID, isEndPortalFrame, stateProps } from '../../shared/blocks';
+import { CHORUS_FRUIT, ENDER_EYE, ENDER_PEARL, END_CRYSTAL, type ItemStack } from '../../shared/items';
+import { BLOCK_FLUID, BLOCK_SOLID, OBSIDIAN, BEDROCK, DRAGON_EGG, isEndPortalFrame, stateProps } from '../../shared/blocks';
 import { DIM_OVERWORLD } from '../../shared/dimensions';
 import type { RayHit } from './raycast';
 import { boxBlocked } from '../../shared/collide';
@@ -73,9 +73,24 @@ export function isEndThrowable(id: number): boolean {
   return id === ENDER_EYE || id === ENDER_PEARL;
 }
 
-/** El ojo de ender sobre un marco del portal del End (true si lo atiende). */
+/**
+ * Clic derecho sobre bloques del End: el ojo de ender en un marco, el cristal del End sobre obsidiana o lecho de roca
+ * y el huevo de dragón (salta). true si lo atiende.
+ */
 export function endFrameUse(g: Game, pressed: boolean, hit: RayHit | null, held: ItemStack | null): boolean {
-  if (!pressed || !hit || held?.id !== ENDER_EYE || !isEndPortalFrame(hit.id)) return false;
+  if (!pressed || !hit) return false;
+  if (hit.id === DRAGON_EGG && !(g.player.sneaking && held)) {
+    g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: g.player.yaw, item: held?.id ?? 0 });
+    g.swing(true);
+    return true;
+  }
+  if (held?.id === END_CRYSTAL && (hit.id === OBSIDIAN || hit.id === BEDROCK)) {
+    g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: g.player.yaw, item: END_CRYSTAL });
+    if (!g.creative) g.inv.consume(g.selected, 1);
+    g.swing(true);
+    return true;
+  }
+  if (held?.id !== ENDER_EYE || !isEndPortalFrame(hit.id)) return false;
   if (!stateProps(hit.id)?.eye) {
     g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: g.player.yaw, item: ENDER_EYE });
     if (!g.creative) g.inv.consume(g.selected, 1);
@@ -97,4 +112,12 @@ export function endThrow(g: Game, id: number, dir: number[]): void {
   }
   cooldown.set(ENDER_PEARL, performance.now() + 1000);
   g.interaction.throwEgg(dir, ENDER_PEARL);
+}
+
+/** Golpear el huevo de dragón en supervivencia lo hace saltar en vez de picarlo (DragonEggBlock.attack). */
+export function endEggPunch(g: Game, hit: RayHit): boolean {
+  if (hit.id !== DRAGON_EGG || g.creative) return false;
+  g.net?.send({ t: 'use', x: hit.x, y: hit.y, z: hit.z, yaw: g.player.yaw, item: 0 });
+  g.swing(true);
+  return true;
 }

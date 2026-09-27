@@ -640,6 +640,8 @@ export const POPPED_CHORUS_FRUIT = item('popped_chorus_fruit', 'Fruta de coro re
 /** El ojo de ender: lanzado, vuela hacia la fortaleza más cercana; puesto en un marco del portal del End, lo completa. */
 export const ENDER_EYE = item('ender_eye', 'Ojo de ender');
 for (const e of END_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
+/** El cristal del End: se pone sobre obsidiana o lecho de roca y estalla al golpearlo; cuatro en el portal de salida traen otro dragón. */
+export const END_CRYSTAL = item('end_crystal', 'Cristal del End');
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -877,4 +879,4 @@ smelt(QUARTZ_BLOCK, SMOOTH_QUARTZ); // el bloque de cuarzo, en cuarzo liso
 
 // ------------------------------------------------------------------ Fase 8.6 (el End)
 smelt(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
-(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT, ENDER_EYE, ...END_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));
+(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, ...END_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));

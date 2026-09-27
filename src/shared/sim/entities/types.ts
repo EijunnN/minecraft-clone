@@ -237,6 +237,8 @@ export interface Entity extends Body {
   cloudRadius?: number;
   cloudWait?: number;
   cloudVictims?: Map<string | number, number>;
+  /** Fase 8.6: nube del aliento del dragón: crecimiento (bloques por segundo), vida (s) y nivel del daño instantáneo. */
+  dragonBreath?: { grow: number; life: number; amp: number };
   /** Fase 7 (transporte): barca o vagoneta en la que va sentada la criatura (id de la entidad). */
   vehicle?: number;
   // Fase 7 (encantamientos)

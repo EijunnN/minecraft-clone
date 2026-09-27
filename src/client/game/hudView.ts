@@ -8,6 +8,8 @@ import { renderXpBar } from '../ui/xpBar';
 import { renderEffectsHud } from '../ui/effectsHud';
 import { renderAttackIndicator } from '../ui/attackIndicator';
 import { renderRaidBar } from '../ui/raidBar';
+import { renderBossBar } from '../ui/bossBar'; // Fase 8.6
+import { bossState } from './endFightClient';
 import { renderDecorHud } from '../ui/decorHud';
 import { renderFrostHud } from '../ui/frostHud';
 import { Freezing } from './freezing';
@@ -23,6 +25,7 @@ export function updateHud(g: Game, worldTime: number): void {
   );
   renderEffectsHud(fx, shown);
   renderRaidBar(g.raid, !g.hudHidden); // Fase 6 (asaltos)
+  renderBossBar(bossState(), !g.hudHidden && !g.raid); // Fase 8.6: el dragón
   const clock = g.heldId === CLOCK || g.inv.offhand?.id === CLOCK;
   // Fase 8: en el Nether el reloj gira sin parar.
   const clockTime = dimensionDef(g.world?.dim ?? 0).compass ? worldTime : performance.now() / 700;

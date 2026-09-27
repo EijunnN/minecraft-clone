@@ -6,7 +6,7 @@
 // Las criaturas que lo tocan se prenden (los jugadores se queman en su cliente) y los objetos arden.
 import { Handlers } from './hooks';
 import {
-  AIR, BLOCK_SOLID, BLOCK_FLUID, NETHERRACK, NEIGHBORS6, isFire, fireAge, fireWithAge, fireSupport, flammability,
+  AIR, BLOCK_SOLID, BLOCK_FLUID, NETHERRACK, MAGMA_BLOCK, BEDROCK, NEIGHBORS6, isFire, fireAge, fireWithAge, fireSupport, flammability,
   flameEncouragement, familyBase, stateOf, stateProps, isCampfire, isCandle, isLitCandle, candleState, candleCount,
 } from '../../blocks';
 import { ENT_ITEM } from '../../mobs';
@@ -15,6 +15,7 @@ import { rainAt } from '../../weather';
 import { FIRE_RESISTANT_ITEMS } from '../../items'; // Fase 8.5
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { Nature } from './nature';
+import { DIM_END } from '../../dimensions';
 import type { ServerContext } from './context';
 
 /** Ticks entre revisiones de un fuego (Minecraft: 30 + azar de 0 a 9). */
@@ -159,7 +160,8 @@ export class Fire {
       return;
     }
     const below = get(0, -1, 0);
-    const infinite = below === NETHERRACK;
+    // infiniburn_overworld (netherrack y magma); en el End (infiniburn_end), también el lecho de roca (Fase 8.6).
+    const infinite = below === NETHERRACK || below === MAGMA_BLOCK || (ctx.dim === DIM_END && below === BEDROCK);
     const age = fireAge(id);
     if (!infinite && this.nearRain(x, y, z) && rand() < 0.2 + age * 0.03) {
       this.extinguish(x, y, z, true);

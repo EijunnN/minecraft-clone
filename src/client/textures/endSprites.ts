@@ -92,4 +92,29 @@ export const END_SPRITES: Record<string, SpriteDef> = {
       h: ink([236, 255, 214], [6, 30, 26]),
     },
   },
+  // Cristal del End: el cubo rosado del centro dentro de sus dos marcos de cristal, girado de canto.
+  end_crystal: {
+    rows: [
+      '................',
+      '.......gg.......',
+      '.....gg..gg.....',
+      '...gg..pp..gg...',
+      '..g...pPPp...g..',
+      '..g..pPwwPp..g..',
+      '.g..pPwwwPPp..g.',
+      '.g.pPPwwPPPPp.g.',
+      '.g..pPPPPPPp..g.',
+      '..g..pPPPPp..g..',
+      '..g...pPPp...g..',
+      '...gg..pp..gg...',
+      '.....gg..gg.....',
+      '.......gg.......',
+      '................',
+      '................',
+    ],
+    inks: {
+      g: ink([214, 236, 244], [60, 70, 90]), p: ink([168, 64, 150], [60, 16, 60]), P: ink([226, 110, 196], [60, 16, 60]),
+      w: ink([255, 214, 244], [60, 16, 60]),
+    },
+  },
 };
