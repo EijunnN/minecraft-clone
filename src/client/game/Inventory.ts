@@ -3,7 +3,7 @@
 import { ITEMS, maxStack, sameKind, isValidItem, type ItemStack } from '../../shared/items';
 import { stackToWire, stackFromWire, type WireStack } from '../../shared/protocol';
 import { cloneStack } from '../../shared/containers';
-import { ARMOR_SLOTS } from '../../shared/armor';
+import { ARMOR_SLOTS, ARMOR_KNOCKBACK_RESISTANCE } from '../../shared/armor';
 import { UNBREAKING, BINDING_CURSE, enchLevel } from '../../shared/enchantments'; // Fase 7 (encantamientos)
 import { unbreakingSaves } from '../../shared/enchantEffects';
 
@@ -220,6 +220,16 @@ export class Inventory {
     let n = 0;
     for (const s of this.armor) if (s) n += ITEMS[s.id]?.armor?.toughness ?? 0;
     return n;
+  }
+
+  /** Fase 8.5: resistencia al empuje de lo puesto (0,1 por pieza de netherita; como mucho 1). */
+  knockbackResistance(): number {
+    let n = 0;
+    for (const s of this.armor) {
+      const m = s ? ITEMS[s.id]?.armor?.material : undefined;
+      if (m) n += ARMOR_KNOCKBACK_RESISTANCE[m] ?? 0;
+    }
+    return Math.min(1, n);
   }
 
   /** Desgasta cada pieza puesta. Devuelve cuántas se rompieron (desaparecen). */

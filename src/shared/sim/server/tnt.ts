@@ -8,7 +8,7 @@
 //   objetos tirados que pillan de lleno; encienden la dinamita que alcanzan y rompen barcas y vagonetas
 //   (la vagoneta con dinamita se enciende).
 import { AIR, TNT, BLOCK_SOLID } from '../../blocks';
-import { TOOLS, type ItemStack } from '../../items';
+import { TOOLS, EXPLOSION_RESISTANT_ITEMS, type ItemStack } from '../../items';
 import { ENT_ITEM, ENT_DISPLAY } from '../../mobs';
 import { isHangingType } from '../../paintings';
 import { ENT_ARMOR_STAND } from '../../armorStands';
@@ -42,6 +42,8 @@ registerRedstone(TNT, {
 export interface BlastOptions {
   /** Creeper cargado (su víctima suelta la cabeza). */
   charged?: boolean;
+  /** Fase 8.5: sin romper bloques (el nexo de reaparición con agua al lado). */
+  noBlocks?: boolean;
 }
 
 export class Explosives {
@@ -51,7 +53,7 @@ export class Explosives {
   constructor(private ctx: ServerContext, rs: Redstone, private transport: Transport) {
     SYSTEMS.set(rs, this);
     ctx.entities.custom.set(ENT_TNT, (e, dt) => this.tickPrimed(e, dt));
-    ctx.entities.explosion = (x, y, z, power, charged) => this.explode(x, y, z, power, { charged });
+    ctx.entities.explosion = (x, y, z, power, charged, breakBlocks = true) => this.explode(x, y, z, power, { charged, noBlocks: !breakBlocks });
   }
 
   /** Enciende la dinamita de (x, y, z) con la mecha dada (ticks); true si había dinamita. */
@@ -132,7 +134,7 @@ export class Explosives {
     const rand = () => ctx.rand();
     ctx.fx('explode', x, y, z, power);
     // Los bloques se calculan con el mundo entero (antes de herir a nadie ni romper nada).
-    const blocks = explodedBlocks((a, b, c) => w.getBlock(a, b, c), x, y, z, power, rand);
+    const blocks = opts.noBlocks ? [] : explodedBlocks((a, b, c) => w.getBlock(a, b, c), x, y, z, power, rand);
     const reach = power * 2;
     ents.chargedBlast = opts.charged ? { dropped: false } : null;
     try {
@@ -155,8 +157,8 @@ export class Explosives {
           continue;
         }
         if (e.type === ENT_ITEM) {
-          // Los objetos tirados que pilla de lleno se destruyen.
-          if (dmg >= 5) ents.remove(e.id);
+          // Los objetos tirados que pilla de lleno se destruyen (Fase 8.5: la estrella del Nether, no).
+          if (dmg >= 5 && !(e.stack && EXPLOSION_RESISTANT_ITEMS.has(e.stack.id))) ents.remove(e.id);
           continue;
         }
         if (e.ai) ents.damage(e, dmg, x, z, null, 0);

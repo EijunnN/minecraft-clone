@@ -6,7 +6,7 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 
 ## 1. Resumen
 
-Estado al terminar la fase 8.4 (2026-09-26). Los recuentos salen de `docs/cobertura.md`, que cruza el
+Estado al terminar la fase 8.5 (2026-09-26). Los recuentos salen de `docs/cobertura.md`, que cruza el
 catálogo exportado de la 26.3 con el registro del juego.
 
 | | Minecraft 26.3 | VoxelCraft hoy |
@@ -15,14 +15,14 @@ catálogo exportado de la 26.3 con el registro del juego.
 | Biomas | 67 (53 del mundo normal, 3 de cueva y el Deep Dark, 5 del Nether, 5 del End y el vacío) | 🟡 58 (faltan el jardín pálido, el bosque moteado, las cuevas de azufre, el End y el vacío) |
 | Estructuras | 22 (más elementos decorativos: geodas, mazmorras, fósiles…) | 🟡 18: 14 del mundo normal y las 4 del Nether (y 4 elementos decorativos); las del End están por hacer |
 | Criaturas | 86 vivas, incluidos 2 jefes | 🟡 70 |
-| Bloques | 1.286 | 🟡 ~1.020 |
-| Objetos | 1.658 | 🟡 ~1.280 (bloques incluidos) |
-| Recetas | 2.042 | 🟡 985 (las demás usan objetos que aún no existen) |
+| Bloques | 1.286 | 🟡 ~1.035 |
+| Objetos | 1.658 | 🟡 ~1.310 (bloques incluidos) |
+| Recetas | 2.042 | 🟡 1.002 (las demás usan objetos que aún no existen) |
 | Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319); el Nether, 128 |
 | Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | 🟡 todos salvo logros y estadísticas, libro de recetas, modos aventura/espectador/extremo y reglas del juego (fase 9) |
 
-El mundo normal está completo salvo lo de 2024–2026 (fase 9). Lo que queda es el resto de la fase 8
-(estructuras del Nether, netherita, el End y el Wither) y el metajuego de la fase 9.
+El mundo normal está completo salvo lo de 2024–2026 (fase 9). El Nether ya está entero (8.1–8.5). Lo que
+queda es el resto de la fase 8 (el End y el Wither) y el metajuego de la fase 9.
 
 ## 2. Inventario por áreas
 
@@ -36,7 +36,7 @@ El mundo normal está completo salvo lo de 2024–2026 (fase 9). Lo que queda es
 | Océanos | cálido, templado, frío, helado, normal y sus versiones profundas | ✅ |
 | Biomas de cueva | cuevas frondosas, cuevas de goteo, Deep Dark, cuevas de azufre (26.2) | 🟡 todos salvo las cuevas de azufre (fase 9) |
 | Cuevas | "queso", "espagueti", "fideos", acuíferos, lagos de lava subterráneos | 🟡 (queso, espaguetis, acuíferos y lagos de lava) |
-| Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, escombros ancestrales | 🟡 todas salvo los escombros ancestrales (8.5) |
+| Menas | carbón, hierro, cobre, oro, redstone, lapislázuli, diamante, esmeralda (+ versiones de pizarra profunda), cuarzo y oro del Nether, escombros ancestrales | ✅ |
 | Árboles | roble, abedul, abeto, jungla, acacia, roble oscuro, mangle, cerezo, roble pálido, álamo (26.3), champiñones gigantes, azalea, hongos gigantes del Nether | 🟡 todos salvo el álamo; el roble pálido crece del brote, pero su bioma es de la fase 9 |
 | Clima | lluvia, nieve, tormentas con rayos; la nieve se acumula y el agua se congela | ✅ |
 | Ciclo día/noche, fases lunares | sí | ✅ |
@@ -82,7 +82,7 @@ la vaca y el pollo, la armadura al azar de zombis y esqueletos y el arnés del g
 | Muerte, pérdida del inventario y reaparición | ✅ (en la cama o en el punto de aparición del mundo) |
 | Camas: dormir para saltar la noche y fijar el punto de reaparición; cama de paja de un solo uso (26.3) | 🟡 (los 16 colores; falta la de paja, fase 9) |
 | Experiencia (orbes, niveles) | ✅ (se gasta en la mesa de encantamientos y el yunque) |
-| Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre, caparazón de tortuga) y adornos de armadura | 🟡 (todas salvo la netherita, 8.5; faltan los adornos, fase 9) |
+| Armaduras (cuero, cota de malla, hierro, oro, diamante, netherita, cobre, caparazón de tortuga) y adornos de armadura | 🟡 (todas; faltan los adornos, fase 9) |
 | Escudo, golpes críticos, barrido de espada, enfriamiento del ataque | ✅ |
 | Armas: espada, hacha, arco, ballesta, tridente, maza, lanza (1.21.11) | 🟡 (faltan la maza y la lanza, fase 9) |
 | Efectos de estado (veneno, regeneración, fuerza, visión nocturna…) | 🟡 (33 efectos con sus mecánicas, iconos y `/efecto`; faltan los de las cámaras de desafío, fase 9) |
@@ -94,7 +94,7 @@ la vaca y el pollo, la armadura al azar de zombis y esqueletos y el arnés del g
 | Elemento | Estado |
 | --- | --- |
 | Herramientas de madera, piedra, hierro, oro y diamante (pico, hacha, pala, espada) | ✅ |
-| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | 🟡 (todo salvo la netherita, 8.5) |
+| Azada, netherita, cobre (1.21.9), mechero, caña de pescar, cepillo, catalejo | ✅ |
 | Tijeras | ✅ |
 | Cubos de agua y lava | ✅ |
 | Cubos de leche, de peces, de ajolote, de renacuajo, de nieve polvo, de cubo de azufre | 🟡 (todos salvo el de cubo de azufre, fase 9) |
@@ -103,7 +103,7 @@ la vaca y el pollo, la armadura al azar de zombis y esqueletos y el arnés del g
 | Recetas | 🟡 (985 de 2.042; las que faltan usan objetos que aún no existen) |
 | Libro de recetas | ❌ (fase 9) |
 | Horno, ahumador, alto horno, fogata | ✅ |
-| Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (todos salvo el crafter, fase 9; la mesa de herrería mejora a netherita en la 8.5) |
+| Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (todos salvo el crafter, fase 9; la mesa de herrería mejora a netherita y los adornos son de la fase 9) |
 | Cofre, barril, tolva, saco (bundle), estantería cincelada | ✅ (también cofre doble y cofre trampa) |
 | Caja de shulker, cofre de ender, cofre de cobre, estante (shelf) | ❌ (8.6 y fase 9) |
 
@@ -134,8 +134,7 @@ Polvo de redstone, antorchas, repetidores, comparadores, palancas, botones, plac
 pistones y pistones pegajosos, observadores, tolvas, dispensadores, soltadores, lámparas, TNT,
 detector de luz solar, bloque musical, raíles y vagonetas (con cofre, tolva, TNT), puertas,
 trampillas, puertas de valla, sensores de sculk, bombillas de cobre y fabricador automático.
-**VoxelCraft:** ✅ todo salvo el fabricador automático (fase 9) y los botones y placas de piedra negra
-pulida (8.5). Comprobado contra el código de la 26.3: ver `docs/redstone.md`,
+**VoxelCraft:** ✅ todo salvo el fabricador automático (fase 9). Comprobado contra el código de la 26.3: ver `docs/redstone.md`,
 `docs/redstone-auditoria.md`, `docs/mecanismos.md` y `docs/vibraciones.md`.
 
 ### 2.9 Encantamientos y pociones
@@ -164,8 +163,9 @@ Portal de obsidiana, 5 biomas del Nether (desiertos, valle de almas, bosques car
 deltas de basalto), fortalezas y bastiones, piglins y trueque con oro, netherita. En el End: ojos de
 ender para encontrar la fortaleza, el portal del End, combate contra el dragón, islas exteriores,
 ciudades del End, élitros y shulkers. **VoxelCraft: 🟡** el portal, los 5 biomas del Nether portados
-de la 26.3, sus criaturas con el trueque (8.1–8.3) y sus cuatro estructuras (8.4). Faltan la
-netherita y lo que da el Nether (8.5), el End (8.6) y el Wither (8.7).
+de la 26.3, sus criaturas con el trueque (8.1–8.3), sus cuatro estructuras (8.4) y lo que da: la
+netherita, el nexo de reaparición, la magnetita, el faro, la fogata de almas y las columnas de burbujas
+(8.5). Faltan el End (8.6) y el Wither (8.7).
 
 ### 2.12 Bloques de construcción y decoración
 
@@ -175,8 +175,7 @@ colores de lana, alfombra, cristal y paneles, terracota esmaltada, hormigón, ve
 de faroles, cadenas, macetas, marcos, cuadros, estandartes, cabezas, cojines (26.3)… **VoxelCraft:
 🟡** todas las familias del mundo normal (las 10 maderas, todas las piedras, cobre, los 16 colores) y
 las del Nether hasta ahora (maderas carmesí y distorsionada, piedra negra, basalto, ladrillos del
-Nether); faltan los botones y placas de piedra negra pulida (8.5), el purpur y la piedra del End
-(8.6) y los cojines (fase 9). Ver `docs/cobertura.md`.
+Nether, con el cuarzo de la 8.5); faltan el purpur y la piedra del End (8.6) y los cojines (fase 9). Ver `docs/cobertura.md`.
 
 ### 2.13 Multijugador, interfaz y opciones
 
@@ -647,10 +646,37 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
     imán, la netherita, los escombros ancestrales y la plantilla de mejora de los cofres del bastión
     (8.5); la lanza, las plantillas de adorno «costilla» y «hocico» y la armadura de cobre para caballo
     (fase 9). Las estructuras se dibujan después de la decoración (en Java se intercalan por pasos).
-- **8.5 Lo que da el Nether:** netherita (escombros ancestrales, plantilla de mejora y mesa de herrería),
-  ancla de reaparición, piedra imán, faro, fogata de alma, columnas de burbujas y lo apuntado en la fase 7
-  (la velocidad de alma, la carga de fuego y la flecha espectral llegaron con la 8.3, porque las da el
-  trueque).
+- ✅ **8.5 Lo que da el Nether:** lo que quedaba del Nether y lo apuntado en las fases 7 y 7.5.
+  - **Netherita:** escombros ancestrales enterrados en el Nether (los dos yacimientos de Java, dispersos y
+    siempre sin aire al lado; pico de diamante, resisten las explosiones), que se funden en chatarra; lingote
+    (4 chatarras y 4 de oro) y bloque; herramientas, armadura y armadura para caballo de netherita, que se
+    mejoran desde las de diamante en la **mesa de herrería** (ya tiene su pantalla: plantilla, objeto y material;
+    conserva encantamientos, desgaste y nombre) con la **plantilla de mejora** (del bastión; se copia con 7
+    diamantes y rocanegra). Valores de la 26.3: velocidad 9, 2031 usos, dureza 3 y 0,1 de resistencia al empuje
+    por pieza; lo de netherita no arde (flota en la lava) y la estrella del Nether aguanta las explosiones.
+    Texturas, sprites, armadura en el jugador y en el caballo, y los timbres de los escombros y la netherita.
+  - **Nexo de reaparición:** se carga con piedra luminosa (hasta 4; la luz sube con las cargas y suelta motas
+    violetas); en el Nether fija el punto de reaparición y cada reaparición gasta una carga (se busca sitio de pie
+    a su alrededor); fuera del Nether explota con fuego (sin romper bloques si hay agua al lado). El punto de
+    reaparición es ahora de una dimensión (la cama del mundo normal o el nexo del Nether), también al morir en la
+    otra.
+  - **Magnetita:** la brújula que se usa en ella queda magnetizada (brilla, se llama «Brújula magnetizada» y
+    apunta a ella en su dimensión; si la rompen o en otra dimensión, gira sin rumbo).
+  - **Faro:** pirámide de 1 a 4 niveles (hierro, oro, esmeralda, diamante o netherita), el haz hasta arriba del
+    mundo que tiñen los cristales de color (y corta lo que no deja pasar la luz, salvo el lecho de roca), su
+    pantalla con los poderes de cada nivel, el secundario del nivel 4 y el pago; cada 4 s da los efectos a 10 +
+    10·nivel bloques durante 9 + 2·nivel s. El haz, por encima de Java: gira, tiene dos ritmos de bandas, brilla
+    (floración), sube al encenderse y se desvanece hacia arriba.
+  - **Fogata de almas** (fuego turquesa, luz 10, quema el doble, suelta tierra de alma; asa como la otra) y
+    **columnas de burbujas**: sobre arena de alma suben y sobre magma tiran hacia abajo (se forman y deshacen
+    solas, como en Java); dentro se respira, las criaturas, los objetos y el jugador suben o bajan con los valores
+    de Java y las barcas tiemblan y salen despedidas o se hunden. Con sus burbujas, remolinos y sonidos.
+  - **Cuarzo:** ladrillos, pilar, cincelado y liso, con las losas y escaleras del bloque de cuarzo y del liso
+    (recetas, horno y cortapiedras).
+  - Botín: la magnetita del puente del bastión y de los portales en ruinas, y la netherita, los escombros y la
+    plantilla de mejora de los bastiones. Los botones y placas de piedra negra pulida ya estaban (8.2).
+  - Pendiente para su fase: la lanza y la armadura de nautilo de netherita (fase 9), la estrella del Nether del
+    Wither (8.7; de momento, en creativo) y los adornos de armadura (fase 9).
 - **8.6 El End:** fortalezas con el portal del End (ojos de ender), la isla del dragón (pilares de
   obsidiana, cristales del End), el dragón y el portal de salida, puertas del End, islas exteriores,
   ciudades y barcos del End (shulkers, élitros), plantas de coro y purpur.

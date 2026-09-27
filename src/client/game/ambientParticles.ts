@@ -7,8 +7,8 @@
 // Las fuentes fijas (antorchas, hornos, fogatas, lava) se buscan dos veces por segundo; el resto se
 // descubre muestreando bloques al azar cada frame.
 import {
-  BLOCK_SOLID, BLOCK_FLUID, TORCH, WALL_TORCH, CAMPFIRE, MYCELIUM, POINTED_DRIPSTONE, GRASS, CHERRY_LEAVES, BIRCH_LEAVES,
-  SPRUCE_LEAVES, isLeaves, isLitFurnace, familyBase, stateProps, blockFacing,
+  BLOCK_SOLID, BLOCK_FLUID, TORCH, WALL_TORCH, isCampfire, MYCELIUM, POINTED_DRIPSTONE, GRASS, CHERRY_LEAVES, BIRCH_LEAVES,
+  SPRUCE_LEAVES, isLeaves, isLitFurnace, familyBase, stateProps, blockFacing, anchorCharges, isBubbleColumn, bubbleColumnDown,
 } from '../../shared/blocks';
 import { DIR_X, DIR_Z } from '../../shared/blockModels';
 import { TerrainGenerator } from '../../shared/world/terrain';
@@ -106,6 +106,24 @@ export class AmbientParticles {
         }
         continue;
       }
+      // Fase 8.5: columnas de burbujas: suben (o giran hacia abajo) y, arriba, revientan en la superficie.
+      if (isBubbleColumn(b)) {
+        const down = bubbleColumnDown(b);
+        for (let k = 0; k < 3; k++) fx.bubbleColumn(x + 0.5, y + Math.random(), z + 0.5, down);
+        if (!down && world.getBlock(x, y + 1, z) === 0) {
+          fx.splash(x + 0.5, y + 0.95, z + 0.5, 2);
+          if (Math.random() < 0.08) this.g.audio.playEnchantSfx('bubble_pop', [x + 0.5, y + 1, z + 0.5]);
+        } else if (down && world.getBlock(x, y + 1, z) === 0 && Math.random() < 0.05) {
+          this.g.audio.playEnchantSfx('whirlpool', [x + 0.5, y + 1, z + 0.5]);
+        }
+        continue;
+      }
+      // Fase 8.5: el nexo de reaparición cargado suelta motas violetas por arriba (más cuanto más cargado).
+      const charges = anchorCharges(b);
+      if (charges > 0) {
+        if (world.getBlock(x, y + 1, z) === 0 && Math.random() < 0.25 + charges * 0.15) fx.anchorMote(x + 0.3 + Math.random() * 0.4, y + 1.02, z + 0.3 + Math.random() * 0.4);
+        continue;
+      }
       if (BLOCK_SOLID[b] && world.getBlock(x, y - 1, z) === 0) {
         // Techo con agua o lava encima: gotea.
         const above = world.getBlock(x, y + 1, z);
@@ -162,7 +180,7 @@ export class AmbientParticles {
             }
           } else if (isLitFurnace(b)) {
             if (furnaces.length < 16) furnaces.push([x, y, z, blockFacing(b)]);
-          } else if (familyBase(b) === CAMPFIRE) {
+          } else if (isCampfire(b)) { // Fase 8.5: también la de almas
             if (stateProps(b)?.lit === 1 && fires.length < 12) fires.push([x, y, z]);
           } else if (BLOCK_FLUID[b] === 2 && lava.length < 32 && world.getBlock(x, y + 1, z) === 0) lava.push([x, y, z]);
           else if (isFire(b) && blazes.length < 32) blazes.push([x, y, z]); // Fase 6.5 (equipo)

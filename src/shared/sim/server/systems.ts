@@ -20,6 +20,7 @@ import { Beds } from './beds';
 import { Composters } from './composters';
 import { Fishing } from './fishing';
 import { Campfires } from './campfires';
+import { NetherGoods } from './netherGoods'; // Fase 8.5 (lo que da el Nether)
 import { Signs } from './signs';
 import { ContainerSystem } from './containerSystem';
 import { BlockEdits } from './blockEdits';
@@ -72,6 +73,8 @@ export class ServerSystems {
   readonly composters: Composters;
   readonly fishing: Fishing;
   readonly campfires: Campfires;
+  /** Fase 8.5 (lo que da el Nether): nexo de reaparición, faro y columnas de burbujas. */
+  readonly netherGoods: NetherGoods;
   readonly signs: Signs;
   readonly edits: BlockEdits;
   readonly actions: PlayerActions;
@@ -153,6 +156,7 @@ export class ServerSystems {
     this.composters = new Composters(ctx);
     this.fishing = new Fishing(ctx);
     this.campfires = new Campfires(ctx, store);
+    this.netherGoods = new NetherGoods(ctx, store);
     this.signs = new Signs(ctx, store);
     this.edits = new BlockEdits(ctx, this.rules, this.farming, this.beds, this.composters, this.campfires);
     this.actions = new PlayerActions(ctx);
@@ -177,6 +181,7 @@ export class ServerSystems {
     this.shelves = new Shelves(ctx, store);
     this.cauldrons = new Cauldrons(ctx, this.nature);
     this.edits.cauldrons = (s, x, y, z, id, item) => this.cauldrons.use(s, x, y, z, id, item);
+    this.edits.netherGoods = (s, x, y, z, id, item) => this.netherGoods.use(s, x, y, z, id, item); // Fase 8.5
     this.leashes = new Leashes(ctx);
     this.stands = new ArmorStands(ctx, store);
     // Atriles y estandartes con dibujos. El estandarte roto suelta su objeto con las capas (lo suelte
@@ -292,6 +297,7 @@ export class ServerSystems {
     this.deepDark?.onBlockChanged(x, y, z, old, id, actor); // vibraciones y venas de sculk
     this.portals?.onBlockChanged(x, y, z, old, id); // Fase 8: el fuego en un marco enciende el portal
     this.netherPlants?.onBlockChanged(x, y, z); // Fase 8.2: punta y tallo de las enredaderas del Nether
+    this.netherGoods?.onBlockChanged(x, y, z, id); // Fase 8.5: columnas de burbujas
   }
 
   /** Un efecto (sonido y partículas) que se difunde: algunos sistemas lo oyen. */
@@ -346,6 +352,7 @@ export class ServerSystems {
     this.deepDark.tick();
     this.monuments.tick();
     this.portals.tick(); // Fase 8
+    this.netherGoods.tick(DT); // Fase 8.5: columnas de burbujas
     this.entitySync.takeRemoved(ctx.entities.removed);
     ctx.entities.removed = [];
     if (tickCount % 4 === 0) {
@@ -360,6 +367,7 @@ export class ServerSystems {
     this.collections.onJoin(s); // los tocadiscos que están sonando
     this.transport.onJoin(s); // quién va en cada barca o vagoneta
     this.deepDark.onJoin(s); // su última muerte (brújula de recuperación)
+    this.netherGoods.onJoin(s); // Fase 8.5: los efectos de los faros
   }
 
   /** Un jugador se va: soltar lo que tenía abierto, montado o atado. */
@@ -383,6 +391,7 @@ export class ServerSystems {
   flush(store: ServerStore): void {
     this.containers.flush(store);
     this.campfires.flush(store);
+    this.netherGoods.flush(store); // Fase 8.5: los faros
     this.signs.flush(store);
     this.monsters.flush(store);
     this.raids.flush(store);

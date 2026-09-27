@@ -34,11 +34,12 @@ export class Beds {
     }
     if (s.sleeping !== null) return;
     // Punto de reaparición: al usar la cama, aunque no se pueda dormir (como en Minecraft).
-    const same = s.bed && s.bed[0] === foot[0] && s.bed[1] === foot[1] && s.bed[2] === foot[2];
+    const same = s.bed && s.bedDim === ctx.dim && s.bed[0] === foot[0] && s.bed[1] === foot[1] && s.bed[2] === foot[2];
     if (!same) {
       s.bed = foot;
+      s.bedDim = ctx.dim; // Fase 8.5: el punto de reaparición es de una dimensión
       ctx.savePlayer(s);
-      ctx.send(s, { t: 'spawn', p: foot });
+      ctx.send(s, { t: 'spawn', p: foot, d: ctx.dim });
       ctx.tell(s, 'Punto de reaparición establecido.');
     }
     if (!canSleepAt(ctx.worldTime())) return fail('Sólo puedes dormir de noche.');
@@ -121,7 +122,7 @@ export class Beds {
     if (!isBed(old) || isBed(id)) return;
     const p = partnerOf(x, y, z, old);
     for (const s of this.ctx.sessions()) {
-      if (!s.bed) continue;
+      if (!s.bed || (s.bedDim ?? 0) !== this.ctx.dim) continue; // Fase 8.5: la cama de esta dimensión
       const atFoot = s.bed[0] === x && s.bed[1] === y && s.bed[2] === z;
       const atHead = !!p && s.bed[0] === p[0] && s.bed[1] === p[1] && s.bed[2] === p[2];
       if (atFoot || atHead) {

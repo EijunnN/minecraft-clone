@@ -176,6 +176,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     banners: g.books.banners.draws((x, y, z) => world.getBlock(x, y, z), camX, camY, camZ), // Fase 6.5 (libros y estandartes)
     bolts: g.bolts,
     guardianBeams: guardianBeams(g), // Fase 7.5 (océano)
+    beaconBeams: g.beacons.beams(), // Fase 8.5
     fishLines: fishingLines(g.bobbers, g.ents.list, g.net?.id ?? null, localRod, f.views),
     leashes: leashLines(g.ents.list, g.net?.id ?? null, localRod, f.views), // Fase 6.5 (remate)
     showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass',

@@ -63,6 +63,7 @@ import { raycastHangings } from './decorInteraction'; // Fase 6.5 (decoración):
 // Fase 7 (encantamientos)
 import { EnchantClient } from './enchantClient';
 import { EnchantBooks } from './enchantBooks';
+import { Beacons } from './beacons'; // Fase 8.5 (lo que da el Nether)
 import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
 import { shieldDecorKey } from '../render/shieldArt'; // Fase 7.6
 
@@ -143,6 +144,8 @@ export class Game {
   /** Fase 7 (encantamientos): mesa, yunque, afiladora, efectos de los encantamientos y el libro de la mesa. */
   readonly enchant = new EnchantClient(this);
   readonly enchantBooks = new EnchantBooks(this);
+  /** Fase 8.5: los faros (el haz, su nivel y sus efectos elegidos). */
+  readonly beacons = new Beacons(this);
   /** Fase 7 (mecanismos): lo que mueven los pistones y la armadura de los dispensadores. */
   readonly mechanisms = new MechanismsClient(this);
   selected = 0;
@@ -266,12 +269,15 @@ export class Game {
     this.difficulty = w.diff;
     if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
     this.life.bed = Array.isArray(w.bed) && w.bed.length === 3 && w.bed.every(Number.isInteger) ? w.bed : null;
+    this.life.bedDim = w.bd ?? 0; // Fase 8.5
     for (const r of Array.isArray(w.rods) ? w.rods : []) if (Array.isArray(r) && typeof r[0] === 'string' && Number.isInteger(r[1])) this.bobbers.set(r[0], r[1]);
     this.signs.clear();
     for (const sg of Array.isArray(w.signs) ? w.signs : []) if (Array.isArray(sg) && sg.slice(0, 3).every(Number.isInteger)) this.signs.set(sg[0], sg[1], sg[2], sg[3]);
     this.books.onWelcome(w.banners); // Fase 6.5 (libros y estandartes)
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
+    this.beacons.reset(); // Fase 8.5: los faros de este mundo
+    this.world.onColumnMeshed = (col) => this.beacons.onColumn(col);
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
     this.world.loadEdits(w.edits);
 
@@ -346,6 +352,8 @@ export class Game {
     this.world?.dispose();
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
+    this.beacons.reset(); // Fase 8.5: los faros de este mundo
+    this.world.onColumnMeshed = (col) => this.beacons.onColumn(col);
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
     this.world.loadEdits(w.edits);
     this.time = w.time;
@@ -356,6 +364,9 @@ export class Game {
     this.mode = w.mode;
     this.difficulty = w.diff;
     if (Array.isArray(w.spawn) && w.spawn.every(Number.isFinite)) this.spawn = w.spawn;
+    // Fase 8.5: el punto de reaparición (cama o nexo) sigue siendo el mismo al cambiar de dimensión.
+    this.life.bed = Array.isArray(w.bed) && w.bed.length === 3 && w.bed.every(Number.isInteger) ? w.bed : null;
+    this.life.bedDim = w.bd ?? 0;
     this.signs.clear();
     for (const sg of Array.isArray(w.signs) ? w.signs : []) if (Array.isArray(sg) && sg.slice(0, 3).every(Number.isInteger)) this.signs.set(sg[0], sg[1], sg[2], sg[3]);
     this.books.onWelcome(w.banners);
@@ -793,6 +804,7 @@ export class Game {
     this.rainNow = rain;
     this.enchant.update(dt); // Fase 7 (encantamientos): Respiración, Agilidad acuática, Paso helado, runas
     this.enchantBooks.update(dt);
+    this.beacons.update(dt); // Fase 8.5
     this.life.tickSurvival(dt, moved, wasGround, rain);
     this.audio.setHeartbeat(!this.creative && !surv.dead && surv.health <= 6 ? (7 - surv.health) / 6 : 0);
 

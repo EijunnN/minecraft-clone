@@ -16,7 +16,7 @@ import { BLOCKS, BLOCK_SOLID, familyBase } from '../../blocks';
 import { armorReduce } from '../../armor';
 import { EF_ACTION } from '../../protocol';
 import {
-  HORSE_ARMOR_POINTS, WOLF_ARMOR_DURABILITY, DROWNED_TRIDENT_CHANCE, DROWNED_TRIDENT_DROP, DROWNED_SHELL_CHANCE,
+  HORSE_ARMOR_POINTS, HORSE_ARMOR_TOUGHNESS, WOLF_ARMOR_DURABILITY, DROWNED_TRIDENT_CHANCE, DROWNED_TRIDENT_DROP, DROWNED_SHELL_CHANCE,
   PILLAGER_CROSSBOW_DROP, RABBIT_FOOT_DROP, TURTLE_SCUTES_ON_GROW, GOAT_HORN_TUNES, TRIDENT_SPEED,
 } from '../../equipment';
 import { moveBody, lineOfSight } from '../physics';
@@ -35,6 +35,12 @@ export function isHorseArmor(id: number): boolean {
 export function horseArmorPoints(id: number): number {
   const m = HORSE_ARMOR_OF.get(id);
   return m ? HORSE_ARMOR_POINTS[m] ?? 0 : 0;
+}
+
+/** Fase 8.5: dureza de una armadura para caballo. */
+export function horseArmorToughness(id: number): number {
+  const m = HORSE_ARMOR_OF.get(id);
+  return m ? HORSE_ARMOR_TOUGHNESS[m] ?? 0 : 0;
 }
 
 let ramBlocks: Uint8Array | null = null;
@@ -128,10 +134,15 @@ export class MobGear {
     return null;
   }
 
+  /** Fase 8.5: resistencia al empuje de lo que lleva puesto (la armadura de netherita del caballo). */
+  knockbackResistance(e: Entity): number {
+    return e.type === MOB_HORSE && e.gear === HORSE_ARMOR.netherite ? 0.1 : 0;
+  }
+
   /** Daño que llega tras la armadura puesta (el del caballo se reduce; el del lobo lo absorbe la suya). */
   absorb(e: Entity, amount: number): number {
     if (!e.gear || amount <= 0) return amount;
-    if (e.type === MOB_HORSE && isHorseArmor(e.gear)) return armorReduce(amount, horseArmorPoints(e.gear), 0);
+    if (e.type === MOB_HORSE && isHorseArmor(e.gear)) return armorReduce(amount, horseArmorPoints(e.gear), horseArmorToughness(e.gear));
     if (e.type === MOB_WOLF && e.gear === WOLF_ARMOR) {
       e.gearDmg = (e.gearDmg ?? 0) + Math.ceil(amount);
       if (e.gearDmg >= WOLF_ARMOR_DURABILITY) {

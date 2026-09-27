@@ -127,6 +127,29 @@ export function buildNetherMaterial(
       sweep({ freqStart: randRange(240, 340), freqEnd: randRange(90, 130), attack: 0.002, decay: 0.07 * d, gain: 0.22 * g });
       return true;
     }
+    // Fase 8.5: escombros ancestrales: roca densa y pesada, un golpe grave con un raspado metálico debajo.
+    case 'ancient_debris': {
+      blip({ freq: randRange(70, 105), freqEnd: randRange(40, 55), wave: 'triangle', attack: 0.001, decay: 0.09 * d, gain: 0.5 * g });
+      burst({ buffer: noise.pink, filterType: 'bandpass', freq: randRange(500, 1000), q: 2, attack: 0.002, decay: 0.07 * d, gain: 0.42 * g });
+      burst({ buffer: noise.white, at: 0.01, filterType: 'bandpass', freq: randRange(2200, 3200), q: 6, attack: 0.001, decay: 0.05 * d, gain: 0.12 * g });
+      return true;
+    }
+    // Netherita: metal macizo, un tañido corto y oscuro más grave que el hierro.
+    case 'netherite': {
+      const f = randRange(380, 520);
+      blip({ freq: f, freqEnd: f * 0.97, wave: 'sine', attack: 0.001, decay: 0.16 * d, gain: 0.3 * g });
+      blip({ freq: f * 2.7, wave: 'sine', attack: 0.001, decay: 0.07 * d, gain: 0.12 * g });
+      burst({ buffer: noise.white, filterType: 'bandpass', freq: randRange(1300, 2300), q: 4, attack: 0.001, decay: 0.04 * d, gain: 0.34 * g });
+      blip({ freq: randRange(90, 120), freqEnd: 60, wave: 'triangle', attack: 0.001, decay: 0.06 * d, gain: 0.3 * g });
+      return true;
+    }
+    // Magnetita: piedra con un zumbido metálico que tiembla al final.
+    case 'lodestone': {
+      burst({ buffer: noise.white, filterType: 'bandpass', freq: randRange(1000, 1900), q: 2.6, attack: 0.001, decay: 0.045 * d, gain: 0.5 * g });
+      blip({ freq: randRange(140, 200), freqEnd: randRange(90, 110), wave: 'triangle', attack: 0.001, decay: 0.05 * d, gain: 0.3 * g });
+      blip({ at: 0.005, freq: randRange(620, 760), wave: 'sine', attack: 0.004, decay: 0.12 * d, gain: 0.1 * g });
+      return true;
+    }
   }
   return false;
 }

@@ -58,8 +58,10 @@ export const TURTLE_SCUTES_ON_GROW = 1;
 // ------------------------------------------------------------------ armaduras de caballo y lobo
 
 /** Puntos de armadura de cada armadura para caballo (valores de Minecraft). */
-export const HORSE_ARMOR_POINTS: Readonly<Record<string, number>> = { leather: 3, iron: 5, golden: 7, diamond: 11 };
-export const HORSE_ARMOR_MATERIALS = ['leather', 'iron', 'golden', 'diamond'] as const;
+export const HORSE_ARMOR_POINTS: Readonly<Record<string, number>> = { leather: 3, iron: 5, golden: 7, diamond: 11, netherite: 19 };
+/** Fase 8.5: dureza de la armadura para caballo (la de diamante 2 y la de netherita 3, que además resiste el empuje). */
+export const HORSE_ARMOR_TOUGHNESS: Readonly<Record<string, number>> = { diamond: 2, netherite: 3 };
+export const HORSE_ARMOR_MATERIALS = ['leather', 'iron', 'golden', 'diamond', 'netherite'] as const;
 /** Durabilidad de la armadura para lobo (se desgasta con el daño que absorbe). */
 export const WOLF_ARMOR_DURABILITY = 64;
 /** Escamas de armadillo que cuesta la armadura para lobo. */

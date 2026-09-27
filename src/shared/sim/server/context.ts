@@ -49,8 +49,10 @@ export interface Session {
   /** Cama en la que duerme (clave de posición) y ticks que lleva dormido. */
   sleeping: number | null;
   sleepTicks: number;
-  /** Cama donde reaparece (pies de la cama). */
+  /** Cama donde reaparece (pies de la cama). Fase 8.5: o el nexo de reaparición (ver bedDim). */
   bed: [number, number, number] | null;
+  /** Fase 8.5: dimensión del punto de reaparición (sin ella, el mundo normal). */
+  bedDim?: number;
   /** Fase 7 (pociones): color de los remolinos de sus efectos (0 sin efectos). */
   ec?: number;
   /** Fase 8 (dimensiones): acaba de llegar de otra dimensión y su cliente aún no la ha montado. */
@@ -62,6 +64,8 @@ export interface PlayerRecord {
   mode: GameMode;
   save: PlayerSave | null;
   bed?: [number, number, number] | null;
+  /** Fase 8.5: dimensión del punto de reaparición (cama en el mundo normal, nexo en el Nether). */
+  bedDim?: number;
   /** Fase 8: dimensión en la que está (sin ella, el mundo normal). */
   dim?: number;
 }

@@ -131,6 +131,22 @@ export class ParticleFx {
     }
   }
 
+  /** Fase 8.5: burbuja de una columna que sube (rápida y recta) o del remolino de una que baja (gira y se hunde). */
+  bubbleColumn(x: number, y: number, z: number, down: boolean): void {
+    if (down) {
+      const a = Math.random() * Math.PI * 2;
+      this.ps.spawn({
+        x: x + Math.cos(a) * 0.3, y, z: z + Math.sin(a) * 0.3, vx: -Math.sin(a) * 1.2, vy: rnd(-2.2, -1.2), vz: Math.cos(a) * 1.2,
+        life: rnd(0.8, 1.4), size: rnd(0.04, 0.08), sprite: SPRITE.bubble, r: 0.85, g: 0.92, b: 1, a: 0.8, drag: 0.4, flags: PF.BUBBLE,
+      });
+      return;
+    }
+    this.ps.spawn({
+      x: x + rnd(-0.35, 0.35), y, z: z + rnd(-0.35, 0.35), vx: rnd(-0.1, 0.1), vy: rnd(3.5, 5.5), vz: rnd(-0.1, 0.1),
+      life: rnd(0.7, 1.4), size: rnd(0.06, 0.13), sprite: SPRITE.bubble, r: 0.9, g: 0.96, b: 1, a: 0.9, drag: 0.2, flags: PF.BUBBLE | PF.DRIFT,
+    });
+  }
+
   /** Brasa que salta de la lava o de un fuego. */
   ember(x: number, y: number, z: number): void {
     this.ps.spawn({
@@ -146,6 +162,14 @@ export class ParticleFx {
       x, y, z, vx: rnd(-0.25, 0.25), vy: rnd(0.35, 0.9), vz: rnd(-0.25, 0.25), life: rnd(4, 8), size: rnd(0.03, 0.06), size1: 0.01,
       sprite: SPRITE.glow, r: 3 + hot * 1.5, g: 0.9 + hot * 0.8, b: 0.15 + hot * 0.2, drag: 0.35, wind: 0.25,
       flags: PF.EMISSIVE | PF.DRIFT | PF.BLINK | PF.FADE_IN,
+    });
+  }
+
+  /** Fase 8.5: mota violeta que sube del remolino del nexo de reaparición cargado. */
+  anchorMote(x: number, y: number, z: number): void {
+    this.ps.spawn({
+      x, y, z, vx: rnd(-0.12, 0.12), vy: rnd(0.4, 1.1), vz: rnd(-0.12, 0.12), life: rnd(1.4, 2.8), size: rnd(0.04, 0.08), size1: 0.01,
+      sprite: SPRITE.glow, r: 1.7, g: 0.55, b: 2.8, drag: 0.6, flags: PF.EMISSIVE | PF.DRIFT | PF.FADE_IN,
     });
   }
 

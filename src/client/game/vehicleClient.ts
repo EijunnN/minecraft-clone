@@ -333,6 +333,11 @@ export class VehicleClient {
       const input: BoatInput = c ? { forward: c.forward, back: c.back, left: c.left, right: c.right } : NO_INPUT;
       const before = body.boat.yaw;
       boatStep(body.boat, world, input);
+      // Fase 8.5: una columna de burbujas que baja hunde la barca y echa al que rema.
+      if (body.boat.eject) {
+        this.leave(false);
+        return;
+      }
       const [l, r] = paddlesOf(input);
       this.paddles = (l ? 1 : 0) | (r ? 2 : 0);
       // La vista gira con la barca.

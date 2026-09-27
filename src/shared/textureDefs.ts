@@ -462,6 +462,12 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'red_nether_bricks'].map((name): TextureDef => ({ name })),
   // Fase 8.4 (estructuras del Nether): la verruga del Nether (tres dibujos para sus cuatro edades).
   ...[0, 1, 2].map((s): TextureDef => ({ name: `nether_wart_stage${s}`, sss: 0.35, cutout: true })),
+  // Fase 8.5 (lo que da el Nether): escombros ancestrales y netherita.
+  ...['ancient_debris_side', 'ancient_debris_top', 'netherite_block', 'quartz_bricks', 'quartz_pillar', 'quartz_pillar_top',
+    'chiseled_quartz_block', 'chiseled_quartz_block_top', 'smooth_quartz', 'lodestone_top', 'lodestone_side', 'soul_campfire_log_lit',
+    'soul_campfire_embers', 'respawn_anchor_top_off', 'respawn_anchor_top', 'respawn_anchor_bottom', 'beacon',
+    ...[0, 1, 2, 3, 4].map((c) => `respawn_anchor_side${c}`)].map((name): TextureDef => ({ name })),
+  { name: 'soul_campfire_fire', wave: 2, cutout: true },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

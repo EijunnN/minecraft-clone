@@ -113,19 +113,29 @@ function blastFront(lit: boolean): Generator {
 // ---------------------------------------------------------------------------
 
 /** Tronco con grietas de brasas encendidas. */
-function campfireLogLit(t: Tex): void {
+/** Fase 8.5: colores del fuego de la fogata: el normal y el de alma (turquesa). */
+const FLAME = {
+  hot: [[255, 170, 60], [236, 96, 30]] as RGB[], core: [[255, 246, 170], [255, 214, 90]] as RGB[], edge: [[255, 170, 50], [220, 70, 20]] as RGB[],
+  ember: [[255, 120, 30], [255, 190, 70]] as RGB[],
+};
+const SOUL_FLAME = {
+  hot: [[120, 250, 255], [40, 190, 220]] as RGB[], core: [[220, 255, 255], [140, 246, 255]] as RGB[], edge: [[70, 220, 240], [20, 130, 170]] as RGB[],
+  ember: [[40, 200, 230], [130, 250, 255]] as RGB[],
+};
+
+function campfireLogLit(t: Tex, fl = FLAME): void {
   WOOD_GENERATORS.oak_log_side(t);
   const r = t.rng('embers');
   for (let k = 0; k < 16; k++) {
     const x = r.int(0, 15), y = r.int(0, 15);
-    const hot: RGB = r.chance(0.5) ? [255, 170, 60] : [236, 96, 30];
+    const hot: RGB = r.chance(0.5) ? fl.hot[0] : fl.hot[1];
     t.paint(x, y, hot, 0.4, 60, 0, 200);
     if (r.chance(0.5) && x < 15) t.paint(x + 1, y, scale(hot, 0.85), 0.4, 60, 0, 150);
   }
 }
 
 /** Llamas: lenguas anchas abajo, amarillas en el centro y naranjas en los bordes. */
-function campfireFire(t: Tex): void {
+function campfireFire(t: Tex, fl = FLAME): void {
   cutoutCanvas(t, 30, 0);
   const r = t.rng();
   const tongues = [
@@ -140,14 +150,14 @@ function campfireFire(t: Tex): void {
         const xx = x + dx + (k > h * 0.6 && r.chance(0.3) ? 1 : 0);
         if (xx < 0 || xx > 15) continue;
         const core = Math.abs(dx) < w * 0.5 && p < 0.7;
-        const c: RGB = core ? mix([255, 246, 170], [255, 214, 90], p) : mix([255, 170, 50], [220, 70, 20], p);
+        const c: RGB = core ? mix(fl.core[0], fl.core[1], p) : mix(fl.edge[0], fl.edge[1], p);
         t.paint(xx, y, c, 1, 20, 0, 255);
       }
     }
   }
 }
 
-function campfireGround(ash: boolean): Generator {
+function campfireGround(ash: boolean, fl = FLAME): Generator {
   return (t) => {
     const r = t.rng();
     const px = pixelNoise(r);
@@ -157,7 +167,7 @@ function campfireGround(ash: boolean): Generator {
       t.height[i] = 0.5 + 0.5 * px[i];
       t.smooth[i] = 20;
       if (!ash && px[i] > 0.72) {
-        c = mix([255, 120, 30], [255, 190, 70], r.next());
+        c = mix(fl.ember[0], fl.ember[1], r.next());
         t.setI(i, c);
         t.emit[i] = 220;
       }
@@ -222,6 +232,10 @@ export const WORKSTATION_GENERATORS: Record<string, Generator> = {
   campfire_log_lit: campfireLogLit,
   campfire_fire: campfireFire,
   campfire_embers: campfireGround(false),
+  // Fase 8.5 (lo que da el Nether): la fogata de almas, con el fuego turquesa.
+  soul_campfire_log_lit: (t) => campfireLogLit(t, SOUL_FLAME),
+  soul_campfire_fire: (t) => campfireFire(t, SOUL_FLAME),
+  soul_campfire_embers: campfireGround(false, SOUL_FLAME),
   campfire_ash: campfireGround(true),
   stonecutter_top: (t) => stonecutterBase(t, true),
   stonecutter_side: stonecutterSide,

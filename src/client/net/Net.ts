@@ -17,6 +17,8 @@ export interface Welcome {
   save: PlayerSave | null;
   spawn: [number, number, number];
   bed?: [number, number, number] | null;
+  /** Fase 8.5: dimensión del punto de reaparición. */
+  bd?: number;
   /** Flotadores de pesca ya lanzados: [jugador, entidad]. */
   rods?: [string, number][];
   /** Carteles con texto: [x, y, z, líneas]. */
@@ -211,7 +213,7 @@ export class Net {
         this.pendingWelcome = {
           id: msg.id, seed: msg.seed, time: msg.time, players: msg.players, mode: msg.mode === 'c' ? 'c' : 's',
           diff: Number.isInteger(msg.diff) ? msg.diff : 2, save: msg.save ?? null, spawn: msg.spawn,
-          bed: msg.bed ?? null, rods: Array.isArray(msg.rods) ? msg.rods : [],
+          bed: msg.bed ?? null, bd: isDimension(msg.bd) ? msg.bd : 0, rods: Array.isArray(msg.rods) ? msg.rods : [],
           signs: Array.isArray(msg.signs) ? msg.signs : [],
           banners: Array.isArray(msg.banners) ? msg.banners : [], // Fase 6.5 (libros y estandartes)
           dim: isDimension(msg.dim) ? msg.dim : 0, // Fase 8

@@ -44,6 +44,12 @@ Objects). Pensado para PC (teclado y ratón).
   bastión (el disco «Pigstep» y el diseño de estandarte del hocico); **fósiles** de hueso en el valle
   de almas y **portales en ruinas** del Nether, a veces medio hundidos en la lava. El mar de lava tiene
   costras que se enfrían y derivan despacio en lugar de una baldosa repetida.
+- **Lo que da el Nether**: **escombros ancestrales** y la **netherita** (herramientas, armadura y armadura
+  para caballo que se mejoran desde el diamante en la **mesa de herrería**, que no arden y flotan en la lava),
+  el **nexo de reaparición** (se carga con piedra luminosa y fija el punto de reaparición en el Nether), la
+  **magnetita** y la brújula magnetizada, el **faro** con su pirámide, su haz de colores y sus poderes, la
+  **fogata de almas**, las **columnas de burbujas** (que suben sobre arena de alma y tiran hacia abajo sobre
+  magma, también a las barcas) y los bloques de **cuarzo**.
 - **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus
@@ -221,6 +227,7 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Piglin admirando el lingote de oro del trueque](docs/screenshots/barter.png) | ![Blaze, esqueleto wither y piglin bruto peleando](docs/screenshots/nether_mobs.png) |
 | ![Puentes de una fortaleza del Nether sobre los deltas de basalto](docs/screenshots/nether_fortress.png) | ![Muros de un bastión en ruinas con sus cascadas de lava](docs/screenshots/bastion.png) |
 | ![Fósil de hueso en el valle de almas](docs/screenshots/nether_fossil.png) | ![Portal en ruinas del Nether con su cofre, oro y la mancha de rocanegra](docs/screenshots/nether_ruined_portal.png) |
+| ![Dos faros de noche, uno con el haz teñido por cristales de color](docs/screenshots/beacon.png) | ![Faro sobre su pirámide, nexo de reaparición cargado, magnetita, cuarzo, escombros ancestrales y netherita](docs/screenshots/nether_goods.png) |
 
 ## Controles
 
@@ -355,7 +362,7 @@ VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no t
 
 - 70 de las 86 criaturas de Minecraft: faltan las del End, los jefes y las de 2024–2026 (sniffer,
   breeze, creaking…).
-- Sin End, y del Nether falta lo que da (netherita, piedra imán, ancla de reaparición…).
+- Sin End ni Wither (la estrella del Nether sólo se consigue en creativo).
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores

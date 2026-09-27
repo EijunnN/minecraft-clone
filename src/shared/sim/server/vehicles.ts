@@ -522,7 +522,7 @@ export class Transport {
           this.pullLeash(v); // Fase 7 (remate)
           boatStep(v.boat, w, null);
           v.paddles = 0;
-          if (v.boat.underTicks >= 60) for (let i = 0; i < v.seats.length; i++) this.unseat(v, i);
+          if (v.boat.underTicks >= 60 || v.boat.eject) for (let i = 0; i < v.seats.length; i++) this.unseat(v, i); // Fase 8.5: o la hunde una columna de burbujas
         }
       } else if (v.cart) {
         carts.push(v);

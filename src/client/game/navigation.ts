@@ -2,6 +2,7 @@
 // con una flecha para el jugador y puntos para los demás; con una brújula en cualquier mano, una
 // esfera cuya aguja apunta al punto de aparición del mundo.
 import { COMPASS, FILLED_MAP } from '../../shared/items';
+import { LODESTONE, familyBase } from '../../shared/blocks'; // Fase 8.5
 import { MAP_SIZE } from '../../shared/maps';
 import { MapImage } from './maps';
 import { structureMapOf } from '../../shared/structureMaps'; // Fase 7.5 (océano)
@@ -27,9 +28,9 @@ export class Navigation {
     const main = g.heldStack;
     const off = g.inv.offhand;
     const mapKey = main?.id === FILLED_MAP && main.dmg ? main.dmg : 0;
-    const compass = main?.id === COMPASS || off?.id === COMPASS;
+    const compass = main?.id === COMPASS ? main : off?.id === COMPASS ? off : null;
     this.updateMap(mapKey);
-    this.updateCompass(compass && !mapKey);
+    this.updateCompass(!!compass && !mapKey, compass?.data?.lode ?? null);
     updateRecoveryCompass(g, !!mapKey); // Fase 7.5 (abismo)
   }
 
@@ -102,7 +103,8 @@ export class Navigation {
     mark(g.player.x, g.player.z, 'me', g.player.yaw);
   }
 
-  private updateCompass(show: boolean): void {
+  /** Fase 8.5: `lode`, la magnetita de una brújula magnetizada [x, y, z, dimensión]. */
+  private updateCompass(show: boolean, lode: readonly number[] | null = null): void {
     const g = this.g;
     if (!show) {
       if (this.compassEl) this.compassEl.style.display = 'none';
@@ -116,13 +118,18 @@ export class Navigation {
       document.body.appendChild(this.compassEl);
     }
     this.compassEl.style.display = 'block';
-    // Ángulo del punto de aparición respecto a donde mira el jugador (0 = de frente, horario).
+    // Ángulo del punto de aparición respecto a donde mira el jugador (0 = de frente, horario). Fase 8.5: la
+    // magnetizada apunta a su magnetita, en su dimensión y si sigue ahí (si no, gira sin rumbo).
     const p = g.player;
-    const dx = g.spawn[0] - p.x, dz = g.spawn[2] - p.z;
+    const dim = g.world?.dim ?? 0;
+    const lodeBlock = lode && lode[3] === dim ? g.world?.getBlock(lode[0], lode[1], lode[2]) ?? -1 : -1;
+    const lodeOk = !!lode && lode[3] === dim && (lodeBlock < 0 || familyBase(lodeBlock) === LODESTONE);
+    const tx = lode ? lode[0] + 0.5 : g.spawn[0], tz = lode ? lode[2] + 0.5 : g.spawn[2];
+    const dx = tx - p.x, dz = tz - p.z;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
     const rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
     // Muy cerca del punto (o en el Nether, fase 8) la aguja gira sin rumbo, como en Minecraft.
-    const near = Math.hypot(dx, dz) < 2 || !dimensionDef(g.world?.dim ?? 0).compass;
+    const near = Math.hypot(dx, dz) < 2 || (lode ? !lodeOk : !dimensionDef(dim).compass);
     const a = near ? performance.now() / 180 : Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
     this.needle!.style.transform = `translate(-50%, -100%) rotate(${a}rad)`;
     // La "N" de la esfera marca el norte (−z) respecto a la vista.

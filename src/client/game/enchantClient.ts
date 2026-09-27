@@ -6,7 +6,7 @@
 // - herramientas y armas: los encantamientos viajan con cada acción (golpe, bloque roto, disparo, pesca);
 //   Eficiencia y Afinidad acuática aceleran el minado, Irrompibilidad y Reparación cuidan la durabilidad;
 // - el brillo de lo encantado (mano, mano secundaria y armadura) para los demás jugadores.
-import { ENCHANTING_TABLE, GRINDSTONE, isAnvil, familyBase, isContainer } from '../../shared/blocks';
+import { ENCHANTING_TABLE, GRINDSTONE, SMITHING_TABLE, BEACON, isAnvil, familyBase, isContainer } from '../../shared/blocks';
 import { ITEMS, type ItemStack } from '../../shared/items';
 import {
   RESPIRATION, AQUA_AFFINITY, DEPTH_STRIDER, FROST_WALKER, EFFICIENCY, MENDING, BINDING_CURSE, VANISHING_CURSE,
@@ -198,7 +198,8 @@ export class EnchantClient {
     const g = this.g;
     if (!pressed || !hit || g.player.sneaking) return false;
     const base = familyBase(hit.id);
-    const kind = hit.id === ENCHANTING_TABLE ? 'enchant' : isAnvil(hit.id) ? 'anvil' : base === GRINDSTONE ? 'grindstone' : null;
+    const kind = hit.id === ENCHANTING_TABLE ? 'enchant' : isAnvil(hit.id) ? 'anvil' : base === GRINDSTONE ? 'grindstone'
+      : base === SMITHING_TABLE ? 'smithing' : base === BEACON ? 'beacon' : null; // Fase 8.5: la mesa de herrería y el faro
     if (!kind || isContainer(hit.id)) return false;
     g.openScreen(kind, [hit.x, hit.y, hit.z]);
     g.audio.playUi('open');
@@ -225,6 +226,13 @@ export class EnchantClient {
     },
     anvilUsed: (pos) => this.g.net?.send({ t: 'work', k: 'anvil', x: pos[0], y: pos[1], z: pos[2] }),
     grindUsed: (pos, xp) => this.g.net?.send({ t: 'work', k: 'grind', x: pos[0], y: pos[1], z: pos[2], ...(xp > 0 ? { n: xp } : {}) }),
+    smithUsed: (pos) => this.g.net?.send({ t: 'work', k: 'smith', x: pos[0], y: pos[1], z: pos[2] }), // Fase 8.5
+    beaconLevel: (pos) => this.g.beacons.levelAt(pos[0], pos[1], pos[2]),
+    beaconEffects: (pos) => this.g.beacons.effects.get(`${pos[0]},${pos[1]},${pos[2]}`) ?? [0, 0],
+    beaconSet: (pos, p, s) => {
+      this.g.beacons.onServer(pos[0], pos[1], pos[2], p, s);
+      this.g.net?.send({ t: 'beacon', x: pos[0], y: pos[1], z: pos[2], p, s });
+    },
     sound: (kind) => {
       if (kind === 'click') this.g.audio.playUi('click');
     },

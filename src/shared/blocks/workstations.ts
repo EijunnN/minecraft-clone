@@ -1,7 +1,7 @@
 // Bloques de trabajo de la fase 4: mitades del cofre doble, ahumador y alto horno (hornos rápidos
 // para comida y para minerales), fogata (cocina y alumbra) y cortapiedras.
 // (Se registran después de la decoración para no mover los ids guardados.)
-import { family, L, R_MODEL, type BlockDef } from './registry';
+import { family, L, R_MODEL, type BlockDef, type Opts } from './registry';
 import { CHEST } from './classic';
 import { mbox, rotateBoxes, rotateFlat, DIR_FACE } from '../blockModels';
 
@@ -41,27 +41,31 @@ export const BLAST_FURNACE = fastFurnace('blast_furnace', 'Alto horno');
 // ------------------------------------------------------------------ fogata
 
 /** Fogata: cuatro troncos cruzados, brasas y llamas si está encendida. */
-export const CAMPFIRE = family('campfire', 'Fogata', [['lit', 2]], (st) => {
-  const log = L('oak_log_side'), end = L('oak_log_top'), lit = L(st.lit ? 'campfire_log_lit' : 'oak_log_side');
-  const fire = L('campfire_fire'), ash = L(st.lit ? 'campfire_embers' : 'campfire_ash');
+export const CAMPFIRE = family('campfire', 'Fogata', [['lit', 2]], (st) => campfireOpts(st.lit === 1, false));
+
+/** Fase 8.5: la fogata y la de almas (fuego turquesa, luz 10) son el mismo modelo con otras texturas. */
+export function campfireOpts(lit: boolean, soul: boolean): Opts {
+  const p = soul ? 'soul_campfire' : 'campfire';
+  const log = L('oak_log_side'), end = L('oak_log_top'), litLog = L(lit ? `${p}_log_lit` : 'oak_log_side');
+  const fire = L(`${p}_fire`), ash = L(lit ? `${p}_embers` : 'campfire_ash');
   // Troncos de abajo a lo largo de X y de arriba a lo largo de Z; brasas en el centro.
-  const along = [end, end, log, log, lit, lit];
-  const across = [lit, lit, log, log, end, end];
+  const along = [end, end, log, log, litLog, litLog];
+  const across = [litLog, litLog, log, log, end, end];
   const model = [
     mbox(0, 0, 1, 16, 4, 5, along), mbox(0, 0, 11, 16, 4, 15, along),
     mbox(1, 3, 0, 5, 7, 16, across), mbox(11, 3, 0, 15, 7, 16, across),
     mbox(5, 0, 5, 11, 1, 11, [-1, -1, ash, -1, -1, -1]),
   ];
-  if (st.lit) {
+  if (lit) {
     // Llamas: dos planos cruzados.
     model.push(mbox(8, 1, 2, 8, 16, 14, [fire, fire, -1, -1, -1, -1]), mbox(2, 1, 8, 14, 16, 8, [-1, -1, -1, -1, fire, fire]));
   }
   return {
-    render: R_MODEL, opaque: false, lightOpacity: 0, emission: st.lit ? 15 : 0, hardness: 2, tool: 'axe', sound: 'wood',
+    render: R_MODEL, opaque: false, lightOpacity: 0, emission: lit ? (soul ? 10 : 15) : 0, hardness: 2, tool: 'axe', sound: 'wood',
     category: 'decoracion', side: 'oak_log_side', top: 'oak_log_top', model,
     collision: [0, 0, 0, 1, 7 / 16, 1], selection: [0, 0, 0, 1, 7 / 16, 1],
   };
-});
+}
 
 // ------------------------------------------------------------------ cortapiedras
 

@@ -233,7 +233,9 @@ export type ClientMsg =
   // Fase 7 (encantamientos): se usó la mesa de encantamientos, el yunque (el servidor decide si se
   // deteriora) o la afiladora (n: experiencia que suelta en orbes) en (x, y, z); Paso helado de nivel l
   // bajo los pies del jugador.
-  | { t: 'work'; k: 'enchant' | 'anvil' | 'grind'; x: number; y: number; z: number; n?: number }
+  | { t: 'work'; k: 'enchant' | 'anvil' | 'grind' | 'smith'; x: number; y: number; z: number; n?: number } // Fase 8.5: 'smith'
+  /** Fase 8.5: efectos elegidos en la pantalla del faro (principal y secundario; 0 ninguno). */
+  | { t: 'beacon'; x: number; y: number; z: number; p: number; s: number }
   | { t: 'frost'; l: number };
 
 export type ServerMsg =
@@ -242,6 +244,8 @@ export type ServerMsg =
     mode: GameMode; diff: number; save: PlayerSave | null; spawn: [number, number, number];
     /** Reaparición en la cama (si tiene). */
     bed?: [number, number, number] | null;
+    /** Fase 8.5: dimensión del punto de reaparición (cama o nexo; sin ella, el mundo normal). */
+    bd?: number;
     /** Flotadores de pesca ya lanzados: [jugador, entidad]. */
     rods?: [string, number][];
     /** Carteles con texto: [x, y, z, líneas]. */
@@ -297,7 +301,11 @@ export type ServerMsg =
   /** Respuesta a 'interact': lo que cambia en la mano del jugador. */
   | { t: 'ires'; q: number; ok: boolean; take?: number; give?: ItemStack; wear?: number }
   /** Punto de reaparición del jugador (cama); null = el del mundo. */
-  | { t: 'spawn'; p: [number, number, number] | null }
+  | { t: 'spawn'; p: [number, number, number] | null; d?: number } // Fase 8.5: d, dimensión del punto
+  /** Fase 8.5: reaparecer aquí (lo decide el servidor: el nexo de reaparición o el punto de aparición). */
+  | { t: 'respawnAt'; p: [number, number, number] }
+  /** Fase 8.5: los efectos elegidos de un faro. */
+  | { t: 'beacon'; x: number; y: number; z: number; p: number; s: number }
   // Fase 6 (monturas)
   /** El jugador `id` va en la entidad e (0 = se bajó); c: la guía él; st: [velocidad, salto] de la montura. */
   | { t: 'ride'; id: string; e: number; c?: boolean; st?: [number, number] }

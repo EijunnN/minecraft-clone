@@ -4,6 +4,7 @@
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluidHeight } from '../../shared/blocks';
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { isSoulGround } from '../../shared/blocks'; // Fase 8.3: Velocidad de alma
+import { isBubbleColumn, bubbleColumnDown } from '../../shared/blocks'; // Fase 8.5
 import { SOUL_SPEED_BASE, SOUL_SPEED_PER_LEVEL } from '../../shared/netherMobs';
 import { moveBox, boxBlocked } from '../../shared/collide';
 import { scaffoldClimb, scaffoldFloor } from '../../shared/scaffoldPhysics'; // Fase 6.5 (decoración)
@@ -57,6 +58,10 @@ export class Player {
   sneaking = false;
   sprinting = false;
   inWater = false;
+  /** Fase 8.5: columna de burbujas en los pies (0 no, 1 sube, 2 baja), si es la superficie y si el ojo está en una. */
+  bubble = 0;
+  bubbleTop = false;
+  eyeInBubble = false;
   eyeInWater = false;
   inLava = false;
   /** Dentro de una telaraña: se mueve muy despacio. */
@@ -189,6 +194,11 @@ export class Player {
     const ex = Math.floor(this.x), ey = Math.floor(this.eyeY), ez = Math.floor(this.z);
     const eb = world.getBlock(ex, ey, ez);
     this.eyeInWater = eb > 0 && BLOCK_FLUID[eb] === 1 && this.eyeY < this.fluidTop(world, ex, ey, ez, eb) - 0.02;
+    // Fase 8.5: columna de burbujas en los pies (1 sube, 2 baja) y si es su superficie; dentro de una, se respira.
+    const fb = world.getBlock(Math.floor(this.x), Math.floor(this.y + 0.1), Math.floor(this.z));
+    this.bubble = isBubbleColumn(fb) ? (bubbleColumnDown(fb) ? 2 : 1) : 0;
+    this.bubbleTop = this.bubble > 0 && world.getBlock(Math.floor(this.x), Math.floor(this.y + 0.1) + 1, Math.floor(this.z)) === 0;
+    this.eyeInBubble = isBubbleColumn(eb);
     this.justEnteredWater = water && !wasInWater && this.vy < -3;
   }
 
@@ -277,7 +287,7 @@ export class Player {
       this.vy *= Math.exp(-dt * 2.2);
       if (c.jump) this.vy += 26 * dt;
       if (c.sneak) this.vy -= 14 * dt;
-      this.vy = Math.max(-4.5, Math.min(4.2, this.vy));
+      if (!this.bubble) this.vy = Math.max(-4.5, Math.min(4.2, this.vy)); // Fase 8.5: la columna de burbujas manda
       // Salir del agua trepando a la orilla.
       if (c.jump && this.inWater && !this.eyeInWater && this.touchingWall(world)) this.vy = Math.max(this.vy, 5.5);
     } else {
@@ -317,6 +327,16 @@ export class Player {
           this.vz += -cy * 1.2;
         }
       }
+    }
+
+    // Fase 8.5: columnas de burbujas (onInsideBubbleColumn / onAboveBubbleColumn de Java, en bloques por tick).
+    if (this.bubble && !this.flying) {
+      const k = dt * 20, down = this.bubble === 2, v = this.vy / 20;
+      const nv = this.bubbleTop
+        ? (down ? Math.max(-0.9, v - 0.03 * k) : Math.min(1.8, v + 0.1 * k))
+        : (down ? Math.max(-0.3, v - 0.03 * k) : Math.min(0.7, v + 0.06 * k));
+      this.vy = nv * 20;
+      this.fallDistance = 0;
     }
 
     // Fase 6.5 (decoración): dentro de un andamio se sube saltando y se baja agachado.

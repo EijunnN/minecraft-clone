@@ -96,7 +96,7 @@ export class Entities {
   /** Fase 7.5 (océano): delfines que llevan a los naufragios y a las ruinas. */
   readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
-  explosion: ((x: number, y: number, z: number, power: number, charged: boolean) => void) | null = null;
+  explosion: ((x: number, y: number, z: number, power: number, charged: boolean, breakBlocks?: boolean) => void) | null = null; // Fase 8.5: breakBlocks
   /** Fase 7.5 (abismo): un catalizador de sculk cercano se come la experiencia de la criatura que muere (devuelve true). */
   xpEater: ((e: Entity) => boolean) | null = null;
   /** Fase 7.5 (mansión): alays (objetos que recogen, bailes y duplicación). */
@@ -276,6 +276,7 @@ export class Entities {
     amount = horsemanAbsorb(e, amount); // Fase 7.5 (fauna): el casco del jinete esqueleto
     amount = this.mobs.nether.absorb(e, amount); // Fase 8.3: la armadura del cubo de magma y el oro de los piglins
     knock *= 1 - this.mobs.nether.knockbackResistance(e); // Fase 8.3: el hoglin y el zoglin apenas retroceden
+    knock *= 1 - this.gear.knockbackResistance(e); // Fase 8.5: la armadura de netherita del caballo
     amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
     e.health -= amount;
     e.invuln = 0.5;

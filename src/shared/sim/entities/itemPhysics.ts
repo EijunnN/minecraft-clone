@@ -9,7 +9,7 @@ import { moveBody, boxCollides } from '../physics';
 import { GRAVITY, type PlayerView, type Entity } from './types';
 import type { Entities } from './Entities';
 import { potionStack, SPECTRAL_ARROW_TYPE } from '../../potions'; // Fase 7 (pociones): flechas con efecto; 8.3: la espectral
-import { SPECTRAL_ARROW } from '../../items';
+import { SPECTRAL_ARROW, FIRE_RESISTANT_ITEMS } from '../../items';
 
 export class ItemPhysics {
   private itemGrid = new Map<string, Entity[]>();
@@ -48,7 +48,9 @@ export class ItemPhysics {
       this.m.remove(e.id);
       return;
     }
-    if (e.inWater) {
+    // Fase 8.5: lo que no arde (la netherita) flota en la lava como en el agua.
+    const fireproof = !!e.stack && FIRE_RESISTANT_ITEMS.has(e.stack.id);
+    if (e.inWater || (e.inLava && fireproof)) {
       e.vy += (1.5 - e.vy) * Math.min(1, dt * 3);
       e.vx *= 1 - Math.min(1, dt * 2);
       e.vz *= 1 - Math.min(1, dt * 2);
@@ -58,7 +60,7 @@ export class ItemPhysics {
       e.vx *= 1 - Math.min(1, dt * fr);
       e.vz *= 1 - Math.min(1, dt * fr);
     }
-    if (e.inLava) {
+    if (e.inLava && !fireproof) {
       this.m.remove(e.id);
       this.m.host.fx('burn_item', e.x, e.y, e.z);
       return;

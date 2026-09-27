@@ -133,7 +133,7 @@ function shade(c: [number, number, number], k: number): string {
   return `rgb(${f(c[0])},${f(c[1])},${f(c[2])})`;
 }
 
-function icon(id: number): string {
+export function effectIcon(id: number): string {
   const cached = iconCache.get(id);
   if (cached) return cached;
   const rows = GLYPHS[id];
@@ -180,6 +180,6 @@ export function renderEffectsHud(fx: StatusEffects, show: boolean): void {
     const blink = e.time < 10 && (Math.floor(e.time * 4) & 1) === 1;
     const lvl = e.amp > 0 ? ` ${effectLevel(e.amp)}` : '';
     return `<div class="fx ${d.good ? 'good' : 'bad'}${blink ? ' blink' : ''}" title="${d.name}${lvl}">` +
-      `<i style="background-image:url(${icon(id)})"></i><span>${clock(e.time)}</span></div>`;
+      `<i style="background-image:url(${effectIcon(id)})"></i><span>${clock(e.time)}</span></div>`;
   }).join('');
 }

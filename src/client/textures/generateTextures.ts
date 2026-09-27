@@ -57,6 +57,7 @@ import { DEEP_DARK_GENERATORS } from './genDeepDark'; // Fase 7.5 (abismo)
 import { NETHER_GENERATORS } from './genNether'; // Fase 8 (dimensiones)
 import { NETHER_BIOME_GENERATORS } from './genNetherBiomes'; // Fase 8.2 (biomas del Nether)
 import { NETHER_STRUCTURE_GENERATORS } from './genNetherStructures'; // Fase 8.4 (estructuras del Nether)
+import { NETHER_GOODS_GENERATORS } from './genNetherGoods'; // Fase 8.5 (lo que da el Nether)
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -106,6 +107,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...NETHER_GENERATORS, // Fase 8 (dimensiones)
   ...NETHER_BIOME_GENERATORS, // Fase 8.2 (biomas del Nether)
   ...NETHER_STRUCTURE_GENERATORS, // Fase 8.4 (estructuras del Nether)
+  ...NETHER_GOODS_GENERATORS, // Fase 8.5 (lo que da el Nether)
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

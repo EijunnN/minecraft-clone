@@ -111,6 +111,13 @@ export class ServerEvents {
         break;
       case 'spawn':
         this.g.life.bed = Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isInteger) ? msg.p : null;
+        this.g.life.bedDim = Number.isInteger(msg.d) ? msg.d! : 0; // Fase 8.5: cama o nexo de reaparición
+        break;
+      case 'beacon': // Fase 8.5: los efectos elegidos de un faro
+        if ([msg.x, msg.y, msg.z].every(Number.isInteger)) this.g.beacons.onServer(msg.x, msg.y, msg.z, Number(msg.p) || 0, Number(msg.s) || 0);
+        break;
+      case 'respawnAt': // Fase 8.5: el servidor decidió dónde reaparece (el nexo o el punto de aparición)
+        if (Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isFinite)) this.g.life.respawnAt(msg.p);
         break;
       case 'effect':
         // Del comando /efecto (id 0 = quitarlos todos). Fase 7 (pociones): también de las pociones (en

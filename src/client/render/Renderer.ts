@@ -48,6 +48,8 @@ import { SignTextRenderer, type SignDraw } from './SignTextRenderer';
 import { BannerRenderer, type BannerDraw } from './BannerRenderer'; // Fase 6.5 (libros y estandartes)
 import { LightningRenderer, type Bolt } from './LightningRenderer';
 import { GuardianBeamRenderer, type GuardianBeam } from './GuardianBeamRenderer'; // Fase 7.5 (océano)
+import { BeaconBeamRenderer } from './BeaconBeamRenderer'; // Fase 8.5 (lo que da el Nether)
+import type { BeaconBeam } from '../game/beacons';
 import { EffectView, type SightFog } from './effectView'; // Fase 7 (efectos)
 import type { FishLine } from '../game/fishingLines';
 import { ARROW, BOW, ITEMS } from '../../shared/items';
@@ -174,6 +176,8 @@ export interface FrameState {
   bolts?: Bolt[];
   /** Fase 7.5 (océano): rayos de los guardianes que están cargando. */
   guardianBeams?: GuardianBeam[];
+  /** Fase 8.5: los haces de los faros encendidos. */
+  beaconBeams?: BeaconBeam[];
   /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
   nausea?: number;
   /** Fase 8: dimensión en la que está la cámara (cielo, niebla y luz; sin ella, el mundo normal). */
@@ -217,6 +221,7 @@ export class Renderer {
   readonly bannerCloth: BannerRenderer;
   readonly lightning: LightningRenderer;
   private beams: GuardianBeamRenderer; // Fase 7.5 (océano)
+  private beaconBeams: BeaconBeamRenderer; // Fase 8.5
   /** Fase 7 (efectos): náuseas, ceguera, oscuridad y contorno del Brillo. */
   private effectView: EffectView;
   settings: RenderSettings;
@@ -310,6 +315,7 @@ export class Renderer {
     this.bannerCloth = new BannerRenderer(gl);
     this.lightning = new LightningRenderer(gl);
     this.beams = new GuardianBeamRenderer(gl); // Fase 7.5 (océano)
+    this.beaconBeams = new BeaconBeamRenderer(gl); // Fase 8.5
 
     this.pTerrain = new Program(gl, { name: 'terrain', vs: TERRAIN_VS, fs: TERRAIN_FS });
     this.pTerrainCut = new Program(gl, { name: 'terrain-cutout', vs: TERRAIN_VS, fs: TERRAIN_FS, defines: { CUTOUT: true } });
@@ -678,6 +684,7 @@ export class Renderer {
     this.atmosphere.drawSky();
     this.lightning.draw(s.bolts ?? [], s.camX, s.camY, s.camZ);
     this.beams.draw(s.guardianBeams ?? [], s.camX, s.camY, s.camZ); // Fase 7.5 (océano)
+    this.beaconBeams.draw(s.beaconBeams ?? [], s.camX, s.camY, s.camZ, performance.now() / 1000); // Fase 8.5: el haz de los faros
 
     // --- 4. Agua ---
     if (this.terrain.visibleTranslucent.length > 0) {

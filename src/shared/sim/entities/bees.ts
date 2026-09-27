@@ -9,7 +9,7 @@
 import { MOBS, MOB_BEE } from '../../mobs';
 import {
   BEE_NEST, HONEY_MAX, isBeeHome, honeyLevel, withHoney, beeHomeFacing, familyBase, stateProps, FLOWERS, POPPY, DANDELION,
-  CORNFLOWER, PINK_PETALS, FLOWERING_AZALEA, CAMPFIRE, BLOCK_SOLID,
+  CORNFLOWER, PINK_PETALS, FLOWERING_AZALEA, isCampfire, BLOCK_SOLID,
 } from '../../blocks';
 import { SHEARS, GLASS_BOTTLE, HONEYCOMB } from '../../items';
 import { DIR_X, DIR_Z } from '../../blockModels';
@@ -489,8 +489,8 @@ export function addBeesToHome(m: Entities, x: number, y: number, z: number, n: n
 function smoked(m: Entities, x: number, y: number, z: number): boolean {
   for (let k = 1; k <= 5; k++) {
     const id = m.w.getBlock(x, y - k, z);
-    if (familyBase(id) === CAMPFIRE && stateProps(id)?.lit === 1) return true;
-    if (id > 0 && BLOCK_SOLID[id] && familyBase(id) !== CAMPFIRE) return false;
+    if (isCampfire(id) && stateProps(id)?.lit === 1) return true; // Fase 8.5: también la de almas
+    if (id > 0 && BLOCK_SOLID[id] && !isCampfire(id)) return false;
   }
   return false;
 }

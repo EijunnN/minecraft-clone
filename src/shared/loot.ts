@@ -10,7 +10,10 @@ import {
 } from './items';
 import { DARK_OAK_LOG, BIRCH_LOG } from './blocks'; // Fase 6 (asaltos)
 
-/** Entrada: [objeto, peso, mínimo, máximo] y, Fase 7 (encantamientos), lo que se le hace (encantarlo). */
+/**
+ * Entrada: [objeto, peso, mínimo, máximo] y, Fase 7 (encantamientos), lo que se le hace (encantarlo). Fase 8.5: el
+ * objeto 0 es la entrada vacía de Minecraft (la tirada no da nada).
+ */
 type Entry = [number, number, number, number] | [number, number, number, number, LootFn];
 /** Fase 7 (encantamientos): función de botín sobre la pila que sale (encantar al azar, con niveles…). */
 export type LootFn = (s: ItemStack, rand: () => number) => ItemStack;
@@ -96,6 +99,7 @@ export function rollLoot(table: LootTable, rand: () => number): ItemStack[] {
     for (const [id, w, min, max, fn] of table.entries) {
       pick -= w;
       if (pick > 0) continue;
+      if (id <= 0) break; // Fase 8.5: entrada vacía
       const s: ItemStack = { id, count: min + Math.floor(rand() * (max - min + 1)) };
       out.push(fn ? fn(s, rand) : s);
       break;
@@ -107,7 +111,8 @@ export function rollLoot(table: LootTable, rand: () => number): ItemStack[] {
 
 /** Fase 7.5 (océano): montones [mínimo, máximo] que puede dar una tabla contando sus tiradas extra. */
 export function lootRollRange(table: LootTable): [number, number] {
-  let lo = table.rolls[0], hi = table.rolls[1];
+  // Fase 8.5: con la entrada vacía, una tirada puede no dar nada.
+  let lo = table.entries.some((e) => e[0] <= 0) ? 0 : table.rolls[0], hi = table.rolls[1];
   for (const t of table.extra ?? []) {
     const [a, b] = lootRollRange(t);
     lo += a;
@@ -265,3 +270,11 @@ import { LEAD } from './items';
 // Los cofres de las fortalezas del Nether (y, con los bastiones, los suyos).
 import { NETHER_LOOT } from './netherLoot';
 Object.assign(LOOT_TABLES, NETHER_LOOT);
+
+// ------------------------------------------------------------------ Fase 8.5 (lo que da el Nether)
+// La magnetita del portal en ruinas: en dos de cada tres cofres, una o dos.
+import { LODESTONE } from './blocks';
+{
+  const t = LOOT_TABLES.ruined_portal as LootTable;
+  t.extra = [...(t.extra ?? []), T(1, 1, [[0, 1, 1, 1], [LODESTONE, 2, 1, 2]])];
+}

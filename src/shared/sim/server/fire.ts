@@ -7,11 +7,12 @@
 import { Handlers } from './hooks';
 import {
   AIR, BLOCK_SOLID, BLOCK_FLUID, NETHERRACK, NEIGHBORS6, isFire, fireAge, fireWithAge, fireSupport, flammability,
-  flameEncouragement, familyBase, stateOf, stateProps, CAMPFIRE, isCandle, isLitCandle, candleState, candleCount,
+  flameEncouragement, familyBase, stateOf, stateProps, isCampfire, isCandle, isLitCandle, candleState, candleCount,
 } from '../../blocks';
 import { ENT_ITEM } from '../../mobs';
 import { SOUL_FIRE, isSoulGround } from '../../blocks'; // Fase 7.5 (abismo)
 import { rainAt } from '../../weather';
+import { FIRE_RESISTANT_ITEMS } from '../../items'; // Fase 8.5
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { Nature } from './nature';
 import type { ServerContext } from './context';
@@ -94,8 +95,8 @@ export class Fire {
       w.setBlock(x, y, z, candleState(id, candleCount(id), true));
       return true;
     }
-    if (familyBase(id) === CAMPFIRE && stateProps(id)?.lit === 0) {
-      w.setBlock(x, y, z, stateOf(CAMPFIRE, { ...stateProps(id)!, lit: 1 }));
+    if (isCampfire(id) && stateProps(id)?.lit === 0) { // Fase 8.5: también la de almas
+      w.setBlock(x, y, z, stateOf(familyBase(id), { ...stateProps(id)!, lit: 1 }));
       return true;
     }
     return false;
@@ -269,6 +270,7 @@ export class Fire {
       const soul = feet === SOUL_FIRE || body === SOUL_FIRE; // Fase 7.5 (abismo): el fuego de alma quema el doble
       if (!isFire(feet) && !isFire(body) && !soul) continue;
       if (e.type === ENT_ITEM) {
+        if (e.stack && FIRE_RESISTANT_ITEMS.has(e.stack.id)) continue; // Fase 8.5: la netherita no arde
         ctx.entities.remove(e.id);
         ctx.fx('burn_item', e.x, e.y, e.z);
       } else if (e.ai && !e.inWater) {

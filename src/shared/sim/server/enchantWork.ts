@@ -9,7 +9,7 @@
 // - Espinas: las piezas de armadura con Espinas devuelven parte de los golpes cuerpo a cuerpo.
 import {
   AIR, WATER, BLOCK_FLUID, BLOCK_FLUID_LEVEL, ENCHANTING_TABLE, GRINDSTONE, FROSTED_ICE, FROSTED_ICE_AGES, isAnvil,
-  damagedAnvil, isFrostedIce, frostedIceAge, familyBase, isWaterlogged,
+  damagedAnvil, isFrostedIce, frostedIceAge, familyBase, isWaterlogged, SMITHING_TABLE,
 } from '../../blocks';
 import { stackFromWire, STATE_DEAD, type ClientMsg } from '../../protocol';
 import { sanitizeStack } from '../../containers';
@@ -64,6 +64,8 @@ export class EnchantWork {
       const n = Number(msg.n);
       if (Number.isInteger(n) && n > 0) ctx.entities.xp.spawn(Math.min(MAX_GRIND_XP, n), cx, y + 0.5, cz);
       ctx.fx('grindstone', cx, y + 0.5, cz);
+    } else if (msg.k === 'smith' && familyBase(id) === SMITHING_TABLE) {
+      ctx.fx('smithing', cx, y + 1, cz); // Fase 8.5: la mesa de herrería
     }
   }
 

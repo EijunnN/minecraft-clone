@@ -110,6 +110,7 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
   vpos: route<'vpos'>(0.2, (h, s, m) => h.sys.transport.onMove(s, m)),
   // Fase 7 (encantamientos)
   work: route<'work'>(2, (h, s, m) => h.sys.enchantWork.onWork(s, m)),
+  beacon: route<'beacon'>(2, (h, s, m) => h.sys.netherGoods.onBeacon(s, m)), // Fase 8.5: el faro
   frost: route<'frost'>(0.2, (h, s, m) => h.sys.enchantWork.onFrost(s, m)),
 };
 

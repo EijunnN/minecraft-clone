@@ -227,3 +227,8 @@ export * from './netherMobBlocks';
 (INVENTORY_ORDER as number[]).push(...NETHER_MOB_INVENTORY);
 // Fase 8.4 (estructuras del Nether): la verruga del Nether plantada (ids nuevos, al final).
 export * from './netherStructureBlocks';
+// Fase 8.5 (lo que da el Nether): escombros ancestrales, netherita… (ids nuevos, al final) y su sitio en el
+// inventario creativo.
+import { NETHER_GOODS_INVENTORY } from './netherGoodsBlocks';
+export * from './netherGoodsBlocks';
+(INVENTORY_ORDER as number[]).push(...NETHER_GOODS_INVENTORY);

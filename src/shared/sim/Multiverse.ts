@@ -40,6 +40,7 @@ export class Multiverse {
       sharedChanged: (from) => {
         for (const g of mv.servers.values()) if (g !== from) g.reloadShared();
       },
+      anchorRespawn: (dim, x, y, z) => mv.server(dim).anchorRespawn(x, y, z), // Fase 8.5
     };
     this.server(DIM_OVERWORLD);
   }

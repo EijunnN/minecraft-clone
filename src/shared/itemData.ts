@@ -9,7 +9,7 @@ import { ENCHANTED_BOOK } from './items';
 import { sanitizeEnchList, isEnchantable } from './enchantments';
 import { isPotionType, SPECTRAL_ARROW_TYPE } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta; 8.3: la espectral
 // Fase 7.5 (océano): mapas del tesoro y de explorador.
-import { FILLED_MAP, SHIELD } from './items';
+import { FILLED_MAP, SHIELD, COMPASS } from './items';
 import { sanitizeStructureMap, STRUCTURE_MAPS, type StructureMapData } from './structureMapData';
 
 export interface ItemData {
@@ -39,6 +39,8 @@ export interface ItemData {
   lock?: 1;
   /** Fase 7.6: escudo decorado con un estandarte: el color de su fondo (las capas van en `layers`). */
   sb?: number;
+  /** Fase 8.5: brújula magnetizada: la magnetita a la que apunta [x, y, z, dimensión]. */
+  lode?: [number, number, number, number];
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -144,6 +146,11 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
     if (r.lock === 1) out.lock = 1;
     return Object.keys(out).length ? out : undefined;
   }
+  // Fase 8.5: brújula magnetizada.
+  if (id === COMPASS && Array.isArray(r.lode) && r.lode.length === 4 && r.lode.every(Number.isInteger)) {
+    const [x, y, z, d] = r.lode as number[];
+    return { lode: [x, y, z, d] };
+  }
   // Fase 7.6: escudo con estandarte (color del fondo y capas).
   if (id === SHIELD) {
     const sb = Number(r.sb);
@@ -172,6 +179,7 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.mz !== undefined) c.mz = d.mz; // Fase 7.6
   if (d.lock) c.lock = 1;
   if (d.sb !== undefined) c.sb = d.sb;
+  if (d.lode) c.lode = [d.lode[0], d.lode[1], d.lode[2], d.lode[3]]; // Fase 8.5
   return c;
 }
 
@@ -183,6 +191,7 @@ export function stackName(s: ItemStack): string {
   if (s.data?.name) return s.data.name;
   if (s.id === WRITTEN_BOOK && s.data?.title) return s.data.title;
   if (s.data?.smap) return STRUCTURE_MAPS[s.data.smap.k]?.name ?? itemName(s.id); // Fase 7.5 (océano)
+  if (s.data?.lode) return 'Brújula magnetizada'; // Fase 8.5
   return itemName(s.id);
 }
 

@@ -170,6 +170,7 @@ const HORSE_INKS: Record<string, Record<string, Ink>> = {
   iron: ramp([240, 240, 246], [200, 200, 208], [150, 150, 160], [110, 110, 120], [60, 60, 66]),
   golden: ramp([255, 246, 170], [246, 204, 52], [206, 150, 22], [150, 98, 10], [80, 50, 6]),
   diamond: ramp([206, 255, 248], [96, 226, 212], [48, 176, 170], [26, 124, 122], [12, 66, 66]),
+  netherite: ramp([146, 130, 146], [96, 86, 96], [68, 60, 68], [44, 38, 46], [18, 14, 18]), // Fase 8.5
 };
 function horseArmor(mat: string): SpriteDef {
   return { rows: HORSE_ARMOR_ROWS, inks: { ...HORSE_INKS[mat], k: ink([255, 255, 255], [60, 60, 60]) } };
@@ -310,6 +311,7 @@ export const EQUIPMENT_SPRITES: Record<string, SpriteDef> = {
   iron_horse_armor: horseArmor('iron'),
   golden_horse_armor: horseArmor('golden'),
   diamond_horse_armor: horseArmor('diamond'),
+  netherite_horse_armor: horseArmor('netherite'), // Fase 8.5
   // Armadura para lobo: placas de escama de armadillo con correas.
   wolf_armor: {
     rows: [

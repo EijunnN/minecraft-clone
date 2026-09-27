@@ -696,7 +696,7 @@ function quartz(t: Tex): void {
   t.depth = 0.9;
 }
 
-interface PolishStyle {
+export interface PolishStyle {
   base: RGB;
   light: RGB;
   dark: RGB;
@@ -723,7 +723,7 @@ function bevel(st: PolishStyle, x: number, y: number): { c: RGB; h: number; ring
   return null;
 }
 
-function polished(t: Tex, st: PolishStyle): void {
+export function polished(t: Tex, st: PolishStyle): void {
   const r = t.rng();
   const brush = new Noise(r, 2, 16); // cepillado horizontal
   const n4 = new Noise(r, 4);

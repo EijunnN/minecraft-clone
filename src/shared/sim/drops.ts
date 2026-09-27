@@ -8,7 +8,7 @@ import {
   EMERALD_ORE, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, COBWEB, MOB_SPAWNER, SNOW_LAYER, SNOW_BLOCK, isSnowLayer,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
-  PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE,
+  PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE, SOUL_CAMPFIRE, SOUL_SOIL,
 } from '../blocks';
 // Fase 6 (monstruos): los bloques infestados no sueltan nada (sale una lepisma).
 import { isInfested } from '../blocks';
@@ -171,6 +171,7 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   }
   // La fogata suelta carbón vegetal (como en Minecraft sin toque de seda).
   if (familyBase(block) === CAMPFIRE) return one(CHARCOAL, 2);
+  if (familyBase(block) === SOUL_CAMPFIRE) return one(SOUL_SOIL, 1); // Fase 8.5: la de almas suelta tierra de alma
   // El compostador lleno suelta también su polvo de hueso.
   if (familyBase(block) === COMPOSTER && block - COMPOSTER === 8) return [{ id: COMPOSTER, count: 1 }, { id: BONE_MEAL, count: 1 }];
   // Fase 6.5 (decoración): la maceta suelta también su planta.

@@ -8,7 +8,7 @@ import {
   CRIMSON_NYLIUM, WARPED_NYLIUM, CRIMSON_FUNGUS, WARPED_FUNGUS, CRIMSON_ROOTS, WARPED_ROOTS, NETHER_SPROUTS, CRIMSON_STEM,
   WARPED_STEM, NETHER_WART_BLOCK, WARPED_WART_BLOCK, SHROOMLIGHT, WEEPING_VINES, WEEPING_VINES_PLANT, TWISTING_VINES,
   TWISTING_VINES_PLANT, BLOCK_REPLACEABLE, BLOCK_SOLID, BLOCK_RENDER, R_CROSS, BLOCK_FLUID, CHEST, MOB_SPAWNER, blockSupported,
-  vineHead, isCrop, familyBase,
+  vineHead, isCrop, familyBase, ANCIENT_DEBRIS,
 } from '../blocks';
 import {
   BIOME_NETHER_WASTES, BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS,
@@ -565,6 +565,38 @@ const ALL = [BIOME_NETHER_WASTES, BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, 
 const NOT_DELTAS = [BIOME_NETHER_WASTES, BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST];
 const SOUL_FIRE_BIOMES = [BIOME_NETHER_WASTES, BIOME_SOUL_SAND_VALLEY, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS];
 
+/** Fase 8.5: piedra base del Nether (la etiqueta base_stone_nether: rocanegra, basalto y piedra negra). */
+const BASE_STONE_NETHER = new Set([NETHERRACK, BASALT, BLACKSTONE]);
+
+/**
+ * Fase 8.5: ScatteredOreFeature de Java (los escombros ancestrales): hasta `size` bloques sueltos alrededor del
+ * origen, cada vez más separados; como descartan todos los que tocan aire, sólo salen enterrados.
+ */
+function scatteredOre(l: FeatureLevel, r: NoiseRandom, ox: number, oy: number, oz: number, size: number, state: number): void {
+  const n = r.nextInt(size + 1);
+  const off = (j: number) => Math.round((r.nextFloat() - r.nextFloat()) * j);
+  for (let j = 0; j < n; j++) {
+    const k = Math.min(j, 7);
+    const x = ox + off(k), y = oy + off(k), z = oz + off(k);
+    if (!BASE_STONE_NETHER.has(l.get(x, y, z))) continue;
+    if (NEIGHBORS6.some(([dx, dy, dz]) => l.get(x + dx, y + dy, z + dz) === AIR)) continue;
+    l.set(x, y, z, state);
+  }
+}
+
+/** Fase 8.5: los dos yacimientos de escombros ancestrales de cada chunk (en todo el Nether). */
+const ancientDebris: FeatureFn = (l, r, cx, cz) => {
+  // Grande: 3 bloques, altura trapezoidal entre 8 y 24 (sin meseta: la suma de dos al azar).
+  let x = cx * 16 + r.nextInt(16), z = cz * 16 + r.nextInt(16);
+  let y = 8 + r.nextInt(9) + r.nextInt(9);
+  scatteredOre(l, r, x, y, z, 3, ANCIENT_DEBRIS);
+  // Pequeño: 2 bloques, de 8 a 119 por igual.
+  x = cx * 16 + r.nextInt(16);
+  z = cz * 16 + r.nextInt(16);
+  y = uniform(r, 8, 119);
+  scatteredOre(l, r, x, y, z, 2, ANCIENT_DEBRIS);
+};
+
 /** Ore con su recuento y su altura, sólo en esos biomas. */
 function oreFeature(count: number, lo: number, hi: number, size: number, target: number, state: number, biomes: readonly number[]): FeatureFn {
   return (l, r, cx, cz) => {
@@ -700,6 +732,7 @@ const STEPS: readonly (readonly FeatureFn[])[] = [
     oreFeature(16, 10, 117, 14, NETHERRACK, NETHER_QUARTZ_ORE, NOT_DELTAS),
     oreFeature(20, 10, 117, 10, NETHERRACK, NETHER_GOLD_ORE, [BIOME_BASALT_DELTAS]),
     oreFeature(32, 10, 117, 14, NETHERRACK, NETHER_QUARTZ_ORE, [BIOME_BASALT_DELTAS]),
+    ancientDebris, // Fase 8.5 (lo que da el Nether)
   ],
   // 9 (vegetación).
   [

@@ -19,7 +19,7 @@ import { migrateStore, type ServerStore } from './store';
 import {
   TICK_RATE, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type PlayerRecord, type ServerContext, type Arrival,
 } from './server/context';
-import { DIM_OVERWORLD, dimensionDef, type DimensionDef } from '../dimensions'; // Fase 8 (dimensiones)
+import { DIM_OVERWORLD, DIM_NETHER, dimensionDef, type DimensionDef } from '../dimensions'; // Fase 8 (dimensiones)
 import type { PlayerSave } from '../protocol';
 import { fallsThrough } from './server/blockRules';
 import { potionView } from './server/potionPlayers'; // Fase 7 (pociones)
@@ -66,6 +66,8 @@ export interface DimensionHub {
   evictName(from: GameServer, name: string): void;
   /** Cambió la hora o la dificultad: que lo sepan las demás dimensiones. */
   sharedChanged(from: GameServer): void;
+  /** Fase 8.5: reaparecer en el nexo de (x, y, z) de la dimensión `dim` (gasta una carga): dónde, o null. */
+  anchorRespawn(dim: number, x: number, y: number, z: number): [number, number, number] | null;
 }
 
 /** Fase 8: lo que viaja con un jugador de una dimensión a otra. */
@@ -77,6 +79,8 @@ export interface Traveler {
   mode: 's' | 'c';
   save: PlayerSave | null;
   bed: [number, number, number] | null;
+  /** Fase 8.5: dimensión del punto de reaparición. */
+  bedDim?: number;
 }
 
 export class GameServer {
@@ -442,7 +446,7 @@ export class GameServer {
     this.sessions.delete(conn);
     this.broadcast({ t: 'leave', id: s.id });
     if (this.playerCount === 0) this.flush(true);
-    return { conn, id: s.id, name: s.name, shirt: s.shirt, mode: s.mode, save: s.save, bed: s.bed };
+    return { conn, id: s.id, name: s.name, shirt: s.shirt, mode: s.mode, save: s.save, bed: s.bed, bedDim: s.bedDim };
   }
 
   /** Mete en esta dimensión a un jugador que viene de otra, en el sitio que toca según cómo llega. */
@@ -451,7 +455,7 @@ export class GameServer {
     const s: Session = {
       conn: t.conn, id: t.id, joined: true, joinedAt: now, lastMsg: now, name: t.name, shirt: t.shirt, p: [0, 100, 0], r: [0, 0], s: 0,
       h: 0, o: 0, a: [0, 0, 0, 0], mode: t.mode, lookAt: -1, lookUntil: 0, lastAttack: 0, tokens: 60, tokenTime: now, known: new Map(),
-      container: null, save: t.save, saveDirty: true, sleeping: null, sleepTicks: 0, bed: t.bed, dimPending: true,
+      container: null, save: t.save, saveDirty: true, sleeping: null, sleepTicks: 0, bed: t.bed, bedDim: t.bedDim, dimPending: true,
     };
     this.sessions.set(t.conn, s);
     s.p = this.arrivalPos(s, arrival);
@@ -461,6 +465,42 @@ export class GameServer {
     this.welcome(s, true);
   }
 
+  /**
+   * Fase 8.5: el jugador muerto pide reaparecer (donde el cliente no lo resuelve solo: en el Nether o con el
+   * punto de reaparición en otra dimensión). Con un nexo de reaparición cargado en el Nether, allí (gasta una
+   * carga); si no vale, se pierde el punto y se va a la cama o al punto de aparición del mundo normal.
+   */
+  private respawn(s: Session): void {
+    if (s.bed && s.bedDim === DIM_NETHER) {
+      const [x, y, z] = s.bed;
+      const at = this.dim === DIM_NETHER ? this.sys.netherGoods.respawnAt(x, y, z) : this.hub?.anchorRespawn(DIM_NETHER, x, y, z) ?? null;
+      if (at) {
+        if (this.dim === DIM_NETHER) {
+          s.p = at;
+          this.send(s, { t: 'respawnAt', p: at });
+        } else this.ctx.travel(s, DIM_NETHER, { kind: 'pos', x: at[0], y: at[1], z: at[2] });
+        return;
+      }
+      s.bed = null;
+      s.bedDim = DIM_OVERWORLD;
+      this.savePlayer(s);
+      this.send(s, { t: 'spawn', p: null });
+      this.ctx.tell(s, 'No tenías cama o nexo de reaparición cargado, o estaba obstruido.');
+    }
+    if (this.dim !== DIM_OVERWORLD) {
+      this.ctx.travel(s, DIM_OVERWORLD, { kind: 'spawn' });
+      return;
+    }
+    const p = this.arrivalPos(s, { kind: 'spawn' });
+    s.p = p;
+    this.send(s, { t: 'respawnAt', p });
+  }
+
+  /** Fase 8.5: reaparición en un nexo de esta dimensión (lo pide otra dimensión a través del anfitrión). */
+  anchorRespawn(x: number, y: number, z: number): [number, number, number] | null {
+    return this.sys.netherGoods.respawnAt(x, y, z);
+  }
+
   /** Dónde aparece quien llega. */
   private arrivalPos(s: Session, arrival: Arrival): [number, number, number] {
     if (arrival.kind === 'portal') {
@@ -468,7 +508,7 @@ export class GameServer {
       return [p[0], p[1], p[2]];
     }
     if (arrival.kind === 'pos' && [arrival.x, arrival.y, arrival.z].every(Number.isFinite)) return [arrival.x!, arrival.y!, arrival.z!];
-    if (arrival.kind === 'spawn' && s.bed) return [s.bed[0] + 0.5, s.bed[1] + 0.5625, s.bed[2] + 0.5];
+    if (arrival.kind === 'spawn' && s.bed && (s.bedDim ?? DIM_OVERWORLD) === this.dim) return [s.bed[0] + 0.5, s.bed[1] + 0.5625, s.bed[2] + 0.5];
     const sp = this.spawn();
     return [sp[0], sp[1] + 0.1, sp[2]];
   }
@@ -529,7 +569,7 @@ export class GameServer {
     }
     if (!s.joined || s.dimPending) return;
     if (msg.t === 'respawn') {
-      if (!this.dimDef.respawn) this.ctx.travel(s, DIM_OVERWORLD, { kind: 'spawn' });
+      this.respawn(s);
       return;
     }
     routeMessage(this.router, s, msg);
@@ -566,6 +606,7 @@ export class GameServer {
     s.save = rec?.save ?? null;
     const bed = rec?.bed;
     s.bed = Array.isArray(bed) && bed.length === 3 && bed.every(Number.isInteger) ? bed : null;
+    s.bedDim = Number.isInteger(rec?.bedDim) ? rec!.bedDim : DIM_OVERWORLD; // Fase 8.5
     if (s.save?.pos && s.save.pos.every(Number.isFinite)) s.p = [s.save.pos[0], s.save.pos[1], s.save.pos[2]];
     // Fase 8: sin posición guardada fuera del mundo normal, el punto de aparición de esta dimensión.
     else if (this.dim !== DIM_OVERWORLD) s.p = this.arrivalPos(s, { kind: 'pos' });
@@ -581,7 +622,7 @@ export class GameServer {
     for (const o of this.sessions.values()) if (o.joined && o !== s) players.push(playerInfo(o));
     this.send(s, {
       t: 'welcome', id: s.id, seed: this.seed, time: this.time, now: this.now(), players, editCount: edits.length,
-      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawn(), bed: s.bed, rods: this.sys.fishing.active(),
+      mode: s.mode, diff: this.difficulty, save: s.save, spawn: this.spawn(), bed: s.bed, bd: s.bedDim ?? DIM_OVERWORLD, rods: this.sys.fishing.active(),
       signs: this.sys.signs.all(),
       banners: this.sys.banners.all(), // Fase 6.5 (libros y estandartes)
       dim: this.dim, // Fase 8
@@ -606,7 +647,7 @@ export class GameServer {
 
   private savePlayer(s: Session): void {
     if (!s.joined) return;
-    const rec: PlayerRecord = { mode: s.mode, save: s.save, bed: s.bed, dim: this.dim };
+    const rec: PlayerRecord = { mode: s.mode, save: s.save, bed: s.bed, bedDim: s.bedDim ?? DIM_OVERWORLD, dim: this.dim };
     this.store.savePlayer(s.name.toLowerCase(), JSON.stringify(rec));
     s.saveDirty = false;
   }

@@ -9,7 +9,7 @@
 // Afiladora: quita los encantamientos (no las maldiciones) y devuelve experiencia; con dos objetos
 // iguales los repara (se suman las durabilidades más un 5 %).
 import {
-  ITEMS, BOOK, ENCHANTED_BOOK, IRON_INGOT, GOLD_INGOT, DIAMOND, COPPER_INGOT, LEATHER, TURTLE_SCUTE, ARMADILLO_SCUTE, WOLF_ARMOR,
+  ITEMS, BOOK, ENCHANTED_BOOK, IRON_INGOT, GOLD_INGOT, DIAMOND, COPPER_INGOT, NETHERITE_INGOT, LEATHER, TURTLE_SCUTE, ARMADILLO_SCUTE, WOLF_ARMOR,
   SHIELD, type ItemStack,
 } from './items';
 import { ALL_PLANKS, COBBLESTONE, COBBLED_DEEPSLATE } from './blocks';
@@ -40,6 +40,7 @@ function repairMaterials(id: number): readonly number[] {
       case 'diamond': return [DIAMOND];
       case 'copper': return [COPPER_INGOT];
       case 'turtle': return [TURTLE_SCUTE];
+      case 'netherite': return [NETHERITE_INGOT]; // Fase 8.5
     }
     return [];
   }
@@ -52,6 +53,7 @@ function repairMaterials(id: number): readonly number[] {
     case 'golden': return [GOLD_INGOT];
     case 'diamond': return [DIAMOND];
     case 'copper': return [COPPER_INGOT];
+    case 'netherite': return [NETHERITE_INGOT]; // Fase 8.5
   }
   return [];
 }

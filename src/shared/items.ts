@@ -26,7 +26,7 @@ import { // Fase 6.5 (piedras)
 import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 // Fase 6.5 (equipo)
-import { CHAINMAIL_ARMOR, TURTLE_ARMOR } from './armor';
+import { CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
@@ -45,6 +45,7 @@ import { // Fase 8.2 (biomas del Nether)
 } from './blocks';
 import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from './blocks'; // Fase 8 (dimensiones)
 import { WARPED_FUNGUS, CRIMSON_FUNGUS } from './blocks'; // Fase 8.3 (criaturas del Nether): comida del strider y del hoglin
+import { ANCIENT_DEBRIS, SMOOTH_QUARTZ, QUARTZ_BLOCK } from './blocks'; // Fase 8.5 (lo que da el Nether)
 
 export type ToolType = 'pickaxe' | 'axe' | 'shovel' | 'sword' | 'shears' | 'bow' | 'hoe' | 'shield' | 'fishing_rod'
   | 'brush' // Fase 6 (fauna): cepillo (escamas de armadillo)
@@ -602,6 +603,36 @@ export const MUSIC_DISC_PIGSTEP = item('music_disc_pigstep', 'Disco de música',
 (MUSIC_DISCS as number[]).push(MUSIC_DISC_PIGSTEP);
 export const PIGLIN_BANNER_PATTERN = item('piglin_banner_pattern', 'Diseño de estandarte (Hocico)', { stack: 1 });
 (BANNER_PATTERN_ITEMS as Record<string, number>).piglin = PIGLIN_BANNER_PATTERN;
+// Fase 8.5 (lo que da el Nether): la netherita (chatarra de los escombros ancestrales, lingote, las herramientas,
+// la armadura y la armadura para caballo, que se mejoran desde el diamante en la mesa de herrería con la plantilla)
+// y la estrella del Nether (la del Wither, para el faro).
+export const NETHERITE_SCRAP = item('netherite_scrap', 'Chatarra de netherita');
+export const NETHERITE_INGOT = item('netherite_ingot', 'Lingote de netherita');
+export const NETHERITE_UPGRADE_SMITHING_TEMPLATE = item('netherite_upgrade_smithing_template', 'Plantilla de herrería (Mejora de netherita)');
+TOOLS.netherite = {};
+for (const [kind, kindName, damage, attackSpeed] of [
+  ['sword', 'Espada', 8, 1.6], ['pickaxe', 'Pico', 6, 1.2], ['axe', 'Hacha', 10, 1], ['shovel', 'Pala', 6.5, 1], ['hoe', 'Azada', 1, 4],
+] as const) {
+  TOOLS.netherite[kind] = item(`netherite_${kind}`, `${kindName} de netherita`, {
+    stack: 1, tool: { kind, tier: 4, speed: 9, durability: 2031, damage, attackSpeed },
+  });
+}
+ARMOR[NETHERITE_ARMOR] = {};
+ARMOR_PIECES.forEach((piece, slot) => {
+  const st = ARMOR_STATS[NETHERITE_ARMOR];
+  ARMOR[NETHERITE_ARMOR][piece] = item(`netherite_${piece}`, `${PIECE_NAMES[slot]} de netherita`, {
+    stack: 1,
+    armor: { slot: slot as ArmorSlot, material: NETHERITE_ARMOR, points: st.points[slot], toughness: st.toughness, durability: st.durability[slot] },
+  });
+});
+HORSE_ARMOR.netherite = item('netherite_horse_armor', 'Armadura de netherita para caballo', { stack: 1 });
+export const NETHER_STAR = item('nether_star', 'Estrella del Nether');
+/** Fase 8.5: objetos que no arden (flotan en la lava y el fuego no los quema): los de netherita y sus escombros. */
+export const FIRE_RESISTANT_ITEMS: ReadonlySet<number> = new Set([
+  NETHERITE_SCRAP, NETHERITE_INGOT, ...Object.values(TOOLS.netherite), ...Object.values(ARMOR[NETHERITE_ARMOR]), HORSE_ARMOR.netherite,
+]);
+/** Fase 8.5: objetos que las explosiones no destruyen (la estrella del Nether). */
+export const EXPLOSION_RESISTANT_ITEMS: ReadonlySet<number> = new Set([NETHER_STAR]);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -827,3 +858,12 @@ Object.assign(BREED_FOOD as Record<string, readonly number[]>, { strider: [WARPE
 
 // ------------------------------------------------------------------ Fase 8.4 (estructuras del Nether)
 (CREATIVE_ITEMS as number[]).push(MUSIC_DISC_PIGSTEP, PIGLIN_BANNER_PATTERN);
+
+// ------------------------------------------------------------------ Fase 8.5 (lo que da el Nether)
+// Los escombros ancestrales se funden (horno o alto horno) en chatarra de netherita.
+smelt(ANCIENT_DEBRIS, NETHERITE_SCRAP);
+smelt(QUARTZ_BLOCK, SMOOTH_QUARTZ); // el bloque de cuarzo, en cuarzo liso
+(CREATIVE_ITEMS as number[]).push(
+  NETHERITE_SCRAP, NETHERITE_INGOT, NETHERITE_UPGRADE_SMITHING_TEMPLATE, ...Object.values(TOOLS.netherite), ...Object.values(ARMOR[NETHERITE_ARMOR]),
+  HORSE_ARMOR.netherite, NETHER_STAR,
+);

@@ -52,7 +52,11 @@ export type SoundMaterial =
   | 'soul_soil'
   | 'basalt'
   | 'wart'
-  | 'nether_ore';
+  | 'nether_ore'
+  // Fase 8.5 (lo que da el Nether): escombros ancestrales, netherita y magnetita.
+  | 'ancient_debris'
+  | 'netherite'
+  | 'lodestone';
 
 export type BlockCategory = 'construccion' | 'naturaleza' | 'minerales' | 'decoracion' | 'colores'
   | 'redstone'; // Fase 7 (redstone)

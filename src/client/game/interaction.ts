@@ -4,11 +4,12 @@
 // recoger y tirar objetos.
 import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { raycast, type RayHit } from './raycast';
+import { netherGoodsUse } from './netherGoodsUse'; // Fase 8.5
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
 import { LILY_PAD, CAVE_VINES, BLOCK_NEEDS_SUPPORT, AIR, BLOCKS, BLOCK_RENDER, BLOCK_SOLID, BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, WATER, LAVA, CACTUS, SUGAR_CANE, R_CROSS, R_TORCH, BEDROCK, CRAFTING_TABLE, GRASS, DIRT, SAND, RED_SAND, isContainer, BLOCK_COLLIDE, BLOCK_WALL, blockCollisionBoxes, isBed, familyBase, isCrop, isCake, FARMLAND, PUMPKIN, COMPOSTER, CARVED_PUMPKIN, orientedFor, isSign, STONECUTTER,
-  CAMPFIRE, stateProps } from '../../shared/blocks';
+  isCampfire, stateProps } from '../../shared/blocks';
 import {
   ITEMS, ARROW, BUCKET, WATER_BUCKET, LAVA_BUCKET, BONE_MEAL, SHEARS, EGG, BREED_FOOD, isValidItem, itemForBlock, maxStack,
   SNOWBALL, EMPTY_MAP, FILLED_MAP, type ItemStack,
@@ -201,6 +202,8 @@ export class Interaction {
     if (materialsUse(this.g, this, pressed, hit, held, dir)) return;
     // Fase 7 (redstone): palancas, botones, repetidores, comparadores, sensores, bloques musicales y polvo.
     if (redstoneUse(this.g, pressed, hit, held)) return;
+    // Fase 8.5 (lo que da el Nether): el nexo de reaparición y la magnetita (la brújula magnetizada).
+    if (netherGoodsUse(this.g, pressed, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       // Fase 6.5 (colores): con la misma vela en la mano se añade otra en vez de encenderla o apagarla.
@@ -220,7 +223,7 @@ export class Interaction {
         return;
       }
       // Comida cruda sobre una fogata encendida: a asar.
-      if (familyBase(hit.id) === CAMPFIRE && held && this.cookOnCampfire(hit, held.id)) return;
+      if (isCampfire(hit.id) && held && this.cookOnCampfire(hit, held.id)) return; // Fase 8.5: también la de almas
     }
     // Fase 6.5 (colecciones): tocadiscos, cabezas (colocar o ponérsela) y marco brillante.
     if (collectionUse(this.g, this, pressed, hit, held)) return;

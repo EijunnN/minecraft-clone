@@ -2,7 +2,7 @@
 // los fluidos cercanos.
 import type { MobSoundKind, MobSoundEvent } from '../audio/types';
 import type { ClientEntity } from './ClientEntities';
-import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, CAMPFIRE, isLitFurnace, isValidBlockId } from '../../shared/blocks';
+import { BLOCK_FLUID, BLOCK_FLUID_LEVEL, GRASS, CAMPFIRE, SOUL_CAMPFIRE, isLitFurnace, isValidBlockId } from '../../shared/blocks';
 import { MOBS } from '../../shared/mobs';
 import { EF_LOVE, EF_BABY, EF_FIRE } from '../../shared/protocol';
 import type { Game } from './Game';
@@ -328,7 +328,7 @@ export class Effects {
           const b = world.getBlock(cx + dx, cy + dy, cz + dz);
           if (b <= 0) continue;
           if (isLitFurnace(b)) furnace = [cx + dx + 0.5, cy + dy + 0.5, cz + dz + 0.5];
-          else if (b === CAMPFIRE + 1 && fires.length < 6) fires.push([cx + dx + 0.5, cy + dy, cz + dz + 0.5]);
+          else if ((b === CAMPFIRE + 1 || b === SOUL_CAMPFIRE + 1) && fires.length < 6) fires.push([cx + dx + 0.5, cy + dy, cz + dz + 0.5]);
           const f = BLOCK_FLUID[b];
           if (!f || ((dx | dz) & 1)) continue;
           const w = 1 / (1 + Math.hypot(dx, dy, dz) * 0.5);

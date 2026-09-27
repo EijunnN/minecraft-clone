@@ -26,6 +26,8 @@ import { BREWING_HTML, renderBrewing } from './brewingScreen';
 import { tippedArrowCraft } from '../../shared/potions';
 import { paintGlint } from './glint'; // Fase 7 (encantamientos)
 import { EnchantPanel, AnvilPanel, GrindstonePanel, type WorkHost, type WorkPanel } from './enchantScreens';
+import { SmithingPanel } from './smithingScreen'; // Fase 8.5 (lo que da el Nether)
+import { BeaconPanel } from './beaconScreen'; // Fase 8.5
 // Fase 7.6: mesa de cartografía, ampliar mapas en la mesa de trabajo, reparar juntando dos y escudo con estandarte.
 import { cartographyResult, mapExtendCraft } from '../../shared/mapOps';
 import { FILLED_MAP, EMPTY_MAP, PAPER } from '../../shared/items';
@@ -35,7 +37,9 @@ import { repairCraft, shieldDecorCraft } from '../../shared/craftSpecials';
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom'
   | 'brewing' // Fase 7 (pociones): alambique
   | 'enchant' | 'anvil' | 'grindstone' // Fase 7 (encantamientos)
-  | 'cartography'; // Fase 7.6: mesa de cartografía
+  | 'cartography' // Fase 7.6: mesa de cartografía
+  | 'smithing' // Fase 8.5: mesa de herrería
+  | 'beacon'; // Fase 8.5: faro
 
 export interface ScreenHost {
   icons: Map<number, string>;
@@ -206,6 +210,8 @@ export class InventoryScreen {
     if (kind === 'enchant') return new EnchantPanel(host, pos);
     if (kind === 'anvil') return new AnvilPanel(host, pos, () => this.render());
     if (kind === 'grindstone') return new GrindstonePanel(host, pos);
+    if (kind === 'smithing') return new SmithingPanel(host, pos); // Fase 8.5
+    if (kind === 'beacon') return new BeaconPanel(host, pos); // Fase 8.5
     return null;
   }
 

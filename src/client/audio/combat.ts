@@ -177,6 +177,10 @@ const TICK_PROFILES: Record<SoundMaterial, TickProfile> = {
   soul_soil: { type: 'lowpass', freq: [350, 650], q: 0.9, buffer: 'brown', tone: 75 },
   basalt: { type: 'bandpass', freq: [600, 1200], q: 2.2, buffer: 'white', tone: 90 },
   wart: { type: 'lowpass', freq: [400, 750], q: 1.4, buffer: 'brown', tone: 100 },
+  // Fase 8.5 (lo que da el Nether)
+  ancient_debris: { type: 'bandpass', freq: [500, 1100], q: 2.2, buffer: 'pink', tone: 90 },
+  netherite: { type: 'bandpass', freq: [1300, 2400], q: 4, buffer: 'white', tone: 380 },
+  lodestone: { type: 'bandpass', freq: [1000, 2000], q: 3, buffer: 'white', tone: 260 },
 };
 
 /** Golpe de picado (minería): breve "tick/scrape", más suave y corto que `buildBreak`; pensado

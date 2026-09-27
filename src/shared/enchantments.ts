@@ -138,10 +138,10 @@ export const MAX_ENCHANTS = 16;
 const TOOL_KINDS_MINING = new Set(['pickaxe', 'axe', 'shovel', 'hoe']);
 const SKULL_IDS = new Set<number>(Object.values(SKULLS));
 /** Encantabilidad de las herramientas y armas por material (Minecraft 26.3). */
-const TOOL_ENCHANTABILITY: Readonly<Record<string, number>> = { wooden: 15, stone: 5, iron: 14, golden: 22, diamond: 10, copper: 13 };
+const TOOL_ENCHANTABILITY: Readonly<Record<string, number>> = { wooden: 15, stone: 5, iron: 14, golden: 22, diamond: 10, copper: 13, netherite: 15 };
 /** Encantabilidad de las armaduras por material. */
 const ARMOR_ENCHANTABILITY: Readonly<Record<string, number>> = {
-  leather: 15, chainmail: 12, iron: 9, golden: 25, diamond: 10, copper: 8, turtle: 9,
+  leather: 15, chainmail: 12, iron: 9, golden: 25, diamond: 10, copper: 8, turtle: 9, netherite: 15,
 };
 
 function toolKind(id: number): string | undefined {
@@ -325,7 +325,7 @@ const ALWAYS_GLINT = new Set([ENCHANTED_BOOK, ENCHANTED_GOLDEN_APPLE, EXPERIENCE
 /** ¿Tiene el brillo del encantamiento? */
 export function hasGlint(s: ItemStack | null | undefined): boolean {
   if (!s) return false;
-  return ALWAYS_GLINT.has(s.id) || enchantsOf(s).length > 0 || storedOf(s).length > 0;
+  return ALWAYS_GLINT.has(s.id) || enchantsOf(s).length > 0 || storedOf(s).length > 0 || !!s.data?.lode; // Fase 8.5: brújula magnetizada
 }
 
 /** Lista ordenada para mostrar (el orden de Minecraft). */

@@ -324,3 +324,14 @@ test('los ids de la fase 8.4 no cambian', () => {
   assert.equal(keyPrint(ITEMS.map((it) => it?.key), 628, 630), 620859315, 'huella de los objetos');
   assert.equal(BANNER_PATTERNS.findIndex((p) => p.key === 'piglin'), 39);
 });
+
+// Fase 8.5 (lo que da el Nether): escombros ancestrales, netherita, cuarzo, magnetita, fogata de almas, nexo de
+// reaparición, faro y columna de burbujas; la netherita, su plantilla y la estrella del Nether.
+import { ANCIENT_DEBRIS, BEACON, BUBBLE_COLUMN } from '../src/shared/blocks';
+import { NETHERITE_SCRAP, NETHER_STAR } from '../src/shared/items';
+test('los ids de la fase 8.5 no cambian', () => {
+  assert.deepEqual([ANCIENT_DEBRIS, BEACON, BUBBLE_COLUMN], [5994, 6032, 6033]);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 5994, 6035), 2306374435, 'huella de los bloques');
+  assert.deepEqual([NETHERITE_SCRAP, NETHER_STAR], [630, 643]);
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 630, 644), 1535299870, 'huella de los objetos');
+});

@@ -26,7 +26,7 @@ import { netherVineOf, GILDED_BLACKSTONE } from '../blocks';
 const SILK_KEYS = new Set([
   'stone', 'deepslate', 'grass_block', 'snowy_grass_block', 'mycelium', 'podzol', 'gravel', 'clay', 'glass', 'glass_pane',
   'tinted_glass', 'ice', 'packed_ice', 'blue_ice', 'snow_block', 'bookshelf', 'chiseled_bookshelf', 'glowstone', 'sea_lantern',
-  'melon', 'cobweb', 'campfire', 'bee_nest', 'beehive', 'turtle_egg', 'red_mushroom_block', 'brown_mushroom_block',
+  'melon', 'cobweb', 'campfire', 'soul_campfire', 'bee_nest', 'beehive', 'turtle_egg', 'red_mushroom_block', 'brown_mushroom_block',
   'mushroom_stem', 'amethyst_bud', 'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'emerald_ore',
   'copper_ore',
   'sculk', 'sculk_vein', 'sculk_catalyst', 'sculk_sensor', 'calibrated_sculk_sensor', 'sculk_shrieker', // Fase 7.5 (abismo)

@@ -62,6 +62,7 @@ export const ARMOR_SHINE: Readonly<Record<ArmorMaterial, { rough: number; metal:
   copper: { rough: 0.35, metal: 0.7, sheen: 0.15 }, // Fase 6.5 (cobre)
   chainmail: { rough: 0.45, metal: 0.6, sheen: 0.05 }, // Fase 6.5 (equipo)
   turtle: { rough: 0.5, metal: 0, sheen: 0.05 },
+  netherite: { rough: 0.26, metal: 0.85, sheen: 0.12 }, // Fase 8.5: metal oscuro muy pulido
 };
 
 export interface ArmorTexture {
@@ -83,13 +84,15 @@ const RAMPS: Readonly<Record<ArmorMaterial, readonly RGB[]>> = {
   // Fase 6.5 (equipo): anillas de acero y placas verdes del caparazón.
   chainmail: [[232, 234, 238], [178, 180, 188], [136, 138, 146], [98, 100, 108], [58, 60, 66]],
   turtle: [[150, 214, 110], [84, 160, 62], [58, 124, 46], [38, 90, 34], [22, 56, 20]],
+  // Fase 8.5: netherita, gris casi negro con un tinte violáceo en los brillos.
+  netherite: [[132, 118, 132], [86, 78, 86], [66, 60, 66], [46, 42, 48], [26, 24, 28]],
 };
 
 /** Pulido base (alpha) de cada material. */
-const GLOSS: Readonly<Record<ArmorMaterial, number>> = { leather: 150, iron: 236, golden: 255, diamond: 255, copper: 240, chainmail: 228, turtle: 200 };
+const GLOSS: Readonly<Record<ArmorMaterial, number>> = { leather: 150, iron: 236, golden: 255, diamond: 255, copper: 240, chainmail: 228, turtle: 200, netherite: 250 };
 
 /** Ruido de color por téxel (el cuero tiene grano, el metal apenas). */
-const GRAIN: Readonly<Record<ArmorMaterial, number>> = { leather: 0.12, iron: 0.05, golden: 0.05, diamond: 0.04, copper: 0.06, chainmail: 0.05, turtle: 0.08 };
+const GRAIN: Readonly<Record<ArmorMaterial, number>> = { leather: 0.12, iron: 0.05, golden: 0.05, diamond: 0.04, copper: 0.06, chainmail: 0.05, turtle: 0.08, netherite: 0.05 };
 
 // Índices de cara (orden de boxUV).
 const PX = 0;
@@ -268,6 +271,11 @@ function pattern(mat: ArmorMaterial, t: Texel, tone: number, seed: number): numb
       // Placas del caparazón separadas por surcos oscuros.
       if ((t.i + 64) % 4 === 0 || (t.j + (((t.i >> 2) & 1) * 2) + 64) % 4 === 0) return 3;
       return r < 0.15 ? 0 : 1;
+    case 'netherite':
+      // Fase 8.5: planchas remachadas con el filo claro arriba y alguna veta violácea del temple.
+      if ((t.i === 1 || t.i === t.fw - 2) && t.j === 1) return 0;
+      if (t.j % 5 === 4) return 3;
+      return r > 0.95 ? 0 : r < 0.05 ? 2 : 1;
   }
 }
 

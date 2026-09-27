@@ -775,3 +775,34 @@ import { WARPED_FUNGUS } from './blocks';
 shape(['R ', ' F'], { R: FISHING_ROD, F: WARPED_FUNGUS }, WARPED_FUNGUS_ON_A_STICK);
 mix([GP, BLAZE_POWDER, FUEL_COAL], FIRE_CHARGE, 3);
 shape([' G ', 'GAG', ' G '], { G: GLOWSTONE_DUST, A: AR }, SPECTRAL_ARROW, 2);
+
+// ------------------------------------------------------------------ Fase 8.5 (lo que da el Nether)
+// Lingote de netherita (4 chatarras y 4 lingotes de oro), su bloque y la copia de la plantilla de mejora
+// (7 diamantes y rocanegra: 2). Las herramientas y la armadura de netherita no se fabrican: se mejoran desde las de
+// diamante en la mesa de herrería (shared/smithing.ts).
+import { NETHERITE_SCRAP, NETHERITE_INGOT, NETHERITE_UPGRADE_SMITHING_TEMPLATE as NUT } from './items';
+import { NETHERITE_BLOCK, NETHERRACK as NRK } from './blocks';
+mix([NETHERITE_SCRAP, NETHERITE_SCRAP, NETHERITE_SCRAP, NETHERITE_SCRAP, GOLD_INGOT, GOLD_INGOT, GOLD_INGOT, GOLD_INGOT], NETHERITE_INGOT);
+shape(['###', '###', '###'], { '#': NETHERITE_INGOT }, NETHERITE_BLOCK);
+mix([NETHERITE_BLOCK], NETHERITE_INGOT, 9);
+shape(['#S#', '#C#', '###'], { '#': DIAMOND, S: NUT, C: NRK }, NUT, 2);
+// Cuarzo (ladrillos, pilar y cincelado; sus losas y escaleras también de cincelado y pilar), la magnetita, la fogata
+// de almas (con arena o tierra de alma), el nexo de reaparición y el faro.
+import {
+  QUARTZ_BRICKS, QUARTZ_PILLAR, CHISELED_QUARTZ_BLOCK, LODESTONE, SOUL_CAMPFIRE, RESPAWN_ANCHOR, BEACON,
+  QUARTZ_BLOCK as QB, CHISELED_STONE_BRICKS as CSB, SOUL_SAND as SSA, SOUL_SOIL as SSO, CRYING_OBSIDIAN as CRY, GLOWSTONE as GLS,
+  OBSIDIAN as OBS, GLASS as GLA,
+} from './blocks';
+import { NETHER_STAR } from './items';
+{
+  const anyQuartz = [QB, CHISELED_QUARTZ_BLOCK, QUARTZ_PILLAR];
+  shape(['QQ', 'QQ'], { Q: QB }, QUARTZ_BRICKS, 4);
+  shape(['Q', 'Q'], { Q: QB }, QUARTZ_PILLAR, 2);
+  shape(['S', 'S'], { S: SLABS.quartz }, CHISELED_QUARTZ_BLOCK);
+  shape(['MMM'], { M: anyQuartz }, SLABS.quartz, 6);
+  shape(['M  ', 'MM ', 'MMM'], { M: anyQuartz }, STAIRS.quartz, 4);
+  shape(['SSS', 'S#S', 'SSS'], { S: CSB, '#': IRON_INGOT }, LODESTONE);
+  shape([' S ', 'S#S', 'LLL'], { S: STICK, '#': [SSA, SSO], L: LOGS }, SOUL_CAMPFIRE);
+  shape(['OOO', 'GGG', 'OOO'], { O: CRY, G: GLS }, RESPAWN_ANCHOR);
+  shape(['GGG', 'GSG', 'OOO'], { G: GLA, S: NETHER_STAR, O: OBS }, BEACON);
+}

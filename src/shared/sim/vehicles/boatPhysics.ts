@@ -5,6 +5,7 @@
 // cliente que rema (predicción), así que da lo mismo en los dos.
 import {
   BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_COLLIDE, ICE, PACKED_ICE, BLUE_ICE, SLIME_BLOCK, fluidHeight, blockCollisionBoxes,
+  isBubbleColumn, bubbleColumnDown, // Fase 8.5
 } from '../../blocks';
 import { moveBox } from '../../collide';
 import { BOAT_WIDTH, BOAT_HEIGHT } from '../../vehicles';
@@ -30,6 +31,13 @@ export interface BoatBody {
   onGround: boolean;
   /** Ticks seguidos bajo el agua (a los 60 echa a los pasajeros). */
   underTicks: number;
+  /**
+   * Fase 8.5: encima de una columna de burbujas la barca tiembla 60 ticks (`bubbleTime`) y luego sale despedida
+   * hacia arriba o se hunde (`bubbleDown`); al hundirse echa a los pasajeros (`eject` se pone ese tick).
+   */
+  bubbleTime?: number;
+  bubbleDown?: boolean;
+  eject?: boolean;
 }
 
 export interface BoatInput {
@@ -157,8 +165,33 @@ function statusOf(w: BlockGetter, b: BoatBody, f: Footprint): { status: number; 
   return friction > 0 ? { status: BOAT_ON_LAND, friction } : { status: BOAT_IN_AIR, friction: 0 };
 }
 
+/**
+ * Fase 8.5: la barca encima de una columna de burbujas (Boat.onAboveBubbleColumn y tickBubbleColumn): a los 60
+ * ticks, si la columna sube, sale despedida (2,7 bloques por tick con alguien que rema; 0,6 vacía); si baja, se
+ * hunde (−0,7) y echa a los pasajeros.
+ */
+function bubbleColumnStep(b: BoatBody, w: BlockGetter, rowed: boolean): void {
+  b.eject = false;
+  const bx = Math.floor(b.x), by = Math.floor(b.y), bz = Math.floor(b.z);
+  const col = w.getBlock(bx, by, bz);
+  const above = isBubbleColumn(col) && w.getBlock(bx, by + 1, bz) === 0;
+  if (!above) {
+    b.bubbleTime = 0;
+    return;
+  }
+  b.bubbleDown = bubbleColumnDown(col);
+  if (!b.bubbleTime) b.bubbleTime = 60;
+  b.bubbleTime--;
+  if (b.bubbleTime > 0) return;
+  if (b.bubbleDown) {
+    b.vy -= 0.7;
+    b.eject = true;
+  } else b.vy = rowed ? 2.7 : 0.6;
+}
+
 /** Un tick de la barca. `input`: lo que pulsa quien rema (null: nadie rema). */
 export function boatStep(b: BoatBody, w: BlockGetter, input: BoatInput | null = null): void {
+  bubbleColumnStep(b, w, !!input);
   const f = footprint(b);
   const old = b.status;
   const st = statusOf(w, b, f);

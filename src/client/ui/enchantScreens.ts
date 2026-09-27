@@ -30,6 +30,12 @@ export interface WorkHost {
   anvilUsed(pos: [number, number, number]): void;
   /** Se cogió el resultado de la afiladora: experiencia que suelta. */
   grindUsed(pos: [number, number, number], xp: number): void;
+  /** Fase 8.5: se cogió el resultado de la mesa de herrería. */
+  smithUsed(pos: [number, number, number]): void;
+  /** Fase 8.5: el faro: nivel de su pirámide, sus efectos elegidos y elegir otros (el pago ya se gastó). */
+  beaconLevel(pos: [number, number, number]): number;
+  beaconEffects(pos: [number, number, number]): [number, number];
+  beaconSet(pos: [number, number, number], primary: number, secondary: number): void;
   sound(kind: 'click' | 'enchant' | 'anvil' | 'grind'): void;
 }
 

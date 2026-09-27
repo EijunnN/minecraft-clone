@@ -8,7 +8,7 @@
 // Es puro (sobre una función que da los bloques): lo usan el servidor y las pruebas.
 import {
   defs, familyBase, BLOCK_COUNT, BLOCK_SOLID, BLOCK_RENDER, BLOCK_FLUID, BLOCK_REPLACEABLE, BLOCK_HARDNESS, R_CROSS, R_TORCH,
-  OBSIDIAN, CRYING_OBSIDIAN, SLIME_BLOCK, HONEY_BLOCK, GRINDSTONE, ENCHANTING_TABLE, LECTERN, LECTERN_BOOK, CAMPFIRE,
+  OBSIDIAN, CRYING_OBSIDIAN, SLIME_BLOCK, HONEY_BLOCK, GRINDSTONE, ENCHANTING_TABLE, LECTERN, LECTERN_BOOK, CAMPFIRE, SOUL_CAMPFIRE,
   MOB_SPAWNER, CONDUIT, DAYLIGHT_DETECTOR, CHISELED_BOOKSHELF, isAnvil, isContainer, isSign, isBanner, isBeeHome, isJukebox,
   isDoor, isBed, isCake, isCrop, isGlazedTerracotta, isPiston, pistonExtended, isPistonHead, isMovingBlock,
 } from './blocks';
@@ -33,7 +33,7 @@ function classify(id: number): number {
   const key = defs[base]?.key ?? d.key;
   // Inamovibles: durísimos, los que guardan algo y las piezas de los pistones.
   if (BLOCK_HARDNESS[id] < 0 || base === OBSIDIAN || base === CRYING_OBSIDIAN || isAnvil(id) || base === GRINDSTONE) return PUSH_BLOCK;
-  if (base === ENCHANTING_TABLE || base === LECTERN || base === LECTERN_BOOK || base === CAMPFIRE || base === MOB_SPAWNER) return PUSH_BLOCK;
+  if (base === ENCHANTING_TABLE || base === LECTERN || base === LECTERN_BOOK || base === CAMPFIRE || base === SOUL_CAMPFIRE || base === MOB_SPAWNER) return PUSH_BLOCK;
   if (base === CONDUIT || base === DAYLIGHT_DETECTOR || base === CHISELED_BOOKSHELF || isContainer(id) || isBeeHome(id)) return PUSH_BLOCK;
   if (isJukebox(id) || isSign(id) || isBanner(id) || isPistonHead(id) || isMovingBlock(id) || BLOCK_KEYS.test(key)) return PUSH_BLOCK;
   // Se rompen: lo que no choca, plantas, antorchas, puertas, camas, tartas, cultivos y los de la lista.

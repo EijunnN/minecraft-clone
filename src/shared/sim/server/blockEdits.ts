@@ -3,7 +3,7 @@
 // Todo se valida aquí; si algo no vale, se devuelve al jugador el bloque real.
 import {
   AIR, BEDROCK, FURNACE_LIT, BLOCKS, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_HARDNESS, BLOCK_REPLACEABLE, isValidBlockId,
-  isBed, familyBase, COMPOSTER, CAMPFIRE,
+  isBed, familyBase, COMPOSTER, isCampfire,
 } from '../../blocks';
 import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
@@ -43,6 +43,8 @@ export class BlockEdits {
   placed: ((s: Session, msg: Extract<ClientMsg, { t: 'place' }>, edits: readonly Edit[]) => void) | null = null;
   /** Fase 6.5 (materiales): tartas con vela, pala y azada sobre los suelos nuevos (`h`: altura del clic). */
   materials: ((s: Session, x: number, y: number, z: number, id: number, item: number, h: number) => boolean) | null = null;
+  /** Fase 8.5 (lo que da el Nether): el nexo de reaparición y demás bloques del Nether. */
+  netherGoods: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
   /** Fase 6.5 (calderos): llenar, vaciar y lavar en un caldero. */
   cauldrons: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
   /** Fase 7 (redstone): clic derecho sobre un componente (palanca, botón, repetidor…); devuelve si lo atendió. */
@@ -183,13 +185,15 @@ export class BlockEdits {
     // Fase 7 (redstone): palancas, botones, repetidores, comparadores, bloques musicales, sensores y menas.
     const rsUse = this.redstone;
     if (rsUse && ctx.asActor(s.id, () => rsUse(x, y, z, id))) return;
+    const ng = this.netherGoods; // Fase 8.5: nexo de reaparición
+    if (ng && ctx.asActor(s.id, () => ng(s, x, y, z, id, Number.isInteger(item) ? item : 0))) return;
     // El compostador acepta cualquier objeto (o la mano, para sacar el polvo de hueso).
     if (familyBase(id) === COMPOSTER) {
       this.composters.use(s, x, y, z, Number.isInteger(item) && item > 0 ? item : 0);
       return;
     }
     // Comida cruda sobre una fogata: se pone a asar.
-    if (familyBase(id) === CAMPFIRE) {
+    if (isCampfire(id)) { // Fase 8.5: también la de almas
       if (!(Number.isInteger(item) && this.campfires.use(x, y, z, item))) ctx.reject(s, x, y, z);
       return;
     }

@@ -46,6 +46,8 @@ export interface DimensionDef {
   respawn: boolean;
   /** ¿Van las brújulas y los relojes? */
   compass: boolean;
+  /** Fase 8.5: ¿funciona el nexo de reaparición? (si no, explota al usarlo cargado). */
+  anchors: boolean;
   /** Fase 8 (entorno): altura de la superficie de su mar de lava (la niebla se enciende y el aire ondula encima). */
   lavaSea?: number;
 }
@@ -54,12 +56,12 @@ const DEFS: DimensionDef[] = [
   {
     id: DIM_OVERWORLD, key: 'overworld', name: 'Mundo normal', scale: 1, skyLight: true, sky: true, weather: true,
     ambient: 0, fog: [192, 216, 255], fogDistance: 1, gravity: 1, breathable: true, evaporatesWater: false, fastLava: false,
-    beds: true, respawn: true, compass: true,
+    beds: true, respawn: true, compass: true, anchors: false,
   },
   {
     id: DIM_NETHER, key: 'nether', name: 'El Nether', scale: 8, skyLight: false, sky: false, weather: false,
     ambient: 0.1, fog: [51, 8, 8], fogDistance: 0.5, gravity: 1, breathable: true, evaporatesWater: true, fastLava: true,
-    beds: false, respawn: false, compass: false, lavaSea: 31 + 8 / 9,
+    beds: false, respawn: false, compass: false, anchors: true, lavaSea: 31 + 8 / 9,
   },
 ];
 

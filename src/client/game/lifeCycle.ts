@@ -4,7 +4,7 @@ import { VOID_Y } from '../../shared/constants';
 import { deathMessage } from './Survival';
 import { faunaOnHurt } from './faunaInteraction'; // Fase 6 (fauna)
 import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
-import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, CAMPFIRE, HAY_BALE, familyBase, stateProps, MAGMA_BLOCK } from '../../shared/blocks';
+import { isBed, BLOCK_OPAQUE, BLOCK_SOLID, isCampfire, SOUL_CAMPFIRE, HAY_BALE, familyBase, stateProps, MAGMA_BLOCK } from '../../shared/blocks';
 import { deathXp } from '../../shared/experience';
 import type { EffectTarget } from './statusEffects';
 import type { Game } from './Game';
@@ -27,6 +27,8 @@ export class LifeCycle {
   sleeping: { t: number } | null = null;
   /** Cama donde reaparece (pies). */
   bed: [number, number, number] | null = null;
+  /** Fase 8.5: dimensión del punto de reaparición (la cama del mundo normal o el nexo del Nether). */
+  bedDim = 0;
   startSleeping(pos: [number, number, number], facing: number): void {
     const p = this.g.player;
     [p.x, p.y, p.z] = pos;
@@ -69,7 +71,9 @@ export class LifeCycle {
     if (dmg <= 0) return;
     faunaOnHurt(this.g, cause); // Fase 6 (fauna): veneno de las abejas
     if (Array.isArray(k) && k.every(Number.isFinite)) {
-      const kb = this.g.enchant.knockbackFactor(cause); // Fase 7 (encantamientos): Protección contra explosiones
+      let kb = this.g.enchant.knockbackFactor(cause); // Fase 7 (encantamientos): Protección contra explosiones
+      // Fase 8.5: la netherita resiste el empuje de golpes y proyectiles (no el de las explosiones).
+      if (cause !== 'explosion' && cause !== 'creeper') kb *= 1 - this.g.inv.knockbackResistance();
       this.g.player.impulse(k[0] * kb, k[1] * kb, k[2] * kb);
       // La cámara se inclina hacia el lado del golpe (el atacante está contra el empuje).
       const kl = Math.hypot(k[0], k[2]);
@@ -132,8 +136,9 @@ export class LifeCycle {
     this.g.survival.reset();
     const p = this.g.player;
     // Fase 8: donde no se puede reaparecer (el Nether), el servidor lleva al mundo normal (a la cama o al
-    // punto de aparición); el cambio de mundo llega con su bienvenida.
-    if (this.g.world && !dimensionDef(this.g.world.dim).respawn) {
+    // punto de aparición); el cambio de mundo llega con su bienvenida. Fase 8.5: también si el punto de
+    // reaparición es de otra dimensión (el nexo del Nether): lo resuelve el servidor.
+    if (this.g.world && (!dimensionDef(this.g.world.dim).respawn || (this.bed && this.bedDim !== this.g.world.dim))) {
       this.g.ui.hideDeath();
       this.g.input.requestLock();
       this.g.sendState(true);
@@ -162,6 +167,18 @@ export class LifeCycle {
     this.g.sendState(true);
     this.g.sendPos(true);
     this.g.refreshHotbar(true);
+  }
+
+  /** Fase 8.5: el servidor dice dónde reaparecer (sin cambiar de dimensión). */
+  respawnAt(at: [number, number, number]): void {
+    const p = this.g.player;
+    [p.x, p.y, p.z] = at;
+    p.vx = p.vy = p.vz = 0;
+    p.kx = p.kz = 0;
+    p.fallDistance = 0;
+    p.flying = false;
+    if (this.g.world) p.unstuck(this.g.world);
+    this.g.sendPos(true);
   }
 
   /**
@@ -209,9 +226,10 @@ export class LifeCycle {
       const exposed = g.world!.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) >> 4 >= 15;
       const feet = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y + 0.05), Math.floor(p.z));
       surv.update(dt, {
-        eyeInWater: p.eyeInWater, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
+        eyeInWater: p.eyeInWater, eyeInBubble: p.eyeInBubble, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
-        onCampfire: familyBase(feet) === CAMPFIRE && stateProps(feet)!.lit === 1,
+        onCampfire: isCampfire(feet) && stateProps(feet)!.lit === 1,
+        soulCampfire: familyBase(feet) === SOUL_CAMPFIRE, // Fase 8.5: la de almas quema el doble
         // Fase 8: el magma quema a quien lo pisa sin agacharse.
         onMagma: p.onGround && !p.sneaking && g.world!.getBlock(Math.floor(p.x), Math.floor(p.y - 0.05), Math.floor(p.z)) === MAGMA_BLOCK,
         inFire: playerInFire(g), // Fase 6.5 (equipo)

@@ -5,6 +5,8 @@ import { resistanceFactor } from '../../shared/effects'; // Fase 6.5 (equipo)
 
 export interface SurvivalContext {
   eyeInWater: boolean;
+  /** Fase 8.5: el ojo está en una columna de burbujas (se respira). */
+  eyeInBubble?: boolean;
   inLava: boolean;
   inWater: boolean;
   /** Bajo la lluvia a cielo abierto (apaga el fuego). */
@@ -17,6 +19,8 @@ export interface SurvivalContext {
   waterBreathing?: boolean;
   /** De pie sobre una fogata encendida (quema sin prender fuego). */
   onCampfire?: boolean;
+  /** Fase 8.5: la fogata que pisa es la de almas (2 de daño). */
+  soulCampfire?: boolean;
   /** Fase 8: de pie sobre un bloque de magma (sin agacharse). */
   onMagma?: boolean;
   /** Fase 6.5 (equipo): dentro de un bloque de fuego (quema y prende). */
@@ -258,7 +262,7 @@ export class Survival {
       }
     } else this.starveTimer = 0;
     // Aire bajo el agua.
-    if (ctx.eyeInWater && !ctx.waterBreathing) {
+    if (ctx.eyeInWater && !ctx.waterBreathing && !ctx.eyeInBubble) {
       this.air = Math.max(0, this.air - dt * this.respiration); // Fase 7: Respiración
       if (this.air <= 0) {
         this.drownTimer += dt;
@@ -281,7 +285,7 @@ export class Survival {
       }
     } else this.lavaTimer = 0.5;
     // La fogata quema al pisarla (la invulnerabilidad deja un golpe cada medio segundo).
-    if (ctx.onCampfire && !ctx.fireResistant) this.damage(1, 'campfire');
+    if (ctx.onCampfire && !ctx.fireResistant) this.damage(ctx.soulCampfire ? 2 : 1, 'campfire');
     if (ctx.onMagma && !ctx.fireResistant) this.damage(1, 'hot_floor'); // Fase 8
     // Fase 6.5 (equipo): el fuego prende al que lo toca (8 s) y quema al momento.
     if (ctx.inFire && !ctx.inWater) {

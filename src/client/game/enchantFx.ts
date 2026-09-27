@@ -32,6 +32,21 @@ export function enchantFx(g: Game, kind: string, p: [number, number, number], a?
       g.audio.playEnchantSfx(kind, p);
       pfx.crit(p[0], p[1] + 0.4, p[2], 6);
       return true;
+    // Fase 8.5: el nexo de reaparición (cargar, fijar el punto y gastar una carga).
+    case 'anchor_charge':
+    case 'anchor_set':
+    case 'anchor_deplete':
+      g.audio.playEnchantSfx(kind, p);
+      for (let i = 0; i < (kind === 'anchor_deplete' ? 10 : 6); i++) pfx.anchorMote(p[0] + rnd(-0.4, 0.4), p[1] + 0.52, p[2] + rnd(-0.4, 0.4));
+      return true;
+    case 'beacon_power': // Fase 8.5: se eligió un poder en el faro
+      g.audio.playEnchantSfx(kind, p);
+      pfx.sparkles(p[0], p[1] + 0.6, p[2], 10, 0.4, [0.6, 1.8, 2.2]);
+      return true;
+    case 'smithing': // Fase 8.5: golpes de martillo y chispas sobre la mesa de herrería
+      g.audio.playEnchantSfx(kind, p);
+      pfx.crit(p[0], p[1], p[2], 8);
+      return true;
     case 'xp_bottle':
       g.audio.playEnchantSfx(kind, p);
       pfx.sparkles(p[0], p[1], p[2], 16, 0.4, [0.9, 2.2, 0.6]);

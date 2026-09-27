@@ -30,6 +30,7 @@ import { REDSTONE_SPRITES } from './redstoneSprites'; // Fase 7 (redstone)
 import { MECHANISM_SPRITES } from './mechanismSprites'; // Fase 7 (mecanismos)
 import { DEEP_DARK_SPRITES } from './deepDarkSprites'; // Fase 7.5 (abismo)
 import { NETHER_MOB_SPRITES } from './netherMobSprites'; // Fase 8.3 (criaturas del Nether)
+import { NETHER_GOODS_SPRITES } from './netherGoodsSprites'; // Fase 8.5 (lo que da el Nether)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -97,6 +98,7 @@ const TOOL_MATERIALS: Record<string, Record<string, Ink>> = {
   golden: ramp([255, 250, 186], [252, 220, 78], [228, 172, 34], [180, 118, 18], [92, 54, 8]),
   diamond: ramp([226, 255, 250], [124, 240, 228], [64, 202, 192], [32, 146, 142], [12, 66, 66]),
   copper: COPPER_TOOL_INKS, // Fase 6.5 (cobre)
+  netherite: ramp([146, 130, 146], [96, 86, 96], [68, 60, 68], [44, 38, 46], [18, 14, 18]), // Fase 8.5
 };
 
 // ---------------------------------------------------------------------------
@@ -225,6 +227,7 @@ const ARMOR_INKS: Record<string, Record<string, Ink>> = {
   golden: TOOL_MATERIALS.golden,
   diamond: TOOL_MATERIALS.diamond,
   copper: COPPER_TOOL_INKS, // Fase 6.5 (cobre)
+  netherite: TOOL_MATERIALS.netherite, // Fase 8.5
 };
 
 /** Detalle claro: costuras en el cuero, destello en el metal. */
@@ -234,6 +237,7 @@ const ARMOR_ACCENT: Record<string, Ink> = {
   golden: ink([255, 255, 226], [92, 54, 8]),
   diamond: ink([246, 255, 255], [12, 66, 66]),
   copper: COPPER_ARMOR_ACCENT, // Fase 6.5 (cobre)
+  netherite: ink([190, 170, 196], [18, 14, 18]), // Fase 8.5
 };
 
 const HELMET = [
@@ -2304,13 +2308,15 @@ Object.assign(SPRITES, DEEP_DARK_SPRITES);
 SPRITES.nether_brick = { rows: SPRITES.brick.rows, inks: ramp([104, 50, 58], [78, 36, 44], [60, 27, 33], [44, 19, 24], [20, 8, 10]) };
 // Fase 8.3 (criaturas del Nether): caña con hongo distorsionado, carga de fuego y flecha espectral.
 Object.assign(SPRITES, NETHER_MOB_SPRITES);
+// Fase 8.5 (lo que da el Nether): chatarra y lingote de netherita, plantilla de mejora y estrella del Nether.
+Object.assign(SPRITES, NETHER_GOODS_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado
 // ---------------------------------------------------------------------------
 
-const TOOL_RE = /^(wooden|stone|iron|golden|diamond|copper)_(pickaxe|axe|shovel|sword|hoe)$/; // Fase 6.5: cobre
-const ARMOR_RE = /^(leather|iron|golden|diamond|copper)_(helmet|chestplate|leggings|boots)$/;
+const TOOL_RE = /^(wooden|stone|iron|golden|diamond|copper|netherite)_(pickaxe|axe|shovel|sword|hoe)$/; // Fase 6.5: cobre; 8.5: netherita
+const ARMOR_RE = /^(leather|iron|golden|diamond|copper|netherite)_(helmet|chestplate|leggings|boots)$/;
 
 /** Marcador para sprites que aún no tienen dibujo. */
 const PLACEHOLDER: SpriteDef = {

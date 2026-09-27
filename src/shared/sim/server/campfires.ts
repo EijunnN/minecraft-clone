@@ -1,7 +1,7 @@
 // Fogatas: hasta cuatro alimentos crudos se asan encima (30 s cada uno, como en Minecraft) y saltan ya
 // hechos. Lo que se asa se ve como objetos quietos sobre la fogata. El estado se guarda con los
 // contenedores (clave de posición).
-import { CAMPFIRE, familyBase, stateProps } from '../../blocks';
+import { CAMPFIRE, familyBase, stateProps, isCampfire } from '../../blocks';
 import { sanitizeStack, smeltResult, variantSmelts } from '../../containers';
 import type { ItemStack } from '../../items';
 import type { ServerStore } from '../store';
@@ -57,7 +57,7 @@ export class Campfires {
   use(x: number, y: number, z: number, item: number): boolean {
     const ctx = this.ctx;
     const id = ctx.world.getBlock(x, y, z);
-    if (familyBase(id) !== CAMPFIRE || !stateProps(id)!.lit || !campfireCooks(item)) return false;
+    if (!isCampfire(id) || !stateProps(id)!.lit || !campfireCooks(item)) return false;
     const k = posKey(x, y, z);
     const f = this.fires.get(k) ?? this.empty();
     const i = f.slots.findIndex((sl) => !sl);
@@ -88,7 +88,7 @@ export class Campfires {
 
   /** La fogata desaparece: suelta lo que se asaba. */
   onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
-    if (familyBase(old) !== CAMPFIRE || familyBase(id) === CAMPFIRE) return;
+    if (!isCampfire(old) || isCampfire(id)) return;
     const k = posKey(x, y, z);
     const f = this.fires.get(k);
     if (!f) return;
@@ -105,7 +105,7 @@ export class Campfires {
       const x = keyX(k), y = keyY(k), z = keyZ(k);
       const id = ctx.world.getBlock(x, y, z);
       if (id < 0) continue;
-      if (familyBase(id) !== CAMPFIRE) {
+      if (!isCampfire(id)) {
         this.onBlockChanged(x, y, z, CAMPFIRE, id);
         continue;
       }
