@@ -58,7 +58,8 @@ export class Portals {
       this.blocks.delete(posKey(x, y, z));
       this.dirty = true;
     }
-    if (isFire(id) && this.light(x, y, z)) return;
+    // Fase 8.6: el portal sólo se enciende en el mundo normal y en el Nether (en el End, no: inPortalDimension).
+    if (isFire(id) && (this.ctx.dim === DIM_OVERWORLD || this.ctx.dim === DIM_NETHER) && this.light(x, y, z)) return;
     // Lo que cambia junto a un portal puede dejarlo sin marco.
     if (old === OBSIDIAN || isNetherPortal(old)) {
       const w = this.ctx.world;

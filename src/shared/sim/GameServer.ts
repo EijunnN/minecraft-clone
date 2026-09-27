@@ -19,7 +19,7 @@ import { migrateStore, type ServerStore } from './store';
 import {
   TICK_RATE, DAY_RATE, SIM_RADIUS, r2, type Conn, type Session, type PlayerRecord, type ServerContext, type Arrival,
 } from './server/context';
-import { DIM_OVERWORLD, DIM_NETHER, dimensionDef, type DimensionDef } from '../dimensions'; // Fase 8 (dimensiones)
+import { DIM_OVERWORLD, DIM_NETHER, DIM_END, dimensionDef, type DimensionDef } from '../dimensions'; // Fase 8 (dimensiones)
 import type { PlayerSave } from '../protocol';
 import { fallsThrough } from './server/blockRules';
 import { potionView } from './server/potionPlayers'; // Fase 7 (pociones)
@@ -458,6 +458,8 @@ export class GameServer {
       container: null, save: t.save, saveDirty: true, sleeping: null, sleepTicks: 0, bed: t.bed, bedDim: t.bedDim, dimPending: true,
     };
     this.sessions.set(t.conn, s);
+    // Fase 8.6: la plataforma de llegada del End (salvo a unas coordenadas concretas).
+    if (this.dim === DIM_END && !(arrival.kind === 'pos' && Number.isFinite(arrival.x))) this.sys.endGoods.rebuildPlatform();
     s.p = this.arrivalPos(s, arrival);
     if (arrival.kind === 'portal') this.sys.portals.justArrived(s);
     if (s.save) s.save = { ...s.save, pos: [s.p[0], s.p[1], s.p[2]] };

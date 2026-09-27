@@ -8,7 +8,7 @@ import {
   BLOCK_REPLACEABLE, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_SOLID, LILY_PAD, VINE, isVine, CAVE_VINES, isCaveVines,
   POINTED_DRIPSTONE, BLOCK_NEEDS_SUPPORT, SNOW_LAYER, isSnowLayer, BLOCK_OPAQUE, BLOCK_RENDER, R_CROSS, TORCH, WALL_TORCH, LADDER,
   stateOf, stateProps, familyBase, isSlab, isStairs, isDoor, isTrapdoor, isFenceGate, isBed, isCrop, isCake,
-  isFarmland, isMatureCrop, COMPOSTER, CHEST, CHEST_DOUBLE, CAMPFIRE, SOUL_CAMPFIRE, SIGN_WALL_OF, chestPartnerDir, isSign,
+  isFarmland, isMatureCrop, COMPOSTER, CHEST, CHEST_DOUBLE, CAMPFIRE, SOUL_CAMPFIRE, END_ROD, isEndRod, SIGN_WALL_OF, chestPartnerDir, isSign,
   blockSupported, orientedFor, type NeighborGet,
 } from './blocks';
 import { DIR_X, DIR_Z } from './blockModels';
@@ -215,6 +215,12 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
     return one(CHEST + f);
   }
   if (base === CAMPFIRE || base === SOUL_CAMPFIRE) return one(stateOf(base, { lit: 1 })); // Fase 8.5: también la de almas
+  // Fase 8.6: la vara del End apunta hacia la cara en la que se pone (contra otra igual, al revés).
+  if (base === END_ROD) {
+    let f = hit.ny > 0 ? 2 : hit.ny < 0 ? 3 : hit.nx > 0 ? 0 : hit.nx < 0 ? 1 : hit.nz > 0 ? 4 : 5;
+    if (isEndRod(hit.id) && hit.id - END_ROD === f) f ^= 1;
+    return one(END_ROD + f);
+  }
   // Tronco contra la cara lateral de un bloque: tumbado en ese eje (como en Minecraft).
   if (face === 'side' && horizontalLog(base, AXIS_X) !== base) return one(horizontalLog(base, hit.nx !== 0 ? AXIS_X : AXIS_Z));
   if (base === TORCH) {

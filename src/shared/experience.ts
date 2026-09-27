@@ -10,7 +10,7 @@ import { DYES } from './items'; // Fase 6.5 (colores)
 import { DYE_COLORS, GLAZED_TERRACOTTA } from './blocks'; // Fase 6.5 (colores)
 import { LIT_REDSTONE_ORE } from './blocks'; // Fase 7 (redstone)
 import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from './blocks'; // Fase 8 (dimensiones)
-import { NETHERITE_SCRAP } from './items'; // Fase 8.5 (lo que da el Nether)
+import { NETHERITE_SCRAP, POPPED_CHORUS_FRUIT } from './items'; // Fase 8.5 y 8.6
 import { SMOOTH_QUARTZ } from './blocks';
 import { QUARTZ, GOLD_NUGGET } from './items';
 
@@ -126,6 +126,7 @@ export const SMELT_XP: Readonly<Record<number, number>> = {
   ...Object.fromEntries(DYE_COLORS.map((c) => [GLAZED_TERRACOTTA[c], 0.1])),
   [NETHERITE_SCRAP]: 2, // Fase 8.5 (lo que da el Nether)
   [SMOOTH_QUARTZ]: 0.1,
+  [POPPED_CHORUS_FRUIT]: 0.1, // Fase 8.6
 };
 
 /** Sacar `count` objetos `item` del horno: la fracción se redondea al azar (como Minecraft). */

@@ -9,6 +9,8 @@
 
 export const DIM_OVERWORLD = 0;
 export const DIM_NETHER = 1;
+/** Fase 8.6. */
+export const DIM_END = 2;
 
 /** Ticks dentro de un portal del Nether para viajar en supervivencia (4 s; en creativo, al momento). */
 export const PORTAL_TICKS = 80;
@@ -48,6 +50,13 @@ export interface DimensionDef {
   compass: boolean;
   /** Fase 8.5: ¿funciona el nexo de reaparición? (si no, explota al usarlo cargado). */
   anchors: boolean;
+  /**
+   * Fase 8.6: el cielo que se dibuja sin sol ('end': el vacío del End con sus nebulosas y sus destellos; sin él, el
+   * color de la niebla). La luz del cielo sigue existiendo aparte (skyLight: en el End sí, en el Nether no).
+   */
+  skybox?: 'end';
+  /** Fase 8.6: color de la penumbra (visual/ambient_light_color; sin él, el tono de la niebla). */
+  ambientColor?: [number, number, number];
   /** Fase 8 (entorno): altura de la superficie de su mar de lava (la niebla se enciende y el aire ondula encima). */
   lavaSea?: number;
 }
@@ -62,6 +71,13 @@ const DEFS: DimensionDef[] = [
     id: DIM_NETHER, key: 'nether', name: 'El Nether', scale: 8, skyLight: false, sky: false, weather: false,
     ambient: 0.1, fog: [51, 8, 8], fogDistance: 0.5, gravity: 1, breathable: true, evaporatesWater: true, fastLava: true,
     beds: false, respawn: false, compass: false, anchors: true, lavaSea: 31 + 8 / 9,
+  },
+  // Fase 8.6: el End (dimension_type the_end de la 26.3): hay luz del cielo pero no sol, ni tiempo, ni clima; luz
+  // ambiental 0,25 en gris verdoso (#3f473f), niebla #181318 y su propio cielo con los destellos.
+  {
+    id: DIM_END, key: 'end', name: 'El End', scale: 1, skyLight: true, sky: false, weather: false,
+    ambient: 0.25, ambientColor: [63, 71, 63], fog: [24, 19, 24], fogDistance: 1, gravity: 1, breathable: true, evaporatesWater: false,
+    fastLava: false, beds: false, respawn: false, compass: false, anchors: false, skybox: 'end',
   },
 ];
 

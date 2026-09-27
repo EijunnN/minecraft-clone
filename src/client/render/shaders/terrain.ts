@@ -379,6 +379,11 @@ void main() {
   vec3 envSpec = Fa * skyRefl * skyF * sq(1.0 - rough) * ao;
 
   vec3 color = diffuse + spec + trans + ambient + envSpec;
+  // Fase 8.6: el destello del End alumbra en violeta lo que ve el cielo, más por el lado de donde viene.
+  if (uEndFlash.w > 0.0) {
+    float sk = vLight.x * vLight.x;
+    color += albedo / PI * vec3(0.67, 0.38, 0.80) * 2.4 * uEndFlash.w * sk * (0.3 + 0.7 * saturate(dot(n, normalize(uEndFlash.xyz)))) * ao;
+  }
   // Fase 8 (entorno del Nether): sin cielo la exposición sube mucho y lo que brilla se quemaba a blanco: la emisión
   // es menor y la de la lava va en un naranja más hondo (al cuadrado), con sus vetas claras aún encendidas.
   vec3 emitCol = special == 2 && uDim.x < 0.5 ? albedo * albedo : albedo;

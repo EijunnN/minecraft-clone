@@ -24,9 +24,10 @@ layout(std140) uniform Frame {
   vec4 uWind;         // xy = desplazamiento del viento de nubes, z = fuerza del viento en plantas, w = tiempo continuo
   vec4 uQuality;      // x = tamaño del mapa de sombras, y = muestras PCF, z = pasos SSR, w = pasos volumétricos
   vec4 uNearFar;      // x = near, y = far, z = tan(fov/2), w = aspecto
-  vec4 uDim;          // Fase 8 (dimensiones): x = hay cielo (sol, luna, luz del cielo), y = altura de su mar de lava (0: no), z = densidad de su niebla
-  vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal)
+  vec4 uDim;          // Fase 8 (dimensiones): x = hay cielo (sol, luna, luz del cielo), y = altura de su mar de lava (0: no), z = densidad de su niebla, w = el canal del cielo lleva la luz de alma (sin luz del cielo)
+  vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal), w = cielo del End
   vec4 uDimAmb;       // rgb = luz mínima de todo sin cielo (la penumbra del Nether)
+  vec4 uEndFlash;     // Fase 8.6: xyz = dirección del destello del End, w = su intensidad (0..1)
 };
 `;
 
@@ -175,7 +176,7 @@ vec3 blockLightColor(float level) {
  */
 vec3 blockLightTinted(float level, float soul) {
   vec3 c = blockLightColor(level);
-  if (uDim.x > 0.5 || soul <= 0.0) return c;
+  if (uDim.w < 0.5 || soul <= 0.0) return c; // Fase 8.6: sólo donde ese canal es la luz de alma (el Nether)
   float share = smoothstep(level - 0.2, level, soul);
   // Más suave con la distancia que la naranja (llega más lejos) y algo más fuerte: el suelo de alrededor se tiñe.
   float s2 = soul * soul;

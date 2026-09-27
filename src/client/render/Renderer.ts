@@ -178,6 +178,8 @@ export interface FrameState {
   guardianBeams?: GuardianBeam[];
   /** Fase 8.5: los haces de los faros encendidos. */
   beaconBeams?: BeaconBeam[];
+  /** Fase 8.6: el destello del End: [dirección x, y, z, intensidad]. */
+  endFlash?: [number, number, number, number];
   /** Fase 7 (efectos): intensidad de las Náuseas (0..1) y la vista cerrada por la Ceguera o la Oscuridad. */
   nausea?: number;
   /** Fase 8: dimensión en la que está la cámara (cielo, niebla y luz; sin ella, el mundo normal). */
@@ -300,7 +302,7 @@ export class Renderer {
     this.caps = caps;
     this.settings = settings;
     this.tri = new FullscreenTriangle(gl);
-    this.ubo = new UniformBuffer(gl, 168); // Fase 8: + uDim, uDimFog y uDimAmb
+    this.ubo = new UniformBuffer(gl, 172); // Fase 8: + uDim, uDimFog y uDimAmb; 8.6: + uEndFlash
     this.textures = new BlockTextures(gl, caps, tex);
     this.terrain = new TerrainRenderer(gl);
     this.atmosphere = new Atmosphere(gl, this.tri);
@@ -523,16 +525,23 @@ export class Renderer {
     // Fase 8: la dimensión (cielo, niebla y penumbra). La niebla se cierra antes que el borde normal.
     const dd = dimensionDef(s.dim ?? 0);
     const lin = (c: number) => Math.pow(c / 255, 2.2);
-    d[156] = dd.sky ? 1 : 0; d[157] = dd.lavaSea ?? 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = 0;
+    d[156] = dd.sky ? 1 : 0; d[157] = dd.lavaSea ?? 0; d[158] = dd.sky ? 0 : 1.3 / (R * dd.fogDistance); d[159] = dd.skyLight ? 0 : 1;
     // Fase 8.2: la niebla es la del bioma (mezclada con los de alrededor) y la penumbra toma su tono.
     const fog = s.fog ?? dd.fog;
-    d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = 0;
+    d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = dd.skybox === 'end' ? 1 : 0;
     const top = Math.max(fog[0], fog[1], fog[2], 1);
     const hue = (c: number) => 0.55 + 0.45 * (c / top);
     // Fase 8 (entorno del Nether): una penumbra algo más clara, para que lo oscuro (arena de alma, basalto) se lea
     // contra la niebla en vez de quedar en silueta negra.
     const amb = dd.ambient * 2.4; // en proporción a la luz de bloque, como el 10 % de Java (lerp(ambiente, luz, 1))
-    d[164] = amb * hue(fog[0]); d[165] = amb * hue(fog[1]); d[166] = amb * hue(fog[2]); d[167] = 0;
+    // Fase 8.6: el End tiene su propio color de penumbra (gris verdoso).
+    const ac = dd.ambientColor;
+    const atop = ac ? Math.max(ac[0], ac[1], ac[2], 1) : 1;
+    const tone = (i: number) => (ac ? ac[i] / atop : hue(fog[i]));
+    d[164] = amb * tone(0); d[165] = amb * tone(1); d[166] = amb * tone(2); d[167] = 0;
+    // Fase 8.6: el destello del End (dirección e intensidad).
+    const fl = s.endFlash;
+    d[168] = fl ? fl[0] : 0; d[169] = fl ? fl[1] : 1; d[170] = fl ? fl[2] : 0; d[171] = fl ? fl[3] : 0;
     this.ubo.upload();
   }
 

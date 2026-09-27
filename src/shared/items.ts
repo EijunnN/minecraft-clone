@@ -633,6 +633,10 @@ export const FIRE_RESISTANT_ITEMS: ReadonlySet<number> = new Set([
 ]);
 /** Fase 8.5: objetos que las explosiones no destruyen (la estrella del Nether). */
 export const EXPLOSION_RESISTANT_ITEMS: ReadonlySet<number> = new Set([NETHER_STAR]);
+// Fase 8.6 (el End): la fruta de coro (se come aunque no haya hambre y teletransporta) y la reventada (del horno,
+// para la púrpura y las varas del End).
+export const CHORUS_FRUIT = item('chorus_fruit', 'Fruta de coro', { food: { hunger: 4, saturation: 2.4, always: true } });
+export const POPPED_CHORUS_FRUIT = item('popped_chorus_fruit', 'Fruta de coro reventada');
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -867,3 +871,7 @@ smelt(QUARTZ_BLOCK, SMOOTH_QUARTZ); // el bloque de cuarzo, en cuarzo liso
   NETHERITE_SCRAP, NETHERITE_INGOT, NETHERITE_UPGRADE_SMITHING_TEMPLATE, ...Object.values(TOOLS.netherite), ...Object.values(ARMOR[NETHERITE_ARMOR]),
   HORSE_ARMOR.netherite, NETHER_STAR,
 );
+
+// ------------------------------------------------------------------ Fase 8.6 (el End)
+smelt(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
+(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);

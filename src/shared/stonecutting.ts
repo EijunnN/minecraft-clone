@@ -18,6 +18,7 @@ import { // Fase 8.2 (biomas del Nether)
   CHISELED_NETHER_BRICKS,
 } from './blocks';
 import { QUARTZ_BLOCK, CHISELED_QUARTZ_BLOCK, QUARTZ_BRICKS, QUARTZ_PILLAR } from './blocks'; // Fase 8.5
+import { END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR } from './blocks'; // Fase 8.6
 
 const table = new Map<number, ItemStack[]>();
 const add = (input: number, id: number, count = 1) => {
@@ -58,6 +59,8 @@ const CUT_EDGES: readonly (readonly [number, number])[] = [
   [POLISHED_BLACKSTONE, CHISELED_POLISHED_BLACKSTONE], [NETHER_BRICKS, CHISELED_NETHER_BRICKS],
   // Fase 8.5 (lo que da el Nether): del bloque de cuarzo, el cincelado, los ladrillos y el pilar.
   [QUARTZ_BLOCK, CHISELED_QUARTZ_BLOCK], [QUARTZ_BLOCK, QUARTZ_BRICKS], [QUARTZ_BLOCK, QUARTZ_PILLAR],
+  // Fase 8.6 (el End): de la piedra del End, sus ladrillos; de la púrpura, el pilar.
+  [END_STONE, END_STONE_BRICKS], [PURPUR_BLOCK, PURPUR_PILLAR],
 ];
 {
   /** Formas de cada bloque: [id, cantidad]. */

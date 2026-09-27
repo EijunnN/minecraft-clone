@@ -173,6 +173,15 @@ export class ParticleFx {
     });
   }
 
+  /** Fase 8.6: mota de polvo del vacío del End: violeta, flota y deriva; con el destello, brilla más. */
+  endMote(x: number, y: number, z: number, flash: number): void {
+    this.ps.spawn({
+      x, y, z, vx: rnd(-0.08, 0.08), vy: rnd(-0.04, 0.1), vz: rnd(-0.08, 0.08), life: rnd(4, 9), size: rnd(0.025, 0.05), size1: 0.01,
+      sprite: SPRITE.glow, r: 0.9 + flash * 1.4, g: 0.55 + flash * 0.6, b: 1.4 + flash * 1.6, a: 0.7, drag: 0.8, wind: 0.1,
+      flags: PF.EMISSIVE | PF.DRIFT | PF.FADE_IN | PF.BLINK,
+    });
+  }
+
   /** Espora flotante (micelio, cuevas frondosas…). */
   spore(x: number, y: number, z: number, r: number, g: number, b: number, emissive = false): void {
     this.ps.spawn({

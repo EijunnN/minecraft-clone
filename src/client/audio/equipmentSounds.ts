@@ -74,6 +74,13 @@ function burst(ctx: AudioContext, noise: NoiseBuffers, dest: AudioNode, now: num
 
 export function buildEquipmentSfx(ctx: AudioContext, noise: NoiseBuffers, kind: string, dest: AudioNode, now: number, a = 0): Sources {
   switch (kind) {
+    // Fase 8.6: el teletransporte de la fruta de coro (y del enderman): un zumbido que baja y un chasquido hueco.
+    case 'chorus_teleport':
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: 900, freqEnd: 180, wave: 'sine', attack: 0.005, decay: 0.35, gain: 0.18 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 1350, freqEnd: 260, wave: 'triangle', attack: 0.005, decay: 0.3, gain: 0.08, detune: 12 }),
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 1800, freqEnd: 500, q: 1.5, attack: 0.003, decay: 0.25, gain: 0.15 }),
+      ];
     case 'ignite':
       // Raspado del acero contra el pedernal y el soplo de la llama al prender.
       return [

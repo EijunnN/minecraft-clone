@@ -179,6 +179,10 @@ export class Effects {
       case 'campfire_put':
         this.g.audio.playPlace('wood', p);
         break;
+      case 'chorus_grow': // Fase 8.6: la flor de coro crece
+        this.g.audio.playPlace('wood', p);
+        fx.spawnSparkles(p[0], p[1], p[2], 4, 0.4);
+        break;
       case 'campfire_done':
         this.g.audio.playPickup();
         fx.spawnSmoke(p[0], p[1], p[2], 6, 0.2, 0.7, 0.4, 1.2);

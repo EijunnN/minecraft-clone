@@ -1,6 +1,6 @@
 // Qué suelta cada bloque al romperse en supervivencia (según la herramienta usada).
 import { NETHER_WART_CROP, NETHER_WART_MAX_AGE, isNetherWartCrop } from '../blocks'; // Fase 8.4
-import { NETHER_WART } from '../items';
+import { NETHER_WART, CHORUS_FRUIT } from '../items';
 import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
   CLAY, GLASS, ICE, OAK_LEAVES, DARK_OAK_LEAVES, JUNGLE_LEAVES, isLeaves, isVine, woodOf, MYCELIUM, PACKED_ICE,
@@ -8,7 +8,7 @@ import {
   EMERALD_ORE, BUDDING_AMETHYST, AMETHYST_BUD, CAVE_VINES, COBWEB, MOB_SPAWNER, SNOW_LAYER, SNOW_BLOCK, isSnowLayer,
   SHORT_GRASS, FERN, DEAD_BUSH, BOOKSHELF, BLOCK_FLUID, GLASS_PANE, baseBlock, stateProps, isDoor, isBed, isSlab,
   WHEAT_CROP, CARROTS, POTATOES, BEETROOTS, familyBase, isCrop, isMatureCrop, isFarmland, isCake, MELON, COMPOSTER,
-  PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE, SOUL_CAMPFIRE, SOUL_SOIL,
+  PUMPKIN_STEM, MELON_STEM, ATTACHED_PUMPKIN_STEM, ATTACHED_MELON_STEM, CAMPFIRE, SOUL_CAMPFIRE, SOUL_SOIL, CHORUS_PLANT, CHORUS_FLOWER, isChorusFlower,
 } from '../blocks';
 // Fase 6 (monstruos): los bloques infestados no sueltan nada (sale una lepisma).
 import { isInfested } from '../blocks';
@@ -172,6 +172,9 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   // La fogata suelta carbón vegetal (como en Minecraft sin toque de seda).
   if (familyBase(block) === CAMPFIRE) return one(CHARCOAL, 2);
   if (familyBase(block) === SOUL_CAMPFIRE) return one(SOUL_SOIL, 1); // Fase 8.5: la de almas suelta tierra de alma
+  // Fase 8.6: la planta de coro suelta 0 o 1 fruta de coro; la flor, a sí misma (joven o muerta).
+  if (block === CHORUS_PLANT) return rnd(0, 1) ? one(CHORUS_FRUIT) : [];
+  if (isChorusFlower(block)) return one(CHORUS_FLOWER);
   // El compostador lleno suelta también su polvo de hueso.
   if (familyBase(block) === COMPOSTER && block - COMPOSTER === 8) return [{ id: COMPOSTER, count: 1 }, { id: BONE_MEAL, count: 1 }];
   // Fase 6.5 (decoración): la maceta suelta también su planta.

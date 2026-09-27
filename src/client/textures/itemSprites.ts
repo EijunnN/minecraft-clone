@@ -31,6 +31,7 @@ import { MECHANISM_SPRITES } from './mechanismSprites'; // Fase 7 (mecanismos)
 import { DEEP_DARK_SPRITES } from './deepDarkSprites'; // Fase 7.5 (abismo)
 import { NETHER_MOB_SPRITES } from './netherMobSprites'; // Fase 8.3 (criaturas del Nether)
 import { NETHER_GOODS_SPRITES } from './netherGoodsSprites'; // Fase 8.5 (lo que da el Nether)
+import { END_SPRITES } from './endSprites'; // Fase 8.6 (el End)
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2310,6 +2311,8 @@ SPRITES.nether_brick = { rows: SPRITES.brick.rows, inks: ramp([104, 50, 58], [78
 Object.assign(SPRITES, NETHER_MOB_SPRITES);
 // Fase 8.5 (lo que da el Nether): chatarra y lingote de netherita, plantilla de mejora y estrella del Nether.
 Object.assign(SPRITES, NETHER_GOODS_SPRITES);
+// Fase 8.6 (el End): los objetos del End.
+Object.assign(SPRITES, END_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

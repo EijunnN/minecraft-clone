@@ -110,6 +110,14 @@ export function buildEnchantSfx(ctx: AudioContext, noise: NoiseBuffers, kind: st
       [880, 1175, 1568].forEach((f, i) => out.push(playTonalBlip(ctx, { destination: dest, now: now + i * 0.07, freq: f, wave: 'sine', attack: 0.005, decay: 0.8, gain: 0.09 })));
       return out;
     }
+    // Fase 8.6: el trueno del destello del End: un retumbo grave y larguísimo que crece y se apaga, con un
+    // silbido alto encima.
+    case 'end_flash':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 260, freqEnd: 90, q: 0.9, attack: 0.9, decay: 4.5, gain: 0.55 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 55, freqEnd: 38, wave: 'sine', attack: 1.2, decay: 4, gain: 0.25 }),
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now: now + 0.4, filterType: 'bandpass', freq: 2600, freqEnd: 900, q: 3, attack: 0.8, decay: 2.6, gain: 0.05 }),
+      ];
     // Fase 8.5: la mesa de herrería: tres martillazos metálicos que se apagan.
     case 'smithing': {
       const out: Sources = [];

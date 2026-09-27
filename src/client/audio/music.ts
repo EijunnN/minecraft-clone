@@ -27,6 +27,12 @@ const NETHER_STYLES: Record<number, { scale: readonly number[]; root: number; be
   54: { scale: [0, 2, 3, 5, 7, 8, 11], root: 61.74, beat: [1.2, 1.8] }, // bosque carmesí: menor armónica
   55: { scale: [0, 2, 4, 6, 9], root: 73.42, beat: [1.5, 2.2] }, // bosque distorsionado: lidio, frío
   56: { scale: [0, 1, 3, 5, 6, 8, 10], root: 51.91, beat: [1.3, 1.9] }, // deltas de basalto: locrio
+  // Fase 8.6: el End (en Java, «The End»): muy lento y abierto, suspendido en quintas sobre un eolio lejano.
+  57: { scale: [0, 2, 3, 7, 8], root: 58.27, beat: [2.2, 3.2] },
+  58: { scale: [0, 2, 3, 7, 8], root: 58.27, beat: [2.2, 3.2] },
+  59: { scale: [0, 2, 3, 7, 8], root: 58.27, beat: [2.2, 3.2] },
+  60: { scale: [0, 2, 3, 7, 8], root: 58.27, beat: [2.2, 3.2] },
+  61: { scale: [0, 2, 3, 7, 8], root: 58.27, beat: [2.2, 3.2] },
 };
 
 export class MusicEngine {

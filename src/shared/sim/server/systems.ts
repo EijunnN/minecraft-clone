@@ -21,6 +21,7 @@ import { Composters } from './composters';
 import { Fishing } from './fishing';
 import { Campfires } from './campfires';
 import { NetherGoods } from './netherGoods'; // Fase 8.5 (lo que da el Nether)
+import { EndGoods } from './endGoods'; // Fase 8.6 (el End)
 import { Signs } from './signs';
 import { ContainerSystem } from './containerSystem';
 import { BlockEdits } from './blockEdits';
@@ -102,6 +103,8 @@ export class ServerSystems {
   readonly shelves: Shelves;
   /** Fase 6.5 (calderos): calderos con agua, lava o nieve polvo. */
   readonly cauldrons: Cauldrons;
+  /** Fase 8.6 (el End): el coro y la plataforma de llegada. */
+  readonly endGoods: EndGoods;
   /** Fase 6.5 (remate): etiquetas y correas. */
   readonly leashes: Leashes;
   /** Fase 6.5 (remate): soportes para armadura. */
@@ -180,6 +183,7 @@ export class ServerSystems {
     this.hangings = new Hangings(ctx, store);
     this.shelves = new Shelves(ctx, store);
     this.cauldrons = new Cauldrons(ctx, this.nature);
+    this.endGoods = new EndGoods(ctx, this.nature);
     this.edits.cauldrons = (s, x, y, z, id, item) => this.cauldrons.use(s, x, y, z, id, item);
     this.edits.netherGoods = (s, x, y, z, id, item) => this.netherGoods.use(s, x, y, z, id, item); // Fase 8.5
     this.leashes = new Leashes(ctx);

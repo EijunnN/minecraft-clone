@@ -11,7 +11,7 @@ import { remoteViews, selfView, animateHand, splitEntities, frameState, updateNa
 import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
 import { Renderer } from '../render/Renderer';
 import { World } from '../world/World';
-import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
+import { dimensionDef, DIM_END } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 import { PortalFx } from './portalFx';
 import { Player } from './Player';
 import { Input } from './Input';
@@ -64,6 +64,7 @@ import { raycastHangings } from './decorInteraction'; // Fase 6.5 (decoración):
 import { EnchantClient } from './enchantClient';
 import { EnchantBooks } from './enchantBooks';
 import { Beacons } from './beacons'; // Fase 8.5 (lo que da el Nether)
+import { EndAtmosphere } from './endAtmosphere'; // Fase 8.6 (el End)
 import { MechanismsClient } from './mechanismsClient'; // Fase 7 (mecanismos)
 import { shieldDecorKey } from '../render/shieldArt'; // Fase 7.6
 
@@ -146,6 +147,8 @@ export class Game {
   readonly enchantBooks = new EnchantBooks(this);
   /** Fase 8.5: los faros (el haz, su nivel y sus efectos elegidos). */
   readonly beacons = new Beacons(this);
+  /** Fase 8.6: los destellos y el polvo del End. */
+  readonly endAtmos = new EndAtmosphere(this);
   /** Fase 7 (mecanismos): lo que mueven los pistones y la armadura de los dispensadores. */
   readonly mechanisms = new MechanismsClient(this);
   selected = 0;
@@ -805,6 +808,7 @@ export class Game {
     this.enchant.update(dt); // Fase 7 (encantamientos): Respiración, Agilidad acuática, Paso helado, runas
     this.enchantBooks.update(dt);
     this.beacons.update(dt); // Fase 8.5
+    this.endAtmos.update(dt); // Fase 8.6
     this.life.tickSurvival(dt, moved, wasGround, rain);
     this.audio.setHeartbeat(!this.creative && !surv.dead && surv.health <= 6 ? (7 - surv.health) / 6 : 0);
 
@@ -932,7 +936,8 @@ export class Game {
       waterProximity: waterNear,
       altitude: cam.camY,
       rain: sky.snow ? 0 : rain * Math.min(1, this.camera.eyeSky * 1.3),
-      netherBiome: this.netherAtmos.biome, // Fase 8.2
+      // Fase 8.2: el bioma del Nether (su ambiente y su música); 8.6: en el End, el suyo (sin los sonidos del mundo normal).
+      netherBiome: this.world?.dim === DIM_END ? this.world.generator.biomeAt(Math.floor(this.player.x), Math.floor(this.player.z)) : this.netherAtmos.biome,
     });
 
     ui.setDebug(this.debug ? debugText(this, eye, sky, { mobs: mobs.length, drops: drops.length }, target) : null);

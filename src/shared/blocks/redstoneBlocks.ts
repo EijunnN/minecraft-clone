@@ -773,7 +773,7 @@ function rodBoxes(t: number): ModelBox[] {
   return [mbox(7, 0, 7, 9, 12, 9, t), mbox(6, 12, 6, 10, 16, 10, t)];
 }
 /** Gira cajas pensadas hacia arriba para que apunten hacia la cara `face`. */
-function pointTo(boxes: ModelBox[], face: number): ModelBox[] {
+export function pointTo(boxes: ModelBox[], face: number): ModelBox[] {
   if (face === UP) return boxes;
   if (face === DOWN) return boxes.map((b) => ({ ...b, y0: 16 - b.y1, y1: 16 - b.y0, tex: [b.tex[0], b.tex[1], b.tex[3], b.tex[2], b.tex[4], b.tex[5]] }));
   // Horizontal: tumbado hacia el norte y luego girado.

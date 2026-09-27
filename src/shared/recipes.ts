@@ -806,3 +806,14 @@ import { NETHER_STAR } from './items';
   shape(['OOO', 'GGG', 'OOO'], { O: CRY, G: GLS }, RESPAWN_ANCHOR);
   shape(['GGG', 'GSG', 'OOO'], { G: GLA, S: NETHER_STAR, O: OBS }, BEACON);
 }
+
+// ------------------------------------------------------------------ Fase 8.6 (el End)
+// Ladrillos de piedra del End (4), púrpura (4 frutas de coro reventadas: 4), el pilar de dos losas de púrpura y
+// la vara del End (una vara de blaze sobre una fruta reventada: 4). Losas, escaleras y muros, de los bucles de
+// arriba.
+import { POPPED_CHORUS_FRUIT as PCF, BLAZE_ROD as BRD } from './items';
+import { END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD } from './blocks';
+shape(['SS', 'SS'], { S: END_STONE }, END_STONE_BRICKS, 4);
+shape(['FF', 'FF'], { F: PCF }, PURPUR_BLOCK, 4);
+shape(['S', 'S'], { S: SLABS.purpur }, PURPUR_PILLAR);
+shape(['B', 'F'], { B: BRD, F: PCF }, END_ROD, 4);

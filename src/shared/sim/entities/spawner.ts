@@ -26,7 +26,7 @@ import { isDeepDark } from '../../world/deepDark'; // Fase 7.5 (abismo)
 import {
   critterWorldTick, critterPassiveFor, critterFloor, CRITTER_GROUPS, biomeWithoutMonsters, structureMonster,
 } from './critters';
-import { DIM_OVERWORLD, DIM_NETHER } from '../../dimensions'; // Fase 8 (dimensiones)
+import { DIM_OVERWORLD, DIM_NETHER, DIM_END } from '../../dimensions'; // Fase 8 (dimensiones)
 import { NetherSpawner } from './netherSpawner'; // Fase 8.3 (criaturas del Nether)
 
 export class Spawner {
@@ -46,7 +46,7 @@ export class Spawner {
     this.squidTimer -= dt;
     if (players.length === 0) return;
     // Fase 8: fuera del mundo normal no sale nada de lo de aquí. Fase 8.3: en el Nether, su propia aparición.
-    if (this.m.host.world.dim === DIM_NETHER) {
+    if (this.m.host.world.dim === DIM_NETHER || this.m.host.world.dim === DIM_END) { // Fase 8.6: y en el End
       this.nether.tick(players);
       return;
     }

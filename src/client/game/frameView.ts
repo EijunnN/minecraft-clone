@@ -177,6 +177,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     bolts: g.bolts,
     guardianBeams: guardianBeams(g), // Fase 7.5 (océano)
     beaconBeams: g.beacons.beams(), // Fase 8.5
+    endFlash: g.endAtmos.flash ?? undefined, // Fase 8.6
     fishLines: fishingLines(g.bobbers, g.ents.list, g.net?.id ?? null, localRod, f.views),
     leashes: leashLines(g.ents.list, g.net?.id ?? null, localRod, f.views), // Fase 6.5 (remate)
     showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass',

@@ -24,6 +24,11 @@ import {
   BIOME_NETHER_WASTES, BIOME_SOUL_SAND_VALLEY, BIOME_CRIMSON_FOREST, BIOME_WARPED_FOREST, BIOME_BASALT_DELTAS,
 } from '../../world/biomeIds';
 import { CHUNK_SIZE } from '../../constants';
+import { isEndBiome } from '../../world/biomeIds'; // Fase 8.6
+import { DIM_NETHER, DIM_END } from '../../dimensions';
+
+/** Fase 8.6: lo que sale en los biomas del End. */
+const END_SPAWNS: NetherSpawns = { monsters: [[MOB_ENDERMAN, 10, 4, 4]], creatures: [] };
 import type { Entity, PlayerView } from './types';
 import type { Entities } from './Entities';
 
@@ -55,8 +60,9 @@ export class NetherSpawner {
 
   constructor(private m: Entities) {}
 
-  /** Qué sale en un bioma (por su id). */
+  /** Qué sale en un bioma (por su id). Fase 8.6: en el End, sólo enderman (10, de 4 en 4, en sus cinco biomas). */
   spawnsAt(biome: number): NetherSpawns {
+    if (isEndBiome(biome)) return END_SPAWNS;
     return NETHER_SPAWNS[BIOME_KEYS[biome] ?? 'nether_wastes'];
   }
 
@@ -157,6 +163,7 @@ export class NetherSpawner {
 
   /** Fase 8.4: la lista de la fortaleza si (x, y, z) está en ella. */
   private fortressList(x: number, y: number, z: number): readonly SpawnEntry[] | null {
+    if (this.m.host.world.dim !== DIM_NETHER) return null; // Fase 8.6: fuera del Nether no hay fortalezas
     const gen = this.m.w.gen;
     if (inFortressPiece(gen, x, y, z)) return FORTRESS_ENEMIES;
     if (this.m.w.getBlock(x, y - 1, z) === NETHER_BRICKS && inFortressBounds(gen, x, y, z)) return FORTRESS_ENEMIES;
@@ -221,8 +228,10 @@ export class NetherSpawner {
         while (BLOCK_FLUID[Math.max(0, w.getBlock(x, yy, z))] === 2) yy++;
         return w.getBlock(x, yy, z) === 0;
       }
-      case MOB_SKELETON:
       case MOB_ENDERMAN:
+        // Fase 8.6: en el End (monster_spawn_block_light_limit 0), sin ninguna luz de bloque.
+        return !this.lightAbove(x, y, z, this.m.host.world.dim === DIM_END ? 0 : 7);
+      case MOB_SKELETON:
       case MOB_WITHER_SKELETON:
       case MOB_BLAZE:
         // checkMonsterSpawnRules: luz de bloques como mucho 7 en el Nether (el blaze, cualquiera, pero ≤ 11).

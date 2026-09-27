@@ -233,3 +233,48 @@ export class BlendedNoise {
     return lerp(choice, this.minLimit.get(X, Y, Z), this.maxLimit.get(X, Y, Z));
   }
 }
+
+/**
+ * Fase 8.6 (el End): SimplexNoise de Java en 2D (el de las islas exteriores del End, EndIslandDensityFunction):
+ * una permutación al azar y los gradientes de las aristas del cubo; getValue(x, y) sin desplazamiento.
+ */
+export class SimplexNoise {
+  private readonly p = new Int32Array(512);
+  constructor(random: NoiseRandom) {
+    random.nextDouble();
+    random.nextDouble();
+    random.nextDouble();
+    for (let i = 0; i < 256; i++) this.p[i] = i;
+    for (let i = 0; i < 256; i++) {
+      const j = random.nextInt(256 - i);
+      const t = this.p[i];
+      this.p[i] = this.p[j + i];
+      this.p[j + i] = t;
+    }
+  }
+  private perm(x: number): number {
+    return this.p[x & 255];
+  }
+  private corner(g: number, x: number, y: number): number {
+    let t = 0.5 - x * x - y * y;
+    if (t < 0) return 0;
+    t *= t;
+    return t * t * (GX[g] * x + GY[g] * y);
+  }
+  getValue(x: number, y: number): number {
+    const s = (x + y) * SIMPLEX_F2;
+    const i = Math.floor(x + s), j = Math.floor(y + s);
+    const t = (i + j) * SIMPLEX_G2;
+    const x0 = x - (i - t), y0 = y - (j - t);
+    const i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
+    const x1 = x0 - i1 + SIMPLEX_G2, y1 = y0 - j1 + SIMPLEX_G2;
+    const x2 = x0 - 1 + 2 * SIMPLEX_G2, y2 = y0 - 1 + 2 * SIMPLEX_G2;
+    const ii = i & 255, jj = j & 255;
+    const g0 = this.perm(ii + this.perm(jj)) % 12;
+    const g1 = this.perm(ii + i1 + this.perm(jj + j1)) % 12;
+    const g2 = this.perm(ii + 1 + this.perm(jj + 1)) % 12;
+    return 70 * (this.corner(g0, x0, y0) + this.corner(g1, x1, y1) + this.corner(g2, x2, y2));
+  }
+}
+const SIMPLEX_F2 = 0.5 * (Math.sqrt(3) - 1);
+const SIMPLEX_G2 = (3 - Math.sqrt(3)) / 6;

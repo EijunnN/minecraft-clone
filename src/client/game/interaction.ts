@@ -5,6 +5,7 @@
 import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { raycast, type RayHit } from './raycast';
 import { netherGoodsUse } from './netherGoodsUse'; // Fase 8.5
+import { endAfterEat, itemCooldown } from './endClient'; // Fase 8.6
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
@@ -276,7 +277,7 @@ export class Interaction {
       return;
     }
     if (def.food || def.drink) {
-      if (pressed && (def.drink || def.food?.always || this.g.survival.food < 20 || this.g.creative)) this.use = { kind: 'eat', t: 0, slot: this.g.selected, item: held.id, soundT: 0.3 };
+      if (pressed && itemCooldown(held.id) <= 0 && (def.drink || def.food?.always || this.g.survival.food < 20 || this.g.creative)) this.use = { kind: 'eat', t: 0, slot: this.g.selected, item: held.id, soundT: 0.3 }; // Fase 8.6: en espera, no
       return;
     }
     if (def.armor) {
@@ -572,6 +573,7 @@ export class Interaction {
     faunaAfterEat(this.g, this, u.item, u.slot); // Fase 6 (fauna): miel
     decorAfterEat(this.g, this, u.item, u.slot, eatenDmg); // Fase 6.5 (decoración): cuenco y estofado sospechoso
     afterDrinkOminous(this.g, u.item); // Fase 6 (asaltos): Mal presagio
+    endAfterEat(this.g, u.item); // Fase 8.6: la fruta de coro teletransporta
   }
 
   releaseBow(dir: number[]): void {

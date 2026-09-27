@@ -65,6 +65,17 @@ export const BIOME_SOUL_SAND_VALLEY = 53;
 export const BIOME_CRIMSON_FOREST = 54;
 export const BIOME_WARPED_FOREST = 55;
 export const BIOME_BASALT_DELTAS = 56;
+// Fase 8.6 (el End): la isla central, las tierras altas, las medias, las islas pequeñas y los páramos.
+export const BIOME_THE_END = 57;
+export const BIOME_END_HIGHLANDS = 58;
+export const BIOME_END_MIDLANDS = 59;
+export const BIOME_SMALL_END_ISLANDS = 60;
+export const BIOME_END_BARRENS = 61;
+
+/** ¿Es un bioma del End? */
+export function isEndBiome(b: number): boolean {
+  return b >= BIOME_THE_END && b <= BIOME_END_BARRENS;
+}
 
 export const BIOME_NAMES = [
   'Océano', 'Océano helado', 'Playa', 'Llanura', 'Bosque', 'Bosque de abedules', 'Taiga',
@@ -82,6 +93,8 @@ export const BIOME_NAMES = [
   'Desiertos del Nether',
   // Fase 8.2
   'Valle de almas', 'Bosque carmesí', 'Bosque distorsionado', 'Deltas de basalto',
+  // Fase 8.6
+  'El End', 'Tierras altas del End', 'Tierras medias del End', 'Islas pequeñas del End', 'Páramos del End',
 ];
 
 /**

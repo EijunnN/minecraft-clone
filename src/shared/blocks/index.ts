@@ -232,3 +232,8 @@ export * from './netherStructureBlocks';
 import { NETHER_GOODS_INVENTORY } from './netherGoodsBlocks';
 export * from './netherGoodsBlocks';
 (INVENTORY_ORDER as number[]).push(...NETHER_GOODS_INVENTORY);
+// Fase 8.6 (el End): piedra del End, púrpura, vara del End y coro (ids nuevos, al final) y su sitio en el
+// inventario creativo.
+import { END_INVENTORY } from './endBlocks';
+export * from './endBlocks';
+(INVENTORY_ORDER as number[]).push(...END_INVENTORY);

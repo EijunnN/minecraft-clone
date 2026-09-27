@@ -468,6 +468,9 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'soul_campfire_embers', 'respawn_anchor_top_off', 'respawn_anchor_top', 'respawn_anchor_bottom', 'beacon',
     ...[0, 1, 2, 3, 4].map((c) => `respawn_anchor_side${c}`)].map((name): TextureDef => ({ name })),
   { name: 'soul_campfire_fire', wave: 2, cutout: true },
+  // Fase 8.6 (el End).
+  ...['end_stone', 'end_stone_bricks', 'purpur_block', 'purpur_pillar', 'purpur_pillar_top', 'end_rod'].map((name): TextureDef => ({ name })),
+  ...['chorus_plant', 'chorus_flower', 'chorus_flower_dead'].map((name): TextureDef => ({ name, sss: 0.3 })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

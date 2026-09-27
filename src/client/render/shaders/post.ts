@@ -42,6 +42,54 @@ vec3 netherFogColor(float y, float rdy) {
   // Hacia arriba, la oscuridad del techo; hacia abajo, el resplandor.
   return c * mix(1.18, 0.62, smoothstep(-0.35, 0.6, rdy));
 }
+/** Fase 8.6: ruido de valor 3D (para las nebulosas del cielo del End). */
+float vnoise3(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash13(i), b = hash13(i + vec3(1, 0, 0)), c = hash13(i + vec3(0, 1, 0)), d = hash13(i + vec3(1, 1, 0));
+  float e = hash13(i + vec3(0, 0, 1)), g = hash13(i + vec3(1, 0, 1)), h = hash13(i + vec3(0, 1, 1)), k = hash13(i + vec3(1, 1, 1));
+  return mix(mix(mix(a, b, f.x), mix(c, d, f.x), f.y), mix(mix(e, g, f.x), mix(h, k, f.x), f.y), f.z);
+}
+float fbm3(vec3 p) {
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    s += a * vnoise3(p);
+    p = p * 2.03 + vec3(1.7, 9.2, 3.1);
+    a *= 0.5;
+  }
+  return s;
+}
+/**
+ * Fase 8.6: el cielo del End. En Java es un mosaico gris; aquí, el vacío: casi negro arriba y abajo, con la
+ * niebla en la línea del horizonte (para que las islas lejanas se fundan con él), nebulosas violetas y verdosas
+ * que derivan muy despacio, estrellas tenues que titilan y el destello (EndFlashState de la 26.3): un resplandor
+ * violeta en su dirección que también aclara todo el cielo.
+ */
+vec3 endSky(vec3 rd) {
+  vec3 fogc = uDimFog.rgb;
+  float band = exp(-abs(rd.y) * 5.0);
+  vec3 c = mix(vec3(0.0022, 0.0016, 0.0032), fogc, band);
+  vec3 p = rd * 2.6 + vec3(0.0, uWind.w * 0.0015, 0.0);
+  float n = fbm3(p);
+  float tint = fbm3(p * 1.9 + 11.3);
+  float neb = smoothstep(0.42, 0.85, n) * (1.0 - 0.6 * band);
+  c += mix(vec3(0.030, 0.008, 0.045), vec3(0.006, 0.024, 0.026), tint) * neb;
+  // Estrellas: una de cada muchas celdas de una rejilla sobre la esfera.
+  vec3 q = rd * 150.0;
+  vec3 cell = floor(q);
+  float h = hash13(cell);
+  if (h > 0.982) {
+    float d = length(fract(q) - 0.5);
+    float tw = 0.6 + 0.4 * sin(uWind.w * (1.5 + h * 3.0) + h * 97.0);
+    c += vec3(0.75, 0.7, 1.0) * smoothstep(0.32, 0.0, d) * (h - 0.982) * 18.0 * tw * (1.0 - band);
+  }
+  float fl = uEndFlash.w;
+  if (fl > 0.0) {
+    float d = max(dot(rd, normalize(uEndFlash.xyz)), 0.0);
+    c += vec3(0.67, 0.38, 0.80) * fl * (pow(d, 90.0) * 5.0 + pow(d, 10.0) * 0.5 + 0.035);
+  }
+  return c;
+}
 /** Camino que recorre el rayo dentro de la capa de aire caliente (2,5 bloques sobre la lava). */
 float heatPath(vec3 rd, float dist) {
   if (uDim.y <= 0.0) return 0.0;
@@ -154,7 +202,9 @@ void main() {
     float far = sky ? 1.0 / max(uDim.z, 1e-4) : dist;
     float yEnd = uCamPos.y + rd.y * min(far, 160.0);
     vec3 fogCol = netherFogColor(0.5 * (uCamPos.y + yEnd), rd.y);
-    if (sky) col = fogCol;
+    // Fase 8.6: el End tiene su cielo (y la niebla, que se aclara con el destello).
+    if (uDimFog.w > 0.5) fogCol += vec3(0.67, 0.38, 0.80) * uEndFlash.w * 0.02;
+    if (sky) col = uDimFog.w > 0.5 ? endSky(rd) : fogCol;
     else {
       col = mix(col, fogCol, 1.0 - exp(-netherFogDepth(rd, dist)));
       col = mix(col, fogCol, smoothstep(uFog.z, uFog.w, length(rel.xz)));
