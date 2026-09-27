@@ -17,7 +17,7 @@
 // lo usa para el brillo especular).
 
 import { boxUV } from '../render/PlayerSkin';
-import type { ArmorMaterial, ArmorSlot } from '../../shared/armor';
+import type { SuitMaterial as ArmorMaterial, ArmorSlot } from '../../shared/armor';
 
 export type BodyPart = 'head' | 'body' | 'rightArm' | 'leftArm' | 'rightLeg' | 'leftLeg';
 

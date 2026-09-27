@@ -49,6 +49,8 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
       h.ctx.entities.dragon.crystalHit(ent, s.id);
       return;
     }
+    // Fase 8.6: la bala del shulker se deshace con un golpe.
+    if (ent && Math.hypot(ent.x - s.p[0], ent.y - s.p[1] - 1.6, ent.z - s.p[2]) < 7 && h.ctx.entities.shulkers.hitBullet(ent)) return;
     if (!h.sys.hangings.onAttack(s, e) && !h.sys.stands.onAttack(s, e) && !h.sys.transport.onAttack(s, e, Number(m.item))) h.sys.actions.onAttack(s, m);
   }),
   pickup: route<'pickup'>(0.5, (h, s, m) => h.sys.actions.onPickup(s, Number(m.e))),

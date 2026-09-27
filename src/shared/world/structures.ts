@@ -45,8 +45,10 @@ export interface StructureMob {
   x: number;
   y: number;
   z: number;
-  /** Fase 7.5 (fauna): variante (la piel del gato negro de la cabaña de bruja). */
+  /** Fase 7.5 (fauna): variante (la piel del gato negro de la cabaña de bruja). Fase 8.6: en un marco, el objeto. */
   variant?: number;
+  /** Fase 8.6: hacia dónde mira (el marco con los élitros del barco del End). */
+  facing?: number;
 }
 
 /** Lienzo de un chunk: escribe sólo dentro del chunk y anota los cofres. */

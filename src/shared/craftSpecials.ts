@@ -3,7 +3,8 @@
 //   pierde los encantamientos salvo las maldiciones.
 // - Escudo con estandarte: un escudo sin decorar y un estandarte dan el escudo con el dibujo del
 //   estandarte (conserva su desgaste y sus encantamientos).
-import { SHIELD, type ItemStack } from './items';
+import { SHIELD, DYES, type ItemStack } from './items';
+import { isShulkerBox, SHULKER_BOXES, DYE_COLORS, type DyeColor } from './blocks'; // Fase 8.6
 import { maxDurability, enchantsOf, ENCHANTS } from './enchantments';
 import { bannerColor, isBannerItem } from './bannerPatterns';
 
@@ -25,6 +26,19 @@ export function repairCraft(grid: readonly (ItemStack | null)[]): ItemStack | nu
   if (curses.length) out.data = { ench: curses.map((e): [number, number] => [e[0], e[1]]) };
   return out;
 }
+
+/**
+ * Fase 8.6 (ShulkerBoxColoring): una caja de shulker y un tinte dan la caja de ese color, con lo que llevaba dentro.
+ */
+export function shulkerDyeCraft(grid: readonly (ItemStack | null)[]): ItemStack | null {
+  const items = filled(grid);
+  if (items.length !== 2) return null;
+  const box = items.find((s) => isShulkerBox(s.id));
+  const dye = items.find((s) => DYE_OF.has(s.id));
+  if (!box || !dye || box.count !== 1) return null;
+  return { ...box, id: SHULKER_BOXES[DYE_OF.get(dye.id)!], count: 1 };
+}
+const DYE_OF = new Map<number, DyeColor>(DYE_COLORS.map((c) => [DYES[c], c]));
 
 /** Escudo decorado con un estandarte (null si no es esta receta). */
 export function shieldDecorCraft(grid: readonly (ItemStack | null)[]): ItemStack | null {

@@ -33,7 +33,7 @@ import { AmbientParticles } from './ambientParticles';
 import { NetherAtmosphere } from './netherAtmosphere'; // Fase 8.2 (biomas del Nether)
 import { maxStack, type ItemStack } from '../../shared/items';
 import { CHUNK_SIZE, DAY_LENGTH_SECONDS, SEA_LEVEL } from '../../shared/constants';
-import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
+import { STATE_FLY, STATE_SNEAK, STATE_SWIM, STATE_DEAD, STATE_SLEEP, STATE_PRONE, STATE_GLIDE, STATE_EAT, STATE_BOW, STATE_BLOCK, worldTimeAt, type WorldTime, type GameMode, type PlayerSave } from '../../shared/protocol';
 import { REACH_CREATIVE, REACH_SURVIVAL, ATTACK_REACH, lighten } from './gameTypes';
 import { Interaction } from './interaction';
 import { Experience } from './experience';
@@ -693,7 +693,7 @@ export class Game {
   sendPos(force: boolean): void {
     const p = this.player;
     const s = (p.sneaking ? STATE_SNEAK : 0) | (p.flying ? STATE_FLY : 0) | (p.inWater ? STATE_SWIM : 0) |
-      (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0) | (p.pose !== 'stand' ? STATE_PRONE : 0) |
+      (this.survival.dead ? STATE_DEAD : 0) | (this.life.sleeping ? STATE_SLEEP : 0) | (p.pose !== 'stand' ? STATE_PRONE : 0) | (p.gliding ? STATE_GLIDE : 0) |
       useState(this.interaction.use) | potionPosState(this).s | effectsPosState(this); // Fase 7 (pociones y efectos): invisible y brillo
     const ec = potionPosState(this).ec;
     const q = (v: number, step: number) => Math.round(v / step);

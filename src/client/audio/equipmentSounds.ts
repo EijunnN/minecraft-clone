@@ -126,6 +126,42 @@ export function buildEquipmentSfx(ctx: AudioContext, noise: NoiseBuffers, kind: 
         playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'bandpass', freq: 420, freqEnd: 260, q: 1.2, attack: 0.1, decay: d, gain: 0.35 }),
       ];
     }
+    // Fase 8.6: el shulker. Se abre: la concha que raspa y un chasquido hueco que sube…
+    case 'shulker_open':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 500, freqEnd: 1300, q: 2.2, attack: 0.02, decay: 0.28, gain: 0.22 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 240, freqEnd: 420, wave: 'triangle', attack: 0.01, decay: 0.22, gain: 0.1 }),
+      ];
+    // … se cierra: un golpe seco de concha contra concha…
+    case 'shulker_close':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 1200, freqEnd: 300, q: 1.2, attack: 0.002, decay: 0.12, gain: 0.4 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 300, freqEnd: 180, wave: 'triangle', attack: 0.002, decay: 0.1, gain: 0.14 }),
+      ];
+    // … dispara: un silbido de energía que se aleja…
+    case 'shulker_shoot':
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: 1500, freqEnd: 600, wave: 'sine', attack: 0.004, decay: 0.3, gain: 0.14 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 2250, freqEnd: 900, wave: 'triangle', attack: 0.004, decay: 0.25, gain: 0.05, detune: 10 }),
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'bandpass', freq: 2600, freqEnd: 1200, q: 2, attack: 0.003, decay: 0.2, gain: 0.08 }),
+      ];
+    // … y se teletransporta (como la fruta de coro, pero más grave).
+    case 'shulker_teleport':
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: 650, freqEnd: 130, wave: 'sine', attack: 0.005, decay: 0.4, gain: 0.18 }),
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 1400, freqEnd: 380, q: 1.5, attack: 0.003, decay: 0.3, gain: 0.14 }),
+      ];
+    // La bala: choca (un estallido pequeño) o la rompe un golpe (un crujido de cristal).
+    case 'shulker_bullet_hit':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 1500, freqEnd: 200, q: 0.8, attack: 0.002, decay: 0.3, gain: 0.35 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 900, freqEnd: 300, wave: 'sine', attack: 0.002, decay: 0.2, gain: 0.08 }),
+      ];
+    case 'shulker_bullet_hurt':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 3000, q: 0.9, attack: 0.001, decay: 0.12, gain: 0.2 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 2400, freqEnd: 1600, wave: 'sine', attack: 0.001, decay: 0.15, gain: 0.07 }),
+      ];
     case 'dragon_flap':
       return [playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 380, freqEnd: 120, q: 0.8, attack: 0.06, decay: 0.55, gain: 0.55 })];
     // La muerte: un alarido largo que se quiebra y cae, con el retumbo de fondo.

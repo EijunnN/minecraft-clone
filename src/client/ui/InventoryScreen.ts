@@ -32,7 +32,7 @@ import { BeaconPanel } from './beaconScreen'; // Fase 8.5
 import { cartographyResult, mapExtendCraft } from '../../shared/mapOps';
 import { FILLED_MAP, EMPTY_MAP, PAPER } from '../../shared/items';
 import { GLASS_PANE } from '../../shared/blocks';
-import { repairCraft, shieldDecorCraft } from '../../shared/craftSpecials';
+import { repairCraft, shieldDecorCraft, shulkerDyeCraft } from '../../shared/craftSpecials';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom'
   | 'brewing' // Fase 7 (pociones): alambique
@@ -391,7 +391,7 @@ export class InventoryScreen {
     if (this.kind === 'cartography') return cartographyResult(this.grid[0], this.grid[1]); // Fase 7.6
     if (this.kind !== 'player' && this.kind !== 'table') return null;
     // Fase 7.6: ampliar un mapa con papel, reparar juntando dos objetos y el escudo con estandarte.
-    const special = (this.kind === 'table' ? mapExtendCraft(this.grid) : null) ?? repairCraft(this.grid) ?? shieldDecorCraft(this.grid);
+    const special = (this.kind === 'table' ? mapExtendCraft(this.grid) : null) ?? repairCraft(this.grid) ?? shieldDecorCraft(this.grid) ?? shulkerDyeCraft(this.grid); // Fase 8.6: teñir la caja de shulker
     if (special) return special;
     // Fase 6.5 (equipo): los fuegos artificiales miran las pilas (los colores de las estrellas).
     const fw = fireworkCraft(this.grid);

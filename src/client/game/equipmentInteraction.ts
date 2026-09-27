@@ -17,7 +17,8 @@ import {
 } from '../../shared/items';
 import { MOB_HORSE, MOB_WOLF, MOB_PIG, MOB_STRIDER } from '../../shared/mobs';
 import { EF_TAMED, EF_BABY } from '../../shared/protocol';
-import { CROSSBOW_CHARGE, TRIDENT_MIN_CHARGE, GOAT_HORN_COOLDOWN } from '../../shared/equipment';
+import { CROSSBOW_CHARGE, TRIDENT_MIN_CHARGE, GOAT_HORN_COOLDOWN, fireworkFlight } from '../../shared/equipment';
+import { rocketLifetime } from '../../shared/elytra'; // Fase 8.6
 import { hasArrows, takeArrow } from './potionClient'; // Fase 7 (pociones)
 import { loadCrossbow, unloadCrossbow } from '../../shared/itemData'; // Fase 7 (remate)
 import { RIPTIDE, QUICK_CHARGE, enchLevel, enchantsOf } from '../../shared/enchantments'; // Fase 7 (encantamientos)
@@ -96,6 +97,15 @@ export function equipmentUse(
       return true;
     }
     case FIREWORK_ROCKET:
+      // Fase 8.6: planeando con élitros, el cohete se pega al jugador y lo empuja hacia donde mira mientras dura.
+      if (g.player.gliding) {
+        const lt = rocketLifetime(fireworkFlight(held.dmg), Math.random);
+        g.player.rockets.push(lt);
+        g.net?.send({ t: 'throw', item: heldId, p: [g.player.x, g.player.y, g.player.z], d: [0, 0, 0], lt, ...(held.dmg ? { w: held.dmg } : {}) });
+        if (!g.creative) g.inv.consume(g.selected, 1);
+        g.swing(false);
+        return true;
+      }
       if (!hit) return true;
       g.net?.send({
         t: 'throw', item: heldId, p: [hit.px + hit.nx * 0.15, hit.py + hit.ny * 0.15, hit.pz + hit.nz * 0.15], d: [0, 1, 0],

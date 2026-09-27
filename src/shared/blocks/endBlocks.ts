@@ -12,6 +12,8 @@ import { addMaterialShapes } from './building';
 import { addWall } from './decoration';
 import { addAxisLogs } from './logAxis';
 import { pointTo } from './redstoneBlocks';
+import { DYE_COLORS, COLOR_NAMES } from './colors'; // Fase 8.6: las cajas de shulker
+import { registerSkull, skullTexture, SKULLS, SKULL_FACES } from './collections'; // Fase 8.6: la cabeza de dragón
 
 const PICK = (hardness: number, sound: SoundMaterial = 'stone') => ({ hardness, tool: 'pickaxe' as const, tier: 1, sound, category: 'construccion' as const });
 
@@ -189,5 +191,102 @@ export const DRAGON_EGG = family('dragon_egg', 'Huevo de dragón', [], () => {
   };
 });
 
+// ------------------------------------------------------------------ cajas de shulker y cofre de ender
+
+/** Colores de las cajas de shulker: la normal (morada, sin teñir) y las dieciséis teñidas. */
+export const SHULKER_BOX_COLORS = ['', ...DYE_COLORS] as const;
+export type ShulkerBoxColor = (typeof SHULKER_BOX_COLORS)[number];
+
+/** La caja de shulker con su tapa hacia arriba: la base (4 de alto) y la tapa encima (la junta se ve de lado). */
+function shulkerBoxBoxes(prefix: string): ModelBox[] {
+  const lid = L(`${prefix}shulker_box_lid`), base = L(`${prefix}shulker_box_base`);
+  return [
+    mbox(0, 4, 0, 16, 16, 16, [lid, lid, L(`${prefix}shulker_box_top`), -1, lid, lid]),
+    mbox(0, 0, 0, 16, 4, 16, [base, base, -1, L(`${prefix}shulker_box_bottom`), base, base]),
+  ];
+}
+
+/**
+ * Cajas de shulker (ShulkerBoxBlock): guardan 27 pilas y, al romperlas, se llevan dentro lo que tenían (no se
+ * desparrama). La tapa mira hacia la cara en la que se ponen (seis direcciones: 0 +x, 1 −x, 2 arriba, 3 abajo,
+ * 4 +z, 5 −z) y no se abren si algo la tapa. Dureza 2; se pican mejor con pico pero salen con cualquier cosa.
+ */
+export const SHULKER_BOXES = Object.fromEntries(SHULKER_BOX_COLORS.map((c) => {
+  const prefix = c ? `${c}_` : '';
+  const name = c ? `Caja de shulker ${COLOR_NAMES[c][1]}` : 'Caja de shulker';
+  const id = family(`${prefix}shulker_box`, name, [['facing', 6]], (st) => ({
+    render: R_MODEL, opaque: false, lightOpacity: 0, hardness: 2, tool: 'pickaxe', sound: 'stone', all: `${prefix}shulker_box_top`,
+    category: 'decoracion', model: pointTo(shulkerBoxBoxes(prefix), st.facing), itemModel: shulkerBoxBoxes(prefix),
+  }));
+  return [c, id];
+})) as Record<ShulkerBoxColor, number>;
+const SHULKER_BOX_BASES = new Map(SHULKER_BOX_COLORS.map((c) => [SHULKER_BOXES[c], c]));
+
+/** ¿Es una caja de shulker (bloque u objeto)? Y su color ('' la normal). */
+export function isShulkerBox(id: number): boolean {
+  return id > 0 && SHULKER_BOX_BASES.has(familyBase(id));
+}
+export function shulkerBoxColor(id: number): ShulkerBoxColor | undefined {
+  return id > 0 ? SHULKER_BOX_BASES.get(familyBase(id)) : undefined;
+}
+/** Hacia dónde mira la tapa de la caja (su cara, 0..5). */
+export function shulkerBoxFacing(id: number): number {
+  return (id - familyBase(id)) % 6;
+}
+
+/** Cofre de ender con su cerrojo, mirando al norte: la caja de 14 × 14 × 14 (tapa de 4) y el cerrojo de delante. */
+function enderChestBoxes(): ModelBox[] {
+  const side = L('ender_chest_side'), top = L('ender_chest_top'), front = L('ender_chest_front'), lock = L('ender_chest_lock');
+  return [
+    mbox(1, 0, 1, 15, 10, 15, [side, side, -1, top, side, front]),
+    mbox(1, 10, 1, 15, 14, 15, [side, side, top, -1, side, front]),
+    mbox(7, 7, 0, 9, 11, 1, lock),
+  ];
+}
+
+/**
+ * Cofre de ender (EnderChestBlock): cada jugador ve en él sus propias 27 pilas, las mismas en todos los cofres de
+ * ender del mundo. Da luz 7; dureza 22,5 y resistencia 600; con pico, suelta 8 de obsidiana (con Toque de seda, él
+ * mismo).
+ */
+export const ENDER_CHEST = family('ender_chest', 'Cofre de ender', [['facing', 4]], (st) => ({
+  render: R_MODEL, opaque: false, lightOpacity: 0, emission: 7, hardness: 22.5, tool: 'pickaxe', tier: 1, sound: 'stone',
+  all: 'ender_chest_top', category: 'decoracion', model: rotateBoxes(enderChestBoxes(), st.facing), itemModel: enderChestBoxes(),
+  collision: [1 / 16, 0, 1 / 16, 15 / 16, 14 / 16, 15 / 16], selection: [1 / 16, 0, 1 / 16, 15 / 16, 14 / 16, 15 / 16],
+}));
+export function isEnderChest(id: number): boolean {
+  return id > 0 && familyBase(id) === ENDER_CHEST;
+}
+
+// ------------------------------------------------------------------ cabeza de dragón
+
+/** Texturas propias de la cabeza de dragón (además de las seis caras de la cabeza). */
+export const DRAGON_HEAD_SNOUT = 'dragon_head_snout';
+export const DRAGON_HEAD_HORN = 'dragon_head_horn';
+export const DRAGON_HEAD_NOSTRIL = 'dragon_head_nostril';
+
+/**
+ * DragonHeadModel (a 0,75, mirando al norte, con la cabeza entre y = 6 y 18 como las demás antes de bajarla 4): la
+ * cabeza de 12 × 12 × 12 algo retrasada, el hocico y la mandíbula (cerrada) que salen 10 píxeles por delante del
+ * bloque, los dos orificios de la nariz encima del hocico y los dos cuernos de hueso detrás, en lo alto.
+ */
+function dragonHeadBoxes(): ModelBox[] {
+  const faces = SKULL_FACES.map((f) => L(skullTexture('dragon', f)));
+  const snout = L(DRAGON_HEAD_SNOUT), horn = L(DRAGON_HEAD_HORN), nostril = L(DRAGON_HEAD_NOSTRIL);
+  return [
+    mbox(2, 6, 0.5, 14, 18, 12.5, faces),
+    mbox(3.5, 9, -10, 12.5, 12.75, 0.5, snout),
+    mbox(3.5, 6, -10, 12.5, 9, 0.5, snout),
+    mbox(4.25, 12.75, -8.5, 5.75, 14.25, -5.5, nostril),
+    mbox(10.25, 12.75, -8.5, 11.75, 14.25, -5.5, nostril),
+    mbox(4.25, 18, 5, 5.75, 21, 9.5, horn),
+    mbox(10.25, 18, 5, 11.75, 21, 9.5, horn),
+  ];
+}
+registerSkull('dragon', dragonHeadBoxes());
+
 /** Su sitio en el inventario creativo. */
-export const END_INVENTORY: number[] = [END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD, CHORUS_PLANT, CHORUS_FLOWER, END_PORTAL_FRAME, DRAGON_EGG];
+export const END_INVENTORY: number[] = [SKULLS.dragon, 
+  END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD, CHORUS_PLANT, CHORUS_FLOWER, END_PORTAL_FRAME, DRAGON_EGG, ENDER_CHEST,
+  ...SHULKER_BOX_COLORS.map((c) => SHULKER_BOXES[c]),
+];

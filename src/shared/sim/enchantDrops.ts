@@ -29,6 +29,7 @@ const SILK_KEYS = new Set([
   'melon', 'cobweb', 'campfire', 'soul_campfire', 'bee_nest', 'beehive', 'turtle_egg', 'red_mushroom_block', 'brown_mushroom_block',
   'mushroom_stem', 'amethyst_bud', 'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'lapis_ore', 'redstone_ore', 'emerald_ore',
   'copper_ore',
+  'ender_chest', // Fase 8.6
   'sculk', 'sculk_vein', 'sculk_catalyst', 'sculk_sensor', 'calibrated_sculk_sensor', 'sculk_shrieker', // Fase 7.5 (abismo)
   // Fase 8.2 (biomas del Nether)
   'crimson_nylium', 'warped_nylium', 'gilded_blackstone', 'weeping_vines', 'weeping_vines_plant', 'twisting_vines',

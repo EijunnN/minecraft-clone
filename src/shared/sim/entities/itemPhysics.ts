@@ -161,6 +161,15 @@ export class ItemPhysics {
         if (Math.abs(m.x - e.x) < hw && Math.abs(m.z - e.z) < hw && e.y > m.y - 0.1 && e.y < m.y + m.height + 0.1) {
           // Fase 7 (encantamientos): Retroceso empuja más, Fuego prende y Perforación sigue de largo.
           if (e.pierced?.includes(m.id)) continue;
+          // Fase 8.6: al shulker cerrado le rebotan (ProjectileDeflection.REVERSE).
+          if (this.m.shulkers.deflectsArrow(m)) {
+            e.vx *= -0.1;
+            e.vy *= -0.1;
+            e.vz *= -0.1;
+            e.shooter = m.id;
+            this.m.host.fx('arrow_hit', e.x, e.y, e.z);
+            return;
+          }
           this.m.damage(m, dmg, e.x - e.vx, e.z - e.vz, e.shooter ?? null, 0.6 * (e.arrowKnock ?? 1));
           if (e.arrowFire && !m.dead) m.fire = Math.max(m.fire, FLAME_SECONDS);
           if (e.arrowPotion !== undefined && !m.dead) this.m.potions.tippedHit(e, m, null); // Fase 7 (pociones)

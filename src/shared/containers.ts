@@ -4,7 +4,7 @@ import { MAX_MAP_KEY } from './maps';
 import { isBundle, fitsInBundle, bundleInsert } from './bundles'; // Fase 6.5 (remate)
 import { stackToWire, stackFromWire, type WireStack } from './protocol';
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
-import { IRON_ORE, GOLD_ORE, ANCIENT_DEBRIS } from './blocks';
+import { IRON_ORE, GOLD_ORE, ANCIENT_DEBRIS, isShulkerBox } from './blocks';
 import { sanitizeItemData, cloneItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { COPPER_ORE, DEEPSLATE_ORE } from './blocks'; // Fase 6.5 (materiales)
 import { RAW_IRON, RAW_GOLD, RAW_COPPER } from './items'; // Fase 6.5 (materiales)
@@ -32,6 +32,8 @@ export interface ContainerState {
   cook: number;
   /** Fase 7 (pociones): alambique, ingrediente con el que empezó la destilación en curso. */
   brewing?: number;
+  /** Fase 8.6: caja de shulker (no admite otras cajas de shulker). */
+  noBoxes?: boolean;
 }
 
 /** Cofre grande (dos mitades de cofre doble). */
@@ -72,7 +74,7 @@ export function cloneStack(s: ItemStack | null | undefined): ItemStack | null {
 }
 
 /** Valida una pila recibida por la red. */
-export function sanitizeStack(raw: unknown, inBag = false): ItemStack | null {
+export function sanitizeStack(raw: unknown, inBag = false, inBox = false): ItemStack | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as { id?: unknown; count?: unknown; dmg?: unknown; bag?: unknown; data?: unknown };
   const id = Number(r.id), count = Number(r.count), dmg = r.dmg === undefined ? 0 : Number(r.dmg);
@@ -82,6 +84,8 @@ export function sanitizeStack(raw: unknown, inBag = false): ItemStack | null {
   if (!Number.isInteger(dmg) || dmg < 0 || dmg > MAX_MAP_KEY) return null;
   const s: ItemStack = { id, count };
   if (dmg > 0) s.dmg = dmg;
+  // Fase 8.6: una caja de shulker no va dentro de otra (ni de un saco).
+  if ((inBox || inBag) && isShulkerBox(id)) return null;
   // Fase 6.5 (remate): lo que lleva un saco, pila a pila, sin pasarse de su capacidad.
   if (!inBag && isBundle(id) && Array.isArray(r.bag)) {
     const holder: ItemStack = { id, count: 1 };
@@ -94,6 +98,52 @@ export function sanitizeStack(raw: unknown, inBag = false): ItemStack | null {
   // Fase 6.5 (libros y estandartes): páginas y capas, validadas y acotadas.
   const data = sanitizeItemData(id, r.data);
   if (data) s.data = data;
+  // Fase 8.6: lo que lleva la caja de shulker (hasta 27 pilas, cada una en su hueco).
+  if (isShulkerBox(id)) {
+    const slots = boxContents({ id, count: 1, bag: Array.isArray(r.bag) ? (r.bag as unknown[]).slice(0, 27).map((b) => sanitizeStack(b, false, true)).filter((b): b is ItemStack => !!b) : [], ...(data ? { data } : {}) });
+    const packed = packBox(id, slots);
+    if (packed.bag) s.bag = packed.bag;
+    else delete s.bag;
+    if (packed.data?.slots) s.data = { ...(s.data ?? {}), slots: packed.data.slots };
+    else if (s.data) {
+      delete s.data.slots;
+      if (!Object.keys(s.data).length) delete s.data;
+    }
+  }
+  return s;
+}
+
+/**
+ * Fase 8.6: los 27 huecos de una caja de shulker (lo que lleva en `bag`, cada pila en el hueco que dice
+ * `data.slots`; si no lo dice o no cuadra, por orden).
+ */
+export function boxContents(s: ItemStack | null | undefined): (ItemStack | null)[] {
+  const out: (ItemStack | null)[] = new Array(CHEST_SLOTS).fill(null);
+  const bag = s?.bag ?? [];
+  const slots = s?.data?.slots;
+  const ok = !!slots && slots.length === bag.length;
+  bag.forEach((b, i) => {
+    const at = ok ? slots![i] : out.indexOf(null);
+    if (at >= 0 && at < CHEST_SLOTS && !out[at]) out[at] = cloneStack(b);
+  });
+  return out;
+}
+
+/** Fase 8.6: la pila de la caja de shulker `id` con lo que hay en sus huecos (sin nada, una caja vacía). */
+export function packBox(id: number, slots: readonly (ItemStack | null)[]): ItemStack {
+  const s: ItemStack = { id, count: 1 };
+  const bag: ItemStack[] = [], idx: number[] = [];
+  slots.forEach((b, i) => {
+    const c = cloneStack(b);
+    if (c && i < CHEST_SLOTS) {
+      bag.push(c);
+      idx.push(i);
+    }
+  });
+  if (bag.length) {
+    s.bag = bag;
+    s.data = { slots: idx };
+  }
   return s;
 }
 
@@ -124,7 +174,7 @@ export function clickSlot(c: ContainerState, slot: number, btn: number, cursorIn
   if (c.kind === 'brewing') return brewClick(c, slot, btn, cursorIn); // Fase 7 (pociones): frascos de uno en uno
   let cursor = cloneStack(cursorIn);
   let cur = cloneStack(c.slots[slot]);
-  const accept = canPlace(c.kind, slot, cursor);
+  const accept = canPlace(c.kind, slot, cursor) && !(c.noBoxes && cursor && isShulkerBox(cursor.id)); // Fase 8.6
   if (c.kind === 'furnace' && slot === FURNACE_OUT) {
     if (!cur) return cursor;
     if (!cursor) {
@@ -191,6 +241,7 @@ export function insertStack(c: ContainerState, s: ItemStack | null): ItemStack |
   if (c.kind === 'brewing') return brewInsert(c, s); // Fase 7 (pociones)
   const rest = cloneStack(s);
   if (!rest) return null;
+  if (c.noBoxes && isShulkerBox(rest.id)) return rest; // Fase 8.6: una caja de shulker no va dentro de otra
   const targets: number[] = [];
   if (c.kind === 'chest') for (let i = 0; i < c.slots.length; i++) targets.push(i);
   else {

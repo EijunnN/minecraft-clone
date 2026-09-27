@@ -11,6 +11,8 @@
 //   W/A/S/D la empujan un poco si está casi parada. Detrás (segundo pasajero) se va sentado donde la
 //   lleve el servidor. Mayúsculas para bajarse.
 // - Los demás jugadores se dibujan sentados en su plaza ('vpass' dice quién va en cada una).
+import { MOB_SHULKER } from '../../shared/endMobs'; // Fase 8.6
+import { shulkerCollisionBox } from '../render/shulkerPose';
 import { boxCollides } from '../../shared/sim/physics';
 import { boatStep, paddlesOf, BOAT_IN_WATER, type BoatBody, type BoatInput } from '../../shared/sim/vehicles/boatPhysics';
 import { cartStep, type CartBody } from '../../shared/sim/vehicles/cartPhysics';
@@ -476,6 +478,19 @@ export class VehicleClient {
       const [kx, kz] = pushApart(p.x, p.z, e.x, e.z);
       p.kx += kx * PUSH_ACCEL * dt;
       p.kz += kz * PUSH_ACCEL * dt;
+    }
+    // Fase 8.6: los shulkers son sólidos (canBeCollidedWith) y la tapa que sube empuja al que está encima.
+    const now = performance.now() / 1000;
+    for (const e of g.ents.list.values()) {
+      if (e.type !== MOB_SHULKER || e.gone || e.deathT >= 0) continue;
+      if (Math.abs(e.x - p.x) > 3 || Math.abs(e.z - p.z) > 3 || Math.abs(e.y - p.y) > 4) continue;
+      const b = shulkerCollisionBox(e, now);
+      boxes.push(...b);
+      const inside = p.x + hw > b[0] && p.x - hw < b[3] && p.z + hw > b[2] && p.z - hw < b[5] && p.y < b[4] && p.y + p.height > b[1];
+      if (inside && p.y > b[4] - 0.6) {
+        p.y = b[4];
+        if (p.vy < 0) p.vy = 0;
+      }
     }
   }
 

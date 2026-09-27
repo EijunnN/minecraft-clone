@@ -25,6 +25,19 @@ import { brewTick, brewBottleMask, BREW_INGREDIENT, BREW_FUEL } from '../../brew
 import { mechanismSlots } from '../../blocks'; // Fase 7 (mecanismos)
 import { resolveStructureMaps } from '../../structureMaps'; // Fase 7.5 (océano)
 import { isGuardedByPiglins } from '../../netherMobs'; // Fase 8.3 (criaturas del Nether)
+import { isShulkerBox, isEnderChest, shulkerBoxFacing, shulkerBoxColor, familyBase as fb, BLOCK_COLLIDE } from '../../blocks'; // Fase 8.6
+import { boxContents, packBox } from '../../containers';
+import { stackFromWire } from '../../protocol';
+import { SHIP_BREWING } from '../../world/endCity';
+import { potionStack, PT_STRONG_HEALING } from '../../potions';
+import { FACE_X, FACE_Y, FACE_Z } from '../../redstone/api';
+
+/** Fase 8.6: el cofre de ender de un jugador desde lo guardado (27 huecos). */
+export function enderFromWire(w: unknown): ContainerState {
+  const c = newContainer('chest');
+  if (Array.isArray(w)) w.slice(0, CHEST_SLOTS).forEach((x, i) => (c.slots[i] = sanitizeStack(stackFromWire(x))));
+  return c;
+}
 
 /** Lo que ve un jugador: un contenedor o las dos mitades de un cofre doble (izquierda primero). */
 interface View {
@@ -61,6 +74,16 @@ export class ContainerSystem {
   fillLoot(chests: StructureChest[]): void {
     const rand = () => this.ctx.rand();
     for (const ch of chests) {
+      // Fase 8.6: el alambique del barco del End, con sus dos pociones de curación II.
+      if (ch.table === SHIP_BREWING) {
+        const k = posKey(ch.x, ch.y, ch.z);
+        const c = newContainer('brewing');
+        c.slots[0] = potionStack('drink', PT_STRONG_HEALING);
+        c.slots[2] = potionStack('drink', PT_STRONG_HEALING);
+        this.containers.set(k, c);
+        this.dirty.add(k);
+        continue;
+      }
       const table = LOOT_TABLES[ch.table];
       if (!table) continue;
       const k = posKey(ch.x, ch.y, ch.z);
@@ -76,9 +99,14 @@ export class ContainerSystem {
     return this.containers.size;
   }
 
+  /** Fase 8.6: cajas de shulker recién rotas (posición → la caja y lo que tenía) hasta que se suelta su objeto. */
+  private brokenBoxes = new Map<number, { id: number; slots: (ItemStack | null)[]; creative: boolean }>();
+  /** Fase 8.6: ¿se está rompiendo sin soltar nada (un jugador en creativo)? (lo pone el servidor). */
+  silentBreak: () => boolean = () => false;
+
   private containerAt(x: number, y: number, z: number): ContainerState | null {
     const id = this.ctx.world.getBlock(x, y, z);
-    if (!isContainer(id)) return null;
+    if (!isContainer(id) || isEnderChest(id)) return null; // Fase 8.6: el cofre de ender es de cada jugador
     const k = posKey(x, y, z);
     let c = this.containers.get(k);
     const size = mechanismSlots(id); // Fase 7 (mecanismos): tolva (5 huecos), dispensador y soltador (9)
@@ -87,6 +115,7 @@ export class ContainerSystem {
       c = newContainer(kind, size || undefined);
       this.containers.set(k, c);
     }
+    if (isShulkerBox(id)) c.noBoxes = true; // Fase 8.6
     return c;
   }
 
@@ -100,10 +129,15 @@ export class ContainerSystem {
     return familyBase(this.ctx.world.getBlock(px, y, pz)) === familyBase(id) ? [px, y, pz, st.side] : null;
   }
 
-  /** Lo que se ve al abrir (x, y, z): el contenedor o el cofre grande. */
-  private viewAt(x: number, y: number, z: number): View | null {
+  /** Lo que se ve al abrir (x, y, z): el contenedor o el cofre grande (Fase 8.6: o el cofre de ender de `s`). */
+  private viewAt(x: number, y: number, z: number, s?: Session): View | null {
     const vc = this.virtual?.container(x, y, z); // Fase 7 (transporte)
     if (vc !== undefined) return vc ? { parts: [[posKey(x, y, z), vc]], state: vc } : null;
+    if (isEnderChest(this.ctx.world.getBlock(x, y, z))) {
+      if (!s) return null;
+      s.ender ??= newContainer('chest');
+      return { parts: [[posKey(x, y, z), s.ender]], state: s.ender };
+    }
     const c = this.containerAt(x, y, z);
     if (!c) return null;
     const k = posKey(x, y, z);
@@ -126,6 +160,23 @@ export class ContainerSystem {
 
   /** Contenedores destruidos: soltar su contenido y cerrar las ventanas abiertas. */
   onBlockChanged(x: number, y: number, z: number, old: number, id: number): void {
+    // Fase 8.6: la caja de shulker se lleva lo que tenía (se guarda hasta que caiga su objeto) y el cofre de ender
+    // cierra la ventana de quien lo tuviera abierto.
+    if ((isShulkerBox(old) && fb(old) !== fb(id)) || (isEnderChest(old) && !isEnderChest(id))) {
+      const k = posKey(x, y, z);
+      if (isShulkerBox(old)) {
+        const c = this.containers.get(k);
+        this.containers.delete(k);
+        this.dirty.add(k);
+        this.brokenBoxes.set(k, { id: fb(old), slots: c ? c.slots.slice() : [], creative: this.silentBreak() });
+      }
+      for (const s of this.ctx.sessions()) {
+        if (s.container !== k) continue;
+        s.container = null;
+        this.ctx.send(s, { t: 'cclose' });
+      }
+      return;
+    }
     // Se rompe media cofre doble: la otra mitad vuelve a ser un cofre sencillo.
     if (isDoubleChest(old) && familyBase(id) !== familyBase(old)) {
       const st = stateProps(old)!;
@@ -160,7 +211,7 @@ export class ContainerSystem {
     for (const s of only ? [only] : this.ctx.sessions()) {
       if (s.container === null || !this.viewKeys(s.container).includes(k)) continue;
       const x = keyX(s.container), y = keyY(s.container), z = keyZ(s.container);
-      const v = this.viewAt(x, y, z);
+      const v = this.viewAt(x, y, z, s);
       if (!v) continue;
       const msg: ServerMsg = { t: 'cont', x, y, z, c: containerToWire(v.state) };
       this.ctx.send(s, msg);
@@ -176,7 +227,7 @@ export class ContainerSystem {
       if (vc === null) this.ctx.send(s, { t: 'cclose' });
       return;
     }
-    if (!this.viewAt(x, y, z)) {
+    if (!this.viewAt(x, y, z, s) || !this.lidFree(x, y, z)) {
       this.ctx.send(s, { t: 'cclose' });
       return;
     }
@@ -195,7 +246,7 @@ export class ContainerSystem {
     const q = Number(msg.q) || 0;
     if (![x, y, z].every(Number.isInteger)) return;
     const k = posKey(x, y, z);
-    const v = s.container === k && ctx.allow(s, 1) ? this.viewAt(x, y, z) : null;
+    const v = s.container === k && ctx.allow(s, 1) ? this.viewAt(x, y, z, s) : null;
     if (!v) {
       // Contenedor cerrado o destruido: devolver al jugador lo que ofrecía.
       if (msg.t === 'cclick') ctx.send(s, { t: 'cres', q, cur: sanitizeStack(msg.cur) });
@@ -222,6 +273,7 @@ export class ContainerSystem {
     this.commit(v);
     if (before) this.smeltReward(s, before.id, before.count - (c.slots[FURNACE_OUT]?.count ?? 0));
     if (this.virtual?.container(x, y, z) !== undefined) this.virtual.changed(x, y, z); // Fase 7 (transporte)
+    else if (v.state === s.ender) s.saveDirty = true; // Fase 8.6: el cofre de ender va con el jugador
     else {
       for (const [pk] of v.parts) {
         this.dirty.add(pk);
@@ -229,6 +281,58 @@ export class ContainerSystem {
       }
     }
     this.sendView(k);
+  }
+
+  /**
+   * Fase 8.6 (ShulkerBoxBlock.canOpen): la caja de shulker sólo se abre si la tapa tiene sitio (la mitad del bloque de
+   * delante de la tapa, sin nada que choque).
+   */
+  private lidFree(x: number, y: number, z: number): boolean {
+    const id = this.ctx.world.getBlock(x, y, z);
+    if (!isShulkerBox(id)) return true;
+    const f = shulkerBoxFacing(id);
+    const n = this.ctx.world.getBlock(x + FACE_X[f], y + FACE_Y[f], z + FACE_Z[f]);
+    return n <= 0 || !BLOCK_COLLIDE[n];
+  }
+
+  /** Fase 8.6: la caja de shulker que cae donde se rompió una se lleva dentro lo que tenía. */
+  decorateDrops(stacks: ItemStack[], x: number, y: number, z: number): ItemStack[] {
+    if (this.brokenBoxes.size === 0) return stacks;
+    const k = posKey(Math.floor(x), Math.floor(y), Math.floor(z));
+    const b = this.brokenBoxes.get(k);
+    if (!b) return stacks;
+    const i = stacks.findIndex((s) => s && s.count === 1 && !s.bag && fb(s.id) === b.id);
+    if (i < 0) return stacks;
+    this.brokenBoxes.delete(k);
+    const out = stacks.slice();
+    const packed = packBox(b.id, b.slots);
+    out[i] = { ...stacks[i], ...(packed.bag ? { bag: packed.bag } : {}), ...(packed.data ? { data: { ...(stacks[i].data ?? {}), ...packed.data } } : {}) };
+    return out;
+  }
+
+  /**
+   * Fase 8.6: al final del tick, las cajas rotas que no soltaron nada (en creativo, o por una explosión que no las
+   * soltó) caen igual con lo suyo; en creativo, sólo si llevaban algo (ShulkerBoxBlock.playerWillDestroy).
+   */
+  endTick(): void {
+    for (const [k, b] of this.brokenBoxes) {
+      if (b.creative && !b.slots.some(Boolean)) continue;
+      this.ctx.entities.dropStacks([packBox(b.id, b.slots)], keyX(k) + 0.5, keyY(k) + 0.5, keyZ(k) + 0.5);
+    }
+    this.brokenBoxes.clear();
+  }
+
+  /** Fase 8.6: se puso una caja de shulker con cosas dentro: lo suyo, a su contenedor. */
+  fillPlacedBox(x: number, y: number, z: number, stack: ItemStack | null): void {
+    if (!stack || !isShulkerBox(this.ctx.world.getBlock(x, y, z)) || shulkerBoxColor(stack.id) !== shulkerBoxColor(this.ctx.world.getBlock(x, y, z))) return;
+    const slots = boxContents(stack);
+    if (!slots.some(Boolean)) return;
+    const c = this.containerAt(x, y, z);
+    if (!c) return;
+    c.slots = slots;
+    const k = posKey(x, y, z);
+    this.dirty.add(k);
+    this.contentsChanged?.(x, y, z);
   }
 
   /** El jugador sacó `taken` objetos fundidos: orbes de experiencia a sus pies. */

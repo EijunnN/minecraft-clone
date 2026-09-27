@@ -824,3 +824,8 @@ mix([BLAZE_POWDER, EPL], ENDER_EYE);
 import { END_CRYSTAL, GHAST_TEAR as GTR } from './items';
 import { GLASS as GLS8 } from './blocks';
 shape(['GGG', 'GEG', 'GTG'], { G: GLS8, E: ENDER_EYE, T: GTR }, END_CRYSTAL);
+// La caja de shulker (dos caparazones y un cofre; teñirla, en craftSpecials) y el cofre de ender (obsidiana y un ojo).
+import { SHULKER_SHELL as SSH } from './items';
+import { SHULKER_BOXES as SBX, ENDER_CHEST as ECH, OBSIDIAN as OBS8, CHEST as CHS8 } from './blocks';
+shape(['S', 'C', 'S'], { S: SSH, C: CHS8 }, SBX['']);
+shape(['OOO', 'OEO', 'OOO'], { O: OBS8, E: ENDER_EYE }, ECH);

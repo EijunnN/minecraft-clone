@@ -78,6 +78,11 @@ export class BlockRules {
   }
 
   /** Ejecuta `fn` sin que lo que se rompa por falta de apoyo suelte objetos (creativo). */
+  /** Fase 8.6: ¿se está rompiendo sin soltar nada (un jugador en creativo)? */
+  get silentBreak(): boolean {
+    return this.silentDrops;
+  }
+
   withoutDrops<T>(silent: boolean, fn: () => T): T {
     const prev = this.silentDrops;
     this.silentDrops = silent;

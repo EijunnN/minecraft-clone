@@ -1,5 +1,6 @@
 // Qué suelta cada bloque al romperse en supervivencia (según la herramienta usada).
 import { NETHER_WART_CROP, NETHER_WART_MAX_AGE, isNetherWartCrop } from '../blocks'; // Fase 8.4
+import { isEnderChest, OBSIDIAN } from '../blocks'; // Fase 8.6
 import { NETHER_WART, CHORUS_FRUIT } from '../items';
 import {
   BLOCKS, STONE, COBBLESTONE, GRASS, SNOWY_GRASS, DIRT, COAL_ORE, DIAMOND_ORE, LAPIS_ORE, REDSTONE_ORE, GRAVEL,
@@ -171,6 +172,7 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   }
   // La fogata suelta carbón vegetal (como en Minecraft sin toque de seda).
   if (familyBase(block) === CAMPFIRE) return one(CHARCOAL, 2);
+  if (isEnderChest(block)) return one(OBSIDIAN, 8); // Fase 8.6: sin Toque de seda, 8 de obsidiana
   if (familyBase(block) === SOUL_CAMPFIRE) return one(SOUL_SOIL, 1); // Fase 8.5: la de almas suelta tierra de alma
   // Fase 8.6: la planta de coro suelta 0 o 1 fruta de coro; la flor, a sí misma (joven o muerta).
   if (block === CHORUS_PLANT) return rnd(0, 1) ? one(CHORUS_FRUIT) : [];

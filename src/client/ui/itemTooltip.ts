@@ -1,5 +1,6 @@
 // Descripción de un objeto al pasar el ratón: nombre y, según lo que sea, daño y velocidad de ataque,
 // armadura, lo que alimenta y sus efectos, qué bloquea el escudo y la durabilidad que le queda.
+import { isShulkerBox } from '../../shared/blocks'; // Fase 8.6
 import { mapArea, mapZoom, mapLocked } from '../../shared/mapOps'; // Fase 7.6
 import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { FILLED_MAP } from '../../shared/items';
@@ -99,7 +100,7 @@ export function itemTooltipHtml(s: ItemStack): string {
   if (s.id === RECOVERY_COMPASS) lines.push('<span class="tt-dim">Apunta a donde moriste por última vez</span>');
   const skull = skullKind(s.id);
   // Fase 8.3: la cabeza de piglin engaña a los piglins y a los piglins brutos; el cráneo wither, a nadie.
-  if (skull && skull !== 'player' && skull !== 'wither_skeleton') {
+  if (skull && skull !== 'player' && skull !== 'wither_skeleton' && skull !== 'dragon') {
     const who = { zombie: 'los zombis', skeleton: 'los esqueletos', creeper: 'los creepers', piglin: 'los piglins' }[skull];
     lines.push(`<span class="tt-dim">Puesta: ${who} te ven a la mitad de distancia</span>`);
   }
@@ -108,6 +109,11 @@ export function itemTooltipHtml(s: ItemStack): string {
     for (const b of (s.bag ?? []).slice(0, 6)) lines.push(`<span class="tt-dim">${esc(ITEMS[b.id]?.name ?? '?')} ×${b.count}</span>`);
     if ((s.bag?.length ?? 0) > 6) lines.push(`<span class="tt-dim">y ${s.bag!.length - 6} más…</span>`);
     lines.push(`<span class="tt-dim">${bagWeight(s.bag)} / ${BUNDLE_CAPACITY} · clic derecho: meter o sacar</span>`);
+  }
+  // Fase 8.6: lo que lleva la caja de shulker (las cinco primeras pilas y cuántas más, como en Java).
+  if (isShulkerBox(s.id) && s.bag?.length) {
+    for (const b of s.bag.slice(0, 5)) lines.push(`<span class="tt-dim">${esc(ITEMS[b.id]?.name ?? '?')} ×${b.count}</span>`);
+    if (s.bag.length > 5) lines.push(`<span class="tt-dim">y ${s.bag.length - 5} más…</span>`);
   }
   // Fase 6.5 (libros y estandartes): título, autor y generación del libro; capas del estandarte.
   if (s.id === WRITTEN_BOOK && s.data) {

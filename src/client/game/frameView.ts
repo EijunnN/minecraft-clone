@@ -1,7 +1,8 @@
 // Lo que se dibuja en cada frame: los demás jugadores (y uno mismo en tercera persona), la mano, las
 // entidades, las grietas del bloque que se mina, los carteles, estandartes, rayos, sedales y correas;
 // después, las etiquetas de nombre y el texto de depuración (F3).
-import { ENT_END_CRYSTAL } from '../../shared/mobs'; // Fase 8.6
+import { newGlidePose, stepGlidePose, glideScale, glideRoll } from '../render/elytraPose'; // Fase 8.6
+import { ENT_END_CRYSTAL, ENT_SHULKER_BULLET } from '../../shared/mobs'; // Fase 8.6
 import * as endFight from './endFightClient';
 import { BLOCKS } from '../../shared/blocks';
 import { MOBS } from '../../shared/mobs';
@@ -53,9 +54,17 @@ export function remoteViews(g: Game, dt: number): RemotePlayerView[] {
   return views;
 }
 
+/** Fase 8.6: la pose de los élitros propios (se avanza con cada vista). */
+const selfGlide = newGlidePose();
+let selfGlideT = 0;
+
 /** Uno mismo visto desde fuera (tercera persona). */
 export function selfView(g: Game, eye: EyeLight): RemotePlayerView {
   const p = g.player;
+  const now = performance.now();
+  const gdt = selfGlideT ? Math.min(0.1, (now - selfGlideT) / 1000) : 0;
+  selfGlideT = now;
+  stepGlidePose(selfGlide, p.gliding, p.sneaking, p.vx, p.vy, p.vz, gdt);
   const hands = handPotionTypes(g);
   return {
     id: '__self', name: g.cfg.name, shirt: g.cfg.shirt, x: p.x, y: p.y, z: p.z,
@@ -69,6 +78,8 @@ export function selfView(g: Game, eye: EyeLight): RemotePlayerView {
     glint: g.enchant.glintBits(), // Fase 7 (encantamientos)
     invisible: g.statusEffects.invisible, // Fase 7 (remate): sin cuerpo, pero con la armadura y lo de las manos
     glowing: g.statusEffects.glowing, // Fase 7 (efectos)
+    // Fase 8.6: planeando, tumbado y ladeado; y las alas.
+    glide: p.gliding ? glideScale(selfGlide) : 0, glideRoll: p.gliding ? glideRoll(p.yaw, p.pitch, p.vx, p.vz) : 0, wings: selfGlide.wings,
   };
 }
 
@@ -88,7 +99,7 @@ export function splitEntities(g: Game): { mobs: ClientEntity[]; drops: ClientEnt
   for (const e of g.ents.list.values()) {
     // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
     // lo que llevan (lo decide MobRenderer).
-    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_END_CRYSTAL) mobs.push(e); // Fase 8.6: y los cristales del End
+    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_END_CRYSTAL || e.type === ENT_SHULKER_BULLET) mobs.push(e); // Fase 8.6: y los cristales del End y las balas de shulker
     else drops.push(e);
   }
   return { mobs, drops };

@@ -17,7 +17,12 @@ import { endSpikes, drawSpike, drawPodium, drawGateway } from './endIsland';
 import { TerrainGenerator, type ColumnInfo, type GenResult } from './terrain';
 import { EndTerrain, END_HEIGHT, endBaseIndex } from './endTerrain';
 import { mulberry32 } from './noise';
-import { BIOME_END_HIGHLANDS, BIOME_SMALL_END_ISLANDS, BIOME_THE_END } from './biomeIds';
+import { BIOME_END_HIGHLANDS, BIOME_END_MIDLANDS, BIOME_SMALL_END_ISLANDS, BIOME_THE_END } from './biomeIds';
+import { endCityPieces, endCityRegionChunk, endCityStartY, drawEndCity, cityBounds, END_CITY_GRID, type CityPiece, type CityBox, type Rot } from './endCity';
+import { Canvas, type StructureChest, type StructureMob } from './structures';
+import { MOB_SHULKER } from '../endMobs';
+import { ENT_FRAME } from '../paintings';
+import { ELYTRA } from '../items';
 
 /** Donde se llega al End (encima de la plataforma de obsidiana). */
 export const END_SPAWN: readonly [number, number, number] = [100, 49, 0];
@@ -99,10 +104,27 @@ function endIsland(l: Level, r: () => number, x: number, y: number, z: number): 
   }
 }
 
+/** Una ciudad del End: su arranque, sus piezas y lo que ocupan. */
+export interface EndCity {
+  x: number;
+  y: number;
+  z: number;
+  pieces: CityPiece[];
+  box: CityBox;
+}
+
+/** Lo más que se aleja una ciudad de su arranque (de sobra: las más grandes no pasan de unos 120 bloques). */
+const CITY_REACH = 160;
+
+function inBox(b: CityBox, x: number, y: number, z: number, pad: number): boolean {
+  return x >= b.x0 - pad && x <= b.x1 + pad && z >= b.z0 - pad && z <= b.z1 + pad && y >= b.y0 - pad && y <= b.y1 + pad;
+}
+
 export class EndGenerator extends TerrainGenerator {
   readonly terrain: EndTerrain;
   private readonly bases = new Lru<Uint16Array>(96);
   private readonly decorations = new Lru<Int32Array>(64);
+  private readonly cities = new Lru<EndCity | null>(64);
 
   constructor(seed: number) {
     super(seed);
@@ -148,6 +170,62 @@ export class EndGenerator extends TerrainGenerator {
     return { x: END_SPAWN[0] + 0.5, y: END_SPAWN[1], z: END_SPAWN[2] + 0.5 };
   }
 
+  /**
+   * La ciudad del End de la región (rx, rz), si la hay (EndCityStructure.findGenerationPoint): en el bloque 7,7 de su
+   * chunk, en las tierras altas o medias, girada al azar, a la menor altura de las esquinas hacia donde mira (≥ 60).
+   */
+  cityInRegion(rx: number, rz: number): EndCity | null {
+    return this.cities.get(chunkKey(rx, rz), () => {
+      const [cx, cz] = endCityRegionChunk(this.seed, rx, rz);
+      const x = cx * 16 + 7, z = cz * 16 + 7;
+      const biome = this.terrain.biomeAt(x, z);
+      if (biome !== BIOME_END_HIGHLANDS && biome !== BIOME_END_MIDLANDS) return null;
+      const h = hash2(cx, cz, this.seed ^ 0x3c17e);
+      const rot = (h & 3) as Rot;
+      const y = endCityStartY((sx, sz) => this.surfaceAt(sx, sz), x, z, rot);
+      if (y < 60) return null;
+      const pieces = endCityPieces(h >>> 2, x, y, z, rot);
+      return { x, y, z, pieces, box: cityBounds(pieces) };
+    });
+  }
+
+  /** Las ciudades que tocan el cuadrado de bloques [x0, x1] × [z0, z1]. */
+  citiesNear(x0: number, z0: number, x1: number, z1: number): EndCity[] {
+    const span = END_CITY_GRID.spacing * 16, reach = CITY_REACH;
+    const out: EndCity[] = [];
+    for (let rz = Math.floor((z0 - reach) / span); rz <= Math.floor((z1 + reach) / span); rz++) {
+      for (let rx = Math.floor((x0 - reach) / span); rx <= Math.floor((x1 + reach) / span); rx++) {
+        const c = this.cityInRegion(rx, rz);
+        if (c && c.box.x0 <= x1 && c.box.x1 >= x0 && c.box.z0 <= z1 && c.box.z1 >= z0) out.push(c);
+      }
+    }
+    return out;
+  }
+
+  /** /localizar ciudad del End: la de la región más cercana (en anillos de regiones). */
+  locateCity(x: number, z: number, maxRegions = 12): [number, number, number] | null {
+    const span = END_CITY_GRID.spacing * 16;
+    const rx0 = Math.floor(x / span), rz0 = Math.floor(z / span);
+    let best = null as EndCity | null, bd = Infinity;
+    for (let r = 0; r <= maxRegions; r++) {
+      for (let dz = -r; dz <= r; dz++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const c = this.cityInRegion(rx0 + dx, rz0 + dz);
+          if (!c) continue;
+          const d = Math.hypot(c.x - x, c.z - z);
+          if (d < bd) {
+            bd = d;
+            best = c;
+          }
+        }
+      }
+      // Un anillo más allá del primero con ciudad ya no puede traer una más cercana.
+      if (best && bd < r * span) break;
+    }
+    return best ? [best.x, best.y, best.z] : null;
+  }
+
   /** Decora el chunk (ocx, ocz) sobre el terreno base: lo que pone (x, y, z, id, …). */
   private decoration(ocx: number, ocz: number): Int32Array {
     return this.decorations.get(chunkKey(ocx, ocz), () => {
@@ -185,16 +263,18 @@ export class EndGenerator extends TerrainGenerator {
           if (top > 0 && this.terrain.biomeAt(x, z) === BIOME_END_HIGHLANDS) drawGateway(l, x, top + 3 + Math.floor(r() * 7), z);
         }
       }
-      // Paso 9: plantas de coro en las tierras altas.
+      // Paso 9: plantas de coro en las tierras altas (no dentro de una ciudad, que se pone antes, en el paso 4).
       {
         const r = rand(9);
+        const cities = this.citiesNear(x0 - 8, z0 - 8, x0 + 23, z0 + 23);
+        const inCity = (x: number, y: number, z: number) => cities.some((c) => inBox(c.box, x, y, z, 8));
         const n = Math.floor(r() * 5);
         for (let i = 0; i < n; i++) {
           const x = x0 + Math.floor(r() * 16), z = z0 + Math.floor(r() * 16);
           let y = END_HEIGHT;
           while (y > 0 && l.get(x, y - 1, z) === AIR) y--;
           if (y <= 0 || this.terrain.biomeAt(x, z) !== BIOME_END_HIGHLANDS) continue;
-          if (l.get(x, y, z) === AIR && l.get(x, y - 1, z) === END_STONE) generateChorusPlant(l, r, x, y, z, 8);
+          if (l.get(x, y, z) === AIR && l.get(x, y - 1, z) === END_STONE && !inCity(x, y, z)) generateChorusPlant(l, r, x, y, z, 8);
         }
       }
       // Paso 10: la plataforma de obsidiana donde se llega (en su chunk).
@@ -240,6 +320,18 @@ export class EndGenerator extends TerrainGenerator {
         }
       }
     }
+    // Las ciudades del End (con sus cofres, sus centinelas shulker y, en el barco, el marco con los élitros).
+    const chests: StructureChest[] = [], mobs: StructureMob[] = [];
+    const c = new Canvas(blocks, x0, z0, chests, [], mobs);
+    for (const city of this.citiesNear(x0, z0, x0 + 15, z0 + 15)) {
+      drawEndCity(c, city.pieces, {
+        chest: () => {},
+        sentry: (x, y, z) => c.mob(MOB_SHULKER, x + 0.5, y, z + 0.5),
+        elytra: (x, y, z, facing) => {
+          if (c.inside(x, y, z)) mobs.push({ type: ENT_FRAME, x, y, z, variant: ELYTRA, facing });
+        },
+      });
+    }
     for (let lz = 0; lz < 16; lz++) {
       for (let lx = 0; lx < 16; lx++) {
         let y = MAX_Y - 1;
@@ -249,7 +341,7 @@ export class EndGenerator extends TerrainGenerator {
     }
     const tint = new Uint8Array(64);
     for (let i = 0; i < 16; i++) tint.set([140, 150, 100, 128], i * 4);
-    return { blocks, tint, heights, chests: [], villagers: [], mobs: [] };
+    return { blocks, tint, heights, chests, villagers: [], mobs };
   }
 }
 

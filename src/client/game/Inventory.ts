@@ -237,6 +237,7 @@ export class Inventory {
     let broken = 0;
     for (let k = 0; k < ARMOR_SLOTS; k++) {
       const s = this.armor[k];
+      if (s && ITEMS[s.id]?.armor?.material === 'elytra') continue; // Fase 8.6: los élitros no se gastan con los golpes
       if (s && this.wearStack(s, amount)) {
         this.armor[k] = null;
         broken++;

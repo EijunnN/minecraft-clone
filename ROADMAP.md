@@ -6,23 +6,23 @@ acercarnos a él. Leyenda: ✅ hecho · 🟡 parcial · ❌ falta.
 
 ## 1. Resumen
 
-Estado al terminar la fase 8.5 (2026-09-26). Los recuentos salen de `docs/cobertura.md`, que cruza el
+Estado al terminar la fase 8.6 (2026-09-27). Los recuentos salen de `docs/cobertura.md`, que cruza el
 catálogo exportado de la 26.3 con el registro del juego.
 
 | | Minecraft 26.3 | VoxelCraft hoy |
 | --- | --- | --- |
-| Dimensiones | 3 (Mundo normal, Nether, End) | 🟡 2 (Mundo normal y Nether) |
-| Biomas | 67 (53 del mundo normal, 3 de cueva y el Deep Dark, 5 del Nether, 5 del End y el vacío) | 🟡 58 (faltan el jardín pálido, el bosque moteado, las cuevas de azufre, el End y el vacío) |
-| Estructuras | 22 (más elementos decorativos: geodas, mazmorras, fósiles…) | 🟡 18: 14 del mundo normal y las 4 del Nether (y 4 elementos decorativos); las del End están por hacer |
-| Criaturas | 86 vivas, incluidos 2 jefes | 🟡 70 |
-| Bloques | 1.286 | 🟡 ~1.035 |
-| Objetos | 1.658 | 🟡 ~1.310 (bloques incluidos) |
-| Recetas | 2.042 | 🟡 1.002 (las demás usan objetos que aún no existen) |
+| Dimensiones | 3 (Mundo normal, Nether, End) | ✅ las 3 |
+| Biomas | 67 (53 del mundo normal, 3 de cueva y el Deep Dark, 5 del Nether, 5 del End y el vacío) | 🟡 63 (faltan el jardín pálido, el bosque moteado, las cuevas de azufre y el vacío) |
+| Estructuras | 22 (más elementos decorativos: geodas, mazmorras, fósiles…) | 🟡 20: 15 del mundo normal (con la fortaleza), las 4 del Nether y la ciudad del End (y 4 elementos decorativos, más los pilares y las puertas del End) |
+| Criaturas | 86 vivas, incluidos 2 jefes | 🟡 73 (con el dragón de Ender) |
+| Bloques | 1.286 | 🟡 ~1.070 |
+| Objetos | 1.658 | 🟡 ~1.350 (bloques incluidos) |
+| Recetas | 2.042 | 🟡 1.015 (las demás usan objetos que aún no existen) |
 | Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319); el Nether, 128 |
 | Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | 🟡 todos salvo logros y estadísticas, libro de recetas, modos aventura/espectador/extremo y reglas del juego (fase 9) |
 
-El mundo normal está completo salvo lo de 2024–2026 (fase 9). El Nether ya está entero (8.1–8.5). Lo que
-queda es el resto de la fase 8 (el End y el Wither) y el metajuego de la fase 9.
+El mundo normal está completo salvo lo de 2024–2026 (fase 9). El Nether (8.1–8.5) y el End (8.6) ya
+están enteros. Lo que queda es el Wither (8.7) y el metajuego de la fase 9.
 
 ## 2. Inventario por áreas
 
@@ -53,10 +53,11 @@ queda es el resto de la fase 8 (el End y el Wither) y el metajuego de la fase 9.
 Elementos decorativos: geoda de amatista, mazmorra con generador de monstruos, fósil, pozo del
 desierto, cofre de bonificación, plataformas y pilares del End.
 
-**VoxelCraft** 🟡: del mundo normal, todas salvo la fortaleza (8.6), las cámaras de desafío, las ruinas
-de senderos y el campamento abandonado (fase 9); geodas, mazmorras, fósiles y pozos del desierto. Todas
-con los cofres de botín de Minecraft y localizables con `/localizar`. Del Nether, las cuatro (8.4):
-fortaleza, bastión (los cuatro tipos), fósil y portal en ruinas. Las del End son la 8.6.
+**VoxelCraft** 🟡: del mundo normal, todas (la fortaleza con su portal del End, 8.6) salvo las cámaras de
+desafío, las ruinas de senderos y el campamento abandonado (fase 9); geodas, mazmorras, fósiles y pozos del
+desierto. Todas con los cofres de botín de Minecraft y localizables con `/localizar`. Del Nether, las cuatro
+(8.4): fortaleza, bastión (los cuatro tipos), fósil y portal en ruinas. Del End (8.6), la ciudad con su barco,
+y los pilares, el podio y las puertas del End.
 
 ### 2.3 Criaturas
 
@@ -64,8 +65,8 @@ fortaleza, bastión (los cuatro tipos), fósil y portal en ruinas. Las del End s
 | --- | --- | --- |
 | Pasivas | alay, armadillo, ajolote, murciélago, camello, gato, pollo, bacalao, gólem de cobre, vaca, burro, rana, calamar brillante, ghast feliz, caballo, champiñaca, mula, ocelote, loro, cerdo, conejo, salmón, oveja, sniffer, gólem de nieve, calamar, strider, cubo de azufre (26.2), renacuajo, pez tropical, tortuga, aldeano, vendedor ambulante, caballo esqueleto, caballo zombi | gólem de cobre, ghast feliz, sniffer y cubo de azufre (fase 9) |
 | Neutrales | abeja, araña de cueva, delfín, enderman, zorro, cabra, gólem de hierro, llama, nautilo, panda, piglin, oso polar, pez globo, araña, llama de comerciante, lobo, piglin zombificado | nautilo (fase 9) |
-| Hostiles | blaze, ciénago (bogged), breeze, crepitante (creaking), creeper, ahogado, guardián y guardián anciano, endermita, evocador, ghast, hoglin, zombi momificado (husk), cubo de magma, momificado (parched), fantasma, piglin bruto, saqueador, devastador, shulker, lepisma, esqueleto, slime, esqueleto errante (stray), vex, vindicador, warden, bruja, esqueleto del Wither, zoglin, zombi, aldeano zombi; monturas de monstruos: nautilo zombi y camello momificado | endermita y shulker (8.6); ciénago, breeze, crepitante, momificado, nautilo zombi y camello momificado (fase 9) |
-| Jefes | dragón del End, Wither | los dos (8.6 y 8.7) |
+| Hostiles | blaze, ciénago (bogged), breeze, crepitante (creaking), creeper, ahogado, guardián y guardián anciano, endermita, evocador, ghast, hoglin, zombi momificado (husk), cubo de magma, momificado (parched), fantasma, piglin bruto, saqueador, devastador, shulker, lepisma, esqueleto, slime, esqueleto errante (stray), vex, vindicador, warden, bruja, esqueleto del Wither, zoglin, zombi, aldeano zombi; monturas de monstruos: nautilo zombi y camello momificado | ciénago, breeze, crepitante, momificado, nautilo zombi y camello momificado (fase 9) |
+| Jefes | dragón del End, Wither | el Wither (8.7) |
 
 Ya hay crías, cría con comida, domesticar lobos, gatos, caballos y llamas, montar (caballos, cerdos y
 striders), esquilar, ordeñar, huevos, generadores de monstruos, criaturas con objetos en la mano
@@ -100,19 +101,19 @@ la vaca y el pollo, la armadura al azar de zombis y esqueletos y el arnés del g
 | Cubos de leche, de peces, de ajolote, de renacuajo, de nieve polvo, de cubo de azufre | 🟡 (todos salvo el de cubo de azufre, fase 9) |
 | Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, correa, silla | ✅ (y la brújula de recuperación) |
 | Mesa de trabajo 3×3 e inventario 2×2 | ✅ |
-| Recetas | 🟡 (985 de 2.042; las que faltan usan objetos que aún no existen) |
+| Recetas | 🟡 (1.015 de 2.042; las que faltan usan objetos que aún no existen) |
 | Libro de recetas | ❌ (fase 9) |
 | Horno, ahumador, alto horno, fogata | ✅ |
 | Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (todos salvo el crafter, fase 9; la mesa de herrería mejora a netherita y los adornos son de la fase 9) |
 | Cofre, barril, tolva, saco (bundle), estantería cincelada | ✅ (también cofre doble y cofre trampa) |
-| Caja de shulker, cofre de ender, cofre de cobre, estante (shelf) | ❌ (8.6 y fase 9) |
+| Caja de shulker, cofre de ender, cofre de cobre, estante (shelf) | 🟡 (las cajas de shulker y el cofre de ender, 8.6; el cofre de cobre y el estante, fase 9) |
 
 ### 2.6 Agricultura y ganadería
 
 | Elemento | Estado |
 | --- | --- |
 | Brotes que crecen, caña de azúcar y cactus que crecen, hierba que se extiende | ✅ |
-| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | 🟡 (todos salvo la flor de coro, 8.6) |
+| Cultivos: trigo, zanahoria, patata, remolacha, calabaza, sandía, bayas, cacao, bambú, verrugas del Nether, flor de coro | ✅ |
 | Azada, tierra de cultivo e hidratación | ✅ |
 | Polvo de hueso, compostador | ✅ |
 | Pan, tarta, galletas, sopas y estofados | ✅ |
@@ -152,7 +153,7 @@ desafío (fase 9). La verruga del Nether sale en las fortalezas (8.4).
 | Caballos, burros, mulas, camellos, cerdos y striders montables; nautilo bajo el agua; ghast feliz volador | 🟡 (todos salvo el nautilo y el ghast feliz, fase 9) |
 | Barcas (y con cofre, balsas de bambú), vagonetas y raíles | ✅ |
 | Cohetes de fuegos artificiales | ✅ |
-| Élitros, perla de ender (teletransporte al lanzarla), ojo de ender | ❌ (8.6) |
+| Élitros, perla de ender (teletransporte al lanzarla), ojo de ender | ✅ |
 | Arqueología (cepillo, arena sospechosa, vasijas decoradas) | 🟡 (el cepillo y las vasijas; faltan la arena y la grava sospechosas, fase 9) |
 | Mapas y brújulas, barra de localización | 🟡 (mapas, de explorador y del tesoro, y brújulas; falta la barra de localización) |
 | Logros (advancements) y estadísticas | ❌ (fase 9) |
@@ -165,7 +166,7 @@ ender para encontrar la fortaleza, el portal del End, combate contra el dragón,
 ciudades del End, élitros y shulkers. **VoxelCraft: 🟡** el portal, los 5 biomas del Nether portados
 de la 26.3, sus criaturas con el trueque (8.1–8.3), sus cuatro estructuras (8.4) y lo que da: la
 netherita, el nexo de reaparición, la magnetita, el faro, la fogata de almas y las columnas de burbujas
-(8.5). Faltan el End (8.6) y el Wither (8.7).
+(8.5). **VoxelCraft: ✅** el End entero (8.6), portado de la 26.3. Falta el Wither (8.7).
 
 ### 2.12 Bloques de construcción y decoración
 
@@ -175,7 +176,7 @@ colores de lana, alfombra, cristal y paneles, terracota esmaltada, hormigón, ve
 de faroles, cadenas, macetas, marcos, cuadros, estandartes, cabezas, cojines (26.3)… **VoxelCraft:
 🟡** todas las familias del mundo normal (las 10 maderas, todas las piedras, cobre, los 16 colores) y
 las del Nether hasta ahora (maderas carmesí y distorsionada, piedra negra, basalto, ladrillos del
-Nether, con el cuarzo de la 8.5); faltan el purpur y la piedra del End (8.6) y los cojines (fase 9). Ver `docs/cobertura.md`.
+Nether, con el cuarzo de la 8.5) y las del End (piedra del End y sus ladrillos, púrpura); faltan los cojines (fase 9). Ver `docs/cobertura.md`.
 
 ### 2.13 Multijugador, interfaz y opciones
 
@@ -677,9 +678,44 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
     plantilla de mejora de los bastiones. Los botones y placas de piedra negra pulida ya estaban (8.2).
   - Pendiente para su fase: la lanza y la armadura de nautilo de netherita (fase 9), la estrella del Nether del
     Wither (8.7; de momento, en creativo) y los adornos de armadura (fase 9).
-- **8.6 El End:** fortalezas con el portal del End (ojos de ender), la isla del dragón (pilares de
-  obsidiana, cristales del End), el dragón y el portal de salida, puertas del End, islas exteriores,
-  ciudades y barcos del End (shulkers, élitros), plantas de coro y purpur.
+- ✅ **8.6 El End:** la tercera dimensión, contrastada con el código de la 26.3 (en cuatro partes).
+  - **La dimensión:** el terreno del End (la isla central y las islas exteriores a partir de 1000 bloques, con
+    las funciones de densidad de Java), sus cinco biomas, las islas pequeñas, las plantas y flores de coro (que
+    crecen y se ramifican como en Java; la fruta de coro teletransporta), la piedra del End y la púrpura con sus
+    formas, la vara del End (y sus chispas) y el cielo del End con su destello.
+  - **Fortalezas:** portadas pieza a pieza de StrongholdPieces (en los anillos de Java), con biblioteca,
+    celdas, fuente, cruces, escaleras y la sala del portal con el generador de lepismas; su botín. El **ojo de
+    ender** (vuela hacia la más cercana y a veces se rompe), los **marcos del portal** (con los doce ojos mirando
+    hacia dentro se abre) y el **portal del End** con su velo de estrellas. La **perla de ender** y la
+    **endermita**.
+  - **La isla del dragón:** los diez pilares de obsidiana (dos con jaula) con sus cristales, el podio, el
+    **dragón de Ender** con todas sus fases (vueltas, pasadas de bola de fuego, aliento en el podio, embestidas),
+    daño por partes, curación con los cristales, la barra de jefe y su muerte (la desintegración, los rayos, el
+    portal de salida, el huevo y una **puerta del End** nueva). **Reaparición** con cuatro cristales en el
+    portal (los pilares se rehacen como en DragonRespawnStage). Las **puertas del End** llevan a las islas
+    exteriores (y dejan una de vuelta); el huevo salta al tocarlo.
+  - **Ciudades del End:** en una rejilla de regiones como en Java, en las tierras altas; crecen como
+    EndCityPieces (casas, torres, torres gordas y puentes, con las colisiones y las secciones anidadas de Java)
+    y sus diecinueve piezas se construyen con reglas a la medida de las plantillas de Java (comprobadas celda a
+    celda). Cofres con su botín, **shulkers** de centinela y, a veces, el **barco** flotando con la **cabeza de
+    dragón** en la proa, el alambique con dos pociones de curación II y el marco con los **élitros**.
+    `/localizar ciudad_del_end`.
+  - **Shulker:** pegado a una cara, se asoma, se abre al ver a un jugador (a 16 bloques, 4 en el eje de su
+    cara) y dispara balas que le persiguen a saltos y dan Levitación; cerrado tiene 20 de armadura y las flechas
+    le rebotan; herido se teletransporta y su propia bala puede duplicarlo. Suelta el **caparazón**. Es sólido
+    (se puede estar encima). Modelo, texturas, sonidos y la estela de la bala.
+  - **Élitros:** planeo con la física exacta de Java (a 20 pasos por segundo), cohetes que empujan (con
+    daño si llevan estrella), choque con las paredes, desgaste (un uso por segundo; con uno, dejan de
+    planear), reparación con membrana de phantom, encantamientos que admiten, el viento al volar y las alas en el
+    jugador (desplegadas, recogidas según el picado, abiertas al agacharse, con el cuerpo que se tumba y se ladea
+    en los giros), también para los demás jugadores.
+  - **Cajas de shulker** (17 colores): guardan 27 pilas, cada una en su hueco, y se las llevan al romperlas
+    (también con un pistón); no admiten otras cajas; no se abren si algo tapa la tapa; se tiñen conservando lo
+    que llevan y se lavan en el caldero. **Cofre de ender:** 27 huecos de cada jugador, los mismos en todos los
+    cofres de ender y guardados con él; luz 7, partículas de portal, suelta obsidiana (con Toque de seda, él
+    mismo).
+  - Pendiente: el Poema del End y los créditos al salir por primera vez (no se incluyen), y la animación de la
+    tapa de las cajas de shulker y de la mandíbula de la cabeza de dragón (se ven cerradas, como los cofres).
 - **8.7 El Wither.**
 
 ### Fase 9 — Metajuego y novedades recientes (L)

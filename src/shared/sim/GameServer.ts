@@ -4,6 +4,8 @@
 // Este archivo sólo orquesta: conexiones y sesiones, reparto de mensajes (server/messageRouter.ts), el
 // bucle de 20 ticks/s y el guardado. Los sistemas (server/systems.ts) viven en la carpeta server/ y
 // sólo ven un ServerContext (ver server/context.ts).
+import { enderFromWire } from './server/containerSystem'; // Fase 8.6
+import { stackToWire } from '../protocol';
 import {
   PROTOCOL_VERSION, MAX_PLAYERS, MAX_CHAT, STATE_DEAD, encodeEdits, sanitizeName, sanitizeColor, worldTimeAt,
   type ClientMsg, type ServerMsg, type PlayerInfo, type WorldTime,
@@ -617,6 +619,7 @@ export class GameServer {
     const bed = rec?.bed;
     s.bed = Array.isArray(bed) && bed.length === 3 && bed.every(Number.isInteger) ? bed : null;
     s.bedDim = Number.isInteger(rec?.bedDim) ? rec!.bedDim : DIM_OVERWORLD; // Fase 8.5
+    s.ender = enderFromWire(rec?.ender); // Fase 8.6
     if (s.save?.pos && s.save.pos.every(Number.isFinite)) s.p = [s.save.pos[0], s.save.pos[1], s.save.pos[2]];
     // Fase 8: sin posición guardada fuera del mundo normal, el punto de aparición de esta dimensión.
     else if (this.dim !== DIM_OVERWORLD) s.p = this.arrivalPos(s, { kind: 'pos' });
@@ -658,6 +661,7 @@ export class GameServer {
   private savePlayer(s: Session): void {
     if (!s.joined) return;
     const rec: PlayerRecord = { mode: s.mode, save: s.save, bed: s.bed, bedDim: s.bedDim ?? DIM_OVERWORLD, dim: this.dim };
+    if (s.ender?.slots.some(Boolean)) rec.ender = s.ender.slots.map((st) => stackToWire(st)); // Fase 8.6
     this.store.savePlayer(s.name.toLowerCase(), JSON.stringify(rec));
     s.saveDirty = false;
   }

@@ -15,6 +15,7 @@ const RESISTANCE: Record<string, number> = {
   terracotta: 4.2, basalt: 4.2, polished_basalt: 4.2, end_stone: 9, end_stone_bricks: 9, iron_bars: 6, iron_chain: 6,
   reinforced_deepslate: 1200, sculk_catalyst: 3, sculk_shrieker: 3, soul_lantern: 3.5, // Fase 7.5 (abismo)
   ancient_debris: 1200, netherite_block: 1200, respawn_anchor: 1200, lodestone: 3.5, beacon: 3, // Fase 8.5
+  ender_chest: 600, // Fase 8.6
 };
 
 let TABLE: Float32Array | null = null;
@@ -29,6 +30,7 @@ function resistanceOf(id: number): number {
   if (h < 0) return 3_600_000;
   if (base === OBSIDIAN || base === CRYING_OBSIDIAN || base === ENCHANTING_TABLE || isAnvil(id)) return 1200;
   if (key in RESISTANCE) return RESISTANCE[key];
+  if (/shulker_box$/.test(key)) return 2; // Fase 8.6
   if (/_terracotta$/.test(key) && !/glazed/.test(key)) return 4.2;
   // Las piedras y los metales (con pico y de 1,5 en adelante) resisten 6; las menas, lo que cuesta romperlas.
   if (d.tool === 'pickaxe' && h >= 1.5 && !/_ore$/.test(key)) return 6;

@@ -83,6 +83,9 @@ export function deathMessage(cause: DamageCause): string {
     case 'void': return 'cayó al vacío';
     case 'suffocate': return 'se asfixió dentro de un bloque';
     case 'explosion': return 'voló por los aires';
+    case 'fireworks': return 'estalló por los aires con un cohete'; // Fase 8.6
+    case 'shulker_bullet': return 'fue abatido por un shulker'; // Fase 8.6
+    case 'fly_into_wall': return 'experimentó la energía cinética'; // Fase 8.6: chocar planeando
     case 'lightning': return 'fue alcanzado por un rayo';
     case 'arrow': return 'fue abatido por una flecha';
     case 'kill': return 'abandonó este mundo';

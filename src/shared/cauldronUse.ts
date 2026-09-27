@@ -2,6 +2,7 @@
 // cambiar lo que lleva en la mano) y el servidor (que cambia el bloque).
 import {
   BANNERS, cauldronFill, cauldronOf, CAULDRON_EMPTY, CAULDRON_WATER, CAULDRON_LAVA, CAULDRON_SNOW,
+  isShulkerBox, shulkerBoxColor, SHULKER_BOXES, // Fase 8.6
 } from './blocks';
 import { BUCKET, WATER_BUCKET, LAVA_BUCKET, POWDER_SNOW_BUCKET, type ItemStack } from './items';
 import { bannerLayers } from './bannerPatterns';
@@ -58,6 +59,10 @@ export function cauldronUse(id: number, held: ItemStack | null): CauldronResult 
     if (!washed.data) delete washed.data;
     return { block: cauldronOf(CAULDRON_WATER, f.level - 1), held: washed, sound: 'wash' };
   }
+  // Fase 8.6: la caja de shulker teñida se lava (vuelve a la morada, con lo que llevaba) y baja un nivel.
+  if (isShulkerBox(item) && shulkerBoxColor(item) !== '' && f.kind === CAULDRON_WATER && f.level > 0) {
+    return { block: cauldronOf(CAULDRON_WATER, f.level - 1), held: { ...held, id: SHULKER_BOXES[''], count: 1 }, sound: 'wash' };
+  }
   return null;
 }
 
@@ -66,5 +71,6 @@ export function cauldronUseServer(id: number, item: number): number {
   const f = cauldronFill(id);
   if (!f) return -1;
   if (BANNER_ITEMS.has(item)) return f.kind === CAULDRON_WATER && f.level > 0 ? cauldronOf(CAULDRON_WATER, f.level - 1) : -1;
+  if (isShulkerBox(item)) return shulkerBoxColor(item) !== '' && f.kind === CAULDRON_WATER && f.level > 0 ? cauldronOf(CAULDRON_WATER, f.level - 1) : -1; // Fase 8.6
   return cauldronUse(id, { id: item, count: 1 })?.block ?? -1;
 }

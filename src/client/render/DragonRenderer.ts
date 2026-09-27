@@ -77,6 +77,11 @@ export const CRYSTAL_MODEL: JPart[] = [
   { name: 'cube', pose: [0, 0, 0], boxes: [[-4, -4, -4, 8, 8, 8, 32, 0]] },
 ];
 
+/** Fase 8.6: ShulkerBulletModel (64 × 32): tres placas cruzadas. */
+export const BULLET_MODEL: JPart[] = [
+  { name: 'main', pose: [0, 0, 0], boxes: [[-4, -4, -1, 8, 8, 2, 0, 0], [-1, -4, -4, 2, 8, 8, 0, 10], [-4, -1, -4, 8, 2, 8, 20, 0]] },
+];
+
 /** Caras de una caja con la disposición de Minecraft: [u, v, ancho, alto] para −X, +X, −Y, +Y, −Z, +Z (en Java). */
 function faces(u: number, v: number, w: number, h: number, d: number): [number, number, number, number][] {
   return [[u, v + d, d, h], [u + d + w, v + d, d, h], [u + d, v, w, d], [u + d + w, v, w, d], [u + d, v + d, w, h], [u + d + w + d, v + d, w, h]];
@@ -98,7 +103,7 @@ export class DragonRenderer {
   private readonly bone = mat4.create();
   private readonly flip = mat4.fromScaling(mat4.create(), [-1, -1, 1]);
 
-  constructor(private gl: GL, private texture: (key: 'dragon' | 'crystal') => MobTexture) {}
+  constructor(private gl: GL, private texture: (key: 'dragon' | 'crystal' | 'bullet') => MobTexture) {}
 
   /** Malla de las cajas de una parte en coordenadas de Java (y hacia abajo), con su UV. */
   private mesh(key: string, part: JPart, aw: number, ah: number): PartMesh {
@@ -159,7 +164,7 @@ export class DragonRenderer {
     return m;
   }
 
-  private skin(key: 'dragon' | 'crystal'): WebGLTexture {
+  private skin(key: 'dragon' | 'crystal' | 'bullet'): WebGLTexture {
     let t = this.skins.get(key);
     if (t) return t;
     const gl = this.gl;
@@ -371,6 +376,46 @@ export class DragonRenderer {
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
     });
+    gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(null);
+  }
+
+  /**
+   * Fase 8.6 (ShulkerBulletRenderer): la bala del shulker, con toda la luz, girando sobre sí misma y con un halo más
+   * grande y tenue alrededor.
+   */
+  drawBullet(p: Program, e: ClientEntity, camX: number, camY: number, camZ: number, time: number): void {
+    const gl = this.gl;
+    const tc = time * 20 + e.seed * 1000;
+    const m = mat4.create();
+    mat4.translate(m, m, [e.x - camX, e.y - camY + 0.15, e.z - camZ]);
+    mat4.rotateY(m, m, Math.sin(tc * 0.1) * Math.PI);
+    mat4.rotateX(m, m, Math.cos(tc * 0.1) * Math.PI);
+    mat4.rotateZ(m, m, Math.sin(tc * 0.15) * Math.PI * 2);
+    mat4.scale(m, m, [0.5, 0.5, 0.5]);
+    mat4.rotateY(m, m, e.yaw);
+    mat4.rotateX(m, m, e.pitch);
+    mat4.identity(this.bone);
+    p.tex2D('uSkin', this.skin('bullet')).f2('uLightLevel', 1, 1).f3('uTint', 1, 1, 1).f1('uFlash', 0);
+    gl.uniformMatrix4fv(p.loc('uBones'), false, this.bone as Float32Array, 0, 16);
+    const mesh = this.mesh('bullet', BULLET_MODEL[0], 64, 32);
+    gl.disable(gl.CULL_FACE);
+    const w = mat4.create();
+    mat4.multiply(w, m, this.flip);
+    p.m4('uModel', w as Float32Array);
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    // El halo: la misma bala × 1,5, casi transparente y aditiva.
+    mat4.scale(w, w, [1.5, 1.5, 1.5]);
+    p.m4('uModel', w as Float32Array).f3('uTint', 0.35, 0.35, 0.3);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.depthMask(false);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    gl.depthMask(true);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.disable(gl.BLEND);
+    p.f3('uTint', 1, 1, 1);
     gl.enable(gl.CULL_FACE);
     gl.bindVertexArray(null);
   }

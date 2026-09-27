@@ -10,6 +10,7 @@ import { sanitizeEnchList, isEnchantable } from './enchantments';
 import { isPotionType, SPECTRAL_ARROW_TYPE } from './potions'; // Fase 7 (remate): la flecha con efecto de la ballesta; 8.3: la espectral
 // Fase 7.5 (océano): mapas del tesoro y de explorador.
 import { FILLED_MAP, SHIELD, COMPASS } from './items';
+import { isShulkerBox } from './blocks'; // Fase 8.6
 import { sanitizeStructureMap, STRUCTURE_MAPS, type StructureMapData } from './structureMapData';
 
 export interface ItemData {
@@ -41,6 +42,8 @@ export interface ItemData {
   sb?: number;
   /** Fase 8.5: brújula magnetizada: la magnetita a la que apunta [x, y, z, dimensión]. */
   lode?: [number, number, number, number];
+  /** Fase 8.6: caja de shulker: el hueco (0..26) de cada pila que lleva dentro (en `bag`, en el mismo orden). */
+  slots?: number[];
 }
 
 /** Páginas de un libro como mucho y caracteres por página. */
@@ -132,6 +135,12 @@ function ownData(id: number, r: Record<string, unknown>): ItemData | undefined {
     const layers = sanitizeLayers(r.layers);
     return layers ? { layers } : undefined;
   }
+  // Fase 8.6: los huecos de lo que lleva la caja de shulker (distintos, de 0 a 26; sanitizeStack los cuadra con `bag`).
+  if (isShulkerBox(id) && Array.isArray(r.slots)) {
+    const seen = new Set<number>();
+    const slots = r.slots.slice(0, 27).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 27 && !seen.has(n) && (seen.add(n), true));
+    return slots.length ? { slots } : undefined;
+  }
   if (id === CROSSBOW_CHARGED) {
     const ap = Number(r.ap);
     return r.ap !== undefined && (isPotionType(ap) || ap === SPECTRAL_ARROW_TYPE) ? { ap } : undefined; // Fase 8.3: o la espectral
@@ -169,6 +178,7 @@ export function cloneItemData(d: ItemData): ItemData {
   if (d.author !== undefined) c.author = d.author;
   if (d.gen !== undefined) c.gen = d.gen;
   if (d.layers) c.layers = d.layers.map((l): BannerLayer => [l[0], l[1]]);
+  if (d.slots) c.slots = d.slots.slice(); // Fase 8.6
   // Fase 7 (encantamientos)
   if (d.ench) c.ench = d.ench.map((e): [number, number] => [e[0], e[1]]);
   if (d.stored) c.stored = d.stored.map((e): [number, number] => [e[0], e[1]]);

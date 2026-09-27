@@ -6,6 +6,8 @@ import { ITEMS } from '../../shared/items';
 import { potionPhysics } from './potionClient';
 import { effectsPhysics } from './effectsClient';
 import type { Game } from './Game';
+import { canGlideWith } from '../../shared/elytra'; // Fase 8.6
+import { glideWindLevel } from '../audio/glideWind';
 
 /** Lo que el resto del frame necesita saber del movimiento. */
 export interface MoveResult {
@@ -77,13 +79,27 @@ export class Movement {
       jump: active && (input.isDown(k.jump) || input.wasPressed(k.jump)),
       sneak: active && (settings.toggleSneak ? this.sneakOn : input.isDown(k.sneak)),
       sprint: active && (settings.toggleSprint ? this.sprintOn : input.isDown(k.sprint)) && (g.creative || surv.canSprint()),
+      jumpPressed: active && input.wasPressed(k.jump), // Fase 8.6: abrir los élitros
     };
+    // Fase 8.6: los élitros sirven puestos en el pecho, con más de un uso, sin ir montado.
+    p.canGlide = canGlideWith(g.inv.armor[1]) && !g.riding.active && !g.vehicles.active;
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
     // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
     g.vehicles.collidePlayer(dt); // Fase 7 (remate): barcas sólidas y vagonetas que apartan
     if (!g.riding.update(dt, controls, active) && !g.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
     g.mechanisms.update(); // Fase 7 (mecanismos): los bloques que empujan los pistones apartan al jugador
     const moved = g.riding.active || g.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz);
+    // Fase 8.6: lo que gasta el vuelo (1 cada 20 ticks, con Irrompibilidad) y el golpe al chocar de lado.
+    for (; p.glideWear > 0; p.glideWear--) {
+      const el = g.inv.armor[1];
+      if (el && !g.creative) g.inv.wearStack(el, 1);
+    }
+    const [wv, wp] = glideWindLevel(p.gliding ? p.glideTicks : 0, (p.vx * p.vx + p.vy * p.vy + p.vz * p.vz) / 400);
+    g.audio.setGlideWind(wv, wp);
+    if (p.wallDamage > 0) {
+      if (!g.creative) surv.damage(p.wallDamage, 'fly_into_wall');
+      p.wallDamage = 0;
+    }
     // Caer sobre tierra de cultivo la pisotea (más probable cuanto más alta la caída).
     if (p.justLanded && !p.flying && p.landedFall > 0.5 && Math.random() < p.landedFall - 0.5) {
       const bx = Math.floor(p.x), by = Math.floor(p.y - 0.05), bz = Math.floor(p.z);

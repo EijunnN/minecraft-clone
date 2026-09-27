@@ -2,6 +2,8 @@
 // experiencia, huevos lanzados y flotadores de pesca. Este gestor guarda la lista, crea y retira
 // entidades, aplica daño y explosiones y reparte cada tick entre sus comportamientos: itemPhysics,
 // projectiles, mobBrain, animalLife, spawner y xpOrbs.
+import { ShulkerAI } from './shulkers'; // Fase 8.6
+import { MOB_SHULKER } from '../../endMobs';
 import {
   MOBS, MOB_CHICKEN, MOB_ENDERMAN, MOB_ENDER_DRAGON, MOB_SQUID, ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY,
   type MobDef,
@@ -96,6 +98,8 @@ export class Entities {
   readonly custom = new Map<number, (e: Entity, dt: number) => void>();
   /** Fase 8.6 (el End): el dragón de Ender, sus cristales y sus bolas de fuego. */
   readonly dragon = new EnderDragonAI(this);
+  /** Fase 8.6 (el End): los shulkers y sus balas. */
+  readonly shulkers = new ShulkerAI(this);
   /** Fase 7.5 (océano): delfines que llevan a los naufragios y a las ruinas. */
   readonly dolphinGuide = new DolphinGuide(this);
   /** Explosión como las de Minecraft (la pone el sistema de la dinamita); sin ella, la sencilla de aquí. */
@@ -144,6 +148,7 @@ export class Entities {
     };
     this.gear.onSpawn(e); // Fase 6.5 (equipo)
     this.allays.init(e); // Fase 7.5 (mansión)
+    if (type === MOB_SHULKER) this.shulkers.init(e); // Fase 8.6: en el centro de su celda, pegado abajo
     this.list.set(e.id, e);
     return e;
   }
@@ -285,6 +290,7 @@ export class Entities {
     amount = this.gear.absorb(e, amount); // Fase 6.5 (equipo): armadura de caballo o de lobo
     amount = horsemanAbsorb(e, amount); // Fase 7.5 (fauna): el casco del jinete esqueleto
     amount = this.mobs.nether.absorb(e, amount); // Fase 8.3: la armadura del cubo de magma y el oro de los piglins
+    amount = this.shulkers.absorb(e, amount); // Fase 8.6: el shulker cerrado
     knock *= 1 - this.mobs.nether.knockbackResistance(e); // Fase 8.3: el hoglin y el zoglin apenas retroceden
     knock *= 1 - this.gear.knockbackResistance(e); // Fase 8.5: la armadura de netherita del caballo
     amount *= this.effects.damageFactor(e); // Fase 7 (pociones): Resistencia
@@ -319,6 +325,7 @@ export class Entities {
     this.mobs.illagers.onDamaged(e, attacker); // Fase 6 (asaltos): venganza de los asaltantes
     this.mobs.warden.onDamaged(e, attacker); // Fase 7.5 (abismo): el warden se enfada (y no retrocede)
     this.mobs.nether.onDamaged(e, attacker); // Fase 8.3 (criaturas del Nether)
+    this.shulkers.onDamaged(e, attacker); // Fase 8.6: se teletransporta, se duplica y avisa a los suyos
     this.host.fx('mob_hurt', e.x, e.y + e.height / 2, e.z, e.type);
     if (e.health <= 0) {
       this.killer = attacker; // Fase 6.5 (colecciones)
@@ -359,6 +366,7 @@ export class Entities {
     if (drops) this.gear.onKilled(e); // Fase 6.5 (equipo): armadura puesta, tridente, ballesta, pata de conejo
     if (drops) this.mobs.guardians.onKilled(e); // Fase 7.5 (océano): botín de los guardianes
     if (drops) this.mobs.nether.onKilled(e, this.killer); // Fase 8.3 (criaturas del Nether): equipo, varas, cráneos, cubos que se dividen
+    if (drops) this.shulkers.onKilled(e); // Fase 8.6: la concha
   }
 
   // ------------------------------------------------------------------ explosiones
@@ -457,9 +465,9 @@ export class Entities {
         if (e.dragonBreath) this.dragon.breathTick(e, dt); // Fase 8.6: el aliento del dragón
         else this.potions.cloudTick(e, dt, players); // Fase 7 (pociones)
       }
+      else if (this.custom.has(e.type)) this.custom.get(e.type)!(e, dt); // Fase 7 (mecanismos): dinamita encendida; 8.6: el End
       else if (e.effects) this.effects.tickWith(e, dt, () => this.mobs.mobTick(e, dt, players)); // Fase 7 (pociones)
       else if (isVehicleType(e.type)) continue; // Fase 7 (transporte): las mueve su sistema
-      else if (this.custom.has(e.type)) this.custom.get(e.type)!(e, dt); // Fase 7 (mecanismos): dinamita encendida
       else this.mobs.mobTick(e, dt, players);
     }
     this.separate(active.filter((e) => !e.dead && this.list.has(e.id) && e.mountId === undefined)); // Fase 8.3: los jinetes van encima

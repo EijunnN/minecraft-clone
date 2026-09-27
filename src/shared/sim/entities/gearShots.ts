@@ -20,6 +20,8 @@ import { meleeBonus, loyaltySpeed } from '../../enchantEffects';
 
 /** Segundos que un tridente clavado espera a que lo recojan. */
 const TRIDENT_STUCK_LIFE = 300;
+/** Estrellas de un cohete con colores (nuestros cohetes llevan una: sus colores van juntos). */
+const FIREWORK_STARS = 1;
 /** Velocidad máxima del cohete (bloques/s). */
 const FIREWORK_MAX_SPEED = 36;
 
@@ -60,10 +62,19 @@ export class GearShots {
     return e;
   }
 
+  /** Fase 8.6: cohete pegado al jugador `owner`, que planea (lo empuja su cliente); estalla a los `life` segundos. */
+  attachFirework(owner: string, x: number, y: number, z: number, stack: ItemStack, life: number): Entity {
+    const e = this.spawnFirework(x, y, z, stack, owner);
+    e.attached = owner;
+    e.fuse = life;
+    e.vx = e.vy = e.vz = 0;
+    return e;
+  }
+
   /** Reparto del tick de Entities: true si la entidad era de este módulo. */
   tick(e: Entity, dt: number, players: PlayerView[]): boolean {
     if (e.type === ENT_TRIDENT) this.tridentTick(e, dt, players);
-    else if (e.type === ENT_FIREWORK) this.fireworkTick(e, dt);
+    else if (e.type === ENT_FIREWORK) this.fireworkTick(e, dt, players);
     else return false;
     return true;
   }
@@ -207,10 +218,22 @@ export class GearShots {
 
   // ------------------------------------------------------------------ cohete
 
-  private fireworkTick(e: Entity, dt: number): void {
+  private fireworkTick(e: Entity, dt: number, players: PlayerView[]): void {
     const m = this.m;
     e.flags = 0;
     e.fuse = (e.fuse ?? 1) - dt;
+    if (e.attached) {
+      // Pegado al que planea: va con él (si se va o muere, estalla ya).
+      const p = players.find((q) => q.id === e.attached && q.alive);
+      if (!p || e.fuse <= 0) {
+        this.explode(e, players);
+        return;
+      }
+      e.x = p.x;
+      e.y = p.y + 0.3;
+      e.z = p.z;
+      return;
+    }
     // Como en Minecraft: cada tick sube 0,04 bloques por tick más deprisa y lo que se desvía de lado crece un 15 %.
     const k = dt * 20;
     const grow = Math.pow(1.15, k);
@@ -220,7 +243,7 @@ export class GearShots {
     const nx = e.x + e.vx * dt, ny = e.y + e.vy * dt, nz = e.z + e.vz * dt;
     const id = m.w.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz));
     if (id < 0 || BLOCK_SOLID[id] || e.fuse <= 0) {
-      this.explode(e);
+      this.explode(e, players);
       return;
     }
     e.x = nx;
@@ -228,11 +251,45 @@ export class GearShots {
     e.z = nz;
   }
 
-  /** El cohete estalla: sus colores en `a` y cuántos son en `b` (sin colores, se apaga con un chasquido). */
-  explode(e: Entity): void {
+  /**
+   * El cohete estalla: sus colores en `a` y cuántos son en `b` (sin colores, se apaga con un chasquido).
+   * Fase 8.6 (FireworkRocketEntity.dealExplosionDamage): con estrella hace 5 + 2 por estrella al que lo lleva pegado y,
+   * a los que ve a menos de 5 bloques, eso por √((5 − d) / 5).
+   */
+  explode(e: Entity, players: PlayerView[] = []): void {
+    const m = this.m;
     const colors = fireworkColors(e.stack?.dmg);
-    if (colors) this.m.host.fx('firework_burst', e.x, e.y, e.z, colors, colorList(colors).length);
-    else this.m.host.fx('firework_fizzle', e.x, e.y, e.z);
-    this.m.remove(e.id);
+    if (colors) m.host.fx('firework_burst', e.x, e.y, e.z, colors, colorList(colors).length);
+    else m.host.fx('firework_fizzle', e.x, e.y, e.z);
+    m.remove(e.id);
+    if (!colors) return;
+    const dmg = 5 + 2 * FIREWORK_STARS;
+    if (e.attached) m.host.hurtPlayer(e.attached, dmg, 0, 0, 0, 'fireworks');
+    const share = (x: number, y: number, z: number): number => {
+      const d = Math.hypot(x - e.x, y - e.y, z - e.z);
+      return d > 5 || !this.sees(e, x, y, z) ? 0 : dmg * Math.sqrt((5 - d) / 5);
+    };
+    for (const p of players) {
+      if (!p.alive || p.id === e.attached) continue;
+      const k = share(p.x, p.y + 0.9, p.z);
+      if (k > 0) m.host.hurtPlayer(p.id, k, 0, 0, 0, 'fireworks');
+    }
+    for (const o of m.list.values()) {
+      if (!o.ai || o.dead || MOBS[o.type].inert) continue;
+      const k = share(o.x, o.y + o.height / 2, o.z);
+      if (k > 0) m.damage(o, k, e.x, e.z, e.owner ?? null, 0);
+    }
+  }
+
+  /** ¿Se ve (x, y, z) desde el cohete sin bloques sólidos en medio? */
+  private sees(e: Entity, x: number, y: number, z: number): boolean {
+    const d = Math.hypot(x - e.x, y - e.y, z - e.z);
+    const n = Math.ceil(d / 0.25);
+    for (let i = 1; i < n; i++) {
+      const t = i / n;
+      const id = this.m.w.getBlock(Math.floor(e.x + (x - e.x) * t), Math.floor(e.y + (y - e.y) * t), Math.floor(e.z + (z - e.z) * t));
+      if (id > 0 && BLOCK_SOLID[id]) return false;
+    }
+    return true;
   }
 }

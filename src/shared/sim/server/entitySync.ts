@@ -1,6 +1,6 @@
 // Envío de entidades a cada jugador: sólo las cercanas y sólo lo que cambió desde el último envío
 // (altas, actualizaciones y bajas, con quién recogió cada objeto para la animación).
-import { MOB_ENDER_DRAGON } from '../../mobs'; // Fase 8.6
+import { MOB_ENDER_DRAGON, MOB_SHULKER } from '../../mobs'; // Fase 8.6
 import { ENT_ITEM, ENT_FALLING, ENT_XP, ENT_THROWN, ENT_DISPLAY } from '../../mobs';
 import type { ServerMsg, EntExtra } from '../../protocol';
 import { isHangingType } from '../../paintings'; // Fase 6.5 (decoración)
@@ -101,7 +101,7 @@ export class EntitySync {
           if (e.type === ENT_ITEM && e.stack) rec.push(e.stack.count);
           else if (e.type === ENT_XP) rec.push(e.xp ?? 1);
           else if (e.villager) rec.push(e.variant ?? 0); // Fase 6 (aldeanos): profesión del aldeano
-          else if (e.type === MOB_ENDER_DRAGON) rec.push(e.variant ?? 0); // Fase 8.6: los ticks de su muerte
+          else if (e.type === MOB_ENDER_DRAGON || e.type === MOB_SHULKER) rec.push(e.variant ?? 0); // Fase 8.6: los ticks de la muerte del dragón; la cara y lo que se asoma el shulker
           else if (e.type === ENT_EFFECT_CLOUD) rec.push(Math.round((e.cloudRadius ?? 0) * 100)); // Fase 7 (pociones)
           upd.push(rec);
         }

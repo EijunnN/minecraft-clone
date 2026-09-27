@@ -383,10 +383,11 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 6.5 (colecciones): caras de las cabezas (como skullTexture en blocks/collections.ts), tocadiscos y
   // marco brillante.
   // Fase 8.3 (criaturas del Nether): cráneo de esqueleto wither y cabeza de piglin (con hocico y orejas).
-  ...['zombie', 'skeleton', 'creeper', 'player', 'wither_skeleton', 'piglin'].flatMap((k) =>
+  ...['zombie', 'skeleton', 'creeper', 'player', 'wither_skeleton', 'piglin', 'dragon'].flatMap((k) =>
     ['right', 'left', 'top', 'bottom', 'back', 'front'].map((f): TextureDef => ({ name: `${k}_head_${f}` }))),
   { name: 'piglin_head_snout' },
   { name: 'piglin_head_ear' },
+  { name: 'dragon_head_snout' }, { name: 'dragon_head_horn' }, { name: 'dragon_head_nostril' }, // Fase 8.6
   { name: 'jukebox_side' },
   { name: 'jukebox_top' },
   { name: 'jukebox_bottom' },
@@ -474,6 +475,10 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   ...['end_portal_frame_top', 'end_portal_frame_side', 'end_portal_frame_eye'].map((name): TextureDef => ({ name })),
   { name: 'end_portal', special: 6 },
   { name: 'dragon_egg' },
+  // Fase 8.6: las cajas de shulker (la tapa, su techo, la base y el fondo de cada color) y el cofre de ender.
+  ...['', 'white_', 'orange_', 'magenta_', 'light_blue_', 'yellow_', 'lime_', 'pink_', 'gray_', 'light_gray_', 'cyan_', 'purple_', 'blue_',
+    'brown_', 'green_', 'red_', 'black_'].flatMap((c) => ['top', 'lid', 'base', 'bottom'].map((p): TextureDef => ({ name: `${c}shulker_box_${p}` }))),
+  ...['ender_chest_side', 'ender_chest_top', 'ender_chest_front', 'ender_chest_lock'].map((name): TextureDef => ({ name })),
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

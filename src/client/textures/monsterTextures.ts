@@ -4,7 +4,7 @@
 // sólo se declaran funciones y constantes propias; las de mobTextures.ts se usan dentro de funciones.
 import {
   MOB_DROWNED, MOB_WITCH, MOB_SLIME, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL, MOB_PHANTOM, MOB_SILVERFISH, MOB_CAVE_SPIDER,
-  MOB_ZOMBIE_VILLAGER, MOB_ENDERMITE,
+  MOB_ZOMBIE_VILLAGER, MOB_ENDERMITE, MOB_SHULKER,
 } from '../../shared/mobs';
 import {
   PX, NX, TOP, BOTTOM, FRONT, BACK, glow, rnd, vnoise, mapAt, zombieLike,
@@ -332,6 +332,76 @@ function endermite(t: Texel): Paint {
 }
 
 // ---------------------------------------------------------------------------
+// Fase 8.6: shulker: la concha de púrpura en escamas (la tapa con el lomo acanalado y un anillo en el techo, la base
+// con su franja), por dentro oscura y violeta, y la cabeza de la criatura, amarillo verdosa con ojos negros brillantes
+// ---------------------------------------------------------------------------
+
+const SHELL: RGB[] = [
+  [74, 46, 80],
+  [102, 66, 108],
+  [132, 90, 136],
+  [160, 114, 160],
+  [190, 146, 186],
+];
+const INSIDE: RGB[] = [
+  [26, 14, 34],
+  [40, 22, 50],
+  [58, 34, 70],
+];
+const FLESH: RGB[] = [
+  [150, 150, 84],
+  [184, 182, 106],
+  [214, 210, 132],
+  [236, 232, 162],
+];
+
+function shulker(t: Texel): Paint {
+  const r = rnd(t, 9898);
+  if (t.part === 'head') {
+    // Ojos negros con un brillo y la boca, en la cara de delante.
+    if (t.f === FRONT && t.j === 2 && (t.i === 1 || t.i === 4)) return [18, 14, 20];
+    if (t.f === FRONT && t.j === 1 && (t.i === 1 || t.i === 4)) return [60, 52, 60];
+    if (t.f === FRONT && t.j === 4 && t.i >= 2 && t.i <= 3) return [104, 90, 52];
+    let k = t.f === TOP ? 3 : t.f === BOTTOM ? 0 : 2;
+    if (r > 0.85) k -= 1;
+    return pick(FLESH, k);
+  }
+  const lid = t.part === 'lid';
+  // Por dentro (la cara de abajo de la tapa y la de arriba de la base): oscura, con motas violetas que brillan.
+  if ((lid && t.f === BOTTOM) || (!lid && t.f === TOP)) {
+    const cx = Math.abs(t.x - t.w / 2), cz = Math.abs(t.z - t.d / 2);
+    if (Math.max(cx, cz) > t.w / 2 - 1) return pick(SHELL, 1);
+    if (r > 0.94) return glow([150, 96, 190]);
+    return pick(INSIDE, r > 0.6 ? 2 : r > 0.25 ? 1 : 0);
+  }
+  let k = 2;
+  if (lid) {
+    if (t.f === TOP) {
+      // Techo: escamas y un anillo más oscuro alrededor del centro.
+      const d = Math.max(Math.abs(t.x - t.w / 2), Math.abs(t.z - t.d / 2));
+      k = d > 6.5 ? 3 : Math.abs(d - 4) < 0.6 ? 1 : 2;
+      if ((Math.floor(t.x / 2) + Math.floor(t.z / 2)) % 2 === 0) k += 1;
+    } else {
+      // Lados: acanalados en vertical y el borde de abajo (el labio) más claro.
+      const u = t.f === PX || t.f === NX ? t.z : t.x;
+      k = Math.floor(u) % 4 === 0 ? 1 : 2;
+      if (t.y < 1) k = 4;
+      else if (t.y > t.h - 1) k = 3;
+      else if (Math.floor(t.y) % 3 === 0 && Math.floor(u) % 2 === 1) k += 1;
+    }
+  } else {
+    // Base: la franja clara de arriba (el borde que asoma) y escamas en rombo abajo.
+    if (t.y > t.h - 1.5) k = 4;
+    else if (t.y > t.h - 2.5) k = 1;
+    else k = (Math.floor(t.y) + Math.floor((t.f === PX || t.f === NX ? t.z : t.x) / 2)) % 2 === 0 ? 2 : 3;
+    if (t.f === BOTTOM) k = 1;
+  }
+  if (r > 0.9) k += 1;
+  if (r < 0.08) k -= 1;
+  return pick(SHELL, k);
+}
+
+// ---------------------------------------------------------------------------
 // Araña de cueva: la araña, azul verdosa
 // ---------------------------------------------------------------------------
 
@@ -395,6 +465,7 @@ export const MONSTER_PAINTERS: Readonly<Record<number, Painter>> = {
   [MOB_PHANTOM]: phantom,
   [MOB_SILVERFISH]: silverfish,
   [MOB_ENDERMITE]: endermite, // Fase 8.6
+  [MOB_SHULKER]: shulker,
   [MOB_CAVE_SPIDER]: caveSpider,
   [MOB_ZOMBIE_VILLAGER]: zombieVillager,
 };

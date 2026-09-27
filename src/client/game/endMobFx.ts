@@ -4,7 +4,7 @@
 //   perla que cae (32 partículas de portal y el sonido del teletransporte) y el lanzamiento del ojo.
 // - Cada frame: las partículas de portal que sueltan los enderman y las endermitas (dos por tick, como en su
 //   aiStep) y la estela del ojo de ender en vuelo (cuatro por tick; burbujas si va por el agua).
-import { MOB_ENDERMAN, MOB_ENDERMITE, ENT_THROWN, MOB_ENDER_DRAGON, ENT_DRAGON_FIREBALL, EF_DRAGON_LANDING, EF_DRAGON_SITTING } from '../../shared/mobs';
+import { MOB_ENDERMAN, MOB_ENDERMITE, ENT_THROWN, MOB_ENDER_DRAGON, ENT_DRAGON_FIREBALL, EF_DRAGON_LANDING, EF_DRAGON_SITTING, ENT_SHULKER_BULLET } from '../../shared/mobs';
 import { ENDER_EYE } from '../../shared/items';
 import type { Game } from './Game';
 import { updateDragons, dragonPartBoxes } from './dragonClient';
@@ -103,6 +103,25 @@ export function endFx(g: Game, kind: string, p: [number, number, number], a?: nu
       }
       return true;
     }
+    // El shulker: se abre, se cierra, dispara y se teletransporta (con las partículas de portal del levelEvent 2016).
+    case 'shulker_open':
+    case 'shulker_close':
+    case 'shulker_shoot':
+      g.audio.playEquipSfx(kind, p);
+      return true;
+    case 'shulker_teleport':
+      g.audio.playEquipSfx('shulker_teleport', p);
+      for (let i = 0; i < 24; i++) pfx.portal(p[0], p[1] - 0.6, p[2], (Math.random() - 0.5) * 1.6, Math.random() - 0.3, (Math.random() - 0.5) * 1.6);
+      return true;
+    // La bala: choca (dos explosiones pequeñas) o la deshace un golpe (15 críticos).
+    case 'shulker_bullet_hit':
+      g.audio.playEquipSfx('shulker_bullet_hit', p);
+      pfx.explosion(p[0], p[1], p[2], 0.4);
+      return true;
+    case 'shulker_bullet_hurt':
+      g.audio.playEquipSfx('shulker_bullet_hurt', p);
+      pfx.crit(p[0], p[1], p[2], 15);
+      return true;
     default:
       return false;
   }
@@ -129,6 +148,9 @@ export function endTick(g: Game, dt: number): void {
       }
     } else if (e.type === ENT_DRAGON_FIREBALL) {
       pfx.dragonOrb(e.x, e.y + 0.5, e.z);
+    } else if (e.type === ENT_SHULKER_BULLET) {
+      // Una chispa por tick, donde estaba (ShulkerBullet.tick en el cliente).
+      for (let n = Math.floor(ticks + Math.random()); n > 0; n--) pfx.endRod(e.x, e.y + 0.15, e.z, 0, 0, 0);
     } else if (e.type === ENT_THROWN && e.item === ENDER_EYE) {
       for (let n = Math.floor(4 * ticks + Math.random()); n > 0; n--) {
         pfx.portal(e.x + Math.random() * 0.6 - 0.3, e.y - 0.5, e.z + Math.random() * 0.6 - 0.3, (Math.random() - 0.5) * 0.4, -0.2, (Math.random() - 0.5) * 0.4);

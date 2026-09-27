@@ -2,6 +2,8 @@
 // camas, tartas, compostadores), comer y beber, arco, escudo, cubos, azada, polvo de hueso, tallar
 // calabazas, lanzar huevos, pescar, animales (dar de comer, esquilar, ordeñar), ponerse armadura,
 // recoger y tirar objetos.
+import { isShulkerBox } from '../../shared/blocks'; // Fase 8.6
+import { stackToWire } from '../../shared/protocol';
 import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { raycast, type RayHit } from './raycast';
 import { netherGoodsUse } from './netherGoodsUse'; // Fase 8.5
@@ -422,7 +424,7 @@ export class Interaction {
     if (this.g.creative) this.g.inv.equip(held);
     else this.g.inv.equipFromSlot(this.g.selected, true);
     const p = this.g.player;
-    this.g.audio.playPlace(def.material === 'leather' ? 'wool' : 'metal', [p.x, p.eyeY, p.z]);
+    this.g.audio.playPlace(def.material === 'leather' || def.material === 'elytra' ? 'wool' : 'metal', [p.x, p.eyeY, p.z]);
     this.g.swing(true);
   }
 
@@ -705,6 +707,7 @@ export class Interaction {
       t: 'place', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], p: [hit.px, hit.py, hit.pz], item: base,
       yaw: this.g.player.yaw, pi: Math.round(this.g.player.pitch * 1000) / 1000, // Fase 7 (mecanismos)
       ...this.g.books.placeExtras(this.g.inv.get(slot), edits), // Fase 6.5 (libros y estandartes): capas del estandarte
+      ...(isShulkerBox(base) && this.g.inv.get(slot)?.bag ? { bx: stackToWire(this.g.inv.get(slot))! } : {}), // Fase 8.6: lo que lleva la caja
     });
     this.g.swing(false);
     const [x, y, z, id] = edits[0];

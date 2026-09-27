@@ -113,4 +113,5 @@ export const NETHER_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
 export const END_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('endermite', 'endermita', [22, 22, 22], [110, 110, 110]),
   egg('ender_dragon', 'dragón de ender', [28, 28, 28], [224, 121, 250]),
+  egg('shulker', 'shulker', [148, 103, 148], [77, 56, 82]),
 ];

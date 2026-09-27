@@ -4,6 +4,7 @@
 // cabeza, ver blocks/collections.ts). Las de zombi, esqueleto y creeper se copian de la cabeza de la
 // textura de la propia criatura (así son idénticas); la de jugador es un dibujo propio. Alrededor del
 // cuadrado va el color medio de la cara, para que las partículas al romperla tengan su color.
+import { DRAGON_HEAD_GENERATORS } from './genEnd'; // Fase 8.6
 import { N, clamp, pixelNoise, scale, type Generator, type RGB, type Tex } from './texCore';
 import { OAK_PLANKS } from './genWood';
 import { generateMobTexture, type MobTexture } from './mobTextures';
@@ -81,7 +82,7 @@ function headLayer(face: () => Face8): Generator {
   };
 }
 
-const HEAD_SOURCES: Record<Exclude<SkullKind, 'piglin'>, (face: SkullFace) => Face8> = {
+const HEAD_SOURCES: Record<Exclude<SkullKind, 'piglin' | 'dragon'>, (face: SkullFace) => Face8> = {
   zombie: (f) => mobHeadFace(MOB_ZOMBIE, f),
   skeleton: (f) => mobHeadFace(MOB_SKELETON, f),
   creeper: (f) => mobHeadFace(MOB_CREEPER, f),
@@ -220,9 +221,10 @@ function glowItemFrame(t: Tex): void {
 }
 
 export const COLLECTION_GENERATORS: Record<string, Generator> = {
-  ...Object.fromEntries((Object.keys(HEAD_SOURCES) as Exclude<SkullKind, 'piglin'>[]).flatMap((kind) =>
+  ...Object.fromEntries((Object.keys(HEAD_SOURCES) as Exclude<SkullKind, 'piglin' | 'dragon'>[]).flatMap((kind) =>
     SKULL_FACES.map((f) => [skullTexture(kind, f), headLayer(() => HEAD_SOURCES[kind](f))]))),
   ...Object.fromEntries(SKULL_FACES.map((f) => [skullTexture('piglin', f), piglinHeadLayer(f)])), // Fase 8.3
+  ...DRAGON_HEAD_GENERATORS, // Fase 8.6
   piglin_head_snout: piglinSnout,
   piglin_head_ear: piglinEar,
   jukebox_side: jukeboxSide,

@@ -151,7 +151,12 @@ function toolKind(id: number): string | undefined {
 /** Pieza de armadura de verdad (las cabezas van en el casco pero no son armadura). */
 function armorSlot(id: number): number {
   const a = ITEMS[id]?.armor;
-  return a && a.durability > 0 ? a.slot : -1;
+  return a && a.durability > 0 && a.material !== 'elytra' ? a.slot : -1;
+}
+
+/** Fase 8.6: los élitros sólo admiten lo de durabilidad (Irrompibilidad, Reparación) y las maldiciones de lo que se pone. */
+function isElytra(id: number): boolean {
+  return ITEMS[id]?.armor?.material === 'elytra';
 }
 
 /** Usos antes de romperse (0 si no se desgasta). */
@@ -178,9 +183,9 @@ export function inCategory(id: number, cat: EnchCategory): boolean {
     case 'trident': return id === TRIDENT;
     case 'fishing': return id === FISHING_ROD;
     case 'durability':
-      return armorSlot(id) >= 0 || kind === 'sword' || (!!kind && TOOL_KINDS_MINING.has(kind)) ||
+      return armorSlot(id) >= 0 || isElytra(id) || kind === 'sword' || (!!kind && TOOL_KINDS_MINING.has(kind)) ||
         [SHIELD, BOW, CROSSBOW, CROSSBOW_CHARGED, TRIDENT, FLINT_AND_STEEL, SHEARS, BRUSH, FISHING_ROD, CARROT_ON_A_STICK].includes(id);
-    case 'equippable': return armorSlot(id) >= 0 || SKULL_IDS.has(id) || id === CARVED_PUMPKIN;
+    case 'equippable': return armorSlot(id) >= 0 || isElytra(id) || SKULL_IDS.has(id) || id === CARVED_PUMPKIN;
     case 'vanishing': return inCategory(id, 'durability') || id === COMPASS || id === CARVED_PUMPKIN || SKULL_IDS.has(id);
   }
 }

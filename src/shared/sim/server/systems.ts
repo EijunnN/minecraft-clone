@@ -5,6 +5,10 @@
 //
 // Los enganches entre sistemas van por puntos con nombre (ver hooks.ts): los rayos (`storms.strikes`),
 // el clic derecho sobre entidades (`farming.interactions`), lo que enciende un bloque (`fire.igniters`)…
+import { isShulkerBox } from '../../blocks'; // Fase 8.6
+import { sanitizeStack } from '../../containers';
+import { stackFromWire } from '../../protocol';
+import { ENT_FRAME } from '../../paintings'; // Fase 8.6
 import { thunderAt } from '../../weather';
 import { discOfItem } from '../../collections';
 import { DT, TICK_RATE, type ServerContext, type Session } from './context';
@@ -197,8 +201,14 @@ export class ServerSystems {
     // quien lo suelte: el jugador, la falta de apoyo, una explosión…).
     this.lecterns = new Lecterns(ctx, store);
     this.banners = new Banners(ctx, store);
-    this.edits.placed = (s, msg, edits) => this.banners.onPlaced(s, msg, edits);
-    entities.decorateDrops = (stacks, x, y, z) => this.banners.decorateDrops(stacks, x, y, z);
+    this.edits.placed = (s, msg, edits) => {
+      this.banners.onPlaced(s, msg, edits);
+      // Fase 8.6: la caja de shulker que se pone con cosas dentro.
+      if (msg.bx) for (const [x, y, z, id] of edits) if (isShulkerBox(id)) this.containers.fillPlacedBox(x, y, z, sanitizeStack(stackFromWire(msg.bx)));
+    };
+    // Fase 8.6: y la caja de shulker que cae se lleva lo suyo.
+    entities.decorateDrops = (stacks, x, y, z) => this.containers.decorateDrops(this.banners.decorateDrops(stacks, x, y, z), x, y, z);
+    this.containers.silentBreak = () => this.rules.silentBreak;
     this.materials = new Materials(ctx);
     this.edits.materials = (s, x, y, z, id, item, h) => this.materials.useBlock(s, x, y, z, id, item, h);
     this.frogspawn = new Frogspawn(ctx, this.nature);
@@ -256,7 +266,11 @@ export class ServerSystems {
     // Un solo camino para las criaturas de estructura (guardianes, illagers de la mansión, alays presos):
     // las hace aparecer con persist; lo propio de cada especie (el alay) lo pone Entities.spawnMob.
     this.monuments = new OceanMonuments(ctx);
-    world.onStructureMobs = (m) => this.monuments.spawnStructureMobs(m);
+    world.onStructureMobs = (m) => {
+      // Fase 8.6: los marcos de las estructuras (los élitros del barco del End) los cuelga su sistema.
+      for (const f of m) if (f.type === ENT_FRAME) this.hangings.placeFrame(Math.floor(f.x), Math.floor(f.y), Math.floor(f.z), f.facing ?? 0, f.variant ?? 0);
+      this.monuments.spawnStructureMobs(m.filter((f) => f.type !== ENT_FRAME));
+    };
     this.critters = new CritterWorld(ctx, this.storms, this.trading);
     this.allays = new Allays(ctx, this.collections);
     this.portals = new Portals(ctx, store);
@@ -349,6 +363,7 @@ export class ServerSystems {
     this.golems.tick();
     this.oceanLife.tick();
     this.banners.endTick();
+    this.containers.endTick(); // Fase 8.6: las cajas de shulker rotas que no soltaron nada
     this.frogspawn.tick();
     this.fire.tick();
     this.conduits.tick();

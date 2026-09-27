@@ -5,7 +5,7 @@ import type { TradeWire } from './villagers'; // Fase 6 (aldeanos)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import type { BannerLayer } from './bannerPatterns';
 
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15; // Fase 8.6: el End (y lo de la 8.5), con mensajes, dimensión e ids nuevos
 export const MAX_PLAYERS = 16;
 export const MAX_NAME = 16;
 export const MAX_CHAT = 200;
@@ -22,6 +22,8 @@ export const STATE_PRONE = 32;
 export const STATE_EAT = 64;
 export const STATE_BOW = 128;
 export const STATE_BLOCK = 256;
+/** Fase 8.6: planeando con élitros (fuera de STATE_MASK: lo acepta playerState aparte). */
+export const STATE_GLIDE = 1 << 16;
 /** Bits de estado que el servidor acepta. */
 export const STATE_MASK = 0x1ff;
 
@@ -153,6 +155,8 @@ export type ClientMsg =
     l?: BannerLayer[];
     /** Fase 7 (mecanismos): inclinación de la mirada (pistones, observadores… hacia arriba o abajo). */
     pi?: number;
+    /** Fase 8.6: la caja de shulker que se pone, con lo que lleva dentro. */
+    bx?: WireStack;
   }
   /** Clic derecho sobre un bloque (abrir puertas, dormir, labrar con la azada, polvo de hueso). */
   | { t: 'use'; x: number; y: number; z: number; yaw: number; item?: number; h?: number } // Fase 6.5 (materiales): h, altura del clic
@@ -176,7 +180,7 @@ export type ClientMsg =
   /** c: 1 = virote de ballesta (Fase 6.5, equipo). Fase 7: ap, tipo de la flecha con efecto (pociones); en, encantamientos. */
   | { t: 'shoot'; p: [number, number, number]; d: [number, number, number]; f: number; c?: number; ap?: number; en?: [number, number][] }
   /** Lanzar un objeto (huevo) desde p en la dirección d. Fase 6.5 (equipo): tridente o cohete, con w = su desgaste o sus datos. */
-  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number; w?: number; st?: ItemStack } // Fase 7: st, el tridente entero
+  | { t: 'throw'; p: [number, number, number]; d: [number, number, number]; item: number; w?: number; st?: ItemStack; lt?: number } // Fase 7: st, el tridente entero; Fase 8.6: lt, cohete planeando (ticks)
   /** Caña de pescar: lanzar el flotador o, si ya está fuera, recogerlo. */
   | { t: 'fish'; p: [number, number, number]; d: [number, number, number]; en?: [number, number][] } // Fase 7: en, Suerte marina y Atracción
   /** Fase 8.6: el frasco recoge aliento de la nube `e` del dragón. */
@@ -406,9 +410,9 @@ export function stackFromWire(w: unknown, depth = 0): ItemStack | null {
   if (!Array.isArray(w) || w.length < 2) return null;
   const s: ItemStack = { id: Number(w[0]), count: Number(w[1]) };
   if (w.length > 2 && Number(w[2]) > 0) s.dmg = Number(w[2]);
-  // Fase 6.5 (remate): contenido del saco (sin sacos dentro).
-  if (depth === 0 && Array.isArray(w[3]) && w[3].length) {
-    const bag = (w[3] as unknown[]).slice(0, 64).map((b) => stackFromWire(b, 1)).filter((b): b is ItemStack => !!b);
+  // Fase 6.5 (remate): contenido del saco (sin sacos dentro). Fase 8.6: y de la caja de shulker (con sus sacos llenos).
+  if (depth < 2 && Array.isArray(w[3]) && w[3].length) {
+    const bag = (w[3] as unknown[]).slice(0, 64).map((b) => stackFromWire(b, depth + 1)).filter((b): b is ItemStack => !!b);
     if (bag.length) s.bag = bag;
   }
   // Fase 6.5 (libros y estandartes): datos de la pila (los valida sanitizeStack).

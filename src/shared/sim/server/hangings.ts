@@ -188,6 +188,13 @@ export class Hangings {
     reply(true);
   }
 
+  /** Fase 8.6: un marco colgado en la celda de aire (x, y, z) mirando hacia `f` con `item` (el de los élitros del barco del End). */
+  placeFrame(x: number, y: number, z: number, f: number, item: number): void {
+    if (this.byEnt.size >= MAX_HANGINGS || f < 0 || f > 3) return;
+    for (const h of this.byCell.get(posKey(x, y, z)) ?? []) if (h.x === x && h.y === y && h.z === z) return;
+    this.add({ kind: 1, x, y, z, f, v: item, rot: 0, ent: 0 });
+  }
+
   /** Clic derecho en un marco: poner el objeto de la mano o girar el que ya tiene. */
   onFrame(s: Session, msg: Extract<ClientMsg, { t: 'frame' }>): void {
     const ctx = this.ctx;

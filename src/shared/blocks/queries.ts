@@ -190,6 +190,8 @@ export function isChest(id: number): boolean {
   return (id >= CHEST && id < CHEST + 4) || familyBase(id) === CHEST_DOUBLE ||
     // Fase 6 (aldeanos): el barril guarda cosas como un cofre sencillo.
     defs[id]?.key === 'barrel' ||
+    // Fase 8.6: las cajas de shulker, también (27 pilas).
+    /shulker_box$/.test(defs[familyBase(id)]?.key ?? '') ||
     (id > 0 && !!extraChest(familyBase(id))); // Fase 7 (redstone): cofre trampa
 }
 
@@ -221,4 +223,4 @@ export function isContainer(id: number): boolean {
   // Fase 7 (mecanismos): y la tolva, el dispensador y el soltador.
   return isFurnace(id) || isChest(id) || CONTAINER_KEYS.has(defs[familyBase(id)]?.key ?? '');
 }
-const CONTAINER_KEYS = new Set(['brewing_stand', 'hopper', 'dispenser', 'dropper']);
+const CONTAINER_KEYS = new Set(['brewing_stand', 'hopper', 'dispenser', 'dropper', 'ender_chest']); // Fase 8.6: el cofre de ender

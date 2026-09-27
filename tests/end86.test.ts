@@ -269,3 +269,160 @@ test('puertas del End: la del anillo lleva lejos (y deja una de vuelta); el huev
   c.send({ t: 'use', x: 2, y, z: 2, yaw: 0, item: 0 });
   assert.notEqual(W.getBlock(2, y, 2), DRAGON_EGG, 'el huevo ya no está ahí');
 });
+
+// ------------------------------------------------------------------ parte 4: ciudades del End, shulkers, élitros, cajas
+
+import { endCityPieces, endCityTemplate, cityBounds } from '../src/shared/world/endCity';
+import { PURPUR_BLOCK, SHULKER_BOXES, ENDER_CHEST, isShulkerBox, shulkerBoxFacing } from '../src/shared/blocks';
+import { ELYTRA, SHULKER_SHELL, DIAMOND, DYES } from '../src/shared/items';
+import { MOB_SHULKER, ENT_SHULKER_BULLET, shulkerPeekState } from '../src/shared/mobs';
+import { EFFECT_LEVITATION } from '../src/shared/effects';
+import { glideTick, rocketBoostTick, canGlideWith, ELYTRA_DURABILITY } from '../src/shared/elytra';
+import { shulkerDyeCraft } from '../src/shared/craftSpecials';
+import { stackToWire } from '../src/shared/protocol';
+import { ENT_FRAME } from '../src/shared/paintings';
+import { CHEST } from '../src/shared/blocks';
+
+test('ciudades del End: en las tierras altas, con sus piezas unidas, cofres, shulkers y el barco con los élitros', () => {
+  const gen = new EndGenerator(12345);
+  const at = gen.locateCity(2000, 0, 12);
+  assert.ok(at, 'hay una ciudad cerca');
+  const city = gen.citiesNear(at[0], at[2], at[0], at[2])[0];
+  assert.ok(city.y >= 60, 'no más baja de y = 60');
+  // Cada pieza cabe en su caja (las medidas de las plantillas de Java).
+  for (const p of city.pieces) {
+    const [w, h, d] = endCityTemplate(p.name).size;
+    assert.equal(p.box.y1 - p.box.y0 + 1, h);
+    assert.equal((p.box.x1 - p.box.x0 + 1) * (p.box.z1 - p.box.z0 + 1), w * d);
+  }
+  let chests = 0, shulkers = 0, purpur = 0;
+  for (let cx = city.box.x0 >> 4; cx <= city.box.x1 >> 4; cx++) {
+    for (let cz = city.box.z0 >> 4; cz <= city.box.z1 >> 4; cz++) {
+      const r = gen.generate(cx, cz);
+      chests += r.chests.filter((c) => c.table === 'end_city_treasure').length;
+      shulkers += r.mobs.filter((m) => m.type === MOB_SHULKER).length;
+      for (const b of r.blocks) if (b === PURPUR_BLOCK) purpur++;
+    }
+  }
+  assert.ok(chests > 0 && shulkers > 0 && purpur > 1000, `${chests} cofres, ${shulkers} shulkers`);
+  // Entre muchas ciudades, alrededor de la mitad llevan barco (con su marco de élitros).
+  let n = 0, ships = 0, frames = 0;
+  for (let rx = -8; rx <= 8; rx++) {
+    for (let rz = -8; rz <= 8; rz++) {
+      const c = gen.cityInRegion(rx, rz);
+      if (!c) continue;
+      n++;
+      const ship = c.pieces.find((p) => p.name === 'ship');
+      if (!ship) continue;
+      ships++;
+      if (ships > 2) continue;
+      for (let cx = ship.box.x0 >> 4; cx <= ship.box.x1 >> 4; cx++) {
+        for (let cz = ship.box.z0 >> 4; cz <= ship.box.z1 >> 4; cz++) frames += gen.generate(cx, cz).mobs.filter((m) => m.type === ENT_FRAME && m.variant === ELYTRA).length;
+      }
+    }
+  }
+  assert.ok(n > 10 && ships > n * 0.25 && ships < n * 0.85, `${ships} barcos en ${n} ciudades`);
+  assert.equal(frames, 2, 'cada barco, su marco con los élitros');
+  // Siempre las mismas piezas con la misma semilla.
+  assert.deepEqual(cityBounds(endCityPieces(7, 0, 70, 0, 0)), cityBounds(endCityPieces(7, 0, 70, 0, 0)));
+});
+
+test('shulker: se abre al ver a un jugador, dispara balas que dan Levitación, cerrado aguanta y suelta su caparazón', () => {
+  const h = makeServer(8611, undefined, DIM_END);
+  const W = h.gs.world;
+  const c = h.join('ana');
+  c.pos(0.5, 101, 0.5);
+  h.tick(5);
+  for (let cx = -2; cx <= 2; cx++) for (let cz = -2; cz <= 2; cz++) W.ensureChunk(cx, cz, h.clock.now);
+  for (let x = -12; x <= 12; x++) for (let z = -12; z <= 12; z++) for (let y = 98; y < 110; y++) W.setBlock(x, y, z, y === 99 ? STONE : AIR);
+  const ents = h.gs.entities;
+  const e = ents.spawnMob(MOB_SHULKER, 0.3, 100.2, 8.7)!;
+  assert.deepEqual([e.x, e.y, e.z], [0.5, 100, 8.5], 'en el centro de su celda');
+  c.pos(0.5, 100, 0.5);
+  h.tick(40);
+  assert.equal(shulkerPeekState(e.variant!), 2, 'abierto');
+  let bullet = false, lev = false;
+  for (let i = 0; i < 400 && !lev; i++) {
+    h.tick(1);
+    bullet ||= [...ents.list.values()].some((b) => b.type === ENT_SHULKER_BULLET);
+    lev ||= c.conn.take('effect').some((m) => m.id === EFFECT_LEVITATION);
+  }
+  assert.ok(bullet && lev, 'la bala le alcanza y le da Levitación');
+  c.pos(0.5, 100, -40);
+  h.tick(200);
+  assert.equal(shulkerPeekState(e.variant!), 0, 'sin nadie, se cierra');
+  const hp = e.health;
+  ents.damage(e, 10, 0, 0, null);
+  assert.equal(hp - e.health, 4, 'cerrado, 20 de armadura: 10 de daño se quedan en 4');
+  let shells = 0;
+  for (let i = 0; i < 40; i++) ents.kill(ents.spawnMob(MOB_SHULKER, 5.5, 100, 5.5)!, true);
+  for (const it of ents.list.values()) if (it.stack?.id === SHULKER_SHELL) shells++;
+  assert.ok(shells > 8 && shells < 32, `la mitad sueltan caparazón (${shells} de 40)`);
+});
+
+test('élitros: planeo, cohetes y picado con los números de Java; se gastan hasta un uso', () => {
+  const v = { x: 0, y: 0, z: -0.3 };
+  let dx = 0, dy = 0;
+  for (let i = 0; i < 400; i++) {
+    glideTick(v, 0, -0.2);
+    if (i >= 200) {
+      dx += Math.hypot(v.x, v.z);
+      dy += v.y;
+    }
+  }
+  assert.ok(dx / -dy > 8 && dx / -dy < 11, 'planea unos 9 bloques por cada uno que baja');
+  const w = { x: 0, y: 0, z: -0.5 };
+  for (let i = 0; i < 40; i++) {
+    rocketBoostTick(w, 0, 0);
+    glideTick(w, 0, 0);
+  }
+  assert.ok(Math.abs(Math.hypot(w.x, w.y, w.z) * 20 - 33.5) < 1, 'con cohete, 33,5 bloques/s');
+  const u = { x: 0, y: -0.5, z: -0.2 };
+  for (let i = 0; i < 200; i++) glideTick(u, 0, -Math.PI / 2 + 0.01);
+  assert.ok(Math.abs(Math.hypot(u.x, u.y, u.z) * 20 - 77) < 3, 'en picado, unos 77 bloques/s');
+  assert.ok(canGlideWith({ id: ELYTRA, count: 1, dmg: ELYTRA_DURABILITY - 2 }));
+  assert.ok(!canGlideWith({ id: ELYTRA, count: 1, dmg: ELYTRA_DURABILITY - 1 }), 'con un uso, ya no');
+});
+
+test('cajas de shulker (guardan lo suyo, 17 colores, no se abren tapadas) y cofre de ender (de cada jugador)', () => {
+  const h = makeServer(8612);
+  const W = h.gs.world;
+  const c = h.join('ana');
+  c.pos(2.5, 100, 2.5);
+  h.tick(5);
+  W.ensureChunk(0, 0, h.clock.now);
+  for (let x = 0; x < 8; x++) for (let z = 0; z < 8; z++) for (let y = 99; y < 104; y++) W.setBlock(x, y, z, y === 99 ? STONE : AIR);
+  assert.equal(Object.keys(SHULKER_BOXES).length, 17);
+  assert.equal(matchRecipe([0, SHULKER_SHELL, 0, 0, CHEST, 0, 0, SHULKER_SHELL, 0], 3)?.out.id, SHULKER_BOXES['']);
+  const dyed = shulkerDyeCraft([{ id: SHULKER_BOXES[''], count: 1, bag: [{ id: DIAMOND, count: 5 }], data: { slots: [3] } }, { id: DYES.red, count: 1 }]);
+  assert.equal(dyed?.id, SHULKER_BOXES.red);
+  assert.equal(dyed?.bag?.[0].count, 5, 'teñida, con lo que llevaba');
+  c.send({ t: 'place', x: 2, y: 99, z: 2, n: [0, 1, 0], p: [2.5, 100, 2.5], item: SHULKER_BOXES.red, yaw: 0, bx: stackToWire(dyed!)! });
+  const id = W.getBlock(2, 100, 2);
+  assert.ok(isShulkerBox(id) && shulkerBoxFacing(id) === 2, 'puesta con la tapa hacia arriba');
+  c.send({ t: 'set', x: 2, y: 100, z: 2, b: 0, tool: 0 });
+  h.tick(2);
+  const drops = [...h.gs.entities.list.values()].filter((e) => e.stack);
+  assert.equal(drops.length, 1, 'cae una sola pila: la caja');
+  assert.equal(drops[0].stack!.bag?.[0].count, 5);
+  assert.deepEqual(drops[0].stack!.data?.slots, [3], 'cada cosa en su hueco');
+  c.send({ t: 'place', x: 4, y: 99, z: 4, n: [0, 1, 0], p: [4.5, 100, 4.5], item: SHULKER_BOXES[''], yaw: 0 });
+  W.setBlock(4, 101, 4, STONE);
+  c.conn.take('cont');
+  c.send({ t: 'open', x: 4, y: 100, z: 4 });
+  assert.equal(c.conn.take('cont').length, 0, 'con la tapa tapada no se abre');
+  W.setBlock(6, 100, 6, ENDER_CHEST);
+  c.pos(5.5, 100, 5.5);
+  h.tick(1);
+  c.send({ t: 'open', x: 6, y: 100, z: 6 });
+  assert.equal(c.conn.take('cont').length, 1);
+  c.send({ t: 'cput', x: 6, y: 100, z: 6, q: 1, stack: { id: DIAMOND, count: 7 } });
+  const b = h.join('bea');
+  b.pos(6.5, 101, 5.5);
+  h.tick(2);
+  b.send({ t: 'open', x: 6, y: 100, z: 6 });
+  assert.ok(!JSON.stringify(b.conn.take('cont')[0].c).includes(`[${DIAMOND},7`), 'el de otro jugador está vacío');
+  h.tick(200);
+  const rec = JSON.parse((h.store as unknown as { players: Map<string, string> }).players.get('ana')!);
+  assert.ok(rec.ender?.some((x: unknown) => Array.isArray(x) && x[0] === DIAMOND && x[1] === 7), 'se guarda con el jugador');
+});

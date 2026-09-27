@@ -335,3 +335,19 @@ test('los ids de la fase 8.5 no cambian', () => {
   assert.deepEqual([NETHERITE_SCRAP, NETHER_STAR], [630, 643]);
   assert.equal(keyPrint(ITEMS.map((it) => it?.key), 630, 644), 1535299870, 'huella de los objetos');
 });
+
+// Fase 8.6 (el End): piedra del End, púrpura, vara del End, coro, marco y portal del End, puerta del End, huevo de
+// dragón, cajas de shulker, cofre de ender y cabeza de dragón; la fruta de coro, el ojo de ender, los huevos
+// generadores, el cristal del End, el caparazón de shulker y los élitros; endermita, dragón y shulker.
+import { END_STONE, END_PORTAL_FRAME, END_GATEWAY, DRAGON_EGG, ENDER_CHEST, SHULKER_BOXES, BLOCK_COUNT } from '../src/shared/blocks';
+import { CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, SHULKER_SHELL, ELYTRA, ITEM_COUNT } from '../src/shared/items';
+import { MOB_ENDERMITE, MOB_ENDER_DRAGON, MOB_SHULKER, ENT_END_CRYSTAL, ENT_DRAGON_FIREBALL, ENT_SHULKER_BULLET } from '../src/shared/mobs';
+test('los ids de la fase 8.6 no cambian', () => {
+  assert.deepEqual([END_STONE, END_PORTAL_FRAME, END_GATEWAY, DRAGON_EGG, SHULKER_BOXES[''], SHULKER_BOXES.black, ENDER_CHEST, SKULLS.dragon], [6035, 6077, 6086, 6087, 6088, 6184, 6190, 6194]);
+  assert.ok(BLOCK_COUNT >= 6214);
+  assert.equal(keyPrint(BLOCKS.map((b) => b?.key), 6035, 6214), 446005006, 'huella de los bloques');
+  assert.deepEqual([CHORUS_FRUIT, ENDER_EYE, SPAWN_EGGS.endermite, SPAWN_EGGS.ender_dragon, SPAWN_EGGS.shulker, END_CRYSTAL, SHULKER_SHELL, ELYTRA], [644, 646, 647, 648, 649, 650, 651, 652]);
+  assert.ok(ITEM_COUNT >= 653);
+  assert.equal(keyPrint(ITEMS.map((it) => it?.key), 644, 653), 216528252, 'huella de los objetos');
+  assert.deepEqual([MOB_ENDERMITE, MOB_ENDER_DRAGON, MOB_SHULKER, ENT_END_CRYSTAL, ENT_DRAGON_FIREBALL, ENT_SHULKER_BULLET], [96, 97, 98, 123, 124, 125]);
+});

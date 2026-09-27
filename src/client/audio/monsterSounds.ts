@@ -93,6 +93,13 @@ export function buildMonsterSound(ctx: AudioContext, noise: NoiseBuffers, kind: 
       return silverfishSound(ctx, noise, event, dest, now);
     case 'endermite':
       return endermiteSound(ctx, noise, event, dest, now);
+    // Fase 8.6: el shulker: un gorgoteo hueco dentro de la concha; herido, un chillido corto; al morir, se vacía.
+    case 'shulker':
+      if (event === 'step') return [];
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: event === 'hurt' ? randRange(520, 640) : randRange(260, 330), freqEnd: event === 'death' ? 90 : event === 'hurt' ? 380 : 220, wave: 'triangle', attack: 0.01, decay: event === 'death' ? 0.6 : 0.25, gain: 0.14 }),
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: randRange(700, 900), q: 3, attack: 0.01, decay: event === 'death' ? 0.5 : 0.2, gain: 0.1 }),
+      ];
     // Fase 8.6: el dragón (sus rugidos grandes van con los efectos del End; aquí, los golpes que recibe).
     case 'ender_dragon':
       return event === 'hurt' || event === 'death' ? [

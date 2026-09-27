@@ -4,7 +4,7 @@
 //   claro, las membranas de las alas oscuras y translúcidas a la vista (venas y bordes), la boca roja por dentro y
 //   los ojos morados encendidos (píxeles emisivos: alfa entre 128 y 250);
 // - cristal: los marcos de cristal (sólo el borde, el centro vacío), el cubo rosado encendido y la base de lecho de roca.
-import { DRAGON_MODEL, CRYSTAL_MODEL } from '../render/DragonRenderer';
+import { DRAGON_MODEL, CRYSTAL_MODEL, BULLET_MODEL } from '../render/DragonRenderer';
 import type { MobTexture } from '../render/MobRenderer';
 
 type RGBA = [number, number, number, number];
@@ -138,5 +138,21 @@ export function crystalTexture(): MobTexture {
     const n = hash(c.u, c.v, 41);
     const g = n > 0.7 ? 150 : n > 0.4 ? 96 : 60;
     return [g, g, g + 4, 255];
+  });
+}
+
+/**
+ * Fase 8.6: la bala del shulker (64 × 32): placas de luz blanca amarillenta, más intensa en el centro y con el borde
+ * deshilachado (los píxeles de fuera, transparentes a trozos).
+ */
+export function bulletTexture(): MobTexture {
+  return paint(64, 32, BULLET_MODEL, (c) => {
+    const cx = (c.w - 1) / 2, cy = (c.h - 1) / 2;
+    const r = Math.max(Math.abs(c.i - cx) / Math.max(1, cx), Math.abs(c.j - cy) / Math.max(1, cy));
+    const n = hash(c.u, c.v, 57);
+    if (r > 0.8 && n < 0.45) return [0, 0, 0, 0];
+    const core = 1 - r;
+    const k: RGBA = mix([214, 200, 168, 230], [255, 252, 236, 245], core);
+    return n > 0.85 ? [255, 255, 250, 250] : k;
   });
 }

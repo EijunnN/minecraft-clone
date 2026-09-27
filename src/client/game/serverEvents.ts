@@ -1,5 +1,6 @@
 // Mensajes del servidor: otros jugadores, cambios de bloques, chat, tiempo, entidades, contenedores,
 // modo de juego, camas y respuestas a las interacciones.
+import { isEnderChest, isShulkerBox, familyBase } from '../../shared/blocks'; // Fase 8.6
 import { onBossMsg } from './endFightClient'; // Fase 8.6
 import { RemotePlayer } from './RemotePlayers';
 import type { Welcome } from '../net/Net';
@@ -78,7 +79,9 @@ export class ServerEvents {
           const variant = furnaceVariant(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
           // Fase 6 (aldeanos): el barril se abre como un cofre con su propio título.
           const barrel = isBarrel(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0);
-          const mech = mechanismTitle(this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0); // Fase 7 (mecanismos): tolva, dispensador, soltador
+          const here = this.g.world?.getBlock(pos[0], pos[1], pos[2]) ?? 0;
+          // Fase 8.6: el cofre de ender y las cajas de shulker, con su nombre.
+          const mech = mechanismTitle(here) || (isEnderChest(here) || isShulkerBox(here) ? BLOCKS[familyBase(here)].name : ''); // Fase 7 (mecanismos): tolva, dispensador, soltador
           if (c.kind === 'brewing') this.g.openScreen('brewing', pos); // Fase 7 (pociones): alambique
           else this.g.openScreen(c.kind === 'chest' ? 'chest' : 'furnace', pos, barrel ? 'Barril' : mech || (this.g.vehicles.containerTitle(pos) ?? (c.kind === 'chest' ? '' : ['Horno', 'Ahumador', 'Alto horno'][Math.max(0, variant)]))); // Fase 7: barcas y vagonetas con cofre
           this.g.audio.playUi('open');

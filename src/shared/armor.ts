@@ -13,10 +13,14 @@ export const CHAINMAIL_ARMOR = 'chainmail';
 export const TURTLE_ARMOR = 'turtle';
 /** Fase 8.5 (lo que da el Nether): netherita (se mejora desde el diamante en la mesa de herrería). */
 export const NETHERITE_ARMOR = 'netherite';
+/** Fase 8.6 (el End): los élitros van en el pecho pero no son armadura (no protegen ni se gastan con los golpes). */
+export const ELYTRA_ARMOR = 'elytra';
 export type ArmorMaterial = (typeof ARMOR_MATERIALS)[number] | typeof COPPER_ARMOR | typeof CHAINMAIL_ARMOR | typeof TURTLE_ARMOR
-  | typeof NETHERITE_ARMOR;
-/** Todos los materiales de armadura (los de siempre, el cobre, la cota de malla, la tortuga y la netherita). */
-export const ALL_ARMOR_MATERIALS: readonly ArmorMaterial[] = [...ARMOR_MATERIALS, COPPER_ARMOR, CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR];
+  | typeof NETHERITE_ARMOR | typeof ELYTRA_ARMOR;
+/** Materiales que se dibujan como armadura sobre el cuerpo (todos menos los élitros, que tienen su modelo). */
+export type SuitMaterial = Exclude<ArmorMaterial, typeof ELYTRA_ARMOR>;
+/** Todos los materiales de armadura (los de siempre, el cobre, la cota de malla, la tortuga y la netherita; los élitros no). */
+export const ALL_ARMOR_MATERIALS: readonly SuitMaterial[] = [...ARMOR_MATERIALS, COPPER_ARMOR, CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR];
 
 export interface ArmorInfo {
   slot: ArmorSlot;
@@ -39,6 +43,7 @@ export const ARMOR_STATS: Readonly<Record<ArmorMaterial, { points: readonly numb
   chainmail: { points: [2, 5, 4, 1], durability: [165, 240, 225, 195], toughness: 0 }, // Fase 6.5 (equipo)
   turtle: { points: [2, 0, 0, 0], durability: [275, 0, 0, 0], toughness: 0 }, // Fase 6.5 (equipo): sólo el casco
   netherite: { points: [3, 8, 6, 3], durability: [407, 592, 555, 481], toughness: 3 }, // Fase 8.5
+  elytra: { points: [0, 0, 0, 0], durability: [0, 432, 0, 0], toughness: 0 }, // Fase 8.6 (Items.ELYTRA: durability 432)
 };
 
 /** Fase 8.5: resistencia al empuje de cada pieza (sólo la netherita en Minecraft: 0,1 por pieza). */
@@ -47,6 +52,7 @@ export const ARMOR_KNOCKBACK_RESISTANCE: Readonly<Partial<Record<ArmorMaterial, 
 /** Causas de daño que la armadura no reduce (como en Minecraft). */
 export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'starve', 'kill', 'poison', 'wither',
   'guardian_laser', // Fase 7.5 (océano): el daño mágico del láser del guardián
+  'fly_into_wall', // Fase 8.6: chocar planeando (como la caída)
 ]);
 
 /**

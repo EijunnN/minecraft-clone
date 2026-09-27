@@ -131,6 +131,8 @@ export interface Entity extends Body {
   stack?: ItemStack;
   pickupDelay?: number;
   owner?: string;
+  /** Fase 8.6: cohete pegado a un jugador que planea con élitros (su id de sesión). */
+  attached?: string;
   // Flechas
   shooter?: string | number;
   arrowDamage?: number;

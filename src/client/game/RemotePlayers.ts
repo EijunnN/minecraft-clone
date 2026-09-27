@@ -1,6 +1,7 @@
 // Jugadores remotos: interpolación de instantáneas y estado de animación.
 import type { PlayerInfo } from '../../shared/protocol';
-import { STATE_SNEAK, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK } from '../../shared/protocol';
+import { STATE_SNEAK, STATE_SLEEP, STATE_PRONE, STATE_EAT, STATE_BOW, STATE_BLOCK, STATE_GLIDE } from '../../shared/protocol';
+import { newGlidePose, stepGlidePose, glideScale, glideRoll } from '../render/elytraPose'; // Fase 8.6
 import { STATE_GLOWING } from '../../shared/effects'; // Fase 7 (efectos)
 import type { RemotePlayerView } from '../render/EntityRenderer';
 
@@ -58,6 +59,9 @@ export class RemotePlayer {
   private lastZ = 0;
   swingTime = -1;
   nameTag: HTMLDivElement | null = null;
+  /** Fase 8.6: pose de los élitros y del planeo, y la altura del frame anterior (para su velocidad). */
+  private glidePose = newGlidePose();
+  private lastY = 0;
   /** Fase 7 (pociones): color de los remolinos de sus efectos (0xRRGGBB; 0 sin efectos). */
   effectColor = 0;
 
@@ -76,6 +80,7 @@ export class RemotePlayer {
       heldDecor: info.hs ?? null, offhandDecor: info.os ?? null, // Fase 7.6: escudos decorados
     };
     this.lastX = info.p[0];
+    this.lastY = info.p[1];
     this.lastZ = info.p[2];
   }
 
@@ -136,9 +141,24 @@ export class RemotePlayer {
     v.glowing = (b.s & STATE_GLOWING) !== 0; // Fase 7 (efectos)
     v.use = b.s & STATE_EAT ? 'eat' : b.s & STATE_BOW ? 'bow' : b.s & STATE_BLOCK ? 'block' : null;
     // Animación de caminar según la velocidad horizontal.
-    const mv = Math.hypot(v.x - this.lastX, v.z - this.lastZ);
+    const mvx = v.x - this.lastX, mvz = v.z - this.lastZ;
+    const mv = Math.hypot(mvx, mvz);
     this.lastX = v.x;
     this.lastZ = v.z;
+    // Fase 8.6: velocidad suavizada para las alas y el ladeo al planear.
+    const gp = this.glidePose;
+    if (dt > 0) {
+      const k = 1 - Math.exp(-dt * 6);
+      gp.vel[0] += (mvx / dt - gp.vel[0]) * k;
+      gp.vel[1] += ((v.y - this.lastY) / dt - gp.vel[1]) * k;
+      gp.vel[2] += (mvz / dt - gp.vel[2]) * k;
+    }
+    this.lastY = v.y;
+    const gliding = (b.s & STATE_GLIDE) !== 0;
+    stepGlidePose(gp, gliding, v.sneaking, gp.vel[0], gp.vel[1], gp.vel[2], dt);
+    v.wings = gp.wings;
+    v.glide = gliding ? glideScale(gp) : 0;
+    v.glideRoll = gliding ? glideRoll(v.headYaw, v.pitch, gp.vel[0], gp.vel[2]) : 0;
     const speed = dt > 0 ? mv / dt : 0;
     const target = Math.min(1, speed / 4.3);
     v.walkAmount += (target - v.walkAmount) * (1 - Math.exp(-dt * 8));

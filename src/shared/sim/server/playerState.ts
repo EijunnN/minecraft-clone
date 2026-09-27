@@ -2,7 +2,7 @@
 // armadura, brillo, efectos) y el estado que se guarda (inventario, vida, hambre, efectos…). El
 // inventario y la vida los lleva el navegador (confianza entre amigos), pero nada llega sin acotar.
 import {
-  STATE_MASK, stackFromWire, stackToWire, type ClientMsg, type PlayerInfo, type PlayerSave, type WireStack,
+  STATE_MASK, STATE_GLIDE, stackFromWire, stackToWire, type ClientMsg, type PlayerInfo, type PlayerSave, type WireStack,
 } from '../../protocol';
 import { WORLD_LIMIT, VOID_Y } from '../../constants';
 import { sanitizeStack } from '../../containers';
@@ -45,7 +45,7 @@ export function applyPos(s: Session, msg: Extract<ClientMsg, { t: 'pos' }>): boo
   const yaw = ((r[0] % TAU) + TAU) % TAU;
   s.p = [r2(clamp(p[0], -WORLD_LIMIT, WORLD_LIMIT)), r2(clamp(p[1], VOID_Y - 64, 1024)), r2(clamp(p[2], -WORLD_LIMIT, WORLD_LIMIT))];
   s.r = [Math.round(yaw * 1000) / 1000, Math.round(clamp(r[1], -Math.PI / 2, Math.PI / 2) * 1000) / 1000];
-  s.s = (Number(msg.s) | 0) & (STATE_MASK | STATE_INVISIBLE | STATE_GLOWING); // Fase 7 (pociones y efectos): invisible y brillo
+  s.s = (Number(msg.s) | 0) & (STATE_MASK | STATE_INVISIBLE | STATE_GLOWING | STATE_GLIDE); // Fase 8.6: planeando // Fase 7 (pociones y efectos): invisible y brillo
   s.ec = effectColorFrom(msg.ec);
   const h = Number(msg.h), o = Number(msg.o);
   s.h = Number.isInteger(h) && isValidItem(h) ? h : 0;

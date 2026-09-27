@@ -123,7 +123,7 @@ test('objetos de la 8.3: recetas, cabezas, velocidad de alma y disco', () => {
   const G = GLOWSTONE_DUST;
   assert.deepEqual(matchRecipe([0, G, 0, G, ARROW, G, 0, G, 0], 3)?.out, { id: SPECTRAL_ARROW, count: 2 });
   assert.equal(ITEMS[WARPED_FUNGUS_ON_A_STICK].tool?.durability, 100);
-  assert.deepEqual(ALL_SKULL_KINDS.slice(-2), ['wither_skeleton', 'piglin']);
+  assert.deepEqual(ALL_SKULL_KINDS.slice(4, 6), ['wither_skeleton', 'piglin']); // (la 8.6 añade la de dragón detrás)
   assert.equal(ITEMS[SKULLS.wither_skeleton].name, 'Cráneo de esqueleto wither');
   assert.equal(BLOCKS[SKULLS.piglin].key, 'piglin_head');
   assert.equal(ENCHANTS[SOUL_SPEED].max, 3);

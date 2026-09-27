@@ -294,7 +294,244 @@ function dragonEgg(t: Tex): void {
   t.depth = 1.1;
 }
 
+// ------------------------------------------------------------------ cajas de shulker y cofre de ender
+
+/** Color de cada caja de shulker (la normal, morada; las teñidas, del tono de su tinte, algo apagado como en Java). */
+const BOX_RGB: Record<string, RGB> = {
+  '': [150, 100, 150], white: [214, 218, 220], orange: [226, 110, 22], magenta: [176, 58, 168], light_blue: [58, 170, 210],
+  yellow: [242, 190, 40], lime: [104, 172, 30], pink: [226, 124, 156], gray: [62, 66, 70], light_gray: [134, 134, 126],
+  cyan: [22, 128, 138], purple: [112, 46, 156], blue: [48, 50, 146], brown: [110, 70, 40], green: [80, 104, 32],
+  red: [150, 36, 32], black: [30, 30, 34],
+};
+
+/** Rampa de un color: de la sombra al brillo. */
+function boxRamp(c: RGB): RGB[] {
+  return [scale(c, 0.45), scale(c, 0.68), c, mix(c, [255, 255, 255], 0.18), mix(c, [255, 255, 255], 0.36)];
+}
+
+/** Techo de la tapa: el marco, un anillo hundido y escamas finas en el centro. */
+function shulkerTop(c: RGB): Generator {
+  return (t) => {
+    const k = boxRamp(c);
+    const px = pixelNoise(t.rng());
+    for (let i = 0; i < N; i++) {
+      const x = i & 15, y = i >> 4;
+      const ring = Math.min(x, y, 15 - x, 15 - y);
+      let col = mix(k[2], k[3], px[i] * 0.6);
+      let h = 0.9 + px[i] * 0.08;
+      if (ring === 0) { col = k[1]; h = 0.75; }
+      else if (ring === 1) col = k[4];
+      else if (ring === 4) { col = k[1]; h = 0.7; }
+      else if (ring === 5) col = k[3];
+      else if (ring > 5 && (x + y) % 3 === 0) col = mix(col, k[1], 0.4);
+      t.setI(i, col);
+      t.height[i] = h;
+      t.smooth[i] = 110 + px[i] * 40;
+    }
+    t.depth = 1.2;
+  };
+}
+
+/** Lado de la tapa (las 12 filas de arriba): acanalado en vertical con el labio claro abajo. */
+function shulkerLid(c: RGB): Generator {
+  return (t) => {
+    const k = boxRamp(c);
+    const px = pixelNoise(t.rng());
+    for (let i = 0; i < N; i++) {
+      const x = i & 15, y = i >> 4;
+      let col = mix(k[2], k[3], px[i] * 0.5);
+      let h = 0.9;
+      if (y === 0) col = k[4];
+      else if (y >= 11) { col = y === 11 ? k[4] : k[3]; h = 1; }
+      else if (x % 4 === 0) { col = k[1]; h = 0.75; }
+      else if (x % 4 === 1) col = k[3];
+      else if (y % 3 === 0 && x % 2 === 1) col = mix(col, k[1], 0.3);
+      if (x === 0 || x === 15) col = k[1];
+      t.setI(i, col);
+      t.height[i] = h;
+      t.smooth[i] = 110 + px[i] * 40;
+    }
+    t.depth = 1.1;
+  };
+}
+
+/** Lado de la base (las 4 filas de abajo): la junta oscura y escamas en rombo. */
+function shulkerBase(c: RGB): Generator {
+  return (t) => {
+    const k = boxRamp(c);
+    const px = pixelNoise(t.rng());
+    for (let i = 0; i < N; i++) {
+      const x = i & 15, y = i >> 4;
+      let col = (x + y) % 4 < 2 ? k[1] : k[2];
+      let h = 0.85 + px[i] * 0.1;
+      if (y === 12) { col = k[0]; h = 0.55; }
+      else if (y === 15) col = k[1];
+      if (x === 0 || x === 15) col = k[0];
+      t.setI(i, mix(col, k[3], px[i] * 0.15));
+      t.height[i] = h;
+      t.smooth[i] = 100 + px[i] * 30;
+    }
+    t.depth = 1.1;
+  };
+}
+
+/** Fondo: la base vista desde abajo, con su marco y el centro liso. */
+function shulkerBottom(c: RGB): Generator {
+  return (t) => {
+    const k = boxRamp(c);
+    const px = pixelNoise(t.rng());
+    for (let i = 0; i < N; i++) {
+      const x = i & 15, y = i >> 4;
+      const ring = Math.min(x, y, 15 - x, 15 - y);
+      t.setI(i, ring === 0 ? k[0] : ring === 1 ? k[2] : mix(k[1], k[2], px[i] * 0.5));
+      t.height[i] = ring === 0 ? 0.7 : 0.9;
+      t.smooth[i] = 90;
+    }
+  };
+}
+
+const OBS: readonly RGB[] = [[6, 8, 10], [14, 18, 22], [22, 30, 34], [34, 48, 52], [60, 90, 88]];
+
+/** Obsidiana del cofre de ender: casi negra, con vetas verdosas y alguna mota violeta que brilla. */
+function enderBase(t: Tex): Float32Array {
+  const r = t.rng();
+  const n = new Noise(r, 3);
+  const px = pixelNoise(r);
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    const v = n.at(x, y) * 0.7 + px[i] * 0.3;
+    t.setI(i, v > 0.78 ? OBS[3] : v > 0.55 ? OBS[2] : v > 0.3 ? OBS[1] : OBS[0]);
+    t.height[i] = 0.85 + v * 0.15;
+    t.smooth[i] = 200;
+    t.f0[i] = 30;
+  }
+  for (let k = 0; k < 5; k++) {
+    const i = idx(r.int(1, 14), r.int(1, 14));
+    t.setI(i, [120, 70, 170]);
+    t.emit[i] = 60;
+  }
+  return px;
+}
+
+function enderSide(t: Tex): void {
+  enderBase(t);
+  // La junta de la tapa (a 10 de 14: fila 5) y el borde.
+  for (let x = 0; x < 16; x++) {
+    t.setI(idx(x, 5), OBS[4]);
+    t.setI(idx(x, 6), OBS[0]);
+    t.height[idx(x, 6)] = 0.5;
+  }
+  t.depth = 1.3;
+}
+
+function enderTop(t: Tex): void {
+  enderBase(t);
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    const ring = Math.min(x, y, 15 - x, 15 - y);
+    if (ring === 1) t.setI(i, OBS[3]);
+  }
+  t.depth = 1.3;
+}
+
+function enderLock(t: Tex): void {
+  // El cerrojo: el ojo de ender verde claro encendido.
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    const d = Math.hypot(x - 7.5, y - 7.5);
+    t.setI(i, d < 3 ? [30, 60, 50] : d < 6 ? [120, 230, 200] : [70, 170, 150]);
+    t.emit[i] = d < 6 ? 120 : 40;
+    t.smooth[i] = 220;
+  }
+}
+
+// Cabeza de dragón: escamas casi negras en hileras con reflejo violeta (como el dragón), los ojos morados encendidos
+// en los costados de delante, el hocico más liso, los orificios hundidos y los cuernos de hueso.
+const DRAGON_SCALE: readonly RGB[] = [[12, 10, 16], [22, 18, 30], [36, 28, 48], [58, 44, 76]];
+
+function dragonScales(t: Tex, seed = ''): Float32Array {
+  const px = pixelNoise(t.rng(seed));
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    const sy = y % 4, sx = (x + (Math.floor(y / 4) & 1) * 2) % 4;
+    let c = mix(DRAGON_SCALE[1], DRAGON_SCALE[2], px[i]);
+    if (sy === 3) c = DRAGON_SCALE[0];
+    else if (sy === 0 && sx !== 3) c = mix(c, DRAGON_SCALE[3], 0.5);
+    t.setI(i, c);
+    t.height[i] = sy === 3 ? 0.55 : 0.85 + px[i] * 0.15;
+    t.smooth[i] = 150 + px[i] * 40;
+  }
+  t.depth = 1.3;
+  return px;
+}
+
+function dragonHeadFace(face: string): Generator {
+  return (t) => {
+    dragonScales(t, face);
+    // Los ojos: una rendija morada encendida en los costados, cerca de delante (la derecha y la izquierda).
+    if (face === 'right' || face === 'left') {
+      const x0 = face === 'right' ? 2 : 10;
+      for (let x = x0; x < x0 + 4; x++) {
+        t.setI(idx(x, 7), [204, 90, 255]);
+        t.emit[idx(x, 7)] = 200;
+        t.setI(idx(x, 8), [150, 50, 200]);
+        t.emit[idx(x, 8)] = 140;
+      }
+    }
+    // Delante (la frente sobre el hocico): una cresta de hueso en el centro.
+    if (face === 'front') for (let y = 0; y < 6; y++) t.setI(idx(7, y), [150, 140, 150]), t.setI(idx(8, y), [120, 110, 124]);
+    if (face === 'top') for (let y = 2; y < 16; y += 3) t.setI(idx(7, y), [170, 160, 170]), t.setI(idx(8, y), [140, 130, 146]);
+  };
+}
+
+function dragonSnout(t: Tex): void {
+  const px = dragonScales(t, 'snout');
+  for (let i = 0; i < N; i++) if (px[i] > 0.9) t.setI(i, DRAGON_SCALE[3]);
+}
+
+function dragonHorn(t: Tex): void {
+  const px = pixelNoise(t.rng());
+  for (let i = 0; i < N; i++) {
+    const y = i >> 4;
+    t.setI(i, mix([206, 198, 206], [150, 140, 152], y / 15 * 0.7 + px[i] * 0.3));
+    t.smooth[i] = 170;
+  }
+}
+
+function dragonNostril(t: Tex): void {
+  dragonScales(t, 'nostril');
+  for (let i = 0; i < N; i++) {
+    const x = i & 15, y = i >> 4;
+    if (Math.hypot(x - 7.5, y - 7.5) < 4) {
+      t.setI(i, [4, 2, 6]);
+      t.height[i] = 0.3;
+    }
+  }
+}
+
+/** La cabeza de dragón (van con las demás cabezas, en genCollections). */
+export const DRAGON_HEAD_GENERATORS: Record<string, Generator> = {
+  ...Object.fromEntries(['right', 'left', 'top', 'bottom', 'back', 'front'].map((f) => [`dragon_head_${f}`, dragonHeadFace(f)])),
+  dragon_head_snout: dragonSnout,
+  dragon_head_horn: dragonHorn,
+  dragon_head_nostril: dragonNostril,
+};
+
+const SHULKER_GENERATORS: Record<string, Generator> = {};
+for (const [c, rgb] of Object.entries(BOX_RGB)) {
+  const p = c ? `${c}_` : '';
+  SHULKER_GENERATORS[`${p}shulker_box_top`] = shulkerTop(rgb);
+  SHULKER_GENERATORS[`${p}shulker_box_lid`] = shulkerLid(rgb);
+  SHULKER_GENERATORS[`${p}shulker_box_base`] = shulkerBase(rgb);
+  SHULKER_GENERATORS[`${p}shulker_box_bottom`] = shulkerBottom(rgb);
+}
+
 export const END_GENERATORS: Record<string, Generator> = {
+  ...SHULKER_GENERATORS,
+  ender_chest_side: enderSide,
+  ender_chest_top: enderTop,
+  ender_chest_front: enderSide,
+  ender_chest_lock: enderLock,
   dragon_egg: dragonEgg,
   end_portal_frame_top: endPortalFrameTop,
   end_portal_frame_side: endPortalFrameSide,

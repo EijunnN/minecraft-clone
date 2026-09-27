@@ -28,7 +28,9 @@ import { netherAnimate, netherPartOffset, netherRoot, netherVariant } from './ne
 import { isNetherMob, MOB_PIGLIN, MOB_PIGLIN_BRUTE, MOB_ZOMBIFIED_PIGLIN, MOB_WITHER_SKELETON } from '../../shared/netherMobs';
 import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL } from '../../shared/endMobs'; // Fase 8.6 (el End)
 import { DragonRenderer } from './DragonRenderer';
-import { dragonTexture, crystalTexture } from '../textures/dragonTextures';
+import { dragonTexture, crystalTexture, bulletTexture } from '../textures/dragonTextures';
+import { shulkerRoot, shulkerPartOffset, animateShulker } from './shulkerPose'; // Fase 8.6
+import { MOB_SHULKER, ENT_SHULKER_BULLET } from '../../shared/endMobs';
 
 export interface MobTexture {
   width: number;
@@ -75,7 +77,7 @@ export class MobRenderer {
   constructor(gl: GL, texSource: (id: number, variant?: number) => MobTexture | null) {
     this.gl = gl;
     this.texSource = texSource;
-    this.dragon = new DragonRenderer(gl, (k) => (k === 'dragon' ? dragonTexture() : crystalTexture()));
+    this.dragon = new DragonRenderer(gl, (k) => (k === 'dragon' ? dragonTexture() : k === 'bullet' ? bulletTexture() : crystalTexture()));
     this.prog = new Program(gl, { name: 'mob', vs: MOB_VS, fs: MOB_FS });
     this.shadowProg = new Program(gl, { name: 'mob-shadow', vs: MOB_SHADOW_VS, fs: MOB_SHADOW_FS });
   }
@@ -269,6 +271,7 @@ export class MobRenderer {
         // Fase 6 (asaltos): illagers, vex, devastador y colmillos.
         animateIllager(def, e, time, name, out);
         animateWarden(def, e, time, name, out); // Fase 7.5 (abismo)
+        animateShulker(def, e, time, name, out); // Fase 8.6
     }
     companionPart(def, e, time, name, out); // Fase 6 (gólems/domesticar)
     critterPart(def, e, name, out); // Fase 7.5 (fauna): el jinete esqueleto, sentado
@@ -287,6 +290,8 @@ export class MobRenderer {
       if (isNetherMob(def.id)) {
         netherPartOffset(def, e, time, part.name, this.off); // Fase 8.3
         mat4.translate(m, m, [this.off[0] * P, this.off[1] * P, this.off[2] * P]);
+      } else if (shulkerPartOffset(def, e, time, part.name, this.off)) {
+        mat4.translate(m, m, [this.off[0] * P, this.off[1] * P, this.off[2] * P]); // Fase 8.6: la tapa del shulker
       }
       this.animate(def, e, time, part.name, rot);
       mountPartAnim(def, e, time, part.name, rot); // Fase 6 (monturas)
@@ -311,6 +316,7 @@ export class MobRenderer {
     mat4.identity(m);
     mat4.translate(m, m, [e.x - camX, e.y - camY, e.z - camZ]);
     mat4.rotateY(m, m, e.bodyYaw);
+    shulkerRoot(def, e, m, time); // Fase 8.6: el shulker, hacia fuera de su cara
     vehicleRoot(def, e, m); // Fase 7 (transporte): balanceo e inclinación
     if (e.deathT >= 0) mat4.rotateZ(m, m, Math.min(1, e.deathT * 1.8) * (Math.PI / 2));
     mountRootPose(def, e, m); // Fase 6 (monturas): encabritada
@@ -359,6 +365,10 @@ export class MobRenderer {
         this.dragon.drawCrystal(p, e, camX, camY, camZ, time);
         continue;
       }
+      if (e.type === ENT_SHULKER_BULLET) {
+        this.dragon.drawBullet(p, e, camX, camY, camZ, time);
+        continue;
+      }
       const vehicle = MOBS[e.type] ? undefined : vehicleModel(e); // Fase 7 (transporte): barcas y vagonetas
       const def = MOBS[e.type] ?? vehicle?.def;
       if (!def) continue;
@@ -369,7 +379,7 @@ export class MobRenderer {
       const light: [number, number] = def.fullBright ? [0, 1] : lightAt(e); // Fase 8.3: el blaze y el cubo de magma brillan
       let flash = 0;
       if (def.id === MOB_CREEPER && e.actionT >= 0) flash = (Math.sin(e.actionT * 14) * 0.5 + 0.5) * 0.7;
-      p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : e.variant || mobVariant(e) || netherVariant(e)))
+      p.tex2D('uSkin', this.skin(def, vehicle ? vehicleSkinVariant(e) : def.id === MOB_SHULKER ? 0 : e.variant || mobVariant(e) || netherVariant(e)))
         .m4('uModel', root as Float32Array)
         .f2('uLightLevel', light[0], light[1])
         .f3('uTint', 1, hurt ? 0.45 : 1, hurt ? 0.45 : 1)
@@ -412,7 +422,7 @@ export class MobRenderer {
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
-      p.tex2D('uSkin', this.skin(def, e.variant || mobVariant(e))).m4('uModel', root as Float32Array);
+      p.tex2D('uSkin', this.skin(def, def.id === MOB_SHULKER ? 0 : e.variant || mobVariant(e))).m4('uModel', root as Float32Array);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
@@ -474,7 +484,7 @@ export class MobRenderer {
       const mesh = this.mesh(def);
       this.pose(def, mesh, e, time);
       const root = this.rootMatrix(def, e, camX, camY, camZ, time);
-      p.tex2D('uSkin', this.skin(def, MOBS[e.type] ? e.variant : vehicleSkinVariant(e))).m4('uModel', root as Float32Array);
+      p.tex2D('uSkin', this.skin(def, def.id === MOB_SHULKER ? 0 : MOBS[e.type] ? e.variant : vehicleSkinVariant(e))).m4('uModel', root as Float32Array);
       gl.uniformMatrix4fv(bonesLoc, false, this.bones, 0, Math.min(MAX_BONES, def.parts.length) * 16);
       gl.bindVertexArray(mesh.vao);
       gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);

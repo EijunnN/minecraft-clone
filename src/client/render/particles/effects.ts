@@ -196,6 +196,17 @@ export class ParticleFx {
     });
   }
 
+  /**
+   * Fase 8.6: chispa de vara del End (EndRodParticle): blanca y encendida, flota y se apaga hacia un tono crema en unos
+   * 3 s (la estela de la bala del shulker y la luz de las varas).
+   */
+  endRod(x: number, y: number, z: number, vx: number, vy: number, vz: number): void {
+    this.ps.spawn({
+      x, y, z, vx, vy, vz, life: rnd(3, 3.6), size: rnd(0.05, 0.08), size1: 0.01, sprite: SPRITE.glow, r: 2.4, g: 2.3, b: 2.1,
+      r1: 1.9, g1: 1.7, b1: 1.5, drag: 1.8, flags: PF.EMISSIVE | PF.BLINK,
+    });
+  }
+
   /** Fase 8.6: bocanada del aliento del dragón: una llama violeta que sale disparada y se abre (DRAGON_BREATH). */
   dragonBreath(x: number, y: number, z: number, vx: number, vy: number, vz: number): void {
     const life = rnd(0.8, 1.6);

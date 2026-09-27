@@ -6,6 +6,7 @@
 //   salpicaduras de la lluvia en el suelo.
 // Las fuentes fijas (antorchas, hornos, fogatas, lava) se buscan dos veces por segundo; el resto se
 // descubre muestreando bloques al azar cada frame.
+import { isEnderChest, isEndRod } from '../../shared/blocks'; // Fase 8.6
 import {
   BLOCK_SOLID, BLOCK_FLUID, TORCH, WALL_TORCH, isCampfire, MYCELIUM, POINTED_DRIPSTONE, GRASS, CHERRY_LEAVES, BIRCH_LEAVES,
   SPRUCE_LEAVES, isLeaves, isLitFurnace, familyBase, stateProps, blockFacing, anchorCharges, isBubbleColumn, bubbleColumnDown,
@@ -39,6 +40,9 @@ export class AmbientParticles {
   private blazes: P3[] = [];
   /** Fase 7 (redstone): puntas de las antorchas de redstone encendidas (motas rojas). */
   private redTorches: P3[] = [];
+  /** Fase 8.6: cofres de ender (partículas de portal) y varas del End (chispas desde la punta, hacia donde apunta). */
+  private enderChests: P3[] = [];
+  private endRods: [number, number, number, number][] = [];
   private scanT = 0;
   private tint = [0, 0, 0];
 
@@ -60,6 +64,21 @@ export class AmbientParticles {
     for (const [x, y, z] of this.torches) if (Math.random() < dt * 2.2) fx.torch(x, y, z);
     for (const [x, y, z] of this.copperTorches) if (Math.random() < dt * 2.2) fx.torch(x, y, z, true); // Fase 6.5 (cobre)
     for (const [x, y, z] of this.redTorches) if (Math.random() < dt * 2.5) dustMote(fx, x, y, z, 15, 0.04); // Fase 7 (redstone)
+    // Fase 8.6 (EnderChestBlock.animateTick): tres partículas de portal que salen del cofre hacia fuera.
+    for (const [x, y, z] of this.enderChests) {
+      if (Math.random() > dt * 3) continue;
+      for (let k = 0; k < 3; k++) {
+        const sx = Math.random() < 0.5 ? -1 : 1, sz = Math.random() < 0.5 ? -1 : 1;
+        fx.portal(x + 0.5 + 0.25 * sx, y + Math.random() - 0.6, z + 0.5 + 0.25 * sz, sx * Math.random(), (Math.random() - 0.5) * 0.25, sz * Math.random());
+      }
+    }
+    // Fase 8.6 (EndRodBlock.animateTick): una chispa de vez en cuando junto a la punta, que se aleja despacio.
+    for (const [x, y, z, f] of this.endRods) {
+      if (Math.random() > dt * 4) continue;
+      const d = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]][f];
+      const j = () => (Math.random() - 0.5) * 0.3;
+      fx.endRod(x + 0.5 + d[0] * 0.4 + j(), y + 0.5 + d[1] * 0.4 + j(), z + 0.5 + d[2] * 0.4 + j(), d[0] * 0.3 + j(), d[1] * 0.3 + j(), d[2] * 0.3 + j());
+    }
     for (const [x, y, z, f] of this.furnaces) {
       if (Math.random() < dt * 1.2) {
         // Llama junto a la boca del horno y humo encima.
@@ -161,6 +180,7 @@ export class AmbientParticles {
     const copperTorches: P3[] = []; // Fase 6.5 (cobre)
     const blazes: P3[] = []; // Fase 6.5 (equipo)
     const redTorches: P3[] = []; // Fase 7 (redstone)
+    const enderChests: P3[] = [], endRods: [number, number, number, number][] = []; // Fase 8.6
     for (let dy = -SCAN_H; dy <= SCAN_H; dy++) {
       for (let dz = -SCAN_R; dz <= SCAN_R; dz++) {
         for (let dx = -SCAN_R; dx <= SCAN_R; dx++) {
@@ -169,6 +189,10 @@ export class AmbientParticles {
           if (b <= 0) continue;
           if (b === TORCH) {
             if (torches.length < 64) torches.push([x + 0.5, y + 0.7, z + 0.5]);
+          } else if (isEnderChest(b)) {
+            if (enderChests.length < 16) enderChests.push([x, y, z]); // Fase 8.6
+          } else if (isEndRod(b)) {
+            if (endRods.length < 48) endRods.push([x, y, z, b - familyBase(b)]); // Fase 8.6
           } else if (familyBase(b) === WALL_TORCH) {
             const f = stateProps(b)?.facing ?? 0;
             if (torches.length < 64) torches.push([x + 0.5 - DIR_X[f] * 0.12, y + 0.84, z + 0.5 - DIR_Z[f] * 0.12]);
@@ -199,6 +223,8 @@ export class AmbientParticles {
     this.lava = lava;
     this.blazes = blazes;
     this.redTorches = redTorches;
+    this.enderChests = enderChests;
+    this.endRods = endRods;
   }
 
   /** Color de las hojas que caen: fijo para abedul y abeto; del bioma para el resto. */

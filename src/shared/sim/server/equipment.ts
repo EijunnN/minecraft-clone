@@ -85,6 +85,13 @@ export class Equipment {
       ctx.fx('trident_throw', p[0], p[1], p[2]);
       return true;
     }
+    // Fase 8.6: planeando con élitros, el cohete se queda pegado al jugador (lt: los ticks que dura, los del cliente).
+    const lt = Number(msg.lt);
+    if (Number.isInteger(lt) && lt >= 10 && lt <= 50) {
+      ctx.entities.gearShots.attachFirework(s.id, s.p[0], s.p[1], s.p[2], { id: FIREWORK_ROCKET, count: 1, ...(data ? { dmg: data } : {}) }, lt / 20);
+      ctx.fx('firework_launch', s.p[0], s.p[1], s.p[2]);
+      return true;
+    }
     // Cohete: sale del punto donde se usó (junto a la cara del bloque).
     if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 7) return true;
     ctx.entities.gearShots.spawnFirework(p[0], p[1], p[2], { id: FIREWORK_ROCKET, count: 1, ...(data ? { dmg: data } : {}) }, s.id);

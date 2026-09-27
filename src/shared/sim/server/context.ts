@@ -1,6 +1,8 @@
 // Lo que los sistemas del servidor (bloques, granja, camas, contenedores, comandos…) necesitan del
 // GameServer: el mundo, las entidades, el reloj y cómo hablar con los jugadores. Cada sistema recibe
 // sólo esto, no el servidor entero.
+import type { ContainerState } from '../../containers'; // Fase 8.6
+import type { WireStack } from '../../protocol';
 import type { ServerMsg, GameMode, PlayerSave } from '../../protocol';
 import type { WorldSim } from '../WorldSim';
 import type { Entities } from '../entities';
@@ -57,6 +59,8 @@ export interface Session {
   ec?: number;
   /** Fase 8 (dimensiones): acaba de llegar de otra dimensión y su cliente aún no la ha montado. */
   dimPending?: boolean;
+  /** Fase 8.6: lo que tiene en el cofre de ender (sus 27 huecos, los mismos en todos los cofres de ender). */
+  ender?: ContainerState;
 }
 
 /** Lo que se guarda de cada jugador. */
@@ -68,6 +72,8 @@ export interface PlayerRecord {
   bedDim?: number;
   /** Fase 8: dimensión en la que está (sin ella, el mundo normal). */
   dim?: number;
+  /** Fase 8.6: el cofre de ender (27 huecos). */
+  ender?: (WireStack | null)[];
 }
 
 /** Fase 8 (dimensiones): cómo llega un jugador a una dimensión. */

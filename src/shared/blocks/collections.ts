@@ -12,7 +12,7 @@ import { mbox, rotateFlat, DIR_X, DIR_Z, type ModelBox } from '../blockModels';
 /** Tipos de cabeza de la fase 6.5 (el orden es el del inventario creativo). */
 export const SKULL_KINDS = ['zombie', 'skeleton', 'creeper', 'player'] as const;
 /** Fase 8.3 (criaturas del Nether): el cráneo de esqueleto wither y la cabeza de piglin (registrados al final). */
-export type SkullKind = (typeof SKULL_KINDS)[number] | 'wither_skeleton' | 'piglin';
+export type SkullKind = (typeof SKULL_KINDS)[number] | 'wither_skeleton' | 'piglin' | 'dragon'; // Fase 8.6: la de dragón
 /** Todos los tipos de cabeza registrados (los de la fase 6.5 y los que se añaden después con registerSkull). */
 export const ALL_SKULL_KINDS: SkullKind[] = [];
 
@@ -23,6 +23,7 @@ const SKULL_NAMES: Readonly<Record<SkullKind, string>> = {
   player: 'Cabeza de jugador',
   wither_skeleton: 'Cráneo de esqueleto wither',
   piglin: 'Cabeza de piglin',
+  dragon: 'Cabeza de dragón',
 };
 
 /** Caras de una cabeza (su derecha es +X cuando mira al norte, −Z). */

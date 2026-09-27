@@ -1,6 +1,7 @@
 // Registro de objetos. Los objetos de bloque comparten id con su bloque (1..255 y, para las familias
 // con estados como losas o puertas, el estado base a partir de 1024); el resto va de 256 a 1023 y usa
 // un sprite 16x16 del atlas de objetos.
+import { SHULKER_BOXES, SHULKER_BOX_COLORS } from './blocks'; // Fase 8.6
 import { NETHER_WART_CROP } from './blocks'; // Fase 8.4
 import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
 import {
@@ -26,7 +27,7 @@ import { // Fase 6.5 (piedras)
 import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 // Fase 6.5 (equipo)
-import { CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR } from './armor';
+import { CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR, ELYTRA_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
@@ -642,6 +643,14 @@ export const ENDER_EYE = item('ender_eye', 'Ojo de ender');
 for (const e of END_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 /** El cristal del End: se pone sobre obsidiana o lecho de roca y estalla al golpearlo; cuatro en el portal de salida traen otro dragón. */
 export const END_CRYSTAL = item('end_crystal', 'Cristal del End');
+// Fase 8.6: las cajas de shulker no se apilan (llevan dentro lo suyo).
+for (const c of SHULKER_BOX_COLORS) if (ITEMS[SHULKER_BOXES[c]]) ITEMS[SHULKER_BOXES[c]].stack = 1;
+/** La concha de shulker (la suelta el shulker): para las cajas de shulker. */
+export const SHULKER_SHELL = item('shulker_shell', 'Caparazón de shulker');
+/** Los élitros (del barco del End): en el pecho, planean al saltar en el aire; se gastan 1 cada segundo de vuelo. */
+export const ELYTRA = item('elytra', 'Élitros', {
+  stack: 1, armor: { slot: 1, material: ELYTRA_ARMOR, points: 0, toughness: 0, durability: ARMOR_STATS[ELYTRA_ARMOR].durability[1] },
+});
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -879,4 +888,4 @@ smelt(QUARTZ_BLOCK, SMOOTH_QUARTZ); // el bloque de cuarzo, en cuarzo liso
 
 // ------------------------------------------------------------------ Fase 8.6 (el End)
 smelt(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
-(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, ...END_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));
+(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, ELYTRA, SHULKER_SHELL, ...END_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));

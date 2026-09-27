@@ -44,6 +44,14 @@ Objects). Pensado para PC (teclado y ratón).
   bastión (el disco «Pigstep» y el diseño de estandarte del hocico); **fósiles** de hueso en el valle
   de almas y **portales en ruinas** del Nether, a veces medio hundidos en la lava. El mar de lava tiene
   costras que se enfrían y derivan despacio en lugar de una baldosa repetida.
+- **El End** (portado de Java 26.3): las **fortalezas** con su biblioteca y la sala del portal, el **ojo de
+  ender** que vuela hacia la más cercana y el **portal del End** que se abre con los doce ojos; la isla del
+  dragón con sus pilares de obsidiana y cristales, el **dragón de Ender** con todas sus fases, su barra de jefe,
+  su muerte (portal de salida, huevo y puertas del End) y su **reaparición** con cuatro cristales; las islas
+  exteriores con sus **plantas de coro**, las **ciudades del End** con sus torres, puentes, cofres y
+  **shulkers**, y el **barco** con la **cabeza de dragón** y los **élitros** (planeo con la física de Java,
+  cohetes y el viento al volar); **cajas de shulker** de 17 colores que se llevan lo suyo y el **cofre de
+  ender** de cada jugador.
 - **Lo que da el Nether**: **escombros ancestrales** y la **netherita** (herramientas, armadura y armadura
   para caballo que se mejoran desde el diamante en la **mesa de herrería**, que no arden y flotan en la lava),
   el **nexo de reaparición** (se carga con piedra luminosa y fija el punto de reaparición en el Nether), la
@@ -228,6 +236,9 @@ Objects). Pensado para PC (teclado y ratón).
 | ![Puentes de una fortaleza del Nether sobre los deltas de basalto](docs/screenshots/nether_fortress.png) | ![Muros de un bastión en ruinas con sus cascadas de lava](docs/screenshots/bastion.png) |
 | ![Fósil de hueso en el valle de almas](docs/screenshots/nether_fossil.png) | ![Portal en ruinas del Nether con su cofre, oro y la mancha de rocanegra](docs/screenshots/nether_ruined_portal.png) |
 | ![Dos faros de noche, uno con el haz teñido por cristales de color](docs/screenshots/beacon.png) | ![Faro sobre su pirámide, nexo de reaparición cargado, magnetita, cuarzo, escombros ancestrales y netherita](docs/screenshots/nether_goods.png) |
+| ![La isla del dragón con sus pilares de obsidiana y la barra del dragón de Ender](docs/screenshots/end_island.png) | ![El portal de salida con el huevo de dragón sobre el podio](docs/screenshots/end_portal.png) |
+| ![Ciudad del End con sus torres y puentes, y el barco flotando bajo el destello del cielo](docs/screenshots/end_city.png) | ![Planeando con élitros sobre una ciudad del End](docs/screenshots/elytra.png) |
+| ![Cajas de shulker de colores, un cofre de ender y una cabeza de dragón](docs/screenshots/shulker_boxes.png) | |
 
 ## Controles
 
@@ -264,9 +275,9 @@ pulsación). Estas son las de por defecto:
 | `/dar <objeto> [cantidad]` | Deja objetos a tus pies (`/dar diamond 5`, `/dar iron_pickaxe`) |
 | `/efecto <efecto> [segundos] [nivel]` | Da un efecto (`/efecto velocidad 60 2`); `/efecto quitar` los quita todos |
 | `/matar` | Muerte instantánea (por si te quedas atascado) |
-| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`, `monumento`, `ruinas`, `tesoro`) |
+| `/localizar <estructura>` | Dónde está la estructura más cercana (`templo_del_desierto`, `templo_de_la_jungla`, `naufragio`, `portal_en_ruinas`, `iglu`, `pozo`, `mina`, `aldea`, `puesto`, `monumento`, `ruinas`, `tesoro`, `fortaleza`; en el End, `ciudad_del_end`) |
 | `/asalto` · `/patrulla` | Desatar un asalto en la aldea más cercana · hacer aparecer una patrulla de saqueadores |
-| `/dimension overworld\|nether [x y z]` | Ir a otra dimensión (a su punto de aparición o a unas coordenadas) |
+| `/dimension overworld\|nether\|end [x y z]` | Ir a otra dimensión (a su punto de aparición o a unas coordenadas) |
 | `/setblock <x> <y> <z> <bloque>` · `/fill <x1> <y1> <z1> <x2> <y2> <z2> <bloque>` | Poner un bloque o llenar una caja (hasta 32768; `~` = relativo a ti) |
 | `/tp <jugador>` · `/lista` · `/seed` · `/ayuda` | Teletransporte, jugadores, semilla y ayuda |
 
@@ -360,9 +371,8 @@ preocupaciones.
 
 VoxelCraft reproduce el bucle principal de supervivencia de Minecraft, pero no todo el juego:
 
-- 70 de las 86 criaturas de Minecraft: faltan las del End, los jefes y las de 2024–2026 (sniffer,
-  breeze, creaking…).
-- Sin End ni Wither (la estrella del Nether sólo se consigue en creativo).
+- 73 de las 86 criaturas de Minecraft: faltan el Wither y las de 2024–2026 (sniffer, breeze, creaking…).
+- Sin Wither (la estrella del Nether sólo se consigue en creativo) ni el Poema del End al salir del End.
 - El inventario y la vida de cada jugador los gestiona su navegador (confianza entre amigos): los
   bloques, los cofres, los hornos, las criaturas y los objetos del suelo sí los controla el servidor.
 - Los fluidos, las criaturas y el crecimiento de plantas solo se simulan cerca de los jugadores

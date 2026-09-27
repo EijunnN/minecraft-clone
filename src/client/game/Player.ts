@@ -15,6 +15,9 @@ import { // Fase 6.5 (materiales): hielo, slime y nieve polvo
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_SNEAK_EYE_HEIGHT, PLAYER_WIDTH } from '../../shared/constants';
 import { SLOW_FALL_GRAVITY, SLOW_FALL_SPEED } from '../../shared/effects'; // Fase 7 (pociones)
 import { DOLPHINS_GRACE_SWIM, levitate } from '../../shared/effects'; // Fase 7 (efectos)
+import { // Fase 8.6: los élitros
+  glideTick, rocketBoostTick, wallHitDamage, ELYTRA_WEAR_TICKS, GLIDE_GRAVITY, GLIDE_SLOW_FALL_GRAVITY, type Vel,
+} from '../../shared/elytra';
 
 export interface BlockSource {
   /** Id del bloque o -1 si la columna no está cargada. */
@@ -29,6 +32,8 @@ export interface MoveControls {
   jump: boolean;
   sneak: boolean;
   sprint: boolean;
+  /** Fase 8.6: se acaba de pulsar saltar (abre los élitros en el aire). */
+  jumpPressed?: boolean;
 }
 
 const GRAVITY = 32;
@@ -39,7 +44,7 @@ const PRONE_EYE = 0.4;
 const SWIM_SPEED = 5.6;
 const CRAWL_SPEED = 1.3;
 
-export type Pose = 'stand' | 'swim' | 'crawl';
+export type Pose = 'stand' | 'swim' | 'crawl' | 'glide';
 const JUMP_VELOCITY = 9.0;
 const HW = PLAYER_WIDTH / 2;
 const EPS = 1e-4;
@@ -114,6 +119,17 @@ export class Player {
   /** Fase 7 (efectos): nivel de Levitación (−1 sin ella) y Gracia del delfín; los pone el juego cada frame. */
   levitation = -1;
   dolphinsGrace = false;
+  /** Fase 8.6: planeando con élitros; si los lleva puestos y con usos (lo pone el juego cada frame). */
+  gliding = false;
+  canGlide = false;
+  /** Fase 8.6: ticks que le quedan a cada cohete pegado, usos gastados y daño por chocar de lado (los recoge el juego). */
+  rockets: number[] = [];
+  glideWear = 0;
+  wallDamage = 0;
+  private glideAcc = 0;
+  /** Ticks planeando (fallFlyTicks). */
+  glideTicks = 0;
+  private readonly gv: Vel = { x: 0, y: 0, z: 0 };
 
   /** Altura del cuerpo según la postura. */
   get height(): number {
@@ -250,7 +266,19 @@ export class Player {
     const wl = Math.hypot(wx, wz);
     if (wl > 1) { wx /= wl; wz /= wl; }
 
-    this.sneaking = c.sneak && !this.flying && this.pose === 'stand';
+    // Fase 8.6: los élitros se abren al pulsar saltar en el aire (tryToStartFallFlying) y se cierran al tocar el suelo,
+    // un líquido o una escalera de mano, con Levitación, volando en creativo o si ya no sirven.
+    if (!this.gliding && c.jumpPressed && this.canGlide && !this.onGround && !this.flying && !this.inWater && !this.inLava && !this.onLadder &&
+      this.levitation < 0) {
+      this.gliding = true;
+      this.glideAcc = 0;
+      this.glideTicks = 0;
+    } else if (this.gliding && (!this.canGlide || this.onGround || this.flying || this.inWater || this.inLava || this.onLadder || this.levitation >= 0)) {
+      this.gliding = false;
+    }
+    if (!this.gliding) this.rockets.length = 0;
+
+    this.sneaking = c.sneak && !this.flying && !this.gliding && this.pose === 'stand';
     if (fwd <= 0 || this.sneaking || this.usingItem) this.sprinting = false;
     else if (c.sprint) this.sprinting = true;
     this.updatePose(world);
@@ -259,7 +287,28 @@ export class Player {
     // Tumbado, los ojos nunca por encima del cuerpo (no se ve a través del techo al entrar en un hueco).
     this.eyeOffset = Math.min(this.eyeOffset, this.height - 0.1);
 
-    if (this.flying) {
+    if (this.gliding) {
+      // Fase 8.6: el planeo va a 20 pasos por segundo, en bloques por tick (como en Java).
+      this.glideAcc += dt;
+      const v = this.gv;
+      v.x = this.vx / 20;
+      v.y = this.vy / 20;
+      v.z = this.vz / 20;
+      while (this.glideAcc >= 0.05) {
+        this.glideAcc -= 0.05;
+        for (let i = this.rockets.length - 1; i >= 0; i--) {
+          rocketBoostTick(v, this.yaw, this.pitch);
+          if (--this.rockets[i] <= 0) this.rockets.splice(i, 1);
+        }
+        glideTick(v, this.yaw, this.pitch, this.slowFall && v.y <= 0 ? GLIDE_SLOW_FALL_GRAVITY : GLIDE_GRAVITY);
+        // checkFallDistanceAccumulation: mientras no se baje deprisa, la caída se queda en 1.
+        if (v.y > -0.5 && this.fallDistance > 1) this.fallDistance = 1;
+        if (++this.glideTicks % ELYTRA_WEAR_TICKS === 0) this.glideWear++;
+      }
+      this.vx = v.x * 20;
+      this.vy = v.y * 20;
+      this.vz = v.z * 20;
+    } else if (this.flying) {
       const speed = this.sprinting ? 21.6 : 10.9;
       const k = 1 - Math.exp(-dt * 8);
       this.vx += (wx * speed - this.vx) * k;
@@ -391,6 +440,7 @@ export class Player {
       if (dx !== 0 && dz !== 0 && !this.groundBelow(this.x + dx, this.z + dz, world)) { dz = 0; this.vz = 0; }
     }
     const prevVy = this.vy;
+    const prevHor = Math.hypot(this.vx, this.vz);
     const ox = this.x, oy = this.y, oz = this.z;
     // Colisión por cajas con subida automática de escalones de hasta 0,6 bloques.
     const r = moveBox(world, this.x, this.y, this.z, PLAYER_WIDTH, this.height, dx, dy, dz, this.flying ? 0 : 0.6, wasGround, this.entityBoxes);
@@ -430,6 +480,11 @@ export class Player {
       this.onGround = true;
     }
     this.hitWall = r.hitX || r.hitZ;
+    // Fase 8.6 (handleFallFlyingCollisions): chocar de lado planeando hace daño según lo que se frena.
+    if (this.gliding && this.hitWall) {
+      const dmg = wallHitDamage(prevHor / 20, Math.hypot(this.vx, this.vz) / 20);
+      if (dmg > 0) this.wallDamage = Math.max(this.wallDamage, dmg);
+    }
     if (this.flying && this.onGround) this.flying = false;
     this.justLanded = this.onGround && !wasGround;
     this.landedSpeed = this.justLanded ? prevVy : 0;
@@ -458,7 +513,9 @@ export class Player {
    */
   private updatePose(world: BlockSource): void {
     const canStand = this.roomToStand(world);
-    if (this.flying) this.pose = canStand ? 'stand' : 'crawl';
+    if (this.gliding) this.pose = 'glide'; // Fase 8.6: 0,6 de alto
+    else if (this.pose === 'glide') this.pose = canStand ? 'stand' : 'crawl';
+    else if (this.flying) this.pose = canStand ? 'stand' : 'crawl';
     else if (this.pose === 'swim') {
       if (!this.inWater || !this.sprinting) this.pose = canStand ? 'stand' : 'crawl';
     } else if (this.sprinting && this.eyeInWater) this.pose = 'swim';

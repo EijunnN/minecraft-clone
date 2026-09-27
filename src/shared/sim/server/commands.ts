@@ -12,7 +12,8 @@ import type { Raids } from './raids'; // Fase 6 (asaltos)
 import { locateStructure, STRUCTURE_NAMES, LOCATE_REGIONS } from '../../world/structures';
 import { locateNetherStructure, NETHER_STRUCTURE_NAMES, NETHER_STRUCTURE_OF } from '../../world/netherStructures'; // Fase 8.4
 import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
-import { DIM_OVERWORLD, DIM_NETHER, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
+import { EndGenerator } from '../../world/end'; // Fase 8.6
+import { DIM_OVERWORLD, DIM_NETHER, DIM_END, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
 import { BLOCKS, isValidBlockId } from '../../blocks';
 import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 
@@ -35,6 +36,7 @@ export const STRUCTURE_ALIASES: Readonly<Record<string, string>> = {
   mansion: 'mansion', mansion_del_bosque: 'mansion', // Fase 7.5 (mansión)
   // Fase 8.4 (estructuras del Nether)
   fortaleza: 'fortress', fortaleza_del_nether: 'fortress', bastion: 'bastion_remnant', bastion_en_ruinas: 'bastion_remnant',
+  ciudad_del_end: 'end_city', ciudad_end: 'end_city', // Fase 8.6 (en el End, «ciudad» también)
 };
 
 export class Commands {
@@ -259,7 +261,19 @@ export class Commands {
         const want = norm(args.join('_'));
         const key = Object.keys(STRUCTURE_ALIASES).find((a) => a === want);
         if (!key) {
-          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion|ciudad_antigua|fortaleza|bastion>');
+          reply('Uso: /localizar <templo_del_desierto|templo_de_la_jungla|naufragio|portal_en_ruinas|iglu|pozo|mina|aldea|puesto|monumento|ruinas|tesoro|cabana_de_bruja|fosil|mansion|ciudad_antigua|fortaleza|bastion|ciudad_del_end>');
+          return;
+        }
+        // Fase 8.6: en el End, sólo las ciudades del End.
+        if (ctx.dim === DIM_END || STRUCTURE_ALIASES[key] === 'end_city') {
+          const gen = ctx.world.gen;
+          if (ctx.dim !== DIM_END || !(gen instanceof EndGenerator) || (key !== 'ciudad' && STRUCTURE_ALIASES[key] !== 'end_city')) {
+            reply(`En ${dimensionDef(ctx.dim).name} no hay estructuras de ese tipo.`);
+            return;
+          }
+          const q = gen.locateCity(Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS);
+          if (!q) reply('No hay ninguna ciudad del End cerca.');
+          else reply(`Ciudad del End más cercana: x ${q[0]}, y ${q[1]}, z ${q[2]} (a ${Math.round(Math.hypot(q[0] - s.p[0], q[2] - s.p[2]))} bloques).`);
           return;
         }
         // Fase 8.4: en el Nether, «fosil» y «portal_en_ruinas» son los suyos.

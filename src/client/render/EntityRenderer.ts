@@ -12,10 +12,12 @@ import { buildBox, drawSkin, skinColorsFor, PART_LAYOUT } from './PlayerSkin';
 import type { BlockTextures } from './BlockTextures';
 import { BLOCK_TEX } from '../../shared/blocks';
 import { ITEMS } from '../../shared/items';
-import { ALL_ARMOR_MATERIALS, type ArmorMaterial } from '../../shared/armor'; // Fase 6.5 (cobre): con el cobre
+import { ALL_ARMOR_MATERIALS, type SuitMaterial as ArmorMaterial } from '../../shared/armor'; // Fase 6.5 (cobre): con el cobre
 import { ARMOR_BOXES, ARMOR_SHINE, generateArmorTexture, type BodyPart } from '../textures/armorTextures';
 import { isSkull } from '../../shared/blocks'; // Fase 6.5 (colecciones)
 import { glintTime } from './ItemRenderer'; // Fase 7 (encantamientos)
+import { ELYTRA } from '../../shared/items'; // Fase 8.6: los élitros
+import { ELYTRA_LAYOUT, generateElytraTexture } from '../textures/elytraTexture';
 
 export interface RemotePlayerView {
   id: string;
@@ -57,6 +59,11 @@ export interface RemotePlayerView {
   invisible?: boolean;
   /** Fase 7 (efectos): con el efecto Brillo (se le ve el contorno a través de las paredes). */
   glowing?: boolean;
+  /** Fase 8.6: planeando con élitros: cuánto está tumbado (0..1) y cuánto se ladea en los giros. */
+  glide?: number;
+  glideRoll?: number;
+  /** Fase 8.6: giros de las alas de los élitros (x, y, z en el espacio de Java; ver elytraPose.ts). */
+  wings?: [number, number, number];
 }
 
 interface PartMesh {
@@ -89,6 +96,9 @@ export class EntityRenderer {
   /** Cajas de armadura de cada parte del cuerpo. */
   private armorParts = new Map<BodyPart, ArmorMesh[]>();
   private armorTex = new Map<ArmorMaterial, WebGLTexture>();
+  /** Fase 8.6: las dos alas de los élitros (la derecha, reflejo de la izquierda) y su textura. */
+  private wingMeshes!: [PartMesh, PartMesh];
+  private elytraTex!: WebGLTexture;
   private skins = new Map<string, { key: string; tex: WebGLTexture }>();
   private outlineVao: WebGLVertexArrayObject;
   /** Partículas (sistema nuevo) y sus efectos con nombre. */
@@ -107,8 +117,17 @@ export class EntityRenderer {
     this.pfx = new ParticleFx(this.particles);
     this.pArmor = new Program(gl, { name: 'armor', vs: ENTITY_VS, fs: ARMOR_FS });
 
-    const mk = (min: [number, number, number], max: [number, number, number], layout: { u: number; v: number; w: number; h: number; d: number }) => {
+    const mk = (min: [number, number, number], max: [number, number, number], layout: { u: number; v: number; w: number; h: number; d: number },
+      mirror = false) => {
       const b = buildBox(min, max, layout, PX);
+      if (mirror) {
+        // Fase 8.6: el reflejo en x (el .mirror() del ala derecha): la misma textura, del revés, y las caras giradas.
+        for (let i = 0; i < b.pos.length; i += 3) {
+          b.pos[i] = -b.pos[i];
+          b.nrm[i] = -b.nrm[i];
+        }
+        for (let i = 0; i < b.idx.length; i += 3) [b.idx[i + 1], b.idx[i + 2]] = [b.idx[i + 2], b.idx[i + 1]];
+      }
       const vao = gl.createVertexArray()!;
       gl.bindVertexArray(vao);
       const attr = (loc: number, data: Float32Array, size: number) => {
@@ -145,8 +164,11 @@ export class EntityRenderer {
         this.armorParts.set(part, list);
       }
     }
-    for (const mat of ALL_ARMOR_MATERIALS) {
-      const t = generateArmorTexture(mat);
+    // Fase 8.6: el ala izquierda de ElytraModel (caja 10 × 20 × 2 hinchada 1, colgando del hombro hacia el centro),
+    // pasada a nuestros ejes (x e y al revés que en Java).
+    this.wingMeshes = [mk([-1, -21, -1], [11, 1, 3], ELYTRA_LAYOUT), mk([-1, -21, -1], [11, 1, 3], ELYTRA_LAYOUT, true)];
+    for (const mat of [...ALL_ARMOR_MATERIALS, 'elytra' as const]) {
+      const t = mat === 'elytra' ? generateElytraTexture() : generateArmorTexture(mat);
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
@@ -155,7 +177,8 @@ export class EntityRenderer {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      this.armorTex.set(mat, tex);
+      if (mat === 'elytra') this.elytraTex = tex;
+      else this.armorTex.set(mat, tex);
     }
 
     // Contorno: 12 aristas de un cubo unitario.
@@ -213,13 +236,19 @@ export class EntityRenderer {
       mat4.rotateY(root, root, p.headYaw + Math.PI);
       mat4.translate(root, root, [0, 0.15, -0.45]);
       mat4.rotateX(root, root, Math.PI / 2);
+    } else if (p.glide) {
+      // Fase 8.6 (AvatarRenderer.setupRotations): tumbado hacia donde mira (−90° − xRot, poco a poco) y ladeado en los giros.
+      mat4.rotateY(root, root, p.bodyYaw);
+      mat4.translate(root, root, [0, 0.3 * p.glide, 0]);
+      mat4.rotateX(root, root, p.glide * (-Math.PI / 2 + p.pitch));
+      if (p.glideRoll) mat4.rotateY(root, root, p.glideRoll);
     } else if (p.prone) {
       // Boca abajo: el cuerpo en horizontal hacia donde mira, a ras del suelo.
       mat4.rotateY(root, root, p.bodyYaw);
       mat4.translate(root, root, [0, 0.3, 0.9]);
       mat4.rotateX(root, root, -Math.PI / 2);
     } else mat4.rotateY(root, root, p.bodyYaw);
-    const legSwing = p.sleeping ? 0 : Math.sin(p.walkPhase) * 0.9 * p.walkAmount;
+    const legSwing = p.sleeping || p.glide ? 0 : Math.sin(p.walkPhase) * 0.9 * p.walkAmount; // Fase 8.6: planeando, quietas
     const armSwing = legSwing * 0.8;
     const m = this.m;
     // Piernas
@@ -262,7 +291,7 @@ export class EntityRenderer {
     mat4.translate(m, upper, [0, 12 * PX, 0]);
     if (!p.sleeping) {
       mat4.rotateY(m, m, p.headYaw - p.bodyYaw);
-      mat4.rotateX(m, m, p.pitch);
+      mat4.rotateX(m, m, p.glide ? Math.PI / 4 : p.pitch); // Fase 8.6: planeando, la cabeza mira al frente
     }
     fn('head', m);
   }
@@ -300,9 +329,9 @@ export class EntityRenderer {
     let any = false;
     const mats = [0, 1, 2, 3].map((slot) => {
       const info = ITEMS[a[slot]]?.armor;
-      if (!info || info.slot !== slot || isSkull(a[slot])) return null; // (las cabezas se dibujan aparte)
+      if (!info || info.slot !== slot || isSkull(a[slot]) || info.material === 'elytra') return null; // (las cabezas y los élitros, aparte)
       any = true;
-      return info.material;
+      return info.material as ArmorMaterial;
     });
     return any ? mats : null;
   }
@@ -319,6 +348,55 @@ export class EntityRenderer {
         if (mat) fn(box.mesh, mat, m, box.slot);
       }
     });
+  }
+
+  /**
+   * Fase 8.6 (WingsLayer, ElytraModel): las alas de los élitros, colgadas del cuello (2 píxeles por detrás de la espalda)
+   * con los giros de su animación; los de Java (Rz · Ry · Rx) en nuestros ejes cambian de signo en x e y.
+   */
+  private forEachWing(p: RemotePlayerView, camX: number, camY: number, camZ: number, fn: (mesh: PartMesh, m: mat4) => void): void {
+    if (p.armor?.[1] !== ELYTRA) return;
+    const [rx, ry, rz] = p.wings ?? [Math.PI / 12, 0, -Math.PI / 12];
+    const body = mat4.create();
+    let found = false;
+    this.forEachPart(p, camX, camY, camZ, (part, m) => {
+      if (part === 'body') {
+        mat4.copy(body, m);
+        found = true;
+      }
+    });
+    if (!found) return;
+    const m = this.m;
+    for (let side = 0; side < 2; side++) {
+      const k = side === 0 ? 1 : -1;
+      mat4.translate(m, body, [-5 * k * PX, 12 * PX, 2 * PX]);
+      mat4.rotateZ(m, m, rz * k);
+      mat4.rotateY(m, m, -ry * k);
+      mat4.rotateX(m, m, -rx);
+      fn(this.wingMeshes[side], m);
+    }
+  }
+
+  private drawWings(players: RemotePlayerView[], camX: number, camY: number, camZ: number, bindLighting: (p: Program) => Program): void {
+    let prog: Program | null = null;
+    for (const p of players) {
+      this.forEachWing(p, camX, camY, camZ, (mesh, m) => {
+        if (!prog) prog = bindLighting(this.pArmor.use()).f1('uTime', glintTime()).tex2D('uSkin', this.elytraTex).f3('uMat', 0.62, 0, 0.04);
+        prog.f2('uLightLevel', p.light[0], p.light[1]).f1('uGlint', (p.glint ?? 0) & (4 << 1) ? 1 : 0);
+        this.drawMesh(prog, mesh, m);
+      });
+    }
+  }
+
+  private drawWingsShadow(players: RemotePlayerView[], camX: number, camY: number, camZ: number, prog: Program): void {
+    let bound = false;
+    for (const p of players) {
+      this.forEachWing(p, camX, camY, camZ, (mesh, m) => {
+        if (!bound) prog.tex2D('uSkin', this.elytraTex);
+        bound = true;
+        this.drawMesh(prog, mesh, m);
+      });
+    }
   }
 
   private drawMesh(prog: Program, mesh: PartMesh, m: mat4): void {
@@ -355,6 +433,7 @@ export class EntityRenderer {
         this.drawMesh(armor, mesh, m);
       });
     }
+    this.drawWings(players, camX, camY, camZ, bindLighting); // Fase 8.6
     gl.bindVertexArray(null);
   }
 
@@ -383,6 +462,7 @@ export class EntityRenderer {
         this.drawMesh(prog, mesh, m);
       });
     }
+    this.drawWingsShadow(players, camX, camY, camZ, prog); // Fase 8.6
     gl.bindVertexArray(null);
   }
 
@@ -404,6 +484,7 @@ export class EntityRenderer {
         this.drawMesh(armor, mesh, m);
       });
     }
+    this.drawWings(views, camX, camY, camZ, bindLighting); // Fase 8.6: también en los soportes
     this.gl.bindVertexArray(null);
   }
 
@@ -419,6 +500,7 @@ export class EntityRenderer {
         this.drawMesh(prog, mesh, m);
       });
     }
+    this.drawWingsShadow(views, camX, camY, camZ, prog); // Fase 8.6
     this.gl.bindVertexArray(null);
   }
 

@@ -6,6 +6,7 @@
 // - El bloque de slime y el de miel arrastran a los que tocan (salvo el uno al otro).
 // - Como mucho 12 bloques; si alguno no se puede mover, el pistón no se mueve.
 // Es puro (sobre una función que da los bloques): lo usan el servidor y las pruebas.
+import { isShulkerBox } from './blocks'; // Fase 8.6
 import {
   defs, familyBase, BLOCK_COUNT, BLOCK_SOLID, BLOCK_RENDER, BLOCK_FLUID, BLOCK_REPLACEABLE, BLOCK_HARDNESS, R_CROSS, R_TORCH,
   OBSIDIAN, CRYING_OBSIDIAN, SLIME_BLOCK, HONEY_BLOCK, GRINDSTONE, ENCHANTING_TABLE, LECTERN, LECTERN_BOOK, CAMPFIRE, SOUL_CAMPFIRE,
@@ -34,6 +35,8 @@ function classify(id: number): number {
   // Inamovibles: durísimos, los que guardan algo y las piezas de los pistones.
   if (BLOCK_HARDNESS[id] < 0 || base === OBSIDIAN || base === CRYING_OBSIDIAN || isAnvil(id) || base === GRINDSTONE) return PUSH_BLOCK;
   if (base === ENCHANTING_TABLE || base === LECTERN || base === LECTERN_BOOK || base === CAMPFIRE || base === SOUL_CAMPFIRE || base === MOB_SPAWNER) return PUSH_BLOCK;
+  // Fase 8.6: la caja de shulker se rompe (y cae con lo que lleva dentro), como en Java.
+  if (isShulkerBox(id)) return PUSH_DESTROY;
   if (base === CONDUIT || base === DAYLIGHT_DETECTOR || base === CHISELED_BOOKSHELF || isContainer(id) || isBeeHome(id)) return PUSH_BLOCK;
   if (isJukebox(id) || isSign(id) || isBanner(id) || isPistonHead(id) || isMovingBlock(id) || BLOCK_KEYS.test(key)) return PUSH_BLOCK;
   // Se rompen: lo que no choca, plantas, antorchas, puertas, camas, tartas, cultivos y los de la lista.
