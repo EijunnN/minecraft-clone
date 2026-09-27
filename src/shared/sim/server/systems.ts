@@ -57,6 +57,8 @@ import { Fire } from './fire';
 import { Conduits } from './conduits';
 import { Equipment } from './equipment';
 import { Transport } from './vehicles';
+import { ENT_CHEST_MINECART } from '../../vehicles'; // las vagonetas con cofre de las minas
+import { LOOT_TABLES, rollLoot, scatterLoot } from '../../loot';
 import { EnchantWork } from './enchantWork';
 import { Redstone } from './redstone';
 import { Mechanisms } from './mechanisms';
@@ -277,7 +279,14 @@ export class ServerSystems {
     world.onStructureMobs = (m) => {
       // Fase 8.6: los marcos de las estructuras (los élitros del barco del End) los cuelga su sistema.
       for (const f of m) if (f.type === ENT_FRAME) this.hangings.placeFrame(Math.floor(f.x), Math.floor(f.y), Math.floor(f.z), f.facing ?? 0, f.variant ?? 0);
-      this.monuments.spawnStructureMobs(m.filter((f) => f.type !== ENT_FRAME));
+      // Las vagonetas con cofre de las minas, con el botín de la mina (MinecartChest con abandoned_mineshaft).
+      for (const f of m) {
+        if (f.type !== ENT_CHEST_MINECART) continue;
+        const v = this.transport.spawn(ENT_CHEST_MINECART, 0, f.x, f.y - 0.5, f.z, ctx.rand() * Math.PI * 2);
+        const table = LOOT_TABLES.mineshaft;
+        if (v.inv && table) v.inv.slots = scatterLoot(rollLoot(table, ctx.rand), v.inv.slots.length, ctx.rand);
+      }
+      this.monuments.spawnStructureMobs(m.filter((f) => f.type !== ENT_FRAME && f.type !== ENT_CHEST_MINECART));
     };
     this.critters = new CritterWorld(ctx, this.storms, this.trading);
     this.allays = new Allays(ctx, this.collections);

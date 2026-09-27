@@ -41,7 +41,9 @@ test('terreno: piedra bajo cero, lecho de roca en −64, lava y diamantes en lo 
             if (b === STONE || b === DEEPSLATE || b === TUFF) stoneBelow++;
             if (b === LAVA) lava++;
             if (b === DIAMOND_ORE || b === DEEPSLATE_ORE[DIAMOND_ORE]) diamonds++;
-            if (b === LAVA) assert.ok(y <= MIN_Y + 10, `lava sólo abajo del todo (y = ${y})`);
+            // Como en Java: la lava de las cuevas es la del fondo (por debajo de y = −54) o la de los acuíferos de lava,
+            // que sólo tienen su nivel por debajo de y = −10.
+            if (b === LAVA) assert.ok(y < -10, `lava sólo en lo hondo (y = ${y})`);
           }
         }
       }

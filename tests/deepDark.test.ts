@@ -161,9 +161,11 @@ test('sensor de sculk: se activa con la distancia, da potencia y frecuencia, se 
   const L = lab();
   const { h, bx, by, bz } = L;
   const sx = bx + 3, sz = bz;
+  // (Los del Deep Dark que haya generado el mundo bajo tierra también escuchan: se cuenta sólo el nuevo.)
+  const before = h.gs.sys.deepDark.vibrations.listenerCount;
   L.set(sx, by, sz, SCULK_SENSOR);
   h.tick(2);
-  assert.equal(h.gs.sys.deepDark.vibrations.listenerCount, 1);
+  assert.equal(h.gs.sys.deepDark.vibrations.listenerCount, before + 1);
   const powers: number[] = [];
   h.gs.sys.deepDark.vibrations.onSensor = (_x, _y, _z, p) => powers.push(p);
   // Colocar un bloque a 4 bloques: potencia 8, frecuencia 13 (lo lee el comparador).

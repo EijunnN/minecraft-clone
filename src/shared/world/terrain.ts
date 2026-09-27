@@ -27,6 +27,7 @@ import { placeStones } from './stones'; // Fase 6.5 (piedras)
 import { decorate65 } from './oceanDecor'; // Fase 6.5 (océano y plantas)
 import { decorateMaterials } from './materialDecor'; // Fase 6.5 (materiales)
 import { deepDarkColumn, decorateDeepDark } from './deepDark'; // Fase 7.5 (abismo)
+import { OverworldCaves } from './caves'; // cuevas de ruido, acuífero y excavadores de Java 26.3
 
 type SetBlock = (x: number, y: number, z: number, id: number, force: boolean) => void;
 
@@ -109,8 +110,6 @@ export interface GenResult {
   fluidTicks?: number[];
 }
 
-const CAVE_GRID = 4;
-
 export class TerrainGenerator {
   readonly seed: number;
   private nCont: Simplex;
@@ -132,6 +131,10 @@ export class TerrainGenerator {
   private nDrip: Simplex;
   private nAquifer: Simplex;
   private info: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
+  /** Cuevas de Java 26.3 (de ruido, acuífero y excavadores). */
+  readonly caves: OverworldCaves;
+  private caveInfo: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
+  private topCache = new Map<number, number>();
 
   constructor(seed: number) {
     this.seed = seed | 0;
@@ -156,6 +159,24 @@ export class TerrainGenerator {
     this.nLush = new Simplex(s());
     this.nDrip = new Simplex(s());
     this.nAquifer = new Simplex(s());
+    this.caves = new OverworldCaves(this.seed, {
+      topAt: (x, z) => this.columnTop(x, z),
+      preliminarySurface: (x, z) => this.columnInfo(x, z, this.caveInfo).height,
+      mountainAt: (x, z) => this.columnInfo(x, z, this.caveInfo).mount,
+    });
+  }
+
+  /** Superficie del terreno (sin cuevas) de una columna, con caché (la usan las cuevas de fuera del chunk). */
+  private columnTop(x: number, z: number): number {
+    const key = (x & 0xffff) * 0x10000 + (z & 0xffff);
+    let t = this.topCache.get(key);
+    if (t === undefined) {
+      if (this.topCache.size > 50000) this.topCache.clear();
+      const inf = this.columnInfo(x, z, { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 });
+      t = this.surfaceAt(x, z, inf);
+      this.topCache.set(key, t);
+    }
+    return t;
   }
 
   /** Roca de fondo: pizarra profunda por debajo de 0 y mezclada con piedra entre 0 y 7. */
@@ -163,17 +184,6 @@ export class TerrainGenerator {
     if (y < 0) return DEEPSLATE;
     if (y >= 8) return STONE;
     return hashToFloat(hash3(x, y, z, this.seed ^ 0xdee9)) < (8 - y) / 8 ? DEEPSLATE : STONE;
-  }
-
-  /**
-   * Nivel del agua subterránea (acuífero) de una columna, o -1e9 si no hay: zonas amplias donde las
-   * cuevas por debajo de ese nivel están inundadas. El nivel va en escalones de 6 bloques.
-   */
-  private aquiferLevel(x: number, z: number, top: number): number {
-    const n = this.nAquifer.noise2(x / 170, z / 170);
-    if (n < 0.28) return -1e9;
-    const level = Math.floor((-40 + (n - 0.28) * 140) / 6) * 6;
-    return Math.min(level, top - 14, SEA_LEVEL - 12);
   }
 
   /** Bioma de cueva de una columna: 1 frondosa, 2 de goteo, 0 normal; Fase 7.5 (abismo): 3 Deep Dark. */
@@ -310,41 +320,9 @@ export class TerrainGenerator {
     return bottom - 1;
   }
 
-  /** Valor del ruido de cuevas en un punto de la rejilla gruesa (1 = hueco). */
-  private caveGridValue(x: number, y: number, z: number): number {
-    const a = this.nCaveA.noise3(x / 72, y / 46, z / 72);
-    const b = this.nCaveB.noise3(x / 72, y / 46, z / 72);
-    const spaghetti = 0.0095 - (a * a + b * b); // > 0 dentro del túnel
-    let cheese = -1;
-    if (y < 56) {
-      const ch = this.nCheese.noise3(x / 110, y / 58, z / 110);
-      cheese = (ch - 0.58) * 0.25 * smoothstep(56, 30, y);
-    }
-    return Math.max(spaghetti, cheese);
-  }
-
-  /** Evalúa la función de cuevas interpolada en cualquier posición (igual que en generate()). */
+  /** ¿Abren las cuevas de ruido un hueco en (x, y, z)? (lo usan los fósiles para no quedar al aire). */
   caveAt(x: number, y: number, z: number): boolean {
-    const gx = Math.floor(x / CAVE_GRID) * CAVE_GRID;
-    const gy = Math.floor(y / CAVE_GRID) * CAVE_GRID;
-    const gz = Math.floor(z / CAVE_GRID) * CAVE_GRID;
-    const fx = (x - gx) / CAVE_GRID;
-    const fy = (y - gy) / CAVE_GRID;
-    const fz = (z - gz) / CAVE_GRID;
-    const v000 = this.caveGridValue(gx, gy, gz);
-    const v100 = this.caveGridValue(gx + CAVE_GRID, gy, gz);
-    const v010 = this.caveGridValue(gx, gy + CAVE_GRID, gz);
-    const v110 = this.caveGridValue(gx + CAVE_GRID, gy + CAVE_GRID, gz);
-    const v001 = this.caveGridValue(gx, gy, gz + CAVE_GRID);
-    const v101 = this.caveGridValue(gx + CAVE_GRID, gy, gz + CAVE_GRID);
-    const v011 = this.caveGridValue(gx, gy + CAVE_GRID, gz + CAVE_GRID);
-    const v111 = this.caveGridValue(gx + CAVE_GRID, gy + CAVE_GRID, gz + CAVE_GRID);
-    const v = lerp(
-      lerp(lerp(v000, v100, fx), lerp(v010, v110, fx), fy),
-      lerp(lerp(v001, v101, fx), lerp(v011, v111, fx), fy),
-      fz,
-    );
-    return v > 0;
+    return this.caves.noiseCaveAt(x, y, z);
   }
 
   /** Color de hierba (sRGB 0..255) según temperatura y humedad. */
@@ -519,11 +497,11 @@ export class TerrainGenerator {
    * vecino, calculada con las mismas reglas) se vuelve roca. Sólo cambia el lado del aire, así que los
    * dos chunks coinciden sin tener que generarse juntos.
    */
-  private waterColumns = new Map<string, { h: number; amp: number; top: number; ceiling: number; aquifer: number; ice: boolean }>();
+  private waterColumns = new Map<string, { h: number; amp: number; top: number; ice: boolean }>();
 
   /**
-   * ¿Deja el generador agua en (x, y, z)? (mar sobre el fondo o cueva inundada del acuífero). Sirve para saber
-   * qué hay al otro lado del borde de un chunk sin generarlo.
+   * ¿Deja el generador agua (o lava) en (x, y, z)? (mar sobre el fondo, o una cueva inundada por el acuífero).
+   * Sirve para saber qué hay al otro lado del borde de un chunk sin generarlo.
    */
   generatedWaterAt(x: number, y: number, z: number): boolean {
     const k = `${x},${z}`;
@@ -532,47 +510,41 @@ export class TerrainGenerator {
       if (this.waterColumns.size > 4096) this.waterColumns.clear();
       const inf = this.columnInfo(x, z, { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 });
       const top = this.surfaceAt(x, z, inf);
-      c = {
-        h: inf.height, amp: inf.amp, top, ceiling: this.caveCeiling(x, z, top), aquifer: this.aquiferLevel(x, z, top),
-        ice: inf.temp < -0.58,
-      };
+      c = { h: inf.height, amp: inf.amp, top, ice: inf.temp < -0.58 };
       this.waterColumns.set(k, c);
     }
     if (c.top < SEA_LEVEL - 1 && y > c.top) return y < SEA_LEVEL && !(c.ice && y === SEA_LEVEL - 1);
-    if (y > c.aquifer || y > c.ceiling || y <= MIN_Y + 10) return false;
-    return this.solidAt(x, y, z, c.h, c.amp) && this.caveAt(x, y, z);
+    if (y > c.top || y <= MIN_Y || !this.solidAt(x, y, z, c.h, c.amp)) return false;
+    const sub = this.caves.substanceAt(x, y, z);
+    return sub === WATER || sub === LAVA;
   }
 
   private sealGeneratedWater(blocks: Uint16Array, x0: number, z0: number): void {
     const waterOutside = (x: number, y: number, z: number) => this.generatedWaterAt(x, y, z);
-    for (let y = MIN_Y + 1; y < SEA_LEVEL; y++) {
-      for (let lz = 0; lz < 16; lz++) {
-        for (let lx = 0; lx < 16; lx++) {
+    // Columna a columna (el resultado no depende del orden: una barrera nunca moja a otra celda), para que las
+    // consultas del otro lado del borde vayan seguidas.
+    for (let lz = 0; lz < 16; lz++) {
+      for (let lx = 0; lx < 16; lx++) {
+        for (let y = MIN_Y + 1; y < SEA_LEVEL; y++) {
           const i = blockIndex(lx, y, lz);
           if (blocks[i] !== AIR) continue;
-          let wet = blocks[blockIndex(lx, y + 1, lz)] === WATER;
+          const fluid = (id: number) => id === WATER || id === LAVA;
+          let wet = fluid(blocks[blockIndex(lx, y + 1, lz)]);
           for (let d = 0; d < 4 && !wet; d++) {
             const nx = lx + DIR_X[d], nz = lz + DIR_Z[d];
             wet = nx >= 0 && nx < 16 && nz >= 0 && nz < 16
-              ? blocks[blockIndex(nx, y, nz)] === WATER
+              ? fluid(blocks[blockIndex(nx, y, nz)])
               : waterOutside(x0 + nx, y, z0 + nz);
           }
           if (!wet) continue;
           // La barrera imita al suelo de debajo (arena, grava, tierra…) o es roca.
           const below = blocks[blockIndex(lx, y - 1, lz)];
           blocks[i] = below === GRASS || below === SNOWY_GRASS || below === MYCELIUM ? DIRT
-            : below !== WATER && below !== STONE && below !== DEEPSLATE && BLOCK_OPAQUE[below] && !isLeaves(below) ? below
+            : below !== WATER && below !== LAVA && below !== STONE && below !== DEEPSLATE && BLOCK_OPAQUE[below] && !isLeaves(below) ? below
               : this.rockAt(x0 + lx, y, z0 + lz);
         }
       }
     }
-  }
-
-  /** Altura máxima (inclusive) hasta la que se excavan cuevas en una columna. */
-  private caveCeiling(x: number, z: number, top: number): number {
-    // Cerca del mar/lagos no abrimos la superficie (el agua no fluye).
-    if (top < SEA_LEVEL + 3) return top - 6;
-    return this.nEntrance.noise2(x / 90, z / 90) > 0.35 ? top + 1 : top - 5;
   }
 
   /** Altura del suelo donde puede crecer un árbol/cactus en (x, z), o -1 si no es válido. */
@@ -581,7 +553,7 @@ export class TerrainGenerator {
     const height = inf.height, amp = inf.amp;
     const sy = this.surfaceAt(x, z, inf);
     if (sy < SEA_LEVEL - 1 || sy > MAX_Y - 20) return -1;
-    if (this.caveAt(x, sy, z) && sy <= this.caveCeiling(x, z, sy)) return -1;
+    if (this.caves.substanceAt(x, sy, z) >= 0) return -1; // boca de cueva o barranco
     const t: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
     const hx1 = this.columnInfo(x + 1, z, t).height;
     const hx0 = this.columnInfo(x - 1, z, t).height;
@@ -681,50 +653,8 @@ export class TerrainGenerator {
       }
     }
 
-    // --- 4. Cuevas (rejilla gruesa + interpolación trilineal) ---
-    // La rejilla empieza en MIN_Y (múltiplo de CAVE_GRID, como la de caveAt).
-    const gyCount = Math.ceil((maxTop + 2 - MIN_Y) / CAVE_GRID) + 1;
-    const grid = new Float64Array(5 * 5 * gyCount);
-    for (let gy = 0; gy < gyCount; gy++) {
-      for (let gz = 0; gz < 5; gz++) {
-        for (let gx = 0; gx < 5; gx++) {
-          grid[(gy * 5 + gz) * 5 + gx] = this.caveGridValue(x0 + gx * CAVE_GRID, MIN_Y + gy * CAVE_GRID, z0 + gz * CAVE_GRID);
-        }
-      }
-    }
-    for (let lz = 0; lz < 16; lz++) {
-      for (let lx = 0; lx < 16; lx++) {
-        const top = tops[lz * 16 + lx];
-        const ceiling = this.caveCeiling(x0 + lx, z0 + lz, top);
-        const gx = lx >> 2, gz = lz >> 2;
-        const fx = (lx & 3) / 4, fz = (lz & 3) / 4;
-        const aquifer = this.aquiferLevel(x0 + lx, z0 + lz, top);
-        for (let y = MIN_Y + 5; y <= ceiling && y <= maxTop; y++) {
-          const i = blockIndex(lx, y, lz);
-          const b = blocks[i];
-          if (b === AIR) continue;
-          const gy = (y - MIN_Y) >> 2;
-          const fy = ((y - MIN_Y) & 3) / 4;
-          const b00 = (gy * 5 + gz) * 5 + gx;
-          const b01 = b00 + 25; // gy + 1
-          const v = lerp(
-            lerp(
-              lerp(grid[b00], grid[b00 + 1], fx),
-              lerp(grid[b00 + 5], grid[b00 + 6], fx),
-              fz,
-            ),
-            lerp(
-              lerp(grid[b01], grid[b01 + 1], fx),
-              lerp(grid[b01 + 5], grid[b01 + 6], fx),
-              fz,
-            ),
-            fy,
-          );
-          // Por debajo de y = −54 las cuevas se llenan de lava (como en Minecraft); en los acuíferos, de agua.
-          if (v > 0) blocks[i] = y <= MIN_Y + 10 ? LAVA : y <= aquifer ? WATER : AIR;
-        }
-      }
-    }
+    // --- 4. Cuevas de Java 26.3: las de ruido y las de los excavadores, con el agua y la lava del acuífero ---
+    this.caves.carveChunk(cx, cz, blocks, tops, maxTop, GRASS, MYCELIUM, DIRT, (id) => id === BEDROCK);
 
     // --- 5. Agua y hielo (sólo donde el terreno base queda bajo el nivel del mar) ---
     for (let lz = 0; lz < 16; lz++) {

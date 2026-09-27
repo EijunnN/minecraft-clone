@@ -411,7 +411,8 @@ test('servidor: Espinas devuelve el golpe y la botella con experiencia suelta or
   }
   assert.ok(th > 0, 'saltan las espinas');
   assert.ok(zombie.health < hp || zombie.dead, 'hieren al zombi');
-  // La botella con experiencia.
+  // La botella con experiencia (sin el zombi, que puede estar pegado al jugador y la rompería al caer).
+  h.gs.entities.list.delete(zombie.id);
   c.send({ t: 'throw', p: [bx + 0.5, by + 1.5, bz + 0.5], d: [0, -1, 0], item: EXPERIENCE_BOTTLE });
   h.tick(1);
   assert.ok(ents(h, ENT_THROWN).some((e) => e.stack?.id === EXPERIENCE_BOTTLE));

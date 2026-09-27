@@ -17,6 +17,10 @@ Objects). Pensado para PC (teclado y ratón).
   pedregosos; cuevas (frondosas con bayas luminosas, de goteo con estalactitas, inundadas, el Deep
   Dark), lagos de lava, geodas de amatista y las ocho menas de Minecraft (también en pizarra profunda
   por debajo de 0).
+- **Cuevas de Java 26.3**: las de ruido (cavernas de «queso» con sus pilares, túneles de espagueti 2D y 3D,
+  fideos finos que se cruzan y las entradas que abren a la superficie), el acuífero (lagos subterráneos con
+  su propio nivel, barreras de roca entre niveles distintos, lagos de lava en lo hondo y lava por debajo de
+  y = −54) y los excavadores (cuevas de gusano con salas y barrancos), con las fórmulas y parámetros de 26.3.
 - **Dimensiones** (fase 8, en curso): el **Nether**, al que se llega por un portal de obsidiana
   encendido con fuego (4 s dentro; 1 bloque allí son 8 aquí). Su terreno, sus biomas y su decoración
   están portados de Java 26.3: cavernas enormes de rocanegra entre un suelo y un techo de lecho de roca,
@@ -65,7 +69,9 @@ Objects). Pensado para PC (teclado y ratón).
   **magnetita** y la brújula magnetizada, el **faro** con su pirámide, su haz de colores y sus poderes, la
   **fogata de almas**, las **columnas de burbujas** (que suben sobre arena de alma y tiran hacia abajo sobre
   magma, también a las barcas) y los bloques de **cuarzo**.
-- **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas con telarañas,
+- **Estructuras con botín**: mazmorras con generador de monstruos, minas abandonadas por piezas como en Java
+  (sala de tierra, pasillos con soportes, raíles, telarañas, cruces de dos pisos, escaleras, puentes con pilares o
+  cadenas, vagonetas con cofre y el generador de arañas de cueva; de roble oscuro en las badlands),
   templos del desierto y de la jungla, naufragios, portales en ruinas, iglús, pozos del desierto,
   cabañas de bruja, fósiles, ruinas oceánicas y tesoros enterrados, monumentos oceánicos con sus
   guardianes, la mansión del bosque con sus illagers y alays presos, y la ciudad antigua en el Deep

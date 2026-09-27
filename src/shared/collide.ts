@@ -227,7 +227,8 @@ export function clipSegment(w: BlockGetter, ax: number, ay: number, az: number, 
   for (let i = 0; i < 512; i++) {
     if (y < MAX_Y) {
       const t = Math.min(cellHit(w, x, y, z, ax, ay, az, dx, dy, dz, false), cellHit(w, x, y - 1, z, ax, ay, az, dx, dy, dz, true));
-      if (t <= 1) {
+      // Como AABB.clip de Java (d < 1): llegar justo a la cara al final del tramo no es chocar.
+      if (t < 1) {
         CLIP_CELL[0] = x; CLIP_CELL[1] = y; CLIP_CELL[2] = z;
         return t;
       }

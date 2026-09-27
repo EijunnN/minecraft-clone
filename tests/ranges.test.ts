@@ -23,7 +23,8 @@ test('alcance en 3D: creeper y bruja no atacan a quien está 10 bloques más arr
   assert.equal(creeper.ai!.fuse, 0, 'el creeper no se hincha con el jugador 10 bloques encima');
   assert.ok(ents.list.has(creeper.id));
   assert.ok(![...ents.list.values()].some((e) => e.type === ENT_THROWN && e.shooter === witch.id), 'la bruja no lanza a 10 de altura');
-  // De cerca (a su altura), el creeper sí se hincha.
+  // De cerca (a su altura), el creeper sí se hincha (vuelve a su sitio por si se paseó hasta el borde).
+  Object.assign(creeper, { x: 8.5, y: 100, z: 8.5, vx: 0, vy: 0, vz: 0 });
   c.pos(10.5, 100, 8.5);
   h.tick(10);
   assert.ok(creeper.ai!.fuse > 0 || !ents.list.has(creeper.id), 'de cerca, se hincha');

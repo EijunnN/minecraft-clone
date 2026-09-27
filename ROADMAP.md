@@ -757,6 +757,23 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
   - Pendiente de la fase 8 (a propósito): el Poema del End y los créditos; las animaciones de la tapa de las cajas de
     shulker y de la mandíbula de la cabeza de dragón; la maceta con bambú.
 
+### Extra — Cuevas y minas de Java 26.3 · ✅ hecho
+
+- ✅ **Cuevas de ruido** (density_function/overworld/caves y el final_density del overworld): queso con las capas
+  de cave_layer, espaguetis 2D y 3D (con su interval_select de rareza), rugosidad, fideos, pilares y entradas,
+  en la rejilla interpolada de 4 × 8 × 4 de Java. El «sloped_cheese» sale de la profundidad bajo nuestra superficie
+  (cerca de ella sólo abren las entradas).
+- ✅ **Acuífero** (Aquifer.NoiseBasedAquifer): celdas de 16 × 12 × 16 con centro al azar, nivel de fluido según la
+  inundación y la profundidad (lleno, a medias con nivel propio o seco), lava en los de nivel bajo −10 (ruido de
+  lava) y por debajo de y = −54, barreras de roca entre niveles distintos y la exclusión bajo las montañas.
+- ✅ **Excavadores** (carver/cave, cave_extra_underground y canyon): cuevas de gusano que serpentean, se parten
+  y tienen salas, y barrancos con su anchura por altura; desde 8 chunks de distancia y con el acuífero.
+- ✅ **Minas abandonadas** (MineshaftStructure y MineshaftPieces): 1 de cada 250 chunks, sala, pasillos, cruces y
+  escaleras hasta 8 niveles y 80 bloques; soportes, raíles, telarañas, antorchas, puentes con pilar o cadena,
+  vagonetas con cofre (con su botín) y el generador de arañas; de roble oscuro en las badlands (pueden asomar);
+  ninguna en el Deep Dark ni tocando agua o lava.
+- Nota: los mundos ya creados cambian bajo tierra en lo que no se haya explorado.
+
 ### Extra — Chat de voz por proximidad · ✅ hecho
 
 - ✅ **Base:** WebRTC directo entre navegadores (STUN de Cloudflare y Google, sin repetidor); el Durable Object

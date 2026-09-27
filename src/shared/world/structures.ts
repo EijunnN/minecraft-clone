@@ -17,7 +17,7 @@ import { mulberry32 } from './noise';
 import type { TerrainGenerator, ColumnInfo } from './terrain';
 import { iglooBrick } from './materialDecor'; // Fase 6.5 (materiales)
 import {
-  BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN, baseBiome,
+  BIOME_DESERT, BIOME_JUNGLE, BIOME_SNOWY, BIOME_ICE_SPIKES, isOceanBiome, BIOME_BEACH, BIOME_FROZEN_OCEAN, baseBiome, BIOME_BADLANDS,
 } from './biomeIds';
 import { buildVillage, isVillageBiome, VILLAGE_RADIUS } from './villages';
 import type { VillagerSpawn } from './villages'; // Fase 6 (aldeanos)
@@ -30,6 +30,8 @@ import { buildFossil, fossilSite, FOSSIL_RADIUS } from './fossils';
 import { isDeepDark } from './deepDark'; // el Deep Dark bloquea las minas (mineshaft_blocking)
 import { buildMansion, mansionSite, MANSION_RADIUS } from './mansion'; // Fase 7.5 (mansión)
 import { placeStrongholds, locateStronghold } from './stronghold'; // Fase 8.6 (el End)
+import { mineshaftAt, mineshaftsNear, drawMineshaft, type MineSite, type MineDrawSite, type MineCart } from './mineshaft'; // minas de Java 26.3
+import { ENT_CHEST_MINECART } from '../vehicles';
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -305,7 +307,12 @@ export function placeStructures(
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
   const c = new Canvas(blocks, x0, z0, chests, villagers, mobs);
   placeDungeon(gen, c, cx, cz, tops);
-  for (const m of mineshaftsNear(gen, cx, cz)) buildMineshaft(c, m, tops, gen);
+  // Minas abandonadas (MineshaftPieces de Java 26.3), con sus vagonetas con cofre.
+  const carts: MineCart[] = [];
+  const draw = mineDrawSite(gen, c);
+  for (const m of mineshaftsNear(mineSite(gen), cx, cz)) drawMineshaft(c, m, draw, carts);
+  for (const k of carts) mobs.push({ type: ENT_CHEST_MINECART, x: k.x, y: k.y, z: k.z });
+  void tops;
   for (const t of GRID) {
     const r0 = Math.floor((x0 - t.radius) / 16 / t.spacing), r1 = Math.floor((x0 + 15 + t.radius) / 16 / t.spacing);
     const q0 = Math.floor((z0 - t.radius) / 16 / t.spacing), q1 = Math.floor((z0 + 15 + t.radius) / 16 / t.spacing);
@@ -343,11 +350,12 @@ export function locateStructure(
   if (key === 'mineshaft') {
     const cx = Math.floor(x / 16), cz = Math.floor(z / 16);
     let best: [number, number, number] | null = null, bd = Infinity;
+    const site = mineSite(gen);
     for (let r = 0; r <= 60 && !best; r++) {
       for (let dz = -r; dz <= r; dz++) {
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-          const m = mineshaftStart(gen, cx + dx, cz + dz);
+          const m = mineshaftAt(site, cx + dx, cz + dz);
           if (!m) continue;
           const d = Math.hypot(m.x - x, m.z - z);
           if (d < bd) { bd = d; best = [m.x, m.y, m.z]; }
@@ -441,184 +449,46 @@ function placeDungeon(gen: TerrainGenerator, c: Canvas, cx: number, cz: number, 
   }
 }
 
-// ------------------------------------------------------------------ minas abandonadas
+// ------------------------------------------------------------------ minas abandonadas (mineshaft.ts)
 
-interface Corridor {
-  x0: number; z0: number; x1: number; z1: number; y: number;
-  /** Eje: 0 a lo largo de x, 1 a lo largo de z; 2 cruce/sala. */
-  axis: number;
-  seed: number;
-}
+const mineSites = new WeakMap<TerrainGenerator, MineSite>();
 
-interface Mineshaft {
-  x: number; y: number; z: number;
-  pieces: Corridor[];
-  box: [number, number, number, number];
-}
-
-const mineCache = new Map<string, Mineshaft | null>();
-
-/** Mina que nace en el chunk (cx, cz), si la hay (una de cada ~70 chunks). */
-function mineshaftStart(gen: TerrainGenerator, cx: number, cz: number): Mineshaft | null {
-  const key = `${gen.seed}:${cx},${cz}`;
-  const cached = mineCache.get(key);
-  if (cached !== undefined) return cached;
-  if (mineCache.size > 6000) mineCache.clear();
-  const h = hash2(cx, cz, gen.seed ^ 0x3a1e5);
-  let m: Mineshaft | null = null;
-  if (h % 70 === 0) {
-    const rnd = mulberry32(h);
-    const x = cx * 16 + 8, z = cz * 16 + 8;
-    const surface = gen.surfaceAt(x, z, gen.columnInfo(x, z, tmp));
-    const y = Math.min(surface - 15, -40 + Math.floor(rnd() * 70));
-    const pieces: Corridor[] = [{ x0: x - 3, z0: z - 3, x1: x + 3, z1: z + 3, y, axis: 2, seed: h }];
-    const grow = (px: number, pz: number, dir: number, depth: number) => {
-      if (depth > 6 || pieces.length > 50) return;
-      const len = 8 + Math.floor(rnd() * 14);
-      const dx = [0, 1, 0, -1][dir], dz = [-1, 0, 1, 0][dir];
-      const ex = px + dx * len, ez = pz + dz * len;
-      // Que no pase de ~100 bloques del inicio (los chunks buscan minas a 7 chunks de distancia).
-      if (Math.abs(ex - x) > 100 || Math.abs(ez - z) > 100) return;
-      const axis = dx !== 0 ? 0 : 1;
-      pieces.push({
-        x0: Math.min(px, ex) - (axis === 1 ? 1 : 0), z0: Math.min(pz, ez) - (axis === 0 ? 1 : 0),
-        x1: Math.max(px, ex) + (axis === 1 ? 1 : 0), z1: Math.max(pz, ez) + (axis === 0 ? 1 : 0),
-        y, axis, seed: Math.floor(rnd() * 2 ** 31),
-      });
-      const r = rnd();
-      if (r < 0.45) {
-        // Cruce: sigue en varias direcciones.
-        pieces.push({ x0: ex - 1, z0: ez - 1, x1: ex + 1, z1: ez + 1, y, axis: 2, seed: 0 });
-        for (const nd of [dir, (dir + 1) & 3, (dir + 3) & 3]) if (rnd() < 0.7) grow(ex + dx, ez + dz, nd, depth + 1);
-      } else if (r < 0.85) {
-        grow(ex + dx, ez + dz, dir, depth + 1);
-      }
+/** Lo que las minas necesitan saber del mundo para colocarse. */
+function mineSite(gen: TerrainGenerator): MineSite {
+  let s = mineSites.get(gen);
+  if (!s) {
+    const inf: ColumnInfo = { height: 0, amp: 0, temp: 0, humid: 0, mount: 0, cont: 0, biome: 0 };
+    s = {
+      seed: gen.seed,
+      isBadlands: (x, z) => baseBiome(gen.biomeAt(x, z)) === BIOME_BADLANDS,
+      isDeepDark: (x, y, z) => isDeepDark(gen, x, y, z),
+      surface: (x, z) => gen.surfaceAt(x, z, gen.columnInfo(x, z, inf)),
     };
-    for (let d = 0; d < 4; d++) if (rnd() < 0.8) grow(x + [0, 4, 0, -4][d], z + [-4, 0, 4, 0][d], d, 0);
-    const box: [number, number, number, number] = [1e9, 1e9, -1e9, -1e9];
-    for (const p of pieces) {
-      box[0] = Math.min(box[0], p.x0);
-      box[1] = Math.min(box[1], p.z0);
-      box[2] = Math.max(box[2], p.x1);
-      box[3] = Math.max(box[3], p.z1);
-    }
-    m = { x, y, z, pieces, box };
+    mineSites.set(gen, s);
   }
-  mineCache.set(key, m);
-  return m;
+  return s;
 }
 
-function mineshaftsNear(gen: TerrainGenerator, cx: number, cz: number): Mineshaft[] {
-  const out: Mineshaft[] = [];
-  const x0 = cx * 16, z0 = cz * 16;
-  for (let dz = -7; dz <= 7; dz++) {
-    for (let dx = -7; dx <= 7; dx++) {
-      const m = mineshaftStart(gen, cx + dx, cz + dz);
-      if (m && m.box[2] >= x0 && m.box[0] <= x0 + 15 && m.box[3] >= z0 && m.box[1] <= z0 + 15) out.push(m);
-    }
-  }
-  return out;
-}
-
-/**
- * isInInvalidLocation de las minas de Java (MineShaftPiece): un tramo no se pone en el chunk si su caja,
- * ampliada un bloque y recortada al chunk, toca un líquido por cualquiera de sus seis caras (o si está en el
- * Deep Dark, el bioma que las bloquea). Así nunca abre un hueco junto al agua o la lava, que se quedarían
- * colgando. Además de lo que hace Java, mira también la fila de celdas del chunk vecino que da a la caja
- * (con el agua que deja el generador): en Java esa agua del otro lado del borde se queda como una pared.
- */
-function mineshaftPieceBlocked(c: Canvas, gen: TerrainGenerator, p: Corridor, top: number): boolean {
-  const liquid = (x: number, y: number, z: number) => {
-    const b = c.get(x, y, z);
-    return b > 0 && BLOCK_FLUID[b] > 0;
-  };
-  const X0 = c.x0, X1 = c.x0 + 15, Z0 = c.z0, Z1 = c.z0 + 15;
-  const x0 = Math.max(p.x0 - 1, X0), x1 = Math.min(p.x1 + 1, X1);
-  const z0 = Math.max(p.z0 - 1, Z0), z1 = Math.min(p.z1 + 1, Z1);
-  const y0 = p.y - 1, y1 = p.y + top + 1;
-  if (isDeepDark(gen, (x0 + x1) >> 1, (y0 + y1) >> 1, (z0 + z1) >> 1)) return true;
-  for (let x = x0; x <= x1; x++) {
-    for (let z = z0; z <= z1; z++) if (liquid(x, y0, z) || liquid(x, y1, z)) return true;
-  }
-  for (let x = x0; x <= x1; x++) {
-    for (let y = y0; y <= y1; y++) if (liquid(x, y, z0) || liquid(x, y, z1)) return true;
-  }
-  for (let z = z0; z <= z1; z++) {
-    for (let y = y0; y <= y1; y++) if (liquid(x0, y, z) || liquid(x1, y, z)) return true;
-  }
-  // Al otro lado de los bordes del chunk que cruza la caja.
-  const outside = (x: number, y: number, z: number) => gen.generatedWaterAt(x, y, z);
-  for (let y = y0; y <= y1; y++) {
-    if (p.x0 - 1 < X0) for (let z = z0; z <= z1; z++) if (outside(X0 - 1, y, z)) return true;
-    if (p.x1 + 1 > X1) for (let z = z0; z <= z1; z++) if (outside(X1 + 1, y, z)) return true;
-    if (p.z0 - 1 < Z0) for (let x = x0; x <= x1; x++) if (outside(x, y, Z0 - 1)) return true;
-    if (p.z1 + 1 > Z1) for (let x = x0; x <= x1; x++) if (outside(x, y, Z1 + 1)) return true;
-  }
-  return false;
-}
-
-function buildMineshaft(c: Canvas, m: Mineshaft, tops: Int16Array, gen: TerrainGenerator): void {
-  const fence = FENCES.oak;
-  const underground = (x: number, z: number, y: number) => {
-    if (!c.inside(x, y, z)) return false;
-    return y + 4 < tops[(z - c.z0) * 16 + (x - c.x0)] - 2;
-  };
-  for (const p of m.pieces) {
-    if (p.x1 < c.x0 || p.x0 > c.x0 + 15 || p.z1 < c.z0 || p.z0 > c.z0 + 15) continue;
-    const top = p.axis === 2 && p.seed !== 0 ? 3 : 2;
-    if (mineshaftPieceBlocked(c, gen, p, top)) continue;
-    for (let z = p.z0; z <= p.z1; z++) {
-      for (let x = p.x0; x <= p.x1; x++) {
-        if (!underground(x, z, p.y)) continue;
-        for (let dy = 0; dy <= top; dy++) {
-          // Como el generateBox de Java, deja aire todo lo de dentro (un líquido ahí dentro, sin tocar las
-          // caras, es una bolsa suelta).
-          const k = hash3(x, p.y + dy, z, p.seed);
-          // Telarañas en los rincones de arriba.
-          c.set(x, p.y + dy, z, dy === top && p.axis !== 2 && k % 23 === 0 ? COBWEB : AIR);
+/** Lo que el dibujo de una mina necesita del chunk: la superficie sin agua de cada columna y el agua de fuera. */
+function mineDrawSite(gen: TerrainGenerator, c: Canvas): MineDrawSite {
+  const floor = new Int16Array(256).fill(-32768);
+  return {
+    floorTop: (x, z) => {
+      const i = (z - c.z0) * 16 + (x - c.x0);
+      if (i < 0 || i >= 256) return MIN_Y;
+      if (floor[i] === -32768) {
+        let y = MAX_Y - 1;
+        for (; y > MIN_Y; y--) {
+          const b = c.blocks[blockIndex(x - c.x0, y, z - c.z0)];
+          if (b !== AIR && !BLOCK_FLUID[b]) break;
         }
-        // Puente de tablones donde falta el suelo.
-        const floor = c.get(x, p.y - 1, z);
-        if (floor === AIR || (floor > 0 && BLOCK_FLUID[floor] === 2)) c.set(x, p.y - 1, z, OAK_PLANKS);
+        floor[i] = y;
       }
-    }
-    if (p.axis === 2) continue;
-    // Soportes cada 4 bloques: dos postes de valla y una viga de tablones.
-    const len = p.axis === 0 ? p.x1 - p.x0 : p.z1 - p.z0;
-    for (let s = 2; s < len; s += 4) {
-      for (const side of [-1, 1]) {
-        const x = p.axis === 0 ? p.x0 + s : (p.x0 + p.x1) / 2 + side;
-        const z = p.axis === 0 ? (p.z0 + p.z1) / 2 + side : p.z0 + s;
-        if (!underground(x, z, p.y)) continue;
-        c.set(x, p.y, z, fence);
-        c.set(x, p.y + 1, z, fence);
-      }
-      for (let o = -1; o <= 1; o++) {
-        const x = p.axis === 0 ? p.x0 + s : (p.x0 + p.x1) / 2 + o;
-        const z = p.axis === 0 ? (p.z0 + p.z1) / 2 + o : p.z0 + s;
-        if (underground(x, z, p.y)) c.set(x, p.y + 2, z, OAK_PLANKS);
-      }
-    }
-    // Un cofre de vez en cuando, pegado a un lado del pasillo.
-    if (p.seed % 4 === 0 && len > 4) {
-      const s = 1 + (p.seed >>> 3) % (len - 1);
-      const side = (p.seed >>> 7) % 2 ? 1 : -1;
-      const x = p.axis === 0 ? p.x0 + s : (p.x0 + p.x1) / 2 + side;
-      const z = p.axis === 0 ? (p.z0 + p.z1) / 2 + side : p.z0 + s;
-      if (underground(x, z, p.y) && c.get(x, p.y, z) === AIR) c.chest(x, p.y, z, p.axis === 0 ? (side > 0 ? 0 : 2) : side > 0 ? 3 : 1, 'mineshaft');
-    }
-    // Pasillo de arañas: generador rodeado de telarañas.
-    if (p.seed % 23 === 5) {
-      const x = Math.floor((p.x0 + p.x1) / 2), z = Math.floor((p.z0 + p.z1) / 2);
-      if (underground(x, z, p.y)) {
-        c.set(x, p.y, z, MOB_SPAWNER);
-        for (let k = 0; k < 18; k++) {
-          const wx = x + ((p.seed >>> k) % 5) - 2, wz = z + ((p.seed >>> (k + 3)) % 5) - 2, wy = p.y + ((p.seed >>> (k + 1)) % 3);
-          if (c.get(wx, wy, wz) === AIR && underground(wx, wz, wy)) c.set(wx, wy, wz, COBWEB);
-        }
-      }
-    }
-  }
+      return floor[i];
+    },
+    fluidOutside: (x, y, z) => gen.generatedWaterAt(x, y, z),
+    isDeepDark: (x, y, z) => isDeepDark(gen, x, y, z),
+  };
 }
 
 // ------------------------------------------------------------------ templo del desierto
