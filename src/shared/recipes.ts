@@ -552,7 +552,7 @@ export function recipeCount(): number {
 }
 
 // Fase 6.5 (libros y estandartes): libro y pluma (libro, saco de tinta y pluma) y diseños de estandarte
-// (papel y un objeto). Los objetos que aquí no existen se cambian por otros del tema: cráneo de wither → hueso, manzana de oro encantada → manzana dorada; el globo, que en
+// (papel y un objeto). El globo, que en
 // Minecraft se compra al cartógrafo, sale del mapa vacío. La copia de libros escritos va aparte
 // (books.ts: lleva datos y el original se queda).
 import { WRITABLE_BOOK, BANNER_PATTERN_ITEMS, ENCHANTED_GOLDEN_APPLE } from './items';
@@ -560,7 +560,7 @@ import { SKULLS } from './blocks';
 mix([BOOK, INK_SAC, FEATHER], WRITABLE_BOOK);
 mix([PAPER, FLOWERS.oxeye_daisy], BANNER_PATTERN_ITEMS.flower);
 mix([PAPER, SKULLS.creeper], BANNER_PATTERN_ITEMS.creeper); // Fase 6.5: ya hay cabeza de creeper
-mix([PAPER, BONE], BANNER_PATTERN_ITEMS.skull);
+mix([PAPER, SKULLS.wither_skeleton], BANNER_PATTERN_ITEMS.skull); // Fase 8.3: ya hay cráneo de esqueleto wither
 mix([PAPER, ENCHANTED_GOLDEN_APPLE], BANNER_PATTERN_ITEMS.thing); // Fase 6.5: ya hay manzana de oro encantada
 mix([PAPER, EMPTY_MAP], BANNER_PATTERN_ITEMS.globe);
 mix([PAPER, VINE], BANNER_PATTERN_ITEMS.curly_border);
@@ -625,6 +625,9 @@ import { BLAZE_ROD, BLAZE_POWDER, MAGMA_CREAM, FERMENTED_SPIDER_EYE, GLOWSTONE_D
 shape([' B ', 'SSS'], { B: BLAZE_ROD, S: [COBBLESTONE, COBBLED_DEEPSLATE] }, BREWING_STAND);
 mix([BLAZE_ROD], BLAZE_POWDER, 2);
 mix([BLAZE_POWDER, SLIME_BALL], MAGMA_CREAM);
+// El bloque de magma: cuatro cremas de magma.
+import { MAGMA_BLOCK } from './blocks';
+shape(['MM', 'MM'], { M: MAGMA_CREAM }, MAGMA_BLOCK);
 mix([SPIDER_EYE, BROWN_MUSHROOM, SUGAR], FERMENTED_SPIDER_EYE);
 shape(['GG', 'GG'], { G: GLOWSTONE_DUST }, GLOWSTONE);
 // ------------------------------------------------------------------ Fase 7 (transporte)
