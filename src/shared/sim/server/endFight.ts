@@ -31,7 +31,8 @@ interface FightSave {
   gates: number[];
   /** Puertas del anillo ya usadas y la suya de vuelta. */
   links: [number, number, number, number, number, number][];
-  dragon: [number, number, number, number] | null;
+  /** [x, y, z, vida] y, con los jefes reforzados, su vida máxima. */
+  dragon: [number, number, number, number] | [number, number, number, number, number] | null;
   crystals: [number, number, number, number][];
 }
 
@@ -158,9 +159,13 @@ export class EndFight {
       d.spawnCrystal(x, y, z, b === 1);
     }
     if (!this.save.killed && this.save.dragon) {
-      const [x, y, z, hp] = this.save.dragon;
+      const [x, y, z, hp, max] = this.save.dragon;
       const e = d.spawn(x, y, z);
-      if (e) e.health = Math.max(1, Math.min(DRAGON_HEALTH, hp));
+      if (e) {
+        const top = Math.max(DRAGON_HEALTH, Math.min(DRAGON_HEALTH * 20, Number(max) || DRAGON_HEALTH));
+        d.setMaxHealth(e, top);
+        e.health = Math.max(1, Math.min(top, hp));
+      }
     }
   }
 
@@ -171,7 +176,10 @@ export class EndFight {
     }
     const dr = this.dragon();
     this.save.crystals = crystals;
-    this.save.dragon = dr && dr.health > 0 ? [round(dr.x), round(dr.y), round(dr.z), Math.round(dr.health)] : this.save.killed ? null : this.save.dragon;
+    const max = dr ? this.ctx.entities.dragon.maxHealth(dr) : DRAGON_HEALTH;
+    this.save.dragon = dr && dr.health > 0
+      ? (max > DRAGON_HEALTH ? [round(dr.x), round(dr.y), round(dr.z), Math.round(dr.health), max] : [round(dr.x), round(dr.y), round(dr.z), Math.round(dr.health)])
+      : this.save.killed ? null : this.save.dragon;
     this.store.setMeta('endFight', JSON.stringify(this.save));
   }
 
@@ -188,13 +196,14 @@ export class EndFight {
     const tick = this.ctx.tickCount;
     for (const s of players) {
       const near = !!dr && Math.hypot(s.p[0], s.p[1] - 128, s.p[2]) <= BOSS_RANGE;
-      const h = near ? Math.max(0, Math.min(1, dr!.health / DRAGON_HEALTH)) : -1;
+      const h = near ? Math.max(0, Math.min(1, dr!.health / this.ctx.entities.dragon.maxHealth(dr!))) : -1;
       const last = this.bossSent.get(s.id);
       if (last === undefined && h < 0) continue;
       if (last !== undefined && Math.abs(last - h) < 0.002 && tick % 40 !== 0) continue;
       if (h < 0) this.bossSent.delete(s.id);
       else this.bossSent.set(s.id, h);
-      this.ctx.send(s, h < 0 ? { t: 'boss', h: -1 } : { t: 'boss', n: 'Dragón de Ender', h: Math.round(h * 1000) / 1000 });
+      const name = dr && this.ctx.entities.dragon.furious(dr) ? 'Dragón de Ender (furioso)' : 'Dragón de Ender';
+      this.ctx.send(s, h < 0 ? { t: 'boss', h: -1 } : { t: 'boss', n: name, h: Math.round(h * 1000) / 1000 });
     }
   }
 

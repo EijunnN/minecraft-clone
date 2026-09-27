@@ -4,6 +4,7 @@
 // Este archivo sólo orquesta: conexiones y sesiones, reparto de mensajes (server/messageRouter.ts), el
 // bucle de 20 ticks/s y el guardado. Los sistemas (server/systems.ts) viven en la carpeta server/ y
 // sólo ven un ServerContext (ver server/context.ts).
+import { hardBosses, BOSS_MODES, type BossMode } from '../bossRules'; // jefes reforzados
 import { enderFromWire } from './server/containerSystem'; // Fase 8.6
 import { stackToWire } from '../protocol';
 import {
@@ -94,6 +95,8 @@ export class GameServer {
   private sessions = new Map<Conn, Session>();
   private time: WorldTime;
   private difficulty = 2;
+  /** Jefes reforzados (bossRules.ts): auto (en difícil), java o duros. Se guarda con el mundo. */
+  private bossMode: BossMode = 'auto';
   private defaultMode: 's' | 'c' | null = null;
   /** Cambios de bloques por enviar: [x, y, z, id, jugador que lo hizo o null]. */
   private queue: [number, number, number, number, string | null][] = [];
@@ -142,6 +145,8 @@ export class GameServer {
     }
     const d = Number(store.getMeta('difficulty'));
     if (store.getMeta('difficulty') !== null && Number.isInteger(d) && d >= 0 && d <= 3) this.difficulty = d;
+    const bm = store.getMeta('bossMode');
+    if (bm && (BOSS_MODES as readonly string[]).includes(bm)) this.bossMode = bm as BossMode;
     const m = store.getMeta('mode');
     if (m === 's' || m === 'c') this.defaultMode = m;
     this.world = new WorldSim(seed | 0, store, this.dim);
@@ -240,6 +245,13 @@ export class GameServer {
       },
       savePlayer: (s) => this.savePlayer(s),
       setTime: (days) => this.setTime(days),
+      get bossMode() {
+        return gs.bossMode;
+      },
+      setBossMode: (m) => {
+        this.bossMode = m;
+        this.store.setMeta('bossMode', m);
+      },
       setDifficulty: (dd) => {
         this.difficulty = dd;
         this.store.setMeta('difficulty', String(dd));
@@ -261,6 +273,7 @@ export class GameServer {
       worldTime: () => this.worldTime(),
       raining: () => (this.dimDef.weather ? rainAt(this.worldTime(), this.seed) : 0),
       difficulty: () => this.difficulty,
+      hardBosses: () => hardBosses(this.bossMode, this.difficulty),
       hurtPlayer: (id, amount, kx, ky, kz, cause, src) => {
         for (const s of this.sessions.values()) {
           if (s.id !== id || !s.joined || s.mode === 'c' || s.s & STATE_DEAD) continue;

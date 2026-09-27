@@ -1,5 +1,6 @@
 // Comandos del chat (/modo, /dificultad, /time, /invocar, /dar, /matar, /seed, /lista, /ayuda).
 // /tp lo resuelve el cliente.
+import { hardBosses, BOSS_MODES, type BossMode } from '../../bossRules'; // jefes reforzados
 import { MOB_ENDER_DRAGON } from '../../mobs'; // Fase 8.6
 import type { GameMode } from '../../protocol';
 import { ITEMS, maxStack } from '../../items';
@@ -157,6 +158,20 @@ export class Commands {
         ctx.setDifficulty(map[v]);
         const names = ['pacífica', 'fácil', 'normal', 'difícil'];
         ctx.broadcast({ t: 'chat', id: null, name: '', m: `Dificultad: ${names[ctx.difficulty]}.` });
+        return;
+      }
+      case 'bosses':
+      case 'jefes': {
+        // Jefes reforzados (bossRules.ts): auto (en difícil), java (como en Java) o duros (siempre).
+        const v = norm(args[0] ?? '');
+        if (!(BOSS_MODES as readonly string[]).includes(v)) {
+          const now = hardBosses(ctx.bossMode, ctx.difficulty) ? 'reforzados' : 'como en Java';
+          reply(`Jefes: ${ctx.bossMode} (ahora, ${now}). Uso: /jefes <auto|java|duros> (auto: reforzados en difícil)`);
+          return;
+        }
+        ctx.setBossMode(v as BossMode);
+        const now = hardBosses(ctx.bossMode, ctx.difficulty);
+        ctx.broadcast({ t: 'chat', id: null, name: '', m: `Jefes: ${v}${now ? ' — el dragón gana vida por cada jugador y se enfurece al final.' : ' — como en Java.'}` });
         return;
       }
       case 'effect':
@@ -361,7 +376,7 @@ export class Commands {
       case 'help':
       case 'ayuda':
         reply(
-          'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, ' +
+          'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, /jefes <auto|java|duros>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar [criatura], ' +
           '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
           '/experiencia <n> [puntos|niveles], /dimension <overworld|nether> [x y z], /setblock, /fill',

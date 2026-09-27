@@ -11,6 +11,7 @@
 // - Partes (EnderDragonPart): cabeza, cuello, cuerpo, tres de cola y dos alas; las alas empujan (y hieren 5 si no
 //   está posado), la cabeza y el cuello hieren 10. Los golpes que no dan en la cabeza o el cuello hacen un cuarto (+1).
 // - Se cura 1 cada 10 ticks con el cristal más cercano (a 32 bloques); si ése estalla, el dragón pierde 10.
+import { dragonMaxHealth, DRAGON_HEALTH_PER_PLAYER, FURY_FRACTION, FURY_SPEED, FURY_STRAFE_CHANCE, FURY_FIREBALL_CHARGE, FURY_BURST } from '../../bossRules'; // jefes reforzados
 import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL, ENT_DRAGON_FIREBALL, EF_DRAGON_SITTING, EF_DRAGON_LANDING, DRAGON_HEALTH, DRAGON_PARTS, DRAGON_XP_FIRST, DRAGON_XP_AGAIN } from '../../mobs';
 import {
   AIR, OBSIDIAN, CRYING_OBSIDIAN, BEDROCK, END_STONE, IRON_BARS, END_PORTAL, END_PORTAL_FRAME, END_GATEWAY, REINFORCED_DEEPSLATE,
@@ -82,6 +83,10 @@ export interface DragonState {
   hurtTime: number;
   parts: Box[];
   acc: number;
+  /** Jefes reforzados (bossRules.ts): vida máxima, jugadores con los que se ha peleado (el máximo) y furia. */
+  maxHealth: number;
+  fighters: number;
+  fury: boolean;
 }
 
 /** Los 24 nodos por los que vuela (findClosestNode): 12 fuera a 60, 8 a 40 (10 más altos) y 4 a 20. */
@@ -156,7 +161,9 @@ export class EnderDragonAI {
         ptr: -1, clockwise: true, path: [], pathEnd: null, attackTarget: null, fireballCharge: 0, flameCount: 0, sittingDamage: 0,
         growlIn: 100, crystal: null, deathTime: 0, firstTick: true, inWall: false, hurtTime: 0, parts: DRAGON_PARTS.map(() => ({ x0: 0, y0: 0, z0: 0, x1: 0, y1: 0, z1: 0 })),
         acc: 0,
+        maxHealth: Math.max(DRAGON_HEALTH, e.health), fighters: 1, fury: false,
       };
+      s.fighters = 1 + Math.ceil((s.maxHealth - DRAGON_HEALTH) / DRAGON_HEALTH_PER_PLAYER);
       this.states.set(e.id, s);
     }
     return s;
@@ -290,7 +297,49 @@ export class EnderDragonAI {
   }
 
   private flySpeed(s: DragonState): number {
-    return s.phase === 'landing' ? 1.5 : s.phase === 'charging' || s.phase === 'dying' ? 3 : 0.6;
+    const base = s.phase === 'landing' ? 1.5 : s.phase === 'charging' || s.phase === 'dying' ? 3 : 0.6;
+    return s.fury && s.phase !== 'landing' && s.phase !== 'dying' ? base * FURY_SPEED : base;
+  }
+
+  /** Vida máxima del dragón (200, o más con los jefes reforzados y un grupo). */
+  maxHealth(e: Entity): number {
+    return this.state(e).maxHealth;
+  }
+
+  /** ¿Está enfurecido? (jefes reforzados, por debajo de un cuarto de su vida). */
+  furious(e: Entity): boolean {
+    return this.state(e).fury;
+  }
+
+  /** Pone la vida máxima guardada (tras reiniciar el servidor). */
+  setMaxHealth(e: Entity, max: number): void {
+    const s = this.state(e);
+    s.maxHealth = Math.max(DRAGON_HEALTH, max);
+    s.fighters = 1 + Math.ceil((s.maxHealth - DRAGON_HEALTH) / DRAGON_HEALTH_PER_PLAYER);
+  }
+
+  /**
+   * Jefes reforzados: cada segundo cuenta los jugadores de la pelea (en la isla, a 150 bloques del podio); por cada uno
+   * de más que llegue, 100 de vida más (y de máximo). Por debajo de un cuarto, se enfurece.
+   */
+  private reinforce(e: Entity, s: DragonState): void {
+    if (!this.m.host.hardBosses() || s.phase === 'dying' || e.health <= 0) return;
+    if (s.time % 20 === 0) {
+      const podium = this.fight?.podium() ?? [0, 64, 0];
+      const n = this.m.host.players().filter((p) => p.alive && !p.creative && Math.hypot(p.x - podium[0], p.z - podium[2]) <= 150).length;
+      if (n > s.fighters) {
+        const extra = dragonMaxHealth(n) - dragonMaxHealth(s.fighters);
+        s.fighters = n;
+        s.maxHealth += extra;
+        e.health += extra;
+      }
+    }
+    if (!s.fury && e.health <= s.maxHealth * FURY_FRACTION) {
+      s.fury = true;
+      s.growlIn = 200;
+      this.m.host.fx('dragon_growl', e.x, e.y, e.z);
+      this.m.host.fx('dragon_fury', e.x, e.y, e.z);
+    }
   }
 
   private turnSpeed(s: DragonState): number {
@@ -353,6 +402,11 @@ export class EnderDragonAI {
     const podium = this.fight?.podium() ?? [0, 64, 0];
     if (s.path.length === 0 && s.target) {
       const crystals = this.fight?.crystalsAlive() ?? 0;
+      // Furia (jefes reforzados): la mitad de las veces va directo a por el jugador más cercano.
+      if (s.fury && this.m.rand() < FURY_STRAFE_CHANCE) {
+        const q = this.nearestPlayer(e.x, e.y, e.z, 150);
+        if (q) return this.strafe(e, s, q);
+      }
       if (Math.floor(this.m.rand() * (crystals + 3)) === 0) return this.setPhase(e, s, 'landing_approach');
       const p = this.nearestPlayer(podium[0], podium[1], podium[2], 128);
       const dist = p ? ((p.x - podium[0]) ** 2 + (p.y - podium[1]) ** 2 + (p.z - podium[2]) ** 2) / 512 : 64;
@@ -423,11 +477,19 @@ export class EnderDragonAI {
           const ax = t.x - e.x, az = t.z - e.z, al = Math.hypot(ax, az) || 1;
           const dot = (Math.sin(s.yRot * DEG) * ax - Math.cos(s.yRot * DEG) * az) / al;
           const angle = Math.acos(clamp(dot, -1, 1)) / DEG + 0.5;
-          if (s.fireballCharge >= 5 && angle < 10) {
+          if (s.fireballCharge >= (s.fury ? FURY_FIREBALL_CHARGE : 5) && angle < 10) {
             const head = s.parts[0];
             const vx = -Math.sin(s.yRot * DEG), vz = Math.cos(s.yRot * DEG);
             const sx = (head.x0 + head.x1) / 2 - vx, sy = (head.y0 + head.y1) / 2 + 0.5, sz = (head.z0 + head.z1) / 2 - vz;
             this.shootFireball(e, sx, sy, sz, t.x - sx, t.y + 0.9 - sy, t.z - sz);
+            // Furia: dos más a los lados (a 3 bloques del jugador), para que apartarse un poco no baste.
+            if (s.fury) {
+              const px = -(t.z - sz), pz = t.x - sx, pl = Math.hypot(px, pz) || 1;
+              for (let k = 1; k < FURY_BURST; k++) {
+                const side = k % 2 ? 3 : -3;
+                this.shootFireball(e, sx, sy, sz, t.x + (px / pl) * side - sx, t.y + 0.9 - sy, t.z + (pz / pl) * side - sz);
+              }
+            }
             s.fireballCharge = 0;
             this.setPhase(e, s, 'holding');
           }
@@ -573,6 +635,7 @@ export class EnderDragonAI {
       return;
     }
     this.checkCrystals(e, s);
+    this.reinforce(e, s);
     const was = s.phase;
     this.phaseTick(e, s);
     if (s.phase !== was && e.health > 0) this.phaseTick(e, s); // la fase nueva actúa en el mismo tick
@@ -682,7 +745,7 @@ export class EnderDragonAI {
     if (s.crystal !== null) {
       const c = this.m.list.get(s.crystal);
       if (!c || c.dead) s.crystal = null;
-      else if (s.time % 10 === 0 && e.health < DRAGON_HEALTH) e.health = Math.min(DRAGON_HEALTH, e.health + 1);
+      else if (s.time % 10 === 0 && e.health < s.maxHealth) e.health = Math.min(s.maxHealth, e.health + 1);
     }
     if (this.m.rand() < 0.1) {
       let best: Entity | null = null, bd = Infinity;
@@ -740,7 +803,7 @@ export class EnderDragonAI {
     }
     if (SITTING.has(s.phase)) {
       s.sittingDamage += before - Math.max(0, e.health);
-      if (s.sittingDamage > 0.25 * DRAGON_HEALTH) {
+      if (s.sittingDamage > 0.25 * s.maxHealth) {
         s.sittingDamage = 0;
         this.setPhase(e, s, 'takeoff');
       }

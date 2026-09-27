@@ -43,6 +43,8 @@ export interface EntityHost {
   raining(): number;
   /** 0 pacífico, 1 fácil, 2 normal, 3 difícil. */
   difficulty(): number;
+  /** ¿Van reforzados los jefes? (bossRules.ts: «/jefes»). */
+  hardBosses(): boolean;
   /** Fase 7 (encantamientos): `src`, la criatura que golpea cuerpo a cuerpo (Espinas). */
   hurtPlayer(id: string, amount: number, kx: number, ky: number, kz: number, cause: string, src?: Entity): void;
   /** Efecto puntual para los clientes (sonidos, partículas). */

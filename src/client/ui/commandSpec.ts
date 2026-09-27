@@ -80,6 +80,16 @@ export const COMMAND_SPECS: CommandSpec[] = [
     }],
   },
   {
+    name: 'jefes', aliases: ['bosses'], desc: 'Jefes reforzados (el dragón gana vida con cada jugador y se enfurece al final)',
+    args: [{
+      name: 'modo', desc: 'Cuándo van reforzados',
+      options: () => [
+        { value: 'auto', label: 'Reforzados en difícil' }, { value: 'java', label: 'Como en Minecraft' },
+        { value: 'duros', label: 'Siempre reforzados' },
+      ],
+    }],
+  },
+  {
     name: 'hora', aliases: ['time'], desc: 'Cambia la hora del día',
     args: [{
       name: 'momento', desc: 'Un momento del día o un número de 0 a 24000',

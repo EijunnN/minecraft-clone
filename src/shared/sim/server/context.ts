@@ -1,6 +1,7 @@
 // Lo que los sistemas del servidor (bloques, granja, camas, contenedores, comandos…) necesitan del
 // GameServer: el mundo, las entidades, el reloj y cómo hablar con los jugadores. Cada sistema recibe
 // sólo esto, no el servidor entero.
+import type { BossMode } from '../../bossRules';
 import type { ContainerState } from '../../containers'; // Fase 8.6
 import type { WireStack } from '../../protocol';
 import type { ServerMsg, GameMode, PlayerSave } from '../../protocol';
@@ -126,6 +127,9 @@ export interface ServerContext {
   savePlayer(s: Session): void;
   setTime(days: number): void;
   setDifficulty(d: number): void;
+  /** Jefes reforzados (bossRules.ts): el modo del mundo y cambiarlo. */
+  readonly bossMode: BossMode;
+  setBossMode(m: BossMode): void;
   /** Marca una entidad como recogida por un jugador (para la animación de recogida). */
   markCollected(entityId: number, playerId: string): void;
 }
