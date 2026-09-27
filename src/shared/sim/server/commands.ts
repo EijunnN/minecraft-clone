@@ -242,7 +242,9 @@ export class Commands {
           return;
         }
         // Fase 8.4: en el Nether, «fosil» y «portal_en_ruinas» son los suyos.
-        const type = ctx.dim === DIM_NETHER ? NETHER_STRUCTURE_OF[STRUCTURE_ALIASES[key]] ?? STRUCTURE_ALIASES[key] : STRUCTURE_ALIASES[key];
+        // Fase 8.6: en el mundo normal, «fortaleza» es la del portal del End.
+        const type = ctx.dim === DIM_NETHER ? NETHER_STRUCTURE_OF[STRUCTURE_ALIASES[key]] ?? STRUCTURE_ALIASES[key]
+          : key === 'fortaleza' ? 'stronghold' : STRUCTURE_ALIASES[key];
         // Fase 8.4: en el Nether, las suyas (fortalezas, bastiones…); en el mundo normal, las demás.
         const netherType = NETHER_STRUCTURE_NAMES[type] !== undefined;
         if (netherType !== (ctx.dim === DIM_NETHER) || (ctx.dim !== DIM_OVERWORLD && ctx.dim !== DIM_NETHER)) {
@@ -259,7 +261,7 @@ export class Commands {
         }
         const p = locateStructure(ctx.world.gen, type, Math.floor(s.p[0]), Math.floor(s.p[2]), LOCATE_REGIONS); // Fase 7.5: como en Minecraft
         // Fase 7.5 (mansión): con el género del nombre («ninguna mansión», «aldea más cercana»).
-        const fem = /^(Aldea|Mina|Mansión)/.test(STRUCTURE_NAMES[type]);
+        const fem = /^(Aldea|Mina|Mansión|Fortaleza)/.test(STRUCTURE_NAMES[type]);
         if (!p) reply(`No hay ${fem ? 'ninguna' : 'ningún'} ${STRUCTURE_NAMES[type].toLowerCase()} cerca.`);
         else reply(`${STRUCTURE_NAMES[type]} más ${fem ? 'cercana' : 'cercano'}: x ${p[0]}, y ${p[1]}, z ${p[2]} (a ${Math.round(Math.hypot(p[0] - s.p[0], p[2] - s.p[2]))} bloques).`);
         return;

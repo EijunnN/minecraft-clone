@@ -14,7 +14,7 @@
 // - Araña de cueva: su mordisco envenena (normal 7 s, difícil 15 s).
 import {
   MOBS, MOB_ZOMBIE, MOB_HUSK, MOB_SPIDER, MOB_DROWNED, MOB_WITCH, MOB_SLIME, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL, MOB_PHANTOM,
-  MOB_SILVERFISH, MOB_CAVE_SPIDER, MOB_ZOMBIE_VILLAGER,
+  MOB_SILVERFISH, MOB_CAVE_SPIDER, MOB_ZOMBIE_VILLAGER, MOB_ENDERMITE, ENDERMITE_LIFE_TICKS,
 } from '../../mobs';
 import { BLOCK_FLUID, BLOCK_SOLID, isInfested } from '../../blocks';
 import { EFFECT_POISON } from '../../effects';
@@ -117,6 +117,10 @@ export class MonsterAI {
       case MOB_PHANTOM:
         this.phantom(e, dt, players);
         return true;
+      // Fase 8.6: la endermita sin nombre se va a los 2400 ticks (Endermite.aiStep).
+      case MOB_ENDERMITE:
+        if (!e.customName && e.age * 20 >= ENDERMITE_LIFE_TICKS) this.m.remove(e.id);
+        return false;
       case MOB_SILVERFISH: {
         const s = this.state(e);
         if (s.call > 0) {

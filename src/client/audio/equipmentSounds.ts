@@ -81,6 +81,38 @@ export function buildEquipmentSfx(ctx: AudioContext, noise: NoiseBuffers, kind: 
         playTonalBlip(ctx, { destination: dest, now, freq: 1350, freqEnd: 260, wave: 'triangle', attack: 0.005, decay: 0.3, gain: 0.08, detune: 12 }),
         playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 1800, freqEnd: 500, q: 1.5, attack: 0.003, decay: 0.25, gain: 0.15 }),
       ];
+    // Fase 8.6: el ojo de ender sale disparado (un silbido que sube con un zumbido de cristal)…
+    case 'ender_eye_launch':
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: 420, freqEnd: 1600, wave: 'sine', attack: 0.01, decay: 0.45, gain: 0.14 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 630, freqEnd: 2400, wave: 'triangle', attack: 0.01, decay: 0.4, gain: 0.05, detune: 9 }),
+        playNoiseBurst(ctx, { buffer: noise.pink, destination: dest, now, filterType: 'bandpass', freq: 900, freqEnd: 3200, q: 2, attack: 0.02, decay: 0.35, gain: 0.12 }),
+      ];
+    // … cae o se rompe (un cristal que tintinea y se apaga)…
+    case 'ender_eye_death':
+      return [
+        playTonalBlip(ctx, { destination: dest, now, freq: 1900, freqEnd: 700, wave: 'sine', attack: 0.003, decay: 0.5, gain: 0.12 }),
+        playTonalBlip(ctx, { destination: dest, now: now + 0.04, freq: 2850, freqEnd: 1100, wave: 'sine', attack: 0.003, decay: 0.4, gain: 0.06 }),
+        playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 3500, q: 0.8, attack: 0.002, decay: 0.12, gain: 0.1 }),
+      ];
+    // … encaja en el marco del portal (un golpe de piedra y un eco hueco que vibra)…
+    case 'end_portal_frame_fill':
+      return [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 1400, freqEnd: 300, q: 0.9, attack: 0.002, decay: 0.18, gain: 0.45 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 330, freqEnd: 310, wave: 'sine', attack: 0.004, decay: 1.2, gain: 0.12 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 495, freqEnd: 470, wave: 'sine', attack: 0.004, decay: 0.9, gain: 0.06, detune: 7 }),
+      ];
+    // … y el portal se abre: un trueno grave que retumba y un coro de tonos que se hunde.
+    case 'end_portal_spawn': {
+      const out: Sources = [
+        playNoiseBurst(ctx, { buffer: noise.brown, destination: dest, now, filterType: 'lowpass', freq: 500, freqEnd: 60, q: 0.7, attack: 0.03, decay: 3.2, gain: 0.9 }),
+        playTonalBlip(ctx, { destination: dest, now, freq: 70, freqEnd: 32, wave: 'sine', attack: 0.05, decay: 3.5, gain: 0.5 }),
+      ];
+      for (const [f, d] of [[220, 0], [277, 7], [330, -6], [440, 4]] as const) {
+        out.push(playTonalBlip(ctx, { destination: dest, now: now + 0.1, freq: f, freqEnd: f * 0.5, wave: 'triangle', attack: 0.3, decay: 3.0, gain: 0.06, detune: d }));
+      }
+      return out;
+    }
     case 'ignite':
       // Raspado del acero contra el pedernal y el soplo de la llama al prender.
       return [

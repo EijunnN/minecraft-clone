@@ -45,6 +45,8 @@ export class BlockEdits {
   materials: ((s: Session, x: number, y: number, z: number, id: number, item: number, h: number) => boolean) | null = null;
   /** Fase 8.5 (lo que da el Nether): el nexo de reaparición y demás bloques del Nether. */
   netherGoods: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
+  /** Fase 8.6: el ojo de ender en los marcos del portal del End. */
+  endGoods: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
   /** Fase 6.5 (calderos): llenar, vaciar y lavar en un caldero. */
   cauldrons: ((s: Session, x: number, y: number, z: number, id: number, item: number) => boolean) | null = null;
   /** Fase 7 (redstone): clic derecho sobre un componente (palanca, botón, repetidor…); devuelve si lo atendió. */
@@ -187,6 +189,8 @@ export class BlockEdits {
     if (rsUse && ctx.asActor(s.id, () => rsUse(x, y, z, id))) return;
     const ng = this.netherGoods; // Fase 8.5: nexo de reaparición
     if (ng && ctx.asActor(s.id, () => ng(s, x, y, z, id, Number.isInteger(item) ? item : 0))) return;
+    const eg = this.endGoods; // Fase 8.6: marcos del portal del End
+    if (eg && ctx.asActor(s.id, () => eg(s, x, y, z, id, Number.isInteger(item) ? item : 0))) return;
     // El compostador acepta cualquier objeto (o la mano, para sacar el polvo de hueso).
     if (familyBase(id) === COMPOSTER) {
       this.composters.use(s, x, y, z, Number.isInteger(item) && item > 0 ? item : 0);

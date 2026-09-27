@@ -266,6 +266,14 @@ export class GameServer {
         }
       },
       fx: (kind, x, y, z, a, b) => this.fx(kind, x, y, z, a, b),
+      // Fase 8.6: la perla de ender lleva a su dueño a donde cae.
+      teleportPlayer: (id, x, y, z) => {
+        for (const s of this.sessions.values()) {
+          if (s.id !== id || !s.joined || s.s & STATE_DEAD) continue;
+          s.p = [x, y, z];
+          this.send(s, { t: 'moveTo', p: [r2(x), r2(y), r2(z)] });
+        }
+      },
       breakBlock: (x, y, z, drop) => {
         const id = this.world.getBlock(x, y, z);
         if (id <= 0) return;

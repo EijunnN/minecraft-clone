@@ -10,7 +10,7 @@ import {
   REINFORCED_DEEPSLATE, // Fase 7.5 (abismo)
   SPRUCE_PLANKS, BONE_BLOCK, BONE_BLOCK_AXIS, // Fase 7.5 (fauna)
 } from '../src/shared/blocks';
-import { DARK_OAK_PLANKS } from '../src/shared/blocks'; // Fase 7.5 (mansión)
+import { DARK_OAK_PLANKS, STONE_BRICKS, MOSSY_STONE_BRICKS } from '../src/shared/blocks'; // Fase 7.5 (mansión); 8.6
 import { STRING, TOOLS, SHEARS } from '../src/shared/items';
 import { TerrainGenerator } from '../src/shared/world/terrain';
 import { locateStructure, STRUCTURE_NAMES } from '../src/shared/world/structures';
@@ -57,6 +57,7 @@ test('cada estructura se encuentra y se genera con lo suyo', () => {
     swamp_hut: (c) => (c.get(SPRUCE_PLANKS) ?? 0) > 40,
     fossil: (c) => (c.get(BONE_BLOCK) ?? 0) + (c.get(BONE_BLOCK_AXIS) ?? 0) + (c.get(BONE_BLOCK_AXIS + 1) ?? 0) > 5,
     mansion: (c, ch) => ch.includes('woodland_mansion') || (c.get(DARK_OAK_PLANKS) ?? 0) > 200, // Fase 7.5 (mansión)
+    stronghold: (c) => (c.get(STONE_BRICKS) ?? 0) + (c.get(MOSSY_STONE_BRICKS) ?? 0) > 60, // Fase 8.6 (el End): la escalera de entrada
   };
   for (const key of Object.keys(STRUCTURE_NAMES)) {
     const p = locateStructure(gen, key, 0, 0, 20);

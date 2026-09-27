@@ -1,7 +1,7 @@
 // Proyectiles que no son flechas: huevos lanzados (se rompen al chocar y a veces nace un pollito) y el
 // flotador de la caña de pescar (vuela, flota en el agua y avisa cuando pica un pez).
-import { MOB_CHICKEN } from '../../mobs';
-import { EGG, FISHING_ROD, SNOWBALL } from '../../items';
+import { MOB_CHICKEN, MOB_ENDERMITE, ENDERMITE_PEARL_CHANCE } from '../../mobs';
+import { EGG, FISHING_ROD, SNOWBALL, ENDER_EYE, ENDER_PEARL } from '../../items';
 import { BLOCK_SOLID, BLOCK_FLUID, fluidHeight } from '../../blocks';
 import { EF_ACTION } from '../../protocol';
 import { FISH_WAIT, FISH_BITE } from '../../fishing';
@@ -26,6 +26,10 @@ export class Projectiles {
   // ------------------------------------------------------------------ huevos
 
   thrownTick(e: Entity, dt: number, players: PlayerView[]): void {
+    if (e.stack?.id === ENDER_EYE) {
+      this.eyeTick(e, dt);
+      return;
+    }
     if (e.age > 15) {
       this.m.remove(e.id);
       return;
@@ -71,6 +75,13 @@ export class Projectiles {
   /** El huevo se rompe: empuja a la criatura (sin daño) y, con 1/8, nace un pollito (1/32 de ésos, cuatro). */
   private shatter(e: Entity, mob: Entity | null, player: PlayerView | null = null): void {
     const m = this.m;
+    // Fase 8.6: la perla de ender lleva a quien la lanzó a donde cae.
+    if (e.stack?.id === ENDER_PEARL) {
+      if (mob) m.damage(mob, 0, e.x - e.vx, e.z - e.vz, typeof e.shooter === 'string' ? e.shooter : null, 0.4);
+      this.pearlLand(e);
+      m.remove(e.id);
+      return;
+    }
     // Fase 6 (monstruos): las pociones arrojadizas de las brujas salpican su efecto.
     // Fase 7 (pociones): todas las arrojadizas y persistentes (a quien alcanza, de lleno).
     if (isSplashPotion(e.stack?.id)) {
@@ -92,6 +103,71 @@ export class Projectiles {
       for (let k = 0; k < n; k++) m.spawnMob(MOB_CHICKEN, e.x, e.y, e.z, true);
     }
     m.remove(e.id);
+  }
+
+  // ------------------------------------------------------------------ Fase 8.6: perla y ojo de ender
+
+  /**
+   * ThrownEnderpearl.onHit: 32 partículas de portal; su dueño (vivo, en esta dimensión) va a donde estaba la perla
+   * antes del golpe, sin la caída que llevaba y con 5 de daño; con un 5 %, sale una endermita donde estaba él.
+   */
+  private pearlLand(e: Entity): void {
+    const m = this.m;
+    m.host.fx('pearl_land', e.x, e.y, e.z);
+    const owner = typeof e.shooter === 'string' ? m.host.players().find((p) => p.id === e.shooter && p.alive) : undefined;
+    if (!owner) return;
+    if (m.rand() < ENDERMITE_PEARL_CHANCE && m.host.difficulty() > 0) m.spawnMob(MOB_ENDERMITE, owner.x, owner.y, owner.z);
+    m.host.teleportPlayer?.(owner.id, e.x, e.y, e.z);
+    m.host.hurtPlayer(owner.id, 5, 0, 0, 0, 'fall');
+  }
+
+  /**
+   * EyeOfEnder.tick, a 20 ticks por segundo: avanza con su velocidad y la corrige hacia el objetivo (updateDelta-
+   * Movement: la horizontal tiende muy despacio a la distancia que falta y la vertical sube o baja hacia la altura
+   * del objetivo); atraviesa los bloques. A los 80 ticks cae (4 de cada 5 veces, como objeto) o se rompe.
+   */
+  private eyeTick(e: Entity, dt: number): void {
+    const m = this.m;
+    const target = e.eyeTarget;
+    if (!target) {
+      m.remove(e.id);
+      return;
+    }
+    e.eyeAcc = (e.eyeAcc ?? 0) + dt;
+    // La velocidad del ojo se guarda en bloques por tick (como en Java) y se pasa a bloques por segundo al final.
+    let mx = e.vx / 20, my = e.vy / 20, mz = e.vz / 20;
+    while (e.eyeAcc >= 0.05) {
+      e.eyeAcc -= 0.05;
+      const nx = e.x + mx, ny = e.y + my, nz = e.z + mz;
+      const hx = target[0] - nx, hz = target[2] - nz;
+      const hLen = Math.hypot(hx, hz);
+      let speed = Math.hypot(mx, mz) + 0.0025 * (hLen - Math.hypot(mx, mz));
+      let vy = my;
+      if (hLen < 1) {
+        speed *= 0.8;
+        vy *= 0.8;
+      }
+      const wantY = ny - my < target[1] ? 1 : -1;
+      const k = hLen > 1e-6 ? speed / hLen : 0;
+      mx = hx * k;
+      mz = hz * k;
+      my = vy + (wantY - vy) * 0.015;
+      e.x = nx;
+      e.y = ny;
+      e.z = nz;
+      e.eyeLife = (e.eyeLife ?? 0) + 1;
+      if (e.eyeLife > 80) {
+        m.remove(e.id);
+        if (e.eyeSurvive) {
+          m.host.fx('ender_eye_drop', e.x, e.y, e.z);
+          m.spawnItem({ id: ENDER_EYE, count: 1 }, e.x, e.y, e.z);
+        } else m.host.fx('ender_eye_break', e.x, e.y, e.z);
+        return;
+      }
+    }
+    e.vx = mx * 20;
+    e.vy = my * 20;
+    e.vz = mz * 20;
   }
 
   // ------------------------------------------------------------------ flotador

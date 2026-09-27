@@ -5,7 +5,7 @@
 import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { raycast, type RayHit } from './raycast';
 import { netherGoodsUse } from './netherGoodsUse'; // Fase 8.5
-import { endAfterEat, itemCooldown } from './endClient'; // Fase 8.6
+import { endAfterEat, itemCooldown, endFrameUse, endThrow, isEndThrowable } from './endClient'; // Fase 8.6
 import type { ClientEntity } from './ClientEntities';
 import { breakTime } from './mining';
 import { planPlacement, partnerOf, toggleEdits, isUsable, canFertilize } from '../../shared/placement';
@@ -205,6 +205,8 @@ export class Interaction {
     if (redstoneUse(this.g, pressed, hit, held)) return;
     // Fase 8.5 (lo que da el Nether): el nexo de reaparición y la magnetita (la brújula magnetizada).
     if (netherGoodsUse(this.g, pressed, hit, held)) return;
+    // Fase 8.6 (el End): el ojo de ender en un marco del portal del End.
+    if (endFrameUse(this.g, pressed, hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       // Fase 6.5 (colores): con la misma vela en la mano se añade otra en vez de encenderla o apagarla.
@@ -248,6 +250,11 @@ export class Interaction {
     }
     if (def.tool?.kind === 'hoe') {
       if (pressed && hit) this.till(hit);
+      return;
+    }
+    // Fase 8.6: lanzar el ojo de ender (hacia la fortaleza) o la perla de ender (con su segundo de espera).
+    if (isEndThrowable(held.id)) {
+      if (pressed) endThrow(this.g, held.id, dir);
       return;
     }
     if (held.id === EGG || held.id === SNOWBALL || held.id === EXPERIENCE_BOTTLE) { // Fase 7: botella con experiencia
@@ -362,7 +369,8 @@ export class Interaction {
     if (kind === 'hoe' || kind === 'shield' || kind === 'bow' || kind === 'fishing_rod') return true;
     if (held.id === SHEARS) return hit?.id === PUMPKIN;
     return held.id === EGG || held.id === SNOWBALL || held.id === EMPTY_MAP || held.id === BONE_MEAL || held.id === BUCKET ||
-      held.id === EXPERIENCE_BOTTLE; // Fase 7 (encantamientos)
+      held.id === EXPERIENCE_BOTTLE || // Fase 7 (encantamientos)
+      isEndThrowable(held.id); // Fase 8.6: el ojo y la perla de ender
   }
 
   /** Mano secundaria: cubrirse con el escudo, comer o colocar un bloque (antorchas…). */

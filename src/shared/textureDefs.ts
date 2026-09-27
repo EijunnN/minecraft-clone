@@ -18,7 +18,7 @@ export interface TextureDef {
   tint?: 0 | 1 | 2 | 3;
   wave?: 0 | 1 | 2;
   sss?: number;
-  special?: 0 | 1 | 2 | 3 | 4 | 5; // Fase 6.5 (equipo): 5 = fuego (llamas que suben y ondulan)
+  special?: 0 | 1 | 2 | 3 | 4 | 5 | 6; // Fase 6.5 (equipo): 5 = fuego (llamas que suben y ondulan). Fase 8.6: 6 = portal del End (estrellas)
   cutout?: boolean;
 }
 
@@ -471,6 +471,8 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
   // Fase 8.6 (el End).
   ...['end_stone', 'end_stone_bricks', 'purpur_block', 'purpur_pillar', 'purpur_pillar_top', 'end_rod'].map((name): TextureDef => ({ name })),
   ...['chorus_plant', 'chorus_flower', 'chorus_flower_dead'].map((name): TextureDef => ({ name, sss: 0.3 })),
+  ...['end_portal_frame_top', 'end_portal_frame_side', 'end_portal_frame_eye'].map((name): TextureDef => ({ name })),
+  { name: 'end_portal', special: 6 },
 ];
 
 export const TEXTURE_NAMES: readonly string[] = TEXTURE_DEFS.map((t) => t.name);

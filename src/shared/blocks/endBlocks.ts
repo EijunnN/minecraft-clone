@@ -7,7 +7,7 @@
 //   aleatorios (ChorusFlowerBlock: sube, se ramifica o se muere) y sólo aguanta sobre planta, piedra del End o
 //   colgada de una única planta de al lado.
 import { family, L, R_MODEL, familyBase, type NeighborGet, type SoundMaterial } from './registry';
-import { mbox, type ModelBox } from '../blockModels';
+import { mbox, rotateBoxes, type ModelBox } from '../blockModels';
 import { addMaterialShapes } from './building';
 import { addWall } from './decoration';
 import { addAxisLogs } from './logAxis';
@@ -131,5 +131,42 @@ export function isChorusPlant(id: number): boolean {
   return id === CHORUS_PLANT;
 }
 
+// ------------------------------------------------------------------ portal del End
+
+/**
+ * Marco del portal del End (EndPortalFrameBlock): una losa de 13/16 que mira hacia dentro del portal (`facing`) y
+ * que puede llevar un ojo de ender encima (`eye`). No se rompe; da un poco de luz.
+ */
+export const END_PORTAL_FRAME = family('end_portal_frame', 'Marco del portal del End', [['facing', 4], ['eye', 2]], (st) => {
+  const top = L('end_portal_frame_top'), side = L('end_portal_frame_side'), bottom = L('end_stone'), eye = L('end_portal_frame_eye');
+  const boxes: ModelBox[] = [mbox(0, 0, 0, 16, 13, 16, [side, side, top, bottom, side, side])];
+  if (st.eye) boxes.push(mbox(4, 13, 4, 12, 16, 12, eye));
+  const shape = st.eye ? [0, 0, 0, 1, 13 / 16, 1, 0.25, 13 / 16, 0.25, 0.75, 1, 0.75] : [0, 0, 0, 1, 13 / 16, 1];
+  return {
+    render: R_MODEL, opaque: false, lightOpacity: 0, emission: 1, hardness: -1, breakable: false, sound: 'glass',
+    top: 'end_portal_frame_top', side: 'end_portal_frame_side', category: 'decoracion',
+    model: rotateBoxes(boxes, st.facing), itemModel: [mbox(0, 0, 0, 16, 13, 16, [side, side, top, bottom, side, side])],
+    collision: shape, selection: shape,
+  };
+});
+
+/** ¿Es un marco del portal del End? */
+export function isEndPortalFrame(id: number): boolean {
+  return id > 0 && familyBase(id) === END_PORTAL_FRAME;
+}
+
+/**
+ * Portal del End: el velo de estrellas (dos caras, a 12/16 y a 6/16 de alto, como TheEndPortalRenderer). Ni se pica
+ * ni se toca; quien entra viaja al End (o, desde el End, vuelve al mundo normal).
+ */
+export const END_PORTAL = family('end_portal', 'Portal del End', [], () => {
+  const t = L('end_portal');
+  return {
+    render: R_MODEL, all: 'end_portal', solid: false, opaque: false, lightOpacity: 0, emission: 15, hardness: -1, breakable: false,
+    sound: 'glass', noItem: true, category: null, walkThrough: true, collision: [], selection: [],
+    model: [mbox(0, 12, 0, 16, 12, 16, [-1, -1, t, -1, -1, -1]), mbox(0, 6, 0, 16, 6, 16, [-1, -1, -1, t, -1, -1])],
+  };
+});
+
 /** Su sitio en el inventario creativo. */
-export const END_INVENTORY: number[] = [END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD, CHORUS_PLANT, CHORUS_FLOWER];
+export const END_INVENTORY: number[] = [END_STONE, END_STONE_BRICKS, PURPUR_BLOCK, PURPUR_PILLAR, END_ROD, CHORUS_PLANT, CHORUS_FLOWER, END_PORTAL_FRAME];

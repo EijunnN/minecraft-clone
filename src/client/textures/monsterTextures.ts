@@ -4,7 +4,7 @@
 // sólo se declaran funciones y constantes propias; las de mobTextures.ts se usan dentro de funciones.
 import {
   MOB_DROWNED, MOB_WITCH, MOB_SLIME, MOB_SLIME_MEDIUM, MOB_SLIME_SMALL, MOB_PHANTOM, MOB_SILVERFISH, MOB_CAVE_SPIDER,
-  MOB_ZOMBIE_VILLAGER,
+  MOB_ZOMBIE_VILLAGER, MOB_ENDERMITE,
 } from '../../shared/mobs';
 import {
   PX, NX, TOP, BOTTOM, FRONT, BACK, glow, rnd, vnoise, mapAt, zombieLike,
@@ -308,6 +308,30 @@ function silverfish(t: Texel): Paint {
 }
 
 // ---------------------------------------------------------------------------
+// Fase 8.6: endermita: placas casi negras con reflejos morados, las juntas más oscuras y motas violetas que brillan
+// ---------------------------------------------------------------------------
+
+const MITE: RGB[] = [
+  [12, 10, 16],
+  [22, 18, 28],
+  [34, 28, 44],
+  [52, 40, 66],
+  [78, 56, 98],
+];
+
+function endermite(t: Texel): Paint {
+  const r = rnd(t, 9696);
+  // Los ojos: dos puntos violetas encendidos en la cara del primer segmento.
+  if (t.part === 'seg0' && t.f === FRONT && t.j === 1 && (t.i === 0 || t.i === t.fw - 1)) return glow([204, 120, 255]);
+  let k = t.f === TOP ? 2 : t.f === BOTTOM ? 0 : 1;
+  if (t.f !== FRONT && t.f !== BACK && t.z > t.d - 0.8) k -= 1;
+  if (t.f === TOP && Math.abs(t.x - t.w / 2) < 0.6) k += 1;
+  if (r > 0.93) return glow([150, 84, 200]);
+  if (r > 0.8) k += 1;
+  return pick(MITE, k);
+}
+
+// ---------------------------------------------------------------------------
 // Araña de cueva: la araña, azul verdosa
 // ---------------------------------------------------------------------------
 
@@ -370,6 +394,7 @@ export const MONSTER_PAINTERS: Readonly<Record<number, Painter>> = {
   [MOB_SLIME_SMALL]: slime,
   [MOB_PHANTOM]: phantom,
   [MOB_SILVERFISH]: silverfish,
+  [MOB_ENDERMITE]: endermite, // Fase 8.6
   [MOB_CAVE_SPIDER]: caveSpider,
   [MOB_ZOMBIE_VILLAGER]: zombieVillager,
 };

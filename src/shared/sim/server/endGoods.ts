@@ -4,14 +4,28 @@
 //   muere. Las ramas nuevas tienen un año más; a los 5 años, muerta.
 // - Plataforma de llegada: cada vez que alguien llega al End se rehace la de obsidiana (5 × 5, con aire encima),
 //   como EndPlatformFeature.createEndPlatform.
+// - Marcos del portal del End: el ojo de ender se engasta en un marco vacío; si con él queda un anillo de doce
+//   marcos con ojo mirando hacia dentro alrededor de un hueco de 3 × 3 (el patrón de EndPortalFrameBlock), el hueco
+//   se llena de portal y suena en toda la dimensión.
 import {
-  AIR, END_STONE, OBSIDIAN, CHORUS_PLANT, CHORUS_FLOWER, CHORUS_FLOWER_DEAD_AGE, isChorusFlower, isChorusPlant,
+  AIR, END_STONE, OBSIDIAN, CHORUS_PLANT, CHORUS_FLOWER, CHORUS_FLOWER_DEAD_AGE, END_PORTAL_FRAME, END_PORTAL, isChorusFlower,
+  isChorusPlant, isEndPortalFrame, stateOf, stateProps,
 } from '../../blocks';
+import { ENDER_EYE } from '../../items';
 import { END_SPAWN } from '../../world/end';
 import type { Nature } from './nature';
-import type { ServerContext } from './context';
+import type { ServerContext, Session } from './context';
 
 const HORIZ: readonly (readonly [number, number])[] = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+/** Direcciones horizontales (0 norte, 1 este, 2 sur, 3 oeste). */
+const DX = [0, 1, 0, -1], DZ = [-1, 0, 1, 0];
+
+/** Orientación y ojo de un marco del portal del End (o null si no lo es). */
+export function frameState(id: number): { facing: number; eye: number } | null {
+  if (!isEndPortalFrame(id)) return null;
+  const st = stateProps(id);
+  return st ? { facing: st.facing, eye: st.eye } : null;
+}
 
 export class EndGoods {
   constructor(private ctx: ServerContext, nature: Nature) {
@@ -78,6 +92,45 @@ export class EndGoods {
       return;
     }
     w.setBlock(x, y, z, CHORUS_FLOWER + CHORUS_FLOWER_DEAD_AGE);
+  }
+
+  /** Clic derecho con algo sobre un bloque: el ojo de ender en un marco vacío (true si lo atiende). */
+  use(_s: Session, x: number, y: number, z: number, id: number, item: number): boolean {
+    const f = frameState(id);
+    if (!f || f.eye || item !== ENDER_EYE) return false;
+    const w = this.ctx.world;
+    w.setBlock(x, y, z, stateOf(END_PORTAL_FRAME, { facing: f.facing, eye: 1 }));
+    this.ctx.fx('end_frame_fill', x + 0.5, y + 0.8, z + 0.5);
+    const hole = this.completedPortal(x, y, z, f.facing);
+    if (hole) {
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) w.setBlock(hole[0] + dx, y, hole[1] + dz, END_PORTAL);
+      this.ctx.fx('end_portal_spawn', hole[0] + 0.5, y + 0.75, hole[1] + 0.5);
+    }
+    return true;
+  }
+
+  /**
+   * ¿Cierra el marco (x, y, z) que mira hacia `facing` un portal? El centro del hueco está dos bloques hacia dentro
+   * (y a un lado o al otro); vale si los doce marcos del anillo tienen ojo y miran hacia el hueco.
+   */
+  private completedPortal(x: number, y: number, z: number, facing: number): [number, number] | null {
+    const w = this.ctx.world;
+    const px = DX[(facing + 1) & 3], pz = DZ[(facing + 1) & 3];
+    for (let k = -1; k <= 1; k++) {
+      const cx = x + DX[facing] * 2 + px * k, cz = z + DZ[facing] * 2 + pz * k;
+      let ok = true;
+      for (let side = 0; side < 4 && ok; side++) {
+        // El lado que mira hacia `side` está a dos bloques del centro en la dirección contraria.
+        const bx = cx - DX[side] * 2, bz = cz - DZ[side] * 2;
+        const sx = DX[(side + 1) & 3], sz = DZ[(side + 1) & 3];
+        for (let j = -1; j <= 1 && ok; j++) {
+          const fs = frameState(w.getBlock(bx + sx * j, y, bz + sz * j));
+          ok = !!fs && fs.eye === 1 && fs.facing === side;
+        }
+      }
+      if (ok) return [cx, cz];
+    }
+    return null;
   }
 
   /** Alguien llega al End: la plataforma de obsidiana, entera y despejada. */

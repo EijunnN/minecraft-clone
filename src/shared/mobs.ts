@@ -31,6 +31,8 @@ export { MOB_ALLAY } from './allay';
 // Fase 8.3 (criaturas del Nether): piglins, ghast, blaze, cubos de magma, hoglin, zoglin, strider y esqueleto wither (ids 84–95).
 import { netherMobs } from './netherMobs';
 export * from './netherMobs';
+import { endMobs } from './endMobs'; // Fase 8.6 (el End)
+export * from './endMobs';
 
 export const MOB_PIG = 1;
 export const MOB_COW = 2;
@@ -124,7 +126,8 @@ export type MobAnim = 'quadruped' | 'humanoid' | 'zombie' | 'skeleton' | 'creepe
   | 'warden' // Fase 7.5 (abismo)
   | 'guardian' // Fase 7.5 (océano)
   | 'allay' // Fase 7.5 (mansión)
-  | 'piglin' | 'ghast' | 'blaze' | 'magma' | 'hoglin' | 'strider' | 'wither_skeleton'; // Fase 8.3 (criaturas del Nether)
+  | 'piglin' | 'ghast' | 'blaze' | 'magma' | 'hoglin' | 'strider' | 'wither_skeleton' // Fase 8.3 (criaturas del Nether)
+  | 'endermite'; // Fase 8.6 (el End)
 
 export interface MobDef {
   id: number;
@@ -662,6 +665,7 @@ for (const d of OCEAN_MOBS) mob(d); // Fase 7.5 (océano)
 for (const d of critterMobs(MOBS, { cat: MOB_CAT, cow: MOB_COW, llama: MOB_LLAMA, horse: MOB_HORSE })) mob(d);
 mob(ALLAY_DEF); // Fase 7.5 (mansión)
 for (const d of netherMobs()) mob(d); // Fase 8.3 (criaturas del Nether)
+for (const d of endMobs()) mob(d); // Fase 8.6 (el End)
 
 export const MOB_TYPES: readonly number[] = MOBS.filter(Boolean).map((m) => m.id);
 

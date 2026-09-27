@@ -817,3 +817,6 @@ shape(['SS', 'SS'], { S: END_STONE }, END_STONE_BRICKS, 4);
 shape(['FF', 'FF'], { F: PCF }, PURPUR_BLOCK, 4);
 shape(['S', 'S'], { S: SLABS.purpur }, PURPUR_PILLAR);
 shape(['B', 'F'], { B: BRD, F: PCF }, END_ROD, 4);
+// El ojo de ender: polvo de blaze y una perla de ender.
+import { ENDER_EYE, ENDER_PEARL as EPL } from './items';
+mix([BLAZE_POWDER, EPL], ENDER_EYE);

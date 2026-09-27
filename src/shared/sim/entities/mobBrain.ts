@@ -1,6 +1,6 @@
 // Cerebro de las criaturas: entorno (sol, lava, agua), objetivos, persecución con A*, ataques,
 // disparos, teletransporte del enderman, paseo y movimiento con física.
-import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA } from '../../mobs';
+import { MOBS, MOB_CHICKEN, MOB_SKELETON, MOB_STRAY, MOB_CREEPER, MOB_ENDERMAN, MOB_RABBIT, MOB_WOLF, MOB_LLAMA, MOB_ENDERMITE } from '../../mobs';
 import { isVillagerType } from '../../mobs'; // Fase 6 (aldeanos)
 import { BLOCK_SOLID, BLOCK_FLUID, isFarmland } from '../../blocks';
 import { EF_HURT, EF_FIRE, EF_DEAD, EF_ANGRY, EF_ACTION, EF_BABY, EF_SHEARED, EF_LOVE } from '../../protocol';
@@ -32,6 +32,7 @@ export class MobBrain {
   readonly warden: WardenAI;
   /** Fase 7.5 (océano): guardianes y guardianes ancianos. */
   readonly guardians: GuardianAI;
+
   /** Fase 8.3 (criaturas del Nether): piglins, ghast, blaze, cubos de magma, hoglin, zoglin, strider y esqueleto wither. */
   readonly nether: NetherAI;
 
@@ -295,6 +296,13 @@ export class MobBrain {
           this.m.companions.onPlayerHurtBy(target.id, e); // Fase 6 (gólems/domesticar)
         }
       }
+    } else if (e.type === MOB_ENDERMAN && this.huntEndermite(e, ai)) {
+      // Fase 8.6: el enderman va a por la endermita que ve (huntEndermite deja la dirección en ai.goalDir).
+      moveX = ai.goalDir[0];
+      moveZ = ai.goalDir[1];
+      speed = ai.goalDir[2];
+      jump = ai.goalDir[3] > 0;
+      if (ai.lookAt) lookAt = ai.lookAt;
     } else if (companion) {
       // Fase 6 (gólems/domesticar)
       moveX = ai.goalDir[0];
@@ -431,6 +439,32 @@ export class MobBrain {
       e.pitch *= 1 - Math.min(1, dt * 3);
     }
     this.updateFlags(e, ai);
+  }
+
+  /**
+   * Fase 8.6: el enderman y las endermitas (NearestAttackableTargetGoal<Endermite>): la más cercana que ve a menos
+   * de 16 bloques; se le acerca corriendo y la muerde (su daño, una vez por segundo). false si no hay ninguna.
+   */
+  private huntEndermite(e: Entity, ai: AI): boolean {
+    let prey: Entity | null = null, bd = 16 * 16;
+    for (const o of this.m.list.values()) {
+      if (o.type !== MOB_ENDERMITE || o.dead || !o.ai) continue;
+      const d2 = (o.x - e.x) ** 2 + (o.y - e.y) ** 2 + (o.z - e.z) ** 2;
+      if (d2 >= bd || !lineOfSight(this.m.w, e.x, e.y + e.height * 0.85, e.z, o.x, o.y + 0.2, o.z)) continue;
+      bd = d2;
+      prey = o;
+    }
+    if (!prey) return false;
+    const def = MOBS[e.type];
+    const dx = prey.x - e.x, dz = prey.z - e.z, d = Math.hypot(dx, dz) || 1;
+    ai.goalDir = [dx / d, dz / d, def.run * 1.2, e.hitWall ? 1 : 0];
+    ai.lookAt = [prey.x, prey.y + 0.2, prey.z];
+    if (d < 1.6 && Math.abs(prey.y - e.y) < 1.5 && ai.attackCd <= 0) {
+      ai.attackCd = 1;
+      this.m.damage(prey, def.damage * this.m.difficultyScale(), e.x, e.z, e.id);
+      this.m.host.fx('mob_attack', e.x, e.y + e.height * 0.7, e.z, e.type);
+    }
+    return true;
   }
 
   /** Enfada a un animal neutral contra un jugador (los lobos cercanos acuden en manada). */

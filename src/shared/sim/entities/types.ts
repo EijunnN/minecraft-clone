@@ -66,6 +66,8 @@ export interface EntityHost {
   projectileHit?(kind: 'arrow' | 'trident' | 'thrown', bx: number, by: number, bz: number, px: number, py: number, pz: number, fire?: boolean): void; // Fase 7 (mecanismos): fire, flecha en llamas
   /** Fase 8.3 (criaturas del Nether): enciende fuego en la celda (bolas de fuego); true si prendió. */
   igniteBlock?(x: number, y: number, z: number): boolean;
+  /** Fase 8.6: lleva a un jugador a (x, y, z) de esta dimensión (la perla de ender). */
+  teleportPlayer?(id: string, x: number, y: number, z: number): void;
 }
 
 /** Resultado de usar un objeto sobre una criatura (lo que cambia en la mano del jugador). */
@@ -136,6 +138,11 @@ export interface Entity extends Body {
   // Pesca: segundos hasta que pique y lo que queda de la picada (> 0: está picando).
   fishWait?: number;
   fishBite?: number;
+  // Fase 8.6: ojo de ender en vuelo: a dónde va, si caerá entero y los ticks que lleva (y el resto del tick).
+  eyeTarget?: [number, number, number];
+  eyeSurvive?: boolean;
+  eyeLife?: number;
+  eyeAcc?: number;
   // Bloques que caen
   block?: number;
   // Orbes de experiencia

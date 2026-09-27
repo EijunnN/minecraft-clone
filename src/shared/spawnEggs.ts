@@ -108,3 +108,8 @@ export const NETHER_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
   egg('strider', 'strider', [156, 61, 62], [77, 73, 77]),
   egg('wither_skeleton', 'esqueleto wither', [20, 20, 20], [71, 77, 77]),
 ];
+
+/** Fase 8.6 (el End): huevos de las criaturas del End (se registran al final de items.ts). */
+export const END_SPAWN_EGG_DEFS: readonly SpawnEggDef[] = [
+  egg('endermite', 'endermita', [22, 22, 22], [110, 110, 110]),
+];

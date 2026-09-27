@@ -34,7 +34,7 @@ import { ENT_ITEM, ENT_ARROW, ENT_FALLING, ENT_THROWN, ENT_BOBBER, ENT_DISPLAY }
 import { MOB_ALLAY } from '../../shared/allay'; // Fase 7.5 (mansión)
 import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
 import { pushPrimedTnt } from '../game/mechanismsClient';
-import { TIPPED_ARROW } from '../../shared/items'; // Fase 7 (pociones)
+import { TIPPED_ARROW, ENDER_EYE } from '../../shared/items'; // Fase 7 (pociones)
 import { FIRE_CHARGE, SPECTRAL_ARROW } from '../../shared/items'; // Fase 8.3 (criaturas del Nether)
 import { ENT_LARGE_FIREBALL, ENT_SMALL_FIREBALL, isNetherMob, gearMain, gearOff } from '../../shared/netherMobs';
 // Fase 6.5 (decoración): cuadros y marcos.
@@ -955,7 +955,8 @@ export class Renderer {
         mat4.translate(m, m, [rx, ry + 0.12, rz]);
         mat4.rotateY(m, m, Math.atan2(-rx, -rz));
         mat4.scale(m, m, [0.3, 0.3, 0.3]);
-        out.push({ model, m, light: lightOf(e.x, e.y, e.z), glint: (e.flags & EF_GLINT) !== 0 }); // Fase 7: brillo
+        // Fase 8.6: el ojo de ender se ve con toda la luz (ThrownItemRenderer con fullBright).
+        out.push({ model, m, light: e.item === ENDER_EYE ? [0, 1] : lightOf(e.x, e.y, e.z), glint: (e.flags & EF_GLINT) !== 0 }); // Fase 7: brillo
       } else if (e.type === ENT_DISPLAY && e.item > 0) {
         // Comida asándose en una fogata: tumbada encima.
         const model = this.items.model(e.item);

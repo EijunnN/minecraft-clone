@@ -29,6 +29,7 @@ import { buildSwampHut, swampHutSite, SWAMP_HUT_RADIUS, SWAMP_HUT_SALT } from '.
 import { buildFossil, fossilSite, FOSSIL_RADIUS } from './fossils';
 import { isDeepDark } from './deepDark'; // el Deep Dark bloquea las minas (mineshaft_blocking)
 import { buildMansion, mansionSite, MANSION_RADIUS } from './mansion'; // Fase 7.5 (mansión)
+import { placeStrongholds, locateStronghold } from './stronghold'; // Fase 8.6 (el End)
 
 /** Cofre de una estructura: posición y tabla de botín (se llena en el servidor al generar el chunk). */
 export interface StructureChest {
@@ -265,6 +266,7 @@ export const STRUCTURE_NAMES: Readonly<Record<string, string>> = {
   ...OCEAN_STRUCTURE_NAMES, // Fase 7.5 (océano)
   swamp_hut: 'Cabaña de bruja', fossil: 'Fósil', // Fase 7.5 (fauna)
   mansion: 'Mansión del bosque', // Fase 7.5 (mansión)
+  stronghold: 'Fortaleza', // Fase 8.6 (el End)
 };
 
 const startCache = new Map<string, Start | null>();
@@ -295,6 +297,7 @@ export function placeStructures(
   gen: TerrainGenerator, blocks: Uint16Array, cx: number, cz: number, tops: Int16Array,
   villagers: VillagerSpawn[] = [], // Fase 6 (aldeanos)
   mobs: StructureMob[] = [], // Fase 7.5 (océano)
+  ticks: number[] = [], // Fase 8.6: los fluidos que ponen (la fuente y la lava de las fortalezas)
 ): StructureChest[] {
   const chests: StructureChest[] = [];
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
@@ -312,6 +315,7 @@ export function placeStructures(
       }
     }
   }
+  placeStrongholds(gen, c, ticks); // Fase 8.6 (el End)
   return chests;
 }
 
@@ -331,6 +335,7 @@ export const LOCATE_REGIONS = 100;
 
 /** Estructura más cercana de un tipo a (x, z): [x, y, z] o null (busca hasta `maxRegions` regiones). */
 export function locateStructure(gen: TerrainGenerator, key: string, x: number, z: number, maxRegions = 12): [number, number, number] | null {
+  if (key === 'stronghold') return locateStronghold(gen, x, z); // Fase 8.6
   if (key === 'mineshaft') {
     const cx = Math.floor(x / 16), cz = Math.floor(z / 16);
     let best: [number, number, number] | null = null, bd = Infinity;

@@ -270,6 +270,8 @@ import { LEAD } from './items';
 // Los cofres de las fortalezas del Nether (y, con los bastiones, los suyos).
 import { NETHER_LOOT } from './netherLoot';
 Object.assign(LOOT_TABLES, NETHER_LOOT);
+import { END_LOOT } from './endLoot'; // Fase 8.6
+Object.assign(LOOT_TABLES, END_LOOT);
 
 // ------------------------------------------------------------------ Fase 8.5 (lo que da el Nether)
 // La magnetita del portal en ruinas: en dos de cada tres cofres, una o dos.

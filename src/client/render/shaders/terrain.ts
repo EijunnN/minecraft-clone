@@ -219,9 +219,68 @@ void faceFrame(int n, out vec3 N, out vec3 T, out vec3 B) {
   else { N = vec3(0, 1, 0); T = vec3(1, 0, 0); B = vec3(0, 0, -1); }
 }
 
+// Fase 8.6 (el End): el velo del portal del End. En Java es un dibujo en pantalla (16 capas de la textura de
+// estrellas giradas y desplazadas sobre el cielo del End): no tiene hondura. Aquí cada capa está de verdad a una
+// profundidad bajo la superficie y se ve con paralaje al mover la cámara: un pozo de estrellas que se hunde, con
+// los colores de las capas de Java (de un turquesa oscuro a un azul vivo), una nebulosa honda que deriva y estrellas
+// que titilan.
+const vec3 END_LAYER[16] = vec3[16](
+  vec3(0.022087, 0.098399, 0.110818), vec3(0.011892, 0.095924, 0.089485), vec3(0.027636, 0.101689, 0.100326),
+  vec3(0.046564, 0.109883, 0.114838), vec3(0.064901, 0.117696, 0.097189), vec3(0.063761, 0.086895, 0.123646),
+  vec3(0.084817, 0.111994, 0.166380), vec3(0.097489, 0.154120, 0.091064), vec3(0.106152, 0.131144, 0.195191),
+  vec3(0.097721, 0.110188, 0.187229), vec3(0.133516, 0.138278, 0.148582), vec3(0.070006, 0.243332, 0.235792),
+  vec3(0.196766, 0.142899, 0.214696), vec3(0.047281, 0.315338, 0.321970), vec3(0.204675, 0.390010, 0.302066),
+  vec3(0.080955, 0.314821, 0.661491)
+);
+vec3 endHash3(vec2 p) {
+  vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  q += dot(q, q.yxz + 33.33);
+  return fract((q.xxy + q.yzz) * q.zyx);
+}
+vec3 endPortalSky(vec3 world, vec3 view, float t) {
+  // Por cada bloque de hondura, cuánto se desplaza lo que se ve (mirando de lado, más; se limita la rasante).
+  float vy = max(abs(view.y), 0.12);
+  vec2 slide = view.xz / vy;
+  // Fondo: el vacío verdoso con una nebulosa que deriva despacio a mucha hondura.
+  vec2 deep = world.xz + slide * 9.0;
+  float neb = texture(uCloudWeather, deep / 26.0 + vec2(t * 0.004, -t * 0.003)).g;
+  float neb2 = texture(uCloudWeather, deep / 9.0 - vec2(t * 0.007, t * 0.005)).g;
+  vec3 col = END_LAYER[0] * 0.06 + mix(vec3(0.004, 0.018, 0.024), vec3(0.020, 0.008, 0.030), neb2) * smoothstep(0.4, 0.8, neb) * 0.35;
+  float pxw = max(fwidth(world.x) + fwidth(world.z), 1e-3);
+  for (int i = 1; i < 16; i++) {
+    float fi = float(i);
+    float depth = 0.25 + fi * 0.45;
+    vec2 p = world.xz + slide * depth;
+    float a = (fi * fi * 4321.0 + fi * 9.0) * 0.0349 + t * 0.012 * (1.0 + fi * 0.15);
+    float ca = cos(a), sa = sin(a);
+    p = mat2(ca, sa, -sa, ca) * p + vec2(17.0 / fi, (2.0 + fi / 1.5) * t * 0.02);
+    float dens = 1.1 + fi * 0.22;
+    vec2 q = p * dens;
+    vec2 cell = floor(q);
+    vec3 h = endHash3(cell + fi * 57.31);
+    if (h.z < 0.8) continue;
+    vec2 f = fract(q) - (0.2 + 0.6 * h.xy);
+    float size = 0.025 + 0.12 * (h.z - 0.8);
+    // Borde suave en píxeles de pantalla (sin parpadeo del TAA lejos).
+    float aa = pxw * dens * (1.0 + depth * 0.25);
+    float d = length(f);
+    // Lo que se pierde por el borde suave se devuelve en brillo: de lejos las estrellas no se apagan ni se llenan.
+    float star = smoothstep(size + aa, size * 0.3, d) * min(1.0, size / max(aa, 1e-4));
+    float glow = exp(-d * d / (size * size * 4.0)) * 0.05;
+    float tw = 0.6 + 0.4 * sin(t * (1.5 + h.x * 3.0) + h.y * 40.0);
+    float fade = 1.0 - fi / 19.0;
+    col += END_LAYER[i] * (star * 5.0 + glow) * tw * fade;
+  }
+  return col;
+}
+
 void main() {
   vec2 uv = vUV;
   int special = int(vProps.a + 0.5);
+  if (special == 6) {
+    outColor = vec4(endPortalSky(vWorld, normalize(vRel), uCamPos.w) * 1.4, 1.0);
+    return;
+  }
   if (special == 2) {
     // Lava: flujo lento de la textura; en pendiente avanza en la dirección de la corriente.
     vec3 gN = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
@@ -337,7 +396,9 @@ void main() {
     float radius = 1.2 + 1.5 * sc.w;
     shadow = sampleShadow(sc, gl_FragCoord.xy, radius);
   }
-  vec3 lightCol = uLightColor.rgb * shadow;
+  // Fase 8.6: donde no llega la luz del cielo tampoco llega el sol (bajo tierra, el mapa de sombras puede no
+  // alcanzar el terreno de encima y el sol se colaba en salas y cuevas hondas).
+  vec3 lightCol = uLightColor.rgb * shadow * smoothstep(0.2, 0.55, vLight.x);
   if (shadow > 0.0) {
     lightCol *= cloudShadow(vWorld);
     float wd = waterDepthToLight(sc);

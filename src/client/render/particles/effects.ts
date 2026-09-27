@@ -182,6 +182,20 @@ export class ParticleFx {
     });
   }
 
+  /**
+   * Fase 8.6: partícula de portal (PortalParticle): nace desplazada (dx, dy, dz) de su punto y vuelve hacia él
+   * mientras sube un poco y se apaga; violeta de brillo variable (0,9·f, 0,3·f, f).
+   */
+  portal(x: number, y: number, z: number, dx: number, dy: number, dz: number): void {
+    const f = rnd(0.4, 1);
+    const life = rnd(1.6, 2.4);
+    this.ps.spawn({
+      x: x + dx, y: y + dy + 0.6, z: z + dz, vx: -dx / life * 1.4, vy: (-dy - 0.6) / life * 1.4, vz: -dz / life * 1.4, life,
+      size: rnd(0.05, 0.08), size1: 0.015, sprite: SPRITE.glow, r: 1.9 * f, g: 0.6 * f, b: 2.4 * f, drag: 0.9,
+      flags: PF.EMISSIVE | PF.FADE_IN,
+    });
+  }
+
   /** Espora flotante (micelio, cuevas frondosas…). */
   spore(x: number, y: number, z: number, r: number, g: number, b: number, emissive = false): void {
     this.ps.spawn({

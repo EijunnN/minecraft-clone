@@ -22,6 +22,7 @@ import { deepDarkFx, deepDarkTick } from './deepDarkFx'; // Fase 7.5 (abismo)
 import { critterFx } from './critterFx'; // Fase 7.5 (fauna)
 import { allayFx } from './allayFx'; // Fase 7.5 (mansión)
 import { netherFx, netherTick, serverVoiced, netherSteps } from './netherMobFx'; // Fase 8.3 (criaturas del Nether)
+import { endFx, endTick } from './endMobFx'; // Fase 8.6 (el End)
 
 export class Effects {
   constructor(private g: Game) {}
@@ -252,6 +253,7 @@ export class Effects {
         break;
       default:
         if (netherFx(this.g, kind, p, a, b)) break; // Fase 8.3 (criaturas del Nether)
+        if (endFx(this.g, kind, p)) break; // Fase 8.6 (el End)
         if (enchantFx(this.g, kind, p, a)) break; // Fase 7 (encantamientos)
         if (oceanFx(this.g, kind, p, a)) break; // Fase 7.5 (océano)
         if (deepDarkFx(this.g, kind, p, a, b)) break; // Fase 7.5 (abismo)
@@ -266,6 +268,7 @@ export class Effects {
   mobSounds(dt: number): void {
     deepDarkTick(this.g, dt); // Fase 7.5 (abismo): latido de los wardens y ambiente del Deep Dark
     netherTick(this.g, dt); // Fase 8.3: humo del blaze, estela de las bolas de fuego, cubos de magma que caen
+    endTick(this.g, dt); // Fase 8.6: partículas de portal de enderman y endermitas, estela del ojo de ender
     const p = this.g.player;
     const now = performance.now() / 1000;
     this.heartT -= dt;

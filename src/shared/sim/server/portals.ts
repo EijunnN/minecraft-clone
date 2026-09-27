@@ -9,10 +9,12 @@
 // - Llegar: se busca el portal más cercano de la dimensión de destino (128 bloques en el mundo normal, 16
 //   en el Nether); si no hay, se construye uno (con plataforma si hace falta) en el mejor sitio cercano.
 // Los bloques de portal de cada dimensión se apuntan (y se guardan) para encontrarlos sin buscar a ciegas.
-import { AIR, OBSIDIAN, BLOCK_SOLID, BLOCK_FLUID, NETHER_PORTAL, isNetherPortal, isFire, portalAxis } from '../../blocks';
+// Fase 8.6: el portal del End lleva al momento (EndPortalBlock.entityInside: al tocar su lámina, de y 6/16 a 12/16) al
+// End, a la plataforma de obsidiana; desde el End, al punto de aparición (la cama) del mundo normal.
+import { AIR, OBSIDIAN, BLOCK_SOLID, BLOCK_FLUID, NETHER_PORTAL, END_PORTAL, isNetherPortal, isFire, portalAxis } from '../../blocks';
 import { MIN_Y, MAX_Y, CHUNK_SIZE, WORLD_LIMIT } from '../../constants';
 import { STATE_DEAD } from '../../protocol';
-import { DIM_OVERWORLD, DIM_NETHER, PORTAL_TICKS, dimensionDef } from '../../dimensions';
+import { DIM_OVERWORLD, DIM_NETHER, DIM_END, PORTAL_TICKS, dimensionDef } from '../../dimensions';
 import { NETHER_LAVA_LEVEL, NETHER_ROOF } from '../../world/nether';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
 import type { ServerStore } from '../store';
@@ -142,6 +144,13 @@ export class Portals {
       if (!s.joined || s.dimPending || s.s & STATE_DEAD) continue;
       const x = Math.floor(s.p[0]), y = Math.floor(s.p[1]), z = Math.floor(s.p[2]);
       const b = w.getBlock(x, y, z), b2 = w.getBlock(x, y + 1, z);
+      // Fase 8.6: el portal del End: el cuerpo toca la lámina (de 6/16 a 12/16 de su bloque) por los pies o por arriba.
+      if ((b === END_PORTAL && s.p[1] - y < 0.75) || b2 === END_PORTAL) {
+        this.inside.delete(s.id);
+        if (this.ctx.dim === DIM_END) this.ctx.travel(s, DIM_OVERWORLD, { kind: 'spawn' });
+        else this.ctx.travel(s, DIM_END, { kind: 'pos' });
+        continue;
+      }
       const inPortal = isNetherPortal(b) || isNetherPortal(b2);
       if (!inPortal) {
         this.inside.delete(s.id);

@@ -1,10 +1,10 @@
 // Generadores de monstruos (mazmorras y minas): con un jugador a 16 bloques o menos, cada 10–40 s
 // invocan de 1 a 4 criaturas alrededor, salvo que ya haya 6 cerca, que esté iluminado por bloques
 // (una antorcha encima lo apaga, como en Minecraft) o que la dificultad sea pacífica.
-import { AIR, COBWEB, MOB_SPAWNER, NETHER_BRICKS } from '../../blocks';
+import { AIR, COBWEB, MOB_SPAWNER, NETHER_BRICKS, isEndPortalFrame } from '../../blocks';
 import { MOB_BLAZE, MOB_MAGMA_CUBE } from '../../netherMobs'; // Fase 8.4
 import { DIM_NETHER } from '../../dimensions';
-import { MOBS, MOB_ZOMBIE, MOB_SKELETON, MOB_SPIDER, MOB_CAVE_SPIDER } from '../../mobs';
+import { MOBS, MOB_ZOMBIE, MOB_SKELETON, MOB_SPIDER, MOB_CAVE_SPIDER, MOB_SILVERFISH } from '../../mobs';
 import { CHUNK_SIZE, hash3, indexY } from '../../constants';
 import { posKey } from '../posKey';
 import { standable } from '../pathfind';
@@ -28,6 +28,10 @@ export class Spawners {
         if (w.getBlock(x + dx, y + dy, z + dz) === NETHER_BRICKS) return MOB_BLAZE;
       }
       return MOB_MAGMA_CUBE;
+    }
+    // Fase 8.6: el de la sala del portal de la fortaleza (delante de los marcos del portal del End), de lepismas.
+    for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+      if (isEndPortalFrame(w.getBlock(x + dx, y, z + dz))) return MOB_SILVERFISH;
     }
     for (let dy = -1; dy <= 1; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
       if (w.getBlock(x + dx, y + dy, z + dz) === COBWEB) return MOB_CAVE_SPIDER; // Fase 6 (monstruos)
@@ -71,8 +75,9 @@ export class Spawners {
     if (ctx.tickCount < due) return;
     this.next.set(k, ctx.tickCount + TICK_RATE * (10 + Math.floor(ctx.rand() * 30)));
     const type = this.mobOf(x, y, z);
-    // La antorcha apaga los de monstruos normales; los blazes y los cubos de magma salen con cualquier luz.
-    if (type !== MOB_BLAZE && type !== MOB_MAGMA_CUBE && w.isLitByBlocks(x, y + 1, z)) return;
+    // La antorcha apaga los de monstruos normales; los blazes, los cubos de magma y las lepismas
+    // (checkAnyLightMonsterSpawnRules) salen con cualquier luz.
+    if (type !== MOB_BLAZE && type !== MOB_MAGMA_CUBE && type !== MOB_SILVERFISH && w.isLitByBlocks(x, y + 1, z)) return;
     let nearby = 0;
     for (const e of ctx.entities.list.values()) {
       if (e.type === type && Math.abs(e.x - x) < 9 && Math.abs(e.y - y) < 5 && Math.abs(e.z - z) < 9) nearby++;

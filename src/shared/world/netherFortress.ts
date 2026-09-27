@@ -44,7 +44,7 @@ export class Box {
 }
 
 /** BoundingBox.orientBox. */
-function orientBox(fx: number, fy: number, fz: number, ox: number, oy: number, oz: number, w: number, h: number, d: number, dir: number): Box {
+export function orientBox(fx: number, fy: number, fz: number, ox: number, oy: number, oz: number, w: number, h: number, d: number, dir: number): Box {
   switch (dir) {
     case N:
       return new Box(fx + ox, fy + oy, fz - d + 1 + oz, fx + w - 1 + ox, fy + h - 1 + oy, fz + oz);
@@ -268,16 +268,22 @@ export function fortressPieces(seed: number, cx: number, cz: number): FortressPi
 // ------------------------------------------------------------------ dibujo
 
 /** Giro y reflejo de una pieza según su orientación (StructurePiece.setOrientation). */
-function turn(dir: number, facing: number): number {
+export function turn(dir: number, facing: number): number {
   let f = facing;
   if (dir === S || dir === W) f = f === N ? S : f === S ? N : f; // Mirror.LEFT_RIGHT
   if (dir === W || dir === E) f = (f + 1) % 4; // Rotation.CLOCKWISE_90
   return f;
 }
 
+/** Lo que tiene toda pieza orientada (de la fortaleza del Nether o del mundo normal). */
+export interface OrientedPiece {
+  box: Box;
+  dir: number;
+}
+
 /** Lo que dibuja una pieza: posiciones locales pasadas al mundo y escritas en el chunk del lienzo. */
-class Drawer {
-  constructor(private c: Canvas, private p: FortressPiece, private ticks: number[]) {}
+export class Drawer {
+  constructor(protected c: Canvas, protected p: OrientedPiece, protected ticks: number[]) {}
   wx(x: number, z: number): number {
     const b = this.p.box;
     return this.p.dir === W ? b.x1 - z : this.p.dir === E ? b.x0 + z : b.x0 + x;

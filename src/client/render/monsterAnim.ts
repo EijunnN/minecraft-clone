@@ -19,6 +19,14 @@ export function animateMonster(def: MobDef, e: ClientEntity, time: number, name:
       else if (name === 'tail' || name === 'tailTip') out[0] = Math.sin(time * 6.5 + e.seed * 10 + 1) * 0.12;
       break;
     }
+    // Fase 8.6: la endermita (EndermiteModel.setupAnim): cada segmento se menea deprisa, más los de los extremos.
+    case 'endermite':
+      if (name.startsWith('seg')) {
+        const i = Number(name.slice(3));
+        const a = time * 18 + i * 0.15 * Math.PI + e.seed * 5;
+        out[1] = Math.cos(a) * Math.PI * 0.01 * (1 + Math.abs(i - 2)) * 3;
+      }
+      break;
     case 'silverfish':
       if (name.startsWith('seg')) {
         const i = Number(name.slice(3));

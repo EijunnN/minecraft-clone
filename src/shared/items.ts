@@ -30,7 +30,7 @@ import { CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR } from './armor';
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
-import { SPAWN_EGG_DEFS, LATE_SPAWN_EGG_DEFS, NETHER_SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración); 8.3: los del Nether
+import { SPAWN_EGG_DEFS, LATE_SPAWN_EGG_DEFS, NETHER_SPAWN_EGG_DEFS, END_SPAWN_EGG_DEFS } from './spawnEggs'; // Fase 6.5 (decoración); 8.3: los del Nether
 import { SWEET_BERRY_BUSH, KELP, WET_SPONGE, SPONGE, DRIED_KELP_BLOCK, isWaterlogged } from './blocks'; // Fase 6.5 (océano y plantas)
 import type { ItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { POWDER_SNOW, COAL_BLOCK } from './blocks'; // Fase 6.5 (materiales)
@@ -637,6 +637,9 @@ export const EXPLOSION_RESISTANT_ITEMS: ReadonlySet<number> = new Set([NETHER_ST
 // para la púrpura y las varas del End).
 export const CHORUS_FRUIT = item('chorus_fruit', 'Fruta de coro', { food: { hunger: 4, saturation: 2.4, always: true } });
 export const POPPED_CHORUS_FRUIT = item('popped_chorus_fruit', 'Fruta de coro reventada');
+/** El ojo de ender: lanzado, vuela hacia la fortaleza más cercana; puesto en un marco del portal del End, lo completa. */
+export const ENDER_EYE = item('ender_eye', 'Ojo de ender');
+for (const e of END_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -874,4 +877,4 @@ smelt(QUARTZ_BLOCK, SMOOTH_QUARTZ); // el bloque de cuarzo, en cuarzo liso
 
 // ------------------------------------------------------------------ Fase 8.6 (el End)
 smelt(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
-(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
+(CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT, ENDER_EYE, ...END_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));

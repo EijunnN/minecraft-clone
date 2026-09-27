@@ -304,6 +304,8 @@ export type ServerMsg =
   | { t: 'spawn'; p: [number, number, number] | null; d?: number } // Fase 8.5: d, dimensión del punto
   /** Fase 8.5: reaparecer aquí (lo decide el servidor: el nexo de reaparición o el punto de aparición). */
   | { t: 'respawnAt'; p: [number, number, number] }
+  /** Fase 8.6: el servidor mueve al jugador (la perla de ender que cae). */
+  | { t: 'moveTo'; p: [number, number, number] }
   /** Fase 8.5: los efectos elegidos de un faro. */
   | { t: 'beacon'; x: number; y: number; z: number; p: number; s: number }
   // Fase 6 (monturas)

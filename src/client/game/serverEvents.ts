@@ -116,6 +116,15 @@ export class ServerEvents {
       case 'beacon': // Fase 8.5: los efectos elegidos de un faro
         if ([msg.x, msg.y, msg.z].every(Number.isInteger)) this.g.beacons.onServer(msg.x, msg.y, msg.z, Number(msg.p) || 0, Number(msg.s) || 0);
         break;
+      case 'moveTo': { // Fase 8.6: la perla de ender cayó
+        if (!Array.isArray(msg.p) || msg.p.length !== 3 || !msg.p.every(Number.isFinite)) break;
+        const pl = this.g.player;
+        [pl.x, pl.y, pl.z] = msg.p;
+        pl.vx = pl.vy = pl.vz = 0;
+        pl.fallDistance = 0;
+        this.g.sendPos(true);
+        break;
+      }
       case 'respawnAt': // Fase 8.5: el servidor decidió dónde reaparece (el nexo o el punto de aparición)
         if (Array.isArray(msg.p) && msg.p.length === 3 && msg.p.every(Number.isFinite)) this.g.life.respawnAt(msg.p);
         break;

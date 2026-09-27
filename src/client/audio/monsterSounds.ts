@@ -62,6 +62,24 @@ function silverfishSound(ctx: AudioContext, noise: NoiseBuffers, event: MobSound
   ];
 }
 
+/** Fase 8.6: endermita: un chirrido de insecto con un zumbido metálico que baja (el eco del End). */
+function endermiteSound(ctx: AudioContext, noise: NoiseBuffers, event: MobSoundEvent, dest: AudioNode, now: number): Sources {
+  const loud = event === 'hurt' || event === 'death' || event === 'attack';
+  if (event === 'step') {
+    return [playNoiseBurst(ctx, { buffer: noise.white, destination: dest, now, filterType: 'highpass', freq: 4200, q: 1.2, attack: 0.002, decay: 0.02, gain: 0.04 })];
+  }
+  const out: Sources = [];
+  const n = loud ? 3 : 2;
+  for (let i = 0; i < n; i++) {
+    out.push(playNoiseBurst(ctx, {
+      buffer: noise.white, destination: dest, now: now + i * 0.05, filterType: 'bandpass', freq: randRange(2800, 4200), q: 4, attack: 0.002,
+      decay: 0.04, gain: loud ? 0.16 : 0.09,
+    }));
+  }
+  out.push(playTonalBlip(ctx, { destination: dest, now, freq: randRange(1500, 1900), freqEnd: event === 'death' ? 300 : 900, wave: 'square', attack: 0.004, decay: loud ? 0.22 : 0.12, gain: 0.03 }));
+  return out;
+}
+
 /** Voz de un monstruo nuevo por su clave de sonido (vacío si no es uno de éstos). */
 export function buildMonsterSound(ctx: AudioContext, noise: NoiseBuffers, kind: string, event: MobSoundEvent, dest: AudioNode, now: number): Sources {
   switch (kind) {
@@ -73,6 +91,8 @@ export function buildMonsterSound(ctx: AudioContext, noise: NoiseBuffers, kind: 
       return phantomSound(ctx, noise, event, dest, now);
     case 'silverfish':
       return silverfishSound(ctx, noise, event, dest, now);
+    case 'endermite':
+      return endermiteSound(ctx, noise, event, dest, now);
     default:
       return [];
   }

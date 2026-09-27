@@ -14,7 +14,9 @@ const POTION_THROW_SPEED = 10;
 const POTION_THROW_UP = (20 * Math.PI) / 180;
 // Fase 7 (encantamientos): encantamientos del arma, del arco y de la ballesta.
 import { meleeHit, shootArrows } from './enchantCombat';
-import { EXPERIENCE_BOTTLE } from '../../items';
+import { EXPERIENCE_BOTTLE, ENDER_EYE, ENDER_PEARL } from '../../items';
+import { DIM_OVERWORLD } from '../../dimensions'; // Fase 8.6
+import { locateStructure } from '../../world/structures';
 import type { ServerContext, Session } from './context';
 
 export class PlayerActions {
@@ -113,7 +115,11 @@ export class PlayerActions {
       this.throwPotion(s, msg, item);
       return;
     }
-    if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL && item !== EXPERIENCE_BOTTLE) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
+    if (item === ENDER_EYE) {
+      this.throwEye(s, msg);
+      return;
+    }
+    if (s.s & STATE_DEAD || (item !== EGG && item !== SNOWBALL && item !== EXPERIENCE_BOTTLE && item !== ENDER_PEARL) || !Array.isArray(msg.p) || !Array.isArray(msg.d)) return;
     const p = msg.p.map(Number), d = msg.d.map(Number);
     if (p.length !== 3 || d.length !== 3 || ![...p, ...d].every(Number.isFinite)) return;
     if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
@@ -125,6 +131,28 @@ export class PlayerActions {
     const speed = bottle ? 14 : 30;
     ctx.entities.spawnThrown(item, p[0], p[1], p[2], (d[0] / len) * speed, (d[1] / len) * speed, (d[2] / len) * speed, s.id);
     ctx.fx('throw', p[0], p[1], p[2]);
+  }
+
+  /**
+   * Fase 8.6: el ojo de ender (EnderEyeItem.use + EyeOfEnder.signalTo): sale del jugador hacia la fortaleza más
+   * cercana; si está a más de 12 bloques, apunta a 12 bloques en su dirección y 8 más arriba. Sólo en el mundo
+   * normal (en las otras dimensiones no hay fortalezas y el cliente no lo lanza).
+   */
+  private throwEye(s: Session, msg: Extract<ClientMsg, { t: 'throw' }>): void {
+    const ctx = this.ctx;
+    if (s.s & STATE_DEAD || ctx.dim !== DIM_OVERWORLD || !Array.isArray(msg.p)) return;
+    const p = msg.p.map(Number);
+    if (p.length !== 3 || !p.every(Number.isFinite)) return;
+    if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - s.p[1] - 1.6, p[2] - s.p[2]) > 3) return;
+    const at = locateStructure(ctx.world.gen, 'stronghold', Math.floor(s.p[0]), Math.floor(s.p[2]));
+    if (!at) return;
+    const x = s.p[0], y = s.p[1] + 0.9, z = s.p[2];
+    const dx = at[0] - x, dz = at[2] - z, h = Math.hypot(dx, dz);
+    const target: [number, number, number] = h > 12 ? [x + (dx / h) * 12, y + 8, z + (dz / h) * 12] : [at[0], at[1], at[2]];
+    const e = ctx.entities.spawnThrown(ENDER_EYE, x, y, z, 0, 0, 0, s.id);
+    e.eyeTarget = target;
+    e.eyeSurvive = ctx.rand() * 5 >= 1;
+    ctx.fx('ender_eye_launch', x, y, z);
   }
 
   /**

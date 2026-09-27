@@ -184,6 +184,7 @@ export class ServerSystems {
     this.shelves = new Shelves(ctx, store);
     this.cauldrons = new Cauldrons(ctx, this.nature);
     this.endGoods = new EndGoods(ctx, this.nature);
+    this.edits.endGoods = (s, x, y, z, id, item) => this.endGoods.use(s, x, y, z, id, item);
     this.edits.cauldrons = (s, x, y, z, id, item) => this.cauldrons.use(s, x, y, z, id, item);
     this.edits.netherGoods = (s, x, y, z, id, item) => this.netherGoods.use(s, x, y, z, id, item); // Fase 8.5
     this.leashes = new Leashes(ctx);
