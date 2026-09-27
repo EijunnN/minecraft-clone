@@ -716,6 +716,24 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
     mismo).
   - Pendiente: el Poema del End y los créditos al salir por primera vez (no se incluyen), y la animación de la
     tapa de las cajas de shulker y de la mandíbula de la cabeza de dragón (se ven cerradas, como los cofres).
+- ✅ **Correcciones tras la 8.6** (lo que faltaba de lo ya hecho, comprobado con el código de Java 26.3):
+  - **Ranas** con su variante según el bioma y la lengua que se come a los slimes y cubos de magma pequeños;
+    **luces de rana** (ocre, perlada y verdosa) de los cubos de magma que se comen.
+  - **Brotes de amatista** en las seis caras (crecen y se ponen en cualquiera; cada tamaño es su objeto) y la
+    geoda con los porcentajes de Java.
+  - Recetas especiales: **copiar estandartes**, **clonar mapas** y **teñir el cuero** y la armadura para lobo
+    (DyedItemColor; se ve en iconos, mano, suelo, jugadores, soportes, caballos y lobos; el caldero lo lava). El
+    alto horno funde las menas del Nether y la telaraña, el bloque de slime y la piedra dan la poción mundana.
+  - **Aldeanos de 26.3:** sus ofertas reales (2 por nivel, fijas y guardadas), **tipos por bioma** (ropa y
+    ofertas), el **clérigo**, los mapas de aldeas, cabaña de la bruja y templo de la jungla, **demanda**,
+    **reputación** (cotilleos), Héroe de la aldea con su nivel y **reposición** en el bloque de trabajo.
+  - Empujar criaturas al chocar con ellas, alcances de ataque en 3D (creeper, bruja, esqueleto…) y puntería de
+    las criaturas casi perfecta (a propósito, más difícil que en Java).
+  - **Jefes reforzados** (`/jefes auto|java|duros`, no es de Java): el dragón gana 100 de vida por cada jugador de
+    más y se enfurece al bajar de un cuarto.
+  - Pendiente: las **estrellas de fuegos artificiales** completas (forma, rastro, centelleo y desvanecimiento; hoy
+    sólo el color), la **cura del aldeano zombi** (manzana dorada y debilidad) y la vasija con fragmentos (con la
+    arqueología, fase 9).
 - **8.7 El Wither.**
 
 ### Fase 9 — Metajuego y novedades recientes (L)

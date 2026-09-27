@@ -14,7 +14,7 @@ import {
   GHAST_TEAR, BLAZE_POWDER, MAGMA_CREAM, RABBIT_FOOT, GOLDEN_CARROT, PUFFERFISH, TURTLE_HELMET, PHANTOM_MEMBRANE, itemName,
   GLASS_BOTTLE, BLAZE_ROD, type ItemStack,
 } from './items';
-import { BREWING_STAND } from './blocks';
+import { BREWING_STAND, COBWEB, SLIME_BLOCK, STONE } from './blocks';
 import { MOBS, MOB_WITCH } from './mobs';
 import { ARMOR_BYPASS } from './armor';
 
@@ -210,6 +210,8 @@ brew(FERMENTED_SPIDER_EYE, [[PT_WATER, PT_WEAKNESS]]);
 for (const i of [REDSTONE, SUGAR, GLISTERING_MELON_SLICE, SPIDER_EYE, GHAST_TEAR, BLAZE_POWDER, MAGMA_CREAM, RABBIT_FOOT]) {
   brew(i, [[PT_WATER, PT_MUNDANE]]);
 }
+// 26.3: también la telaraña, el bloque de slime y la piedra (brewing/potion_water_cobweb, …).
+for (const i of [COBWEB, SLIME_BLOCK, STONE]) brew(i, [[PT_WATER, PT_MUNDANE]]);
 // De la rara, las pociones con efecto.
 brew(GOLDEN_CARROT, [[PT_AWKWARD, PT_NIGHT_VISION]]);
 brew(MAGMA_CREAM, [[PT_AWKWARD, PT_FIRE_RESISTANCE]]);

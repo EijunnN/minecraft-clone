@@ -47,7 +47,8 @@ Objects). Pensado para PC (teclado y ratón).
 - **El End** (portado de Java 26.3): las **fortalezas** con su biblioteca y la sala del portal, el **ojo de
   ender** que vuela hacia la más cercana y el **portal del End** que se abre con los doce ojos; la isla del
   dragón con sus pilares de obsidiana y cristales, el **dragón de Ender** con todas sus fases, su barra de jefe,
-  su muerte (portal de salida, huevo y puertas del End) y su **reaparición** con cuatro cristales; las islas
+  su muerte (portal de salida, huevo y puertas del End) y su **reaparición** con cuatro cristales (con
+  `/jefes duros`, o en difícil, gana vida con cada jugador y se enfurece al final); las islas
   exteriores con sus **plantas de coro**, las **ciudades del End** con sus torres, puentes, cofres y
   **shulkers**, y el **barco** con la **cabeza de dragón** y los **élitros** (planeo con la física de Java,
   cohetes y el viento al volar); **cajas de shulker** de 17 colores que se llevan lo suyo y el **cofre de
@@ -99,9 +100,11 @@ Objects). Pensado para PC (teclado y ratón).
   slimes, fantasmas, lepismas y aldeanos zombi). También murciélagos, ocelotes, champiñacas, alays,
   llamas de comerciante y caballos esqueleto (la trampa del rayo) y zombi. Los monstruos aparecen en la
   oscuridad y los no muertos arden al sol.
-- **Aldeas y comercio**: aldeanos con 12 profesiones según su bloque de trabajo, que pasean de día y
-  vuelven a casa de noche; clic derecho abre el comercio en esmeraldas, con 5 niveles. Vendedor
-  ambulante y gólem de hierro protector.
+- **Aldeas y comercio**: aldeanos con 13 profesiones según su bloque de trabajo (clérigo incluido) y 7 tipos
+  según su bioma (su ropa y algunas ofertas), que pasean de día y vuelven a casa de noche; clic derecho abre el
+  comercio con las ofertas de Minecraft 26.3 (2 más por nivel, 5 niveles). Los precios suben con la demanda y
+  cambian con tu reputación con cada aldeano (lo que se cuentan entre ellos) y el Héroe de la aldea; reponen
+  trabajando en su bloque. Vendedor ambulante y gólem de hierro protector.
 - **Saqueadores y asaltos**: puestos de saqueadores y patrullas con capitán. Su botella ominosa da Mal
   presagio y, al entrar en una aldea, llega un asalto por oleadas (saqueadores, vindicadores,
   evocadores con sus colmillos y vex, devastadores y brujas) con su barra arriba; ganarlo te hace

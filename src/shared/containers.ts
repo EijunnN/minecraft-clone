@@ -4,7 +4,7 @@ import { MAX_MAP_KEY } from './maps';
 import { isBundle, fitsInBundle, bundleInsert } from './bundles'; // Fase 6.5 (remate)
 import { stackToWire, stackFromWire, type WireStack } from './protocol';
 import { ITEMS, BUCKET, LAVA_BUCKET, maxStack, sameKind, isValidItem, type ItemStack } from './items';
-import { IRON_ORE, GOLD_ORE, ANCIENT_DEBRIS, isShulkerBox } from './blocks';
+import { IRON_ORE, GOLD_ORE, ANCIENT_DEBRIS, NETHER_GOLD_ORE, NETHER_QUARTZ_ORE, isShulkerBox } from './blocks';
 import { sanitizeItemData, cloneItemData } from './itemData'; // Fase 6.5 (libros y estandartes)
 import { COPPER_ORE, DEEPSLATE_ORE } from './blocks'; // Fase 6.5 (materiales)
 import { RAW_IRON, RAW_GOLD, RAW_COPPER } from './items'; // Fase 6.5 (materiales)
@@ -54,6 +54,8 @@ for (const ore of [COAL_ORE, DIAMOND_ORE, EMERALD_ORE, LAPIS_ORE, REDSTONE_ORE])
 for (const mat of ['iron', 'golden', 'copper'] as const) for (const id of [...Object.values(TOOLS[mat]), ...Object.values(ARMOR[mat])]) BLAST_INPUTS.add(id);
 for (const id of [...Object.values(ARMOR.chainmail), HORSE_ARMOR.iron, HORSE_ARMOR.golden]) BLAST_INPUTS.add(id);
 BLAST_INPUTS.add(ANCIENT_DEBRIS); // Fase 8.5 (lo que da el Nether)
+// Las menas del Nether (gold_ingot_from_blasting_nether_gold_ore, quartz_from_blasting).
+BLAST_INPUTS.add(NETHER_GOLD_ORE).add(NETHER_QUARTZ_ORE);
 
 /** ¿Funde este horno lo que hay en la entrada? */
 export function variantSmelts(variant: FurnaceVariant, input: number): boolean {
