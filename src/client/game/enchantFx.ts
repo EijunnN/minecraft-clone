@@ -70,7 +70,7 @@ export function enchantFx(g: Game, kind: string, p: [number, number, number], a?
           flags: PF.EMISSIVE | PF.STRETCH,
         });
       }
-      g.audio.playEquipSfx('trident_throw', p);
+      g.audio.playSweep(p);
       return true;
     }
   }

@@ -2,6 +2,7 @@
 // camas, tartas, compostadores), comer y beber, arco, escudo, cubos, azada, polvo de hueso, tallar
 // calabazas, lanzar huevos, pescar, animales (dar de comer, esquilar, ordeñar), ponerse armadura,
 // recoger y tirar objetos.
+import { KNOCKBACK } from '../../shared/enchantments'; // el golpe con Empuje también corta la carrera
 import { isShulkerBox } from '../../shared/blocks'; // Fase 8.6
 import { stackToWire } from '../../shared/protocol';
 import { isBundle, bundleEmpty } from '../../shared/bundles'; // Fase 6.5 (remate)
@@ -539,14 +540,26 @@ export class Interaction {
     // Crítico: cayendo y con la barra casi llena (el servidor lo vuelve a comprobar).
     const charged = this.attackCharge() > 0.9;
     const crit = !p.onGround && p.vy < -1 && !p.inWater && !p.flying && charged && !this.g.statusEffects.blind; // Fase 7: ciego, sin críticos
-    // Fase 7 (encantamientos): la espada barre con el golpe cargado, en el suelo, sin correr ni crítico.
-    const sw = charged && !crit && p.onGround && !p.sprinting && ITEMS[this.g.heldId]?.tool?.kind === 'sword' ? 1 : 0;
+    // Golpe corriendo con la barra llena (el de empuje de Java): empuja más y corta la carrera.
+    const sprintHit = charged && p.sprinting;
+    // Fase 7 (encantamientos): la espada barre con el golpe cargado, en el suelo, sin correr ni crítico, y sin ir
+    // más deprisa que andando (Player.isSweepAttack: velocidad horizontal < 2,5 × la de andar por tick).
+    const slow = Math.hypot(p.vx, p.vz) < 5;
+    const sw = charged && !crit && !sprintHit && p.onGround && slow && ITEMS[this.g.heldId]?.tool?.kind === 'sword' ? 1 : 0;
     this.resetAttack();
     const b = this.g.statusEffects.melee;
     const k = this.g.statusEffects.attackSpeed; // Fase 7 (efectos): ritmo de ataque
     this.g.net?.send({
       t: 'attack', e: e.id, item: this.g.heldId, crit, ...(b ? { b } : {}), ...this.g.enchant.heldField(), ...(sw ? { sw } : {}), ...(k !== 1 ? { k } : {}),
+      ...(sprintHit ? { sp: 1 as const } : {}),
     });
+    // Player.causeExtraKnockback: tras un golpe con empuje extra (corriendo o con Empuje), frena y deja de correr.
+    if (sprintHit || this.g.enchant.held().some(([id]) => id === KNOCKBACK)) {
+      if (sprintHit) this.g.audio.playKnockbackHit([e.x, e.y + 1, e.z]);
+      p.vx *= 0.6;
+      p.vz *= 0.6;
+      p.sprinting = false;
+    }
     this.g.swing(false);
     this.g.net?.send({ t: 'swing' });
     if (crit) this.g.renderer.entities.spawnCrit(e.x, e.y + 1, e.z, 10);

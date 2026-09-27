@@ -320,7 +320,41 @@ export class UI {
       s.classList.toggle('sel', i === selected);
       paintSlot(s, stacks[i] ?? null, this.icons);
     }
+    this.paintHeldDurability();
     if (this.isInventoryOpen()) this.renderInvHotbar();
+  }
+
+  private offhandStack: ItemStack | null = null;
+
+  /**
+   * Usos que le quedan a lo que se lleva en la mano (o, si no gasta, a lo de la mano secundaria): una barrita con
+   * el número al lado de la barra de objetos, en verde, amarillo o rojo, y parpadeando cuando está a punto de romperse.
+   */
+  private paintHeldDurability(): void {
+    const bar = $('hotbar');
+    let el = bar.querySelector<HTMLDivElement>('.held-dur');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'held-dur';
+      el.innerHTML = '<div class="hd-bar"><i></i></div><span class="hd-num"></span>';
+      bar.appendChild(el);
+    }
+    const wear = (s: ItemStack | null | undefined) => (s && ITEMS[s.id]?.tool?.durability ? s : null);
+    const s = wear(this.hotbar[this.selected]) ?? wear(this.offhandStack);
+    if (!s) {
+      el.classList.add('hidden');
+      return;
+    }
+    const max = ITEMS[s.id]!.tool!.durability;
+    const left = Math.max(0, max - (s.dmg ?? 0));
+    const f = left / max;
+    el.classList.remove('hidden');
+    el.classList.toggle('low', f <= 0.1 || left <= 5);
+    const fill = el.querySelector('i') as HTMLElement;
+    fill.style.height = `${Math.round(f * 100)}%`;
+    fill.style.background = `hsl(${Math.round(f * 120)}, 85%, 52%)`;
+    el.querySelector('.hd-num')!.textContent = String(left);
+    el.title = `${ITEMS[s.id]!.name}: ${left} de ${max} usos`;
   }
 
   /** Mano secundaria: un hueco a la izquierda de la barra (sólo si lleva algo). */
@@ -335,6 +369,8 @@ export class UI {
     }
     el.classList.toggle('hidden', !stack);
     paintSlot(el, stack, this.icons);
+    this.offhandStack = stack;
+    this.paintHeldDurability();
   }
 
   /** Corazones, hambre y aire (sólo en supervivencia). */
@@ -860,14 +896,14 @@ export function paintSlot(el: HTMLElement, s: ItemStack | null, icons: Map<numbe
     const tool = s ? ITEMS[s.id]?.tool : undefined;
     if (s && tool && s.dmg) {
       const f = Math.max(0, 1 - s.dmg / tool.durability);
-      dur.style.display = '';
+      dur.style.display = 'block'; // '' dejaría el display: none de la hoja de estilos
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
       bar.style.background = `hsl(${Math.round(f * 120)}, 90%, 50%)`;
     } else if (s && isBundle(s.id) && s.bag?.length) {
       // Fase 6.5 (remate): lo lleno que está el saco.
       const f = Math.min(1, bagWeight(s.bag) / BUNDLE_CAPACITY);
-      dur.style.display = '';
+      dur.style.display = 'block'; // '' dejaría el display: none de la hoja de estilos
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
       bar.style.background = f >= 1 ? '#e8503a' : '#6aa8ff';

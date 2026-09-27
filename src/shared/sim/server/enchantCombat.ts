@@ -33,8 +33,10 @@ export function meleeHit(
   const ents = ctx.entities;
   const bonus = meleeBonus(en, e.type) * charge;
   ents.looting = levelIn(en, LOOTING);
+  // Golpe corriendo con la barra llena (Player.attack: knockbackAttack): medio punto más de empuje, como un nivel de Empuje.
+  const sprintKnock = msg.sp === 1 && charge > 0.9 ? 1 : 0;
   try {
-    ents.damage(e, Math.max(0.5, dmg + bonus), s.p[0], s.p[2], s.id, knock * knockbackFactor(levelIn(en, KNOCKBACK)));
+    ents.damage(e, Math.max(0.5, dmg + bonus), s.p[0], s.p[2], s.id, knock * knockbackFactor(levelIn(en, KNOCKBACK) + sprintKnock));
   } finally {
     ents.looting = 0;
   }
@@ -42,14 +44,18 @@ export function meleeHit(
   const fire = levelIn(en, FIRE_ASPECT);
   if (fire > 0 && !e.dead && e.hurt === 0) e.fire = Math.max(e.fire, fireAspectSeconds(fire));
   // Barrido: sólo espadas, golpe cargado desde el suelo y sin correr (lo comprueba el cliente).
-  if (msg.sw === 1 && ITEMS[item]?.tool?.kind === 'sword' && charge > 0.9) sweep(ctx, s, e, dmg, levelIn(en, SWEEPING_EDGE), en);
+  if (msg.sw === 1 && !sprintKnock && ITEMS[item]?.tool?.kind === 'sword' && charge > 0.9) sweep(ctx, s, e, dmg, levelIn(en, SWEEPING_EDGE), en, charge);
 }
 
-/** Criaturas pegadas al objetivo (a un bloque de su caja) y a menos de 3 del jugador reciben el barrido. */
-function sweep(ctx: ServerContext, s: Session, target: Entity, dmg: number, level: number, en: [number, number][]): void {
+/**
+ * Player.doSweepAttack: las criaturas que tocan la caja del objetivo ensanchada 1 × 0,25 × 1 y a menos de 3 bloques
+ * del jugador (de pies a pies) reciben 1 + daño × Barrido (con Filo, Castigo o Perdición según cada una, y por la
+ * carga del golpe) y un empujón de 0,4.
+ */
+function sweep(ctx: ServerContext, s: Session, target: Entity, dmg: number, level: number, en: [number, number][], charge: number): void {
   const ents = ctx.entities;
   const amount = sweepDamage(dmg, level);
-  const ex = s.p[0], ey = s.p[1] + 0.9, ez = s.p[2];
+  const ex = s.p[0], ey = s.p[1], ez = s.p[2];
   ents.looting = levelIn(en, LOOTING);
   try {
     for (const o of ents.list.values()) {
@@ -57,8 +63,8 @@ function sweep(ctx: ServerContext, s: Session, target: Entity, dmg: number, leve
       const hw = target.width / 2 + 1 + o.width / 2;
       if (Math.abs(o.x - target.x) > hw || Math.abs(o.z - target.z) > hw) continue;
       if (o.y > target.y + target.height + 0.25 || o.y + o.height < target.y - 0.25) continue;
-      if ((o.x - ex) ** 2 + (o.y + o.height / 2 - ey) ** 2 + (o.z - ez) ** 2 > 9) continue;
-      ents.damage(o, amount, s.p[0], s.p[2], s.id, 0.4);
+      if ((o.x - ex) ** 2 + (o.y - ey) ** 2 + (o.z - ez) ** 2 >= 9) continue;
+      ents.damage(o, (amount + meleeBonus(en, o.type)) * charge, s.p[0], s.p[2], s.id, 1); // knockback(0,4): el mismo que un golpe normal
     }
   } finally {
     ents.looting = 0;

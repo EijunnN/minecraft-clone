@@ -1095,11 +1095,14 @@ kbd {
 .slot .dur,
 .slot2 .dur {
   position: absolute;
-  left: 6px;
-  right: 6px;
+  left: 5px;
+  right: 5px;
   bottom: 4px;
-  height: 3px;
-  background: #000;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
   display: none;
 }
 
@@ -1367,6 +1370,67 @@ kbd {
 
 #hotbar .slot.offhand.hidden {
   display: none;
+}
+
+/* Usos que le quedan a lo de la mano: barrita vertical y número, a la derecha de la barra de objetos. */
+#hotbar .held-dur {
+  position: absolute;
+  left: calc(100% + 10px);
+  bottom: 5px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px 0 7px;
+  background: rgba(8, 12, 20, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+#hotbar .held-dur.hidden {
+  display: none;
+}
+
+#hotbar .held-dur .hd-bar {
+  width: 6px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 3px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+#hotbar .held-dur .hd-bar i {
+  display: block;
+  width: 100%;
+  border-radius: 3px;
+  transition: height 0.2s;
+}
+
+#hotbar .held-dur .hd-num {
+  min-width: 2ch;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  font-variant-numeric: tabular-nums;
+}
+
+#hotbar .held-dur.low {
+  border-color: rgba(255, 90, 70, 0.7);
+  animation: held-dur-warn 0.9s ease-in-out infinite alternate;
+}
+
+#hotbar .held-dur.low .hd-num {
+  color: #ff8a78;
+}
+
+@keyframes held-dur-warn {
+  from { box-shadow: 0 0 0 rgba(255, 80, 60, 0); }
+  to { box-shadow: 0 0 12px rgba(255, 80, 60, 0.6); }
 }
 
 /* Menú: mundos recientes (clic para elegir, × para quitar de la lista). */

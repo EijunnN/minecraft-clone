@@ -21,7 +21,7 @@ import { buildOceanSfx } from './oceanSounds'; // Fase 7.5 (océano)
 import { buildDeepDarkSfx } from './deepDarkSounds'; // Fase 7.5 (abismo)
 import { AmbienceController } from './ambience';
 import {
-  buildArrowHit,
+  buildArrowHit, buildSweep, buildKnockbackHit,
   buildBlockHit,
   buildBowTwang,
   buildBurp,
@@ -590,6 +590,16 @@ export class AudioEngine {
   /** Suelta de cuerda de arco en `pos`; `charge` 0..1 es la tensión acumulada al soltar. */
   playBowShoot(pos: Vec3, charge: number): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildBowTwang(ctx, noise, dest, now, charge)));
+  }
+
+  /** Barrido de la espada (PLAYER_ATTACK_SWEEP) en `pos`. */
+  playSweep(pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildSweep(ctx, noise, dest, now), 0.3));
+  }
+
+  /** Golpe corriendo (PLAYER_ATTACK_KNOCKBACK) en `pos`. */
+  playKnockbackHit(pos: Vec3): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildKnockbackHit(ctx, noise, dest, now), 0.2));
   }
 
   /** Impacto de una flecha contra un bloque o criatura en `pos`. */

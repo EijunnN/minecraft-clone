@@ -84,6 +84,23 @@ export function buildFurnaceCrackle(ctx: AudioContext, noise: NoiseBuffers, dest
 }
 
 /** Impacto corto de flecha en un bloque o criatura: "thock" grave + transitorio de asta. */
+/** Barrido de la espada: un silbido de aire que baja y un roce metálico corto. */
+export function buildSweep(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number): AudioScheduledSourceNode[] {
+  return [
+    playNoiseBurst(ctx, { buffer: noise.white, destination, now, filterType: 'bandpass', freq: randRange(2600, 3200), freqEnd: randRange(500, 700), q: 1.4, attack: 0.03, decay: 0.2, gain: 0.34 }),
+    playNoiseBurst(ctx, { buffer: noise.pink, destination, now: now + 0.02, filterType: 'lowpass', freq: 900, freqEnd: 250, q: 0.7, attack: 0.02, decay: 0.16, gain: 0.2 }),
+    ...playInharmonicRing(ctx, { destination, now: now + 0.01, baseFreq: randRange(1900, 2300), partials: [1, 1.41, 2.03], decay: 0.12, gain: 0.05 }),
+  ];
+}
+
+/** Golpe corriendo (el de empuje): un golpe sordo más pesado. */
+export function buildKnockbackHit(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number): AudioScheduledSourceNode[] {
+  return [
+    playNoiseBurst(ctx, { buffer: noise.brown, destination, now, filterType: 'lowpass', freq: 700, freqEnd: 120, q: 0.8, attack: 0.002, decay: 0.16, gain: 0.5 }),
+    playTonalBlip(ctx, { destination, now, freq: 120, freqEnd: 55, wave: 'sine', attack: 0.002, decay: 0.14, gain: 0.35 }),
+  ];
+}
+
 export function buildArrowHit(ctx: AudioContext, noise: NoiseBuffers, destination: AudioNode, now: number): AudioScheduledSourceNode[] {
   return [
     playNoiseBurst(ctx, { buffer: noise.white, destination, now, filterType: 'bandpass', freq: randRange(900, 1700), q: 2, attack: 0.001, decay: 0.03, gain: 0.22 }),
