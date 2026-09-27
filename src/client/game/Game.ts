@@ -510,12 +510,10 @@ export class Game {
 
   /** Chat de voz: la tecla de hablar (la primera vez pide el micrófono) y las voces del fotograma. */
   private updateVoice(cam: [number, number, number]): void {
-    const input = this.input;
+    // Las teclas de hablar y susurrar las lleva el chat de voz (funcionan con el inventario, el comercio, un cofre
+    // o la pausa abiertos; no mientras se escribe en un campo de texto).
     const { voice: key, whisper } = this.cfg.settings.keys;
-    const canTalk = input.locked && !this.ui.isChatOpen();
-    const pressed = input.wasPressed(key) || input.wasPressed(whisper);
-    if (canTalk && pressed && this.voice.active && this.voice.micState === 'none') void this.voice.requestMic();
-    this.voice.update(canTalk && input.isDown(key), canTalk && input.isDown(whisper), cam);
+    this.voice.update(this.voice.keyHeld(key), this.voice.keyHeld(whisper), cam);
   }
 
   private sendChat(text: string): void {

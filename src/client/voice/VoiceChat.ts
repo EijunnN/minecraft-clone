@@ -161,7 +161,31 @@ export class VoiceChat {
   /** Las dos salas de voz (convoluciones): corta y larga, compartidas por todas las voces. */
   private rooms: { small: ConvolverNode; large: ConvolverNode } | null = null;
 
-  constructor(private g: Game) {}
+  /** Teclas pulsadas ahora (hablar y susurrar funcionan con cualquier pantalla abierta: inventario, comercio…). */
+  private held = new Set<string>();
+  private readonly onKeyDown = (e: KeyboardEvent) => {
+    if (e.repeat || typingIn(e.target)) return;
+    const k = this.settings.keys;
+    if (e.code !== k.voice && e.code !== k.whisper) return;
+    this.held.add(e.code);
+    // La primera vez, el micrófono se pide aquí (con el gesto de pulsar la tecla).
+    if (this.active && this.micState === 'none') void this.requestMic();
+  };
+  private readonly onKeyUp = (e: KeyboardEvent) => {
+    this.held.delete(e.code);
+  };
+  private readonly onBlur = () => this.held.clear();
+
+  constructor(private g: Game) {
+    window.addEventListener('keydown', this.onKeyDown, true);
+    window.addEventListener('keyup', this.onKeyUp, true);
+    window.addEventListener('blur', this.onBlur);
+  }
+
+  /** ¿Se está pulsando ahora la tecla de hablar / de susurrar? */
+  keyHeld(code: string): boolean {
+    return this.held.has(code);
+  }
 
   private get settings() {
     return this.g.cfg.settings;
@@ -778,6 +802,10 @@ export class VoiceChat {
   }
 
   dispose(): void {
+    window.removeEventListener('keydown', this.onKeyDown, true);
+    window.removeEventListener('keyup', this.onKeyUp, true);
+    window.removeEventListener('blur', this.onBlur);
+    this.held.clear();
     const net = this.g.net;
     if (this.announced && net) net.send({ t: 'voice', on: false });
     this.announced = false;
@@ -786,4 +814,12 @@ export class VoiceChat {
     this.hud?.remove();
     this.hud = null;
   }
+}
+
+/** ¿Se está escribiendo en un campo de texto? (chat, carteles, libros, buscador…): entonces las teclas no hablan. */
+function typingIn(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
 }
