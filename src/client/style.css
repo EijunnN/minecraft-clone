@@ -767,6 +767,12 @@ kbd {
   display: block;
 }
 
+#playerlist .pl-server {
+  margin: -4px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 #nametags {
   position: absolute;
   inset: 0;

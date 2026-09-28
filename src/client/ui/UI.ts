@@ -587,11 +587,12 @@ export class UI {
     }
   }
 
-  showPlayerList(players: { name: string; color: string; me: boolean }[], room: string, ping: number | null): void {
+  showPlayerList(players: { name: string; color: string; me: boolean }[], room: string, ping: number | null, server: string | null = null): void {
     const el = $('playerlist');
     el.classList.remove('hidden');
     el.innerHTML =
       `<h4>Mundo «${escapeHtml(room)}» · ${players.length} jugador${players.length === 1 ? '' : 'es'}${ping !== null ? ` · ${Math.round(ping)} ms` : ''}</h4>` +
+      (server ? `<div class="pl-server">Servidor en ${escapeHtml(server)}</div>` : '') +
       players
         .map((p) => `<div class="p"><span class="dot" style="background:${p.color}"></span>${escapeHtml(p.name)}${p.me ? ' <span style="color:var(--muted)">(tú)</span>' : ''}</div>`)
         .join('');

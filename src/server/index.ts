@@ -10,6 +10,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { TICK_RATE, type Conn } from '../shared/sim/GameServer';
 import { Multiverse } from '../shared/sim/Multiverse';
 import type { ServerStore } from '../shared/sim/store';
+import { regionFor, cityOf, type GeoInfo } from './region';
 
 export interface Env {
   GAME_WORLDS: DurableObjectNamespace<GameWorld>;
@@ -26,6 +27,7 @@ const idleMs = (env: Env): number => {
 };
 
 const ROOM_RE = /^\/api\/room\/([a-z0-9_-]{1,32})\/ws$/i;
+const WHERE_RE = /^\/api\/room\/([a-z0-9_-]{1,32})\/donde$/i;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -36,13 +38,26 @@ export default {
         return new Response('Se esperaba una conexión WebSocket', { status: 426 });
       }
       const room = m[1].toLowerCase();
-      const stub = env.GAME_WORLDS.getByName(room);
+      // Un mundo nuevo nace en la región de quien lo crea (a uno que ya existe la pista no le afecta).
+      const hint = regionFor(request.cf as GeoInfo | undefined);
+      const stub = env.GAME_WORLDS.getByName(room, hint ? { locationHint: hint } : undefined);
       // El objeto no sabe su propio nombre: se lo pasamos (lo necesita para avisar al directorio).
       const u = new URL(request.url);
       u.searchParams.set('sala', room);
       return stub.fetch(new Request(u, request));
     }
     if (url.pathname === '/api/health') return Response.json({ ok: true });
+    // Diagnóstico de la latencia: dónde está el servidor del mundo y por dónde entra el jugador.
+    const w = url.pathname.match(WHERE_RE);
+    if (w) {
+      const cf = request.cf as (GeoInfo & { colo?: string }) | undefined;
+      const hint = regionFor(cf);
+      const world = await env.GAME_WORLDS.getByName(w[1].toLowerCase(), hint ? { locationHint: hint } : undefined).where();
+      return Response.json({
+        servidor: world, ciudad: world ? cityOf(world) : null, entrada: cf?.colo ?? null, pais: cf?.country ?? null,
+        region: regionFor(cf) ?? null,
+      });
+    }
     if (url.pathname === '/api/stats') {
       const stats = await env.WORLD_DIRECTORY.getByName('global').stats();
       return Response.json(stats, { headers: { 'Cache-Control': 'public, max-age=10' } });
@@ -187,6 +202,21 @@ export class GameWorld extends DurableObject<Env> {
 
   private roomName(): string | null {
     return (this.room ??= this.store.getMeta('room'));
+  }
+
+  /** Centro de datos donde vive este mundo (lo dice la traza de Cloudflare de una petición saliente). */
+  private colo: string | null = null;
+
+  async where(): Promise<string | null> {
+    if (this.colo) return this.colo;
+    try {
+      const r = await fetch('https://cloudflare.com/cdn-cgi/trace');
+      const m = (await r.text()).match(/^colo=([A-Z]{3})$/m);
+      this.colo = m ? m[1] : null;
+    } catch {
+      this.colo = null;
+    }
+    return this.colo;
   }
 
   /** Cuenta al directorio cuánta gente hay (si cambió). */

@@ -114,6 +114,8 @@ export class Game {
   readonly trading = new Trading(this);
   /** Chat de voz por proximidad. */
   readonly voice = new VoiceChat(this);
+  /** Dónde está el servidor del mundo (ciudad del centro de datos de Cloudflare), para la lista de jugadores. */
+  serverWhere: string | null = null;
   readonly xp = new Experience();
   readonly statusEffects = new StatusEffects();
   /** Fase 6 (asaltos): asalto cercano (para la barra) o null. */
@@ -271,6 +273,15 @@ export class Game {
     }
     const w = welcome as Welcome | null;
     if (!w) throw new Error('El servidor no envió la bienvenida.');
+    if (!this.offline) {
+      // Diagnóstico de la latencia: en qué centro de datos vive este mundo.
+      void fetch(`/api/room/${encodeURIComponent(this.cfg.room)}/donde`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { servidor?: string; ciudad?: string } | null) => {
+          if (d?.servidor) this.serverWhere = d.ciudad && d.ciudad !== d.servidor ? `${d.ciudad} (${d.servidor})` : d.servidor;
+        })
+        .catch(() => {});
+    }
     this.time = w.time;
     this.voice.onWelcome();
     for (const p of w.players) this.network.addRemote(p, false);
@@ -784,7 +795,7 @@ export class Game {
     if (tabDown) {
       const list = [{ name: this.cfg.name, color: this.cfg.shirt, me: true }];
       for (const rp of this.remote.values()) list.push({ name: rp.name, color: rp.shirt, me: false });
-      ui.showPlayerList(list, this.cfg.room, this.net?.latency ?? null);
+      ui.showPlayerList(list, this.cfg.room, this.net?.latency ?? null, this.offline ? null : this.serverWhere);
     } else if (this.lastTabDown) ui.hidePlayerList();
     this.lastTabDown = tabDown;
     this.trading.update(); // Fase 6 (aldeanos)

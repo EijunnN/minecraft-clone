@@ -136,3 +136,14 @@ test('entorno: la sala suena según tamaño y material; eco en las cavernas; de 
   assert.ok(back.gain < front.gain && back.cutoff < front.cutoff / 3);
   assert.ok(airCutoff(48) < airCutoff(5));
 });
+
+test('región: cada mundo nuevo nace cerca de quien lo crea', async () => {
+  const { regionFor, cityOf } = await import('../src/server/region');
+  assert.equal(regionFor({ continent: 'SA', country: 'PE' }), 'sam');
+  assert.equal(regionFor({ continent: 'NA', country: 'MX', longitude: '-99.1' }), 'enam');
+  assert.equal(regionFor({ continent: 'NA', country: 'US', longitude: '-122.4' }), 'wnam');
+  assert.equal(regionFor({ continent: 'EU', country: 'ES', longitude: '-3.7' }), 'weur');
+  assert.equal(regionFor({ continent: 'AS', country: 'AE' }), 'me');
+  assert.equal(regionFor(undefined), undefined);
+  assert.equal(cityOf('MIA'), 'Miami');
+});
