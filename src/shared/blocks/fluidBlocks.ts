@@ -122,8 +122,57 @@ export function fluidMachineInfo(id: number): { kind: 'tank' | 'pump'; dir: numb
   return i && i.controller ? { kind: isTankBlock(id) ? 'tank' : 'pump', dir: i.dir } : null;
 }
 
+/**
+ * Pozo de petróleo (pumpjack): 3×3 y 3 de alto; se pone sobre un pozo (el bloque de debajo del centro) y saca petróleo crudo por delante.
+ * `dir` (0 +x, 1 +z, 2 −x, 3 −z) es hacia donde asoma la conexión de tubería (en el centro del lado).
+ */
+export const PUMPJACK = multiblock({
+  key: 'pumpjack', name: 'Pozo de petróleo (bomba)', size: [3, 3, 3], anchor: [1, 0, 1], oriented: true,
+  model: [
+    mbox(2, 0, 2, 46, 4, 46, six(L('polished_andesite'))),
+    mbox(18, 4, 18, 30, 30, 30, six(L('iron_block'))),
+    mbox(6, 30, 20, 42, 36, 28, six(L('iron_block'))), // el balancín
+    mbox(38, 20, 21, 46, 34, 27, six(L('polished_andesite'))),
+    mbox(20, 4, 0, 28, 12, 18, six(L('polished_andesite'))), // la salida, dentro de UNA casilla de delante
+  ],
+  opts: { ...METAL, hardness: 3 },
+});
+export const isPumpjack = (id: number): boolean => id > 0 && familyBase(id) === PUMPJACK;
+
+/**
+ * Caldera: 3×2 y 2 de alto, mirando al norte en el modelo (`dir`: hacia donde sale el vapor, por el centro del frente). El agua entra y
+ * sale por los dos extremos de atrás. Quema el combustible que le meta un brazo. La casilla principal es el centro del frente.
+ */
+export const BOILER = multiblock({
+  key: 'boiler', name: 'Caldera', size: [3, 2, 2], anchor: [1, 0, 0], oriented: true,
+  model: [
+    mbox(0, 0, 0, 48, 4, 32, six(L('polished_andesite'))),
+    mbox(2, 4, 8, 46, 26, 30, six(L('iron_block'))), // el depósito
+    mbox(18, 4, 0, 30, 20, 8, [L('furnace_side'), L('furnace_side'), L('furnace_top'), L('furnace_top'), L('furnace_side'), L('furnace_front')]), // la boca del fuego
+    mbox(20, 26, 14, 28, 32, 22, six(L('iron_block'))), // la chimenea
+  ],
+  opts: { ...METAL, hardness: 3 },
+});
+export const isBoiler = (id: number): boolean => id > 0 && familyBase(id) === BOILER;
+
+/**
+ * Máquina de vapor: 3×5 y 2 de alto; el vapor entra por un extremo y sale por el otro (se encadenan en fila). `dir` es el sentido de la
+ * fila. La casilla principal es la del centro. 900 kW con 30 de vapor por segundo.
+ */
+export const STEAM_ENGINE = multiblock({
+  key: 'steam_engine', name: 'Máquina de vapor', size: [3, 2, 5], anchor: [1, 0, 2], oriented: true,
+  model: [
+    mbox(0, 0, 0, 48, 4, 80, six(L('polished_andesite'))),
+    mbox(10, 4, 2, 38, 24, 78, six(L('iron_block'))),
+    mbox(4, 4, 24, 44, 14, 56, six(L('polished_andesite'))), // el cilindro
+    mbox(20, 24, 12, 28, 32, 68, six(L('iron_block'))), // el eje
+  ],
+  opts: { ...METAL, hardness: 3 },
+});
+export const isSteamEngine = (id: number): boolean => id > 0 && familyBase(id) === STEAM_ENGINE;
+
 /** Todo lo de los fluidos que se coloca con «fantasma» y sale en el inventario. */
-export const FLUID_BLOCKS: readonly number[] = [PIPE, PIPE_TO_GROUND, STORAGE_TANK, PUMP, OFFSHORE_PUMP];
-(POWER_BLOCKS as number[]).push(PUMP); // la bomba lleva energía; la de agua no
+export const FLUID_BLOCKS: readonly number[] = [PIPE, PIPE_TO_GROUND, STORAGE_TANK, PUMP, OFFSHORE_PUMP, PUMPJACK, BOILER, STEAM_ENGINE];
+(POWER_BLOCKS as number[]).push(PUMP, PUMPJACK, BOILER, STEAM_ENGINE); // la bomba lleva energía; la de agua no
 (LOGISTICS_INVENTORY as number[]).push(PIPE, PIPE_TO_GROUND, STORAGE_TANK, OFFSHORE_PUMP);
 export const FLUID_INVENTORY: readonly number[] = [...FLUID_BLOCKS];

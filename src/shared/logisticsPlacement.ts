@@ -4,7 +4,7 @@
 import {
   BELTS, INSERTERS, UNDERGROUNDS, SPLITTERS, UNDERGROUND_MAX, POLE_SMALL, POLE_MEDIUM, beltState, inserterState, undergroundState, beltInfo,
   inserterInfo, undergroundInfo, splitterInfo, PIPE_TO_GROUND, OFFSHORE_PUMP, undergroundPipeState, undergroundPipeDir, isUndergroundPipe, isOffshorePump,
-  offshorePumpDir, familyBase, multiOf, multiInfo, multiFootprint, multiControllerPos, BLOCK_REPLACEABLE, BLOCK_FLUID,
+  offshorePumpDir, PUMPJACK, MOON_OIL_WELL, familyBase, multiOf, multiInfo, multiFootprint, multiControllerPos, BLOCK_REPLACEABLE, BLOCK_FLUID,
 } from './blocks';
 import { BELT_DX, BELT_DZ } from './logistics/belts';
 import { MIN_Y, MAX_Y } from './constants';
@@ -117,6 +117,7 @@ export function planLogistics(
   // Máquinas de varias casillas: toda la huella de una vez, con el ancla donde apunta el jugador y el frente hacia donde mira.
   const multi = multiOf(base);
   if (multi) {
+    if (familyBase(base) === PUMPJACK && get(x, y - 1, z) !== MOON_OIL_WELL) return null; // sólo sobre un pozo de petróleo
     const cells = multiFootprint(base, multi.spec.oriented ? lookDir(yaw) : 0, x, y, z);
     for (const [cx, cy, cz] of cells) {
       if (cy <= MIN_Y || cy >= MAX_Y) return null;

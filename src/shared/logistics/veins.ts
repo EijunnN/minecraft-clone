@@ -6,8 +6,8 @@
 // Números (de Factorio: taladro eléctrico 0,5 mineral/s con mineral de tiempo 1; aquí la potencia sigue la proporción de nuestro panel
 // de 20 kW): 0,5 mineral/s a plena potencia, 30 kW, área de 5×5 y hasta 3 bloques de fondo. Un extractor sobre veta rica (2 capas de
 // 25 bloques, ~200 cada una) da ~10 000 minerales: unas 5 horas a 0,5/s.
-import { MOON_IRON_VEIN, DIRTY_ICE, MOON_REGOLITH_DARK, MOON_ROCK } from '../blocks';
-import { RAW_IRON, itemForBlock } from '../items';
+import { MOON_IRON_VEIN, MOON_COPPER_VEIN, MOON_COAL_VEIN, MOON_STONE_VEIN, DIRTY_ICE, MOON_REGOLITH, MOON_REGOLITH_DARK, MOON_ROCK, COBBLESTONE } from '../blocks';
+import { RAW_IRON, RAW_COPPER, COAL, itemForBlock } from '../items';
 import { hash2 } from '../constants';
 
 /** Segundos que tarda el extractor en sacar un objeto a plena potencia (0,5 objetos/s). */
@@ -33,6 +33,9 @@ export interface VeinYield {
 /** ¿Es un bloque del que el extractor puede sacar algo? (y qué) */
 export function veinYield(block: number): VeinYield | null {
   if (block === MOON_IRON_VEIN) return { item: RAW_IRON, depleted: MOON_REGOLITH_DARK };
+  if (block === MOON_COPPER_VEIN) return { item: RAW_COPPER, depleted: MOON_REGOLITH };
+  if (block === MOON_COAL_VEIN) return { item: COAL, depleted: MOON_REGOLITH };
+  if (block === MOON_STONE_VEIN) return { item: itemForBlock(COBBLESTONE) || COBBLESTONE, depleted: MOON_ROCK };
   if (block === DIRTY_ICE) {
     const item = itemForBlock(DIRTY_ICE);
     return item ? { item, depleted: MOON_ROCK } : null;

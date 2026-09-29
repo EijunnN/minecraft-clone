@@ -30,6 +30,8 @@ registerRedstone([PIPE, PIPE_TO_GROUND, STORAGE_TANK, PUMP, OFFSHORE_PUMP], {
 });
 
 const WATER_FLUID = fluidByName('water')!.id;
+/** Las claves de las cajas de las máquinas empiezan aquí (por encima de cualquier posKey). */
+const MACHINE_BOX_BASE = 4e15;
 /** Cada cuántos ticks se manda a los jugadores lo que hay en las cajas de alrededor. */
 const SYNC_EVERY = 10;
 const SYNC_RANGE = 40;
@@ -64,6 +66,10 @@ export class Fluids implements PowerConsumer {
   private pumps = new Map<number, PumpRec>();
   private saved = new Map<number, [number, number]>();
   private api: RedstoneApi | null = null;
+  /** Cajas y puertos de las máquinas (ensambladoras, plantas químicas, pozos…): «x,y,z,cara» → caja. */
+  private ports = new Map<string, number>();
+  private machinePorts = new Map<number, string[]>();
+  private nextBox = MACHINE_BOX_BASE;
   private dirty = true;
   private saveDirty = false;
   private tickCount = 0;
@@ -147,11 +153,49 @@ export class Fluids implements PowerConsumer {
     this.power.detach(k);
   }
 
+  // ------------------------------------------------------------------ cajas y puertos de las máquinas
+
+  /** Crea una caja para una máquina y devuelve su clave. */
+  allocBox(cap: number): number {
+    const k = this.nextBox++;
+    this.graph.add(k, cap);
+    return k;
+  }
+
+  freeBox(key: number): void {
+    this.graph.remove(key);
+    this.dirty = true;
+  }
+
+  /** Dice por qué caras de qué casillas se une la máquina `machine`: cada puerto es una cara de una casilla y la caja a la que lleva. */
+  setMachinePorts(machine: number, ports: { x: number; y: number; z: number; face: number; box: number }[]): void {
+    this.clearMachinePorts(machine);
+    const keys: string[] = [];
+    for (const p of ports) {
+      const k = `${p.x},${p.y},${p.z},${p.face}`;
+      this.ports.set(k, p.box);
+      keys.push(k);
+    }
+    this.machinePorts.set(machine, keys);
+    this.dirty = true;
+  }
+
+  clearMachinePorts(machine: number): void {
+    for (const k of this.machinePorts.get(machine) ?? []) this.ports.delete(k);
+    this.machinePorts.delete(machine);
+    this.dirty = true;
+  }
+
+  private portBox(x: number, y: number, z: number, face: number): number {
+    return this.ports.get(`${x},${y},${z},${face}`) ?? -1;
+  }
+
   // ------------------------------------------------------------------ conexiones
 
   /** ¿Ofrece el bloque `id` de la casilla (x, y, z) una unión por la cara `face`? */
   private offers(id: number, x: number, y: number, z: number, face: number): boolean {
     if (id <= 0) return false;
+    if (this.ports.size && this.ports.has(`${x},${y},${z},${face}`)) return true;
     if (isPipe(id)) return true;
     if (isUndergroundPipe(id)) return face === faceOfDir(undergroundPipeDir(id));
     if (isOffshorePump(id)) return face === faceOfDir(offshorePumpDir(id));
@@ -172,7 +216,11 @@ export class Fluids implements PowerConsumer {
   }
 
   /** Clave de la caja de la casilla (x, y, z), o −1 si ahí no hay una (una bomba no tiene caja). */
-  private boxKey(id: number, x: number, y: number, z: number): number {
+  private boxKey(id: number, x: number, y: number, z: number, face = -1): number {
+    if (face >= 0 && this.ports.size) {
+      const pb = this.portBox(x, y, z, face);
+      if (pb >= 0) return pb;
+    }
     if (isPipe(id) || isUndergroundPipe(id) || isOffshorePump(id)) return posKey(x, y, z);
     if (isTankBlock(id)) {
       const c = multiControllerPos(id, x, y, z);
@@ -212,7 +260,7 @@ export class Fluids implements PowerConsumer {
         const nx = c.x + PIPE_FACE_DX[f], ny = c.y + PIPE_FACE_DY[f], nz = c.z + PIPE_FACE_DZ[f];
         const nid = this.block(nx, ny, nz);
         if (nid < 0 || !this.offers(nid, nx, ny, nz, oppositeFace(f))) continue;
-        link(k, this.boxKey(nid, nx, ny, nz));
+        link(k, this.boxKey(nid, nx, ny, nz, oppositeFace(f)));
       }
       if (c.kind === 'ug') {
         const partner = this.partnerOf(c, id);
@@ -222,6 +270,14 @@ export class Fluids implements PowerConsumer {
         const want = this.maskAt(c.x, c.y, c.z);
         if (pipeMask(id) !== want && this.api) this.api.setBlock(c.x, c.y, c.z, pipeState(want), UPDATE_CLIENTS);
       }
+    }
+    // Los puertos de las máquinas: cada uno se une con lo que ofrezca la cara contraria de la casilla de al lado.
+    for (const [pk, box] of this.ports) {
+      const [x, y, z, f] = pk.split(',').map(Number);
+      const nx = x + PIPE_FACE_DX[f], ny = y + PIPE_FACE_DY[f], nz = z + PIPE_FACE_DZ[f];
+      const nid = this.block(nx, ny, nz);
+      if (nid < 0 || !this.offers(nid, nx, ny, nz, oppositeFace(f))) continue;
+      link(box, this.boxKey(nid, nx, ny, nz, oppositeFace(f)));
     }
     this.graph.setEdges(edges);
     // Las bombas: la caja de detrás y la de delante.
@@ -233,8 +289,8 @@ export class Fluids implements PowerConsumer {
       const inX = rx - fx, inZ = rz - fz;
       const outX = ax + fx, outZ = az + fz;
       const iid = this.block(inX, p.y, inZ), oid = this.block(outX, p.y, outZ);
-      p.inKey = iid > 0 && this.offers(iid, inX, p.y, inZ, f) ? this.boxKey(iid, inX, p.y, inZ) : -1;
-      p.outKey = oid > 0 && this.offers(oid, outX, p.y, outZ, oppositeFace(f)) ? this.boxKey(oid, outX, p.y, outZ) : -1;
+      p.inKey = iid > 0 && this.offers(iid, inX, p.y, inZ, f) ? this.boxKey(iid, inX, p.y, inZ, f) : -1;
+      p.outKey = oid > 0 && this.offers(oid, outX, p.y, outZ, oppositeFace(f)) ? this.boxKey(oid, outX, p.y, outZ, oppositeFace(f)) : -1;
     }
   }
 
@@ -333,7 +389,7 @@ export class Fluids implements PowerConsumer {
       if (!s.joined || s.dimPending) continue;
       const rows: number[][] = [];
       for (const [k, b] of this.graph.boxes) {
-        if (b.amount <= 0) continue;
+        if (b.amount <= 0 || k >= MACHINE_BOX_BASE) continue;
         const x = keyX(k), z = keyZ(k);
         if (Math.hypot(x + 0.5 - s.p[0], z + 0.5 - s.p[2]) > SYNC_RANGE) continue;
         rows.push([x, keyY(k), z, b.fluid, Math.round(b.amount * 10) / 10, b.cap]);
@@ -348,7 +404,7 @@ export class Fluids implements PowerConsumer {
     this.saveDirty = false;
     const rows: number[][] = [];
     for (const [k, v] of this.saved) rows.push([keyX(k), keyY(k), keyZ(k), v[0], v[1]]);
-    for (const [k, b] of this.graph.boxes) if (b.amount > 0) rows.push([keyX(k), keyY(k), keyZ(k), b.fluid, Math.round(b.amount * 100) / 100]);
+    for (const [k, b] of this.graph.boxes) if (b.amount > 0 && k < MACHINE_BOX_BASE) rows.push([keyX(k), keyY(k), keyZ(k), b.fluid, Math.round(b.amount * 100) / 100]);
     store.setMeta('fluids', JSON.stringify(rows));
   }
 }

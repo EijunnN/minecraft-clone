@@ -6,7 +6,7 @@ import recipesJson from './recipes.json';
 import { FACTORIO_NEW, COAL, IRON_INGOT, COPPER_INGOT, RAW_IRON, RAW_COPPER, type ItemStack } from '../items';
 import {
   COBBLESTONE, BELTS, UNDERGROUNDS, SPLITTERS, INSERTERS, POLE_SMALL, POLE_MEDIUM, POLE_BIG, SUBSTATION, SOLAR_PANEL, ACCUMULATOR, ASSEMBLER_BLOCKS,
-  FURNACE_BLOCKS, ELECTRIC_SMELTER, EXTRACTOR, ALL_LOGS, LAB_BLOCK,
+  FURNACE_BLOCKS, ELECTRIC_SMELTER, EXTRACTOR, ALL_LOGS, LAB_BLOCK, PIPE, PIPE_TO_GROUND, STORAGE_TANK, PUMP, OFFSHORE_PUMP, PUMPJACK, BOILER, STEAM_ENGINE,
 } from '../blocks';
 
 /** Objetos del juego que valen por cada nombre de Factorio (varios = cualquiera de ellos). */
@@ -29,6 +29,8 @@ const EXISTING: Readonly<Record<string, readonly number[]>> = {
   'stone-furnace': [FURNACE_BLOCKS[0]], 'steel-furnace': [FURNACE_BLOCKS[1]], 'electric-furnace': [ELECTRIC_SMELTER],
   'electric-mining-drill': [EXTRACTOR],
   lab: [LAB_BLOCK],
+  pipe: [PIPE], 'pipe-to-ground': [PIPE_TO_GROUND], 'storage-tank': [STORAGE_TANK], pump: [PUMP], 'offshore-pump': [OFFSHORE_PUMP], pumpjack: [PUMPJACK],
+  boiler: [BOILER], 'steam-engine': [STEAM_ENGINE],
 };
 
 /** Los objetos del juego que valen por ese nombre de Factorio (null si aún no existe). */

@@ -44,3 +44,22 @@ export const PIPE_UNDERGROUND_MAX = 10;
 export const FLOW_FACTOR = 0.4;
 /** Pasos de flujo por tick del juego (20 tps → 60 pasos por segundo). */
 export const FLOW_SUBSTEPS = 3;
+
+// Pozo de petróleo (pumpjack): 90 kW; cada segundo saca 10 × el rendimiento de crudo del pozo. Un pozo empieza con un rendimiento (100 % =
+// 300 000 de reserva) y pierde reserva con lo que se saca (10 por segundo a pleno rendimiento); nunca baja del 20 %.
+export const PUMPJACK_KW = 90;
+export const OIL_PER_SECOND = 10;
+export const OIL_FULL = 300000;
+export const OIL_MIN_YIELD = 0.2;
+export const OIL_DEPLETION_PER_SECOND = 10;
+export const PUMPJACK_VOLUME = 100;
+
+// Vapor (Factorio): la caldera (1,8 MW) convierte 6 de agua por segundo en 60 de vapor a 165 °C (30 kJ por unidad); la máquina de vapor
+// (900 kW) gasta 30 de vapor por segundo. Una caldera alimenta a dos máquinas.
+export const BOILER_KW = 1800;
+export const BOILER_WATER_PER_SECOND = 6;
+export const BOILER_STEAM_PER_SECOND = 60;
+export const STEAM_KJ = 30;
+export const STEAM_ENGINE_KW = 900;
+export const BOILER_VOLUME = 200;
+export const ENGINE_VOLUME = 200;

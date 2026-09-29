@@ -8,7 +8,9 @@
 //   cuenco hundido con un borde elevado alrededor. En las latitudes altas, los grandes guardan hielo sucio en el fondo
 //   (nunca ven el Sol).
 import { CHUNK_SIZE, CHUNK_VOLUME, MIN_Y, MAX_Y, blockIndex, hash2 } from '../constants';
-import { BEDROCK, MOON_REGOLITH, MOON_REGOLITH_DARK, MOON_ROCK, DIRTY_ICE, MOON_IRON_VEIN } from '../blocks';
+import {
+  BEDROCK, MOON_REGOLITH, MOON_REGOLITH_DARK, MOON_ROCK, DIRTY_ICE, MOON_IRON_VEIN, MOON_COPPER_VEIN, MOON_COAL_VEIN, MOON_STONE_VEIN, MOON_OIL_WELL,
+} from '../blocks';
 import { TerrainGenerator, type ColumnInfo, type GenResult } from './terrain';
 import { Simplex } from './noise';
 import { BIOME_MOON_HIGHLANDS, BIOME_MOON_MARE } from './biomeIds';
@@ -95,28 +97,86 @@ export class MoonGenerator extends TerrainGenerator {
     return this.mare.noise2(x / 420, z / 420) + 0.25 * this.mare.noise2(x / 130, z / 130) > 0.12;
   }
 
-  private starterPatch: { x: number; z: number } | null = null;
+  private spawnAt: { x: number; z: number } | null = null;
+
+  private spawnPoint(): { x: number; z: number } {
+    if (!this.spawnAt) {
+      const s = this.findSpawn();
+      this.spawnAt = { x: Math.floor(s.x), z: Math.floor(s.z) };
+    }
+    return this.spawnAt;
+  }
 
   /**
-   * ¿Es (x, z) una veta de hierro? Manchas de 3 a 8 bloques de radio con bordes irregulares, una celda de 64 de cada tres o cuatro,
-   * sólo en los mares (el basalto con ilmenita), más una mancha fija junto al sitio de aterrizaje para que la primera se encuentre.
+   * ¿Es (x, z) de una mancha de un recurso? Manchas de `rMin` a `rMin + rSpan` bloques de radio con bordes irregulares, una celda de `cell`
+   * de cada `1 / chance`, donde `allow` diga (los mares, las tierras altas…), más una mancha fija de 5,5 de radio a `starter` del punto de
+   * aterrizaje para que la primera se encuentre.
    */
-  veinAt(x: number, z: number): boolean {
-    const fuzz = this.detail.noise2(x / 3.1, z / 3.1) * 1.4;
-    if (!this.starterPatch) {
-      const s = this.findSpawn();
-      this.starterPatch = { x: Math.floor(s.x) + 22, z: Math.floor(s.z) + 9 };
-    }
-    if (Math.hypot(x - this.starterPatch.x, z - this.starterPatch.z) + fuzz < 5.5) return true;
-    const ci = Math.floor(x / VEIN_CELL), cj = Math.floor(z / VEIN_CELL);
+  private patchAt(
+    x: number, z: number, salt: number, cell: number, chance: number, rMin: number, rSpan: number, allow: (px: number, pz: number) => boolean,
+    starter: readonly [number, number],
+  ): boolean {
+    const fuzz = this.detail.noise2(x / 3.1 + salt, z / 3.1 - salt) * 1.4;
+    const sp = this.spawnPoint();
+    if (Math.hypot(x - (sp.x + starter[0]), z - (sp.z + starter[1])) + fuzz < 5.5) return true;
+    const ci = Math.floor(x / cell), cj = Math.floor(z / cell);
     for (let dj = -1; dj <= 1; dj++) {
       for (let di = -1; di <= 1; di++) {
-        const h = (n: number) => (hash2((ci + di) * 29 + n, (cj + dj) * 13 + 5, this.seed ^ 0x1e70b0) >>> 0) / 0x100000000;
-        if (h(0) >= 0.4) continue;
-        const r = 3 + 5 * h(1);
-        const px = (ci + di) * VEIN_CELL + r + (VEIN_CELL - 2 * r) * h(2);
-        const pz = (cj + dj) * VEIN_CELL + r + (VEIN_CELL - 2 * r) * h(3);
-        if (Math.hypot(x - px, z - pz) + fuzz < r && this.isMare(px, pz)) return true;
+        const h = (n: number) => (hash2((ci + di) * 29 + n, (cj + dj) * 13 + 5, this.seed ^ salt) >>> 0) / 0x100000000;
+        if (h(0) >= chance) continue;
+        const r = rMin + rSpan * h(1);
+        const px = (ci + di) * cell + r + (cell - 2 * r) * h(2);
+        const pz = (cj + dj) * cell + r + (cell - 2 * r) * h(3);
+        if (Math.hypot(x - px, z - pz) + fuzz < r && allow(px, pz)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** ¿Es (x, z) una veta de hierro? Sólo en los mares (el basalto con ilmenita). */
+  veinAt(x: number, z: number): boolean {
+    return this.patchAt(x, z, 0x1e70b0, VEIN_CELL, 0.4, 3, 5, (px, pz) => this.isMare(px, pz), [22, 9]);
+  }
+
+  /** Cobre: en cualquier sitio, algo más raro que el hierro. */
+  copperAt(x: number, z: number): boolean {
+    return this.patchAt(x, z, 0x0c0b12, VEIN_CELL, 0.35, 3, 5, () => true, [-20, 14]);
+  }
+
+  /** Carbón: en las tierras altas. */
+  coalAt(x: number, z: number): boolean {
+    return this.patchAt(x, z, 0x0c0a15, 80, 0.3, 3, 5, (px, pz) => !this.isMare(px, pz), [8, -24]);
+  }
+
+  /** Piedra: manchas algo mayores, en cualquier sitio. */
+  stoneAt(x: number, z: number): boolean {
+    return this.patchAt(x, z, 0x057013, VEIN_CELL, 0.4, 4, 5, () => true, [-14, -22]);
+  }
+
+  /**
+   * ¿Hay un pozo de petróleo en la columna (x, z)? Campos de 3 a 6 pozos sueltos en un radio de 7, en los mares, una celda de 160 de cada
+   * tres; y un campo fijo cerca del aterrizaje (a unos 50 bloques).
+   */
+  oilAt(x: number, z: number): boolean {
+    const sp = this.spawnPoint();
+    const wellsOf = (cx: number, cz: number, seed: number): boolean => {
+      const n = 3 + ((hash2(cx, cz, seed) >>> 0) % 4);
+      for (let i = 0; i < n; i++) {
+        const wx = cx + Math.round(((hash2(cx + i * 7, cz, seed ^ 0x51) >>> 0) / 0x100000000 - 0.5) * 14);
+        const wz = cz + Math.round(((hash2(cx, cz + i * 11, seed ^ 0xa3) >>> 0) / 0x100000000 - 0.5) * 14);
+        if (wx === x && wz === z) return true;
+      }
+      return false;
+    };
+    if (Math.abs(x - (sp.x + 36)) <= 8 && Math.abs(z - (sp.z - 34)) <= 8 && wellsOf(sp.x + 36, sp.z - 34, this.seed ^ 0x0113)) return true;
+    const cell = 160;
+    const ci = Math.floor(x / cell), cj = Math.floor(z / cell);
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        const h = (n: number) => (hash2((ci + di) * 29 + n, (cj + dj) * 13 + 3, this.seed ^ 0x0113) >>> 0) / 0x100000000;
+        if (h(0) >= 0.33) continue;
+        const cx = Math.floor((ci + di) * cell + 20 + (cell - 40) * h(1)), cz = Math.floor((cj + dj) * cell + 20 + (cell - 40) * h(2));
+        if (Math.abs(x - cx) <= 8 && Math.abs(z - cz) <= 8 && this.isMare(cx, cz) && wellsOf(cx, cz, this.seed ^ 0x0114)) return true;
       }
     }
     return false;
@@ -194,7 +254,9 @@ export class MoonGenerator extends TerrainGenerator {
         const mare = this.isMare(x, z);
         const { big } = this.craterShape(x, z);
         const ice = big && Math.abs(z) > MOON_ICE_LATITUDE;
-        const vein = !ice && this.veinAt(x, z);
+        // Un recurso por columna, por orden: hierro, cobre, carbón, piedra.
+        const vein = ice ? 0 : this.veinAt(x, z) ? MOON_IRON_VEIN : this.copperAt(x, z) ? MOON_COPPER_VEIN : this.coalAt(x, z) ? MOON_COAL_VEIN : this.stoneAt(x, z) ? MOON_STONE_VEIN : 0;
+        const well = !ice && !vein && this.oilAt(x, z);
         heights[lz * CHUNK_SIZE + lx] = top;
         const soil = mare ? MOON_REGOLITH_DARK : MOON_REGOLITH;
         for (let y = MIN_Y; y <= top; y++) {
@@ -202,7 +264,8 @@ export class MoonGenerator extends TerrainGenerator {
           if (y === MIN_Y) b = BEDROCK;
           else if (y > top - REGOLITH_DEPTH) b = soil;
           if (ice && y > top - 4) b = DIRTY_ICE;
-          else if (vein && y > top - VEIN_DEPTH) b = MOON_IRON_VEIN;
+          else if (vein && y > top - VEIN_DEPTH) b = vein;
+          else if (well && y === top) b = MOON_OIL_WELL;
           blocks[blockIndex(lx, y, lz)] = b;
         }
       }

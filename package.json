@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json && tsc --noEmit -p tsconfig.test.json",
     "cf-typegen": "wrangler types",
     "test": "tsx --test \"tests/*.test.ts\"",
-    "test:luna": "tsx --test tests/rocket.test.ts tests/rocketFlight.test.ts tests/belts.test.ts tests/beltsServer.test.ts tests/power.test.ts tests/extractors.test.ts tests/inserters.test.ts tests/assemblers.test.ts tests/factorio.test.ts tests/research.test.ts tests/fluidNet.test.ts tests/fluids.test.ts tests/multiblock.test.ts tests/beltNetwork.test.ts tests/limits.test.ts tests/ids.test.ts tests/dimensions.test.ts"
+    "test:luna": "tsx --test tests/rocket.test.ts tests/rocketFlight.test.ts tests/belts.test.ts tests/beltsServer.test.ts tests/power.test.ts tests/extractors.test.ts tests/inserters.test.ts tests/assemblers.test.ts tests/factorio.test.ts tests/research.test.ts tests/fluidNet.test.ts tests/fluids.test.ts tests/steam.test.ts tests/multiblock.test.ts tests/beltNetwork.test.ts tests/limits.test.ts tests/ids.test.ts tests/dimensions.test.ts"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.58.0",

@@ -16,7 +16,7 @@ import {
 } from '../../blocks';
 import { registerRedstone, type RedstoneApi } from '../../redstone';
 import {
-  balance, sunPower, PANEL_KW, ACCUMULATOR_CAP, POLE_MAX_WIRES, type PowerNet,
+  balance, sunPower, PANEL_KW, ACCUMULATOR_CAP, ACCUMULATOR_RATE, POLE_MAX_WIRES, type PowerNet,
 } from '../../logistics/energy';
 import { dimensionDef } from '../../dimensions';
 import { posKey, keyX, keyY, keyZ } from '../posKey';
@@ -40,6 +40,15 @@ const WIRE_SYNC_RANGE = 96;
 export interface PowerConsumer {
   demand(out: Map<number, number>): void;
   advance(sat: (k: number) => number, active: ReadonlyMap<number, number>): void;
+}
+
+/**
+ * Lo que GENERA a demanda (las máquinas de vapor): dice cuánta potencia puede dar cada una ahora y, tras repartir, cuánta dio. La red
+ * las pone a trabajar sólo lo que falta después de los paneles (más la carga de los acumuladores).
+ */
+export interface PowerProducer {
+  capacity(out: Map<number, number>): void;
+  deliver(used: ReadonlyMap<number, number>): void;
 }
 
 /** Una caja de bloques (esquina mínima y máxima) de algo que puede tocar el área de suministro de un poste. */
@@ -107,6 +116,13 @@ export class Power {
     } catch {
       /* mundo sin red guardada */
     }
+  }
+
+  private producers: PowerProducer[] = [];
+
+  /** Apunta algo que genera a demanda (máquinas de vapor). Se apunta también con `attach` para que un poste lo alcance. */
+  registerProducer(p: PowerProducer): void {
+    this.producers.push(p);
   }
 
   /** Apunta algo que consume (para que `tick` le dé energía). */
@@ -363,6 +379,31 @@ export class Power {
     for (const [k, kw] of active) {
       const i = this.netOf.get(k);
       if (i !== undefined) this.nets[i].demand += kw;
+    }
+    // Los generadores a demanda cubren lo que falta tras los paneles, y la carga de los acumuladores si no están llenos.
+    const caps = new Map<number, number>();
+    for (const p of this.producers) p.capacity(caps);
+    const engineCap = new Array<number>(this.nets.length).fill(0);
+    for (const [k, kw] of caps) {
+      const i = this.netOf.get(k);
+      if (i !== undefined) engineCap[i] += kw;
+    }
+    const frac = new Array<number>(this.nets.length).fill(0);
+    this.nets.forEach((n, i) => {
+      if (engineCap[i] <= 0) return;
+      const room = n.accs.length ? (n.accs.length * ACCUMULATOR_CAP - n.stored) / DT : 0;
+      const charge = Math.max(0, Math.min(n.accs.length * ACCUMULATOR_RATE, room));
+      const use = Math.min(engineCap[i], Math.max(0, n.demand + charge - n.supply));
+      frac[i] = use / engineCap[i];
+      n.supply += use;
+    });
+    if (caps.size) {
+      const used = new Map<number, number>();
+      for (const [k, kw] of caps) {
+        const i = this.netOf.get(k);
+        used.set(k, i === undefined ? 0 : kw * frac[i]);
+      }
+      for (const p of this.producers) p.deliver(used);
     }
     for (const n of this.nets) {
       if (n.supply === 0 && n.demand === 0 && n.stored === 0 && n.accs.length === 0) {

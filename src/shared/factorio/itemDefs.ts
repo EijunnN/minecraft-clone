@@ -28,7 +28,6 @@ export const FACTORIO_ITEM_DEFS: readonly FactorioItemDef[] = [
   { name: 'advanced-circuit', es: 'Circuito avanzado', stack: 200, shape: 'circuit', tint: [190, 66, 60] },
   { name: 'processing-unit', es: 'Unidad de procesamiento', stack: 200, shape: 'circuit', tint: [66, 110, 214] },
   { name: 'iron-stick', es: 'Varilla de hierro', stack: 100, shape: 'stick', tint: [190, 194, 204] },
-  { name: 'pipe', es: 'Tubería', stack: 100, shape: 'pipe', tint: [176, 182, 192] },
   { name: 'steel-plate', es: 'Placa de acero', stack: 100, shape: 'plate', tint: [150, 160, 176] },
   { name: 'stone-brick', es: 'Ladrillo de piedra', stack: 100, shape: 'brick', tint: [176, 160, 132] },
   { name: 'battery', es: 'Batería', stack: 200, shape: 'battery', tint: [120, 138, 156] },

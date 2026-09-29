@@ -2,9 +2,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AIR, STONE, CHEST, SOLAR_PANEL, POLE_SMALL, EXTRACTOR, isMultiPart, MOON_IRON_VEIN, MOON_REGOLITH_DARK, DIRTY_ICE, BLOCKS, extractorInfo,
+  AIR, STONE, CHEST, SOLAR_PANEL, POLE_SMALL, EXTRACTOR, isMultiPart, MOON_IRON_VEIN, MOON_COPPER_VEIN, MOON_COAL_VEIN, MOON_STONE_VEIN, MOON_OIL_WELL, COBBLESTONE, MOON_REGOLITH_DARK, DIRTY_ICE, BLOCKS,
+  extractorInfo,
 } from '../src/shared/blocks';
-import { RAW_IRON } from '../src/shared/items';
+import { RAW_IRON, RAW_COPPER, COAL } from '../src/shared/items';
 import { veinAmount, veinYield, EXTRACT_SECONDS } from '../src/shared/logistics/veins';
 import { MACHINE_KW, PANEL_KW } from '../src/shared/logistics/energy';
 import { MoonGenerator } from '../src/shared/world/moon';
@@ -58,6 +59,28 @@ test('vetas: hay una junto al sitio de aterrizaje y son finas (2 capas) y en man
   }
   assert.ok(columns >= 40, `cerca del aterrizaje hay veta (${columns} columnas)`);
   assert.ok(veins === columns * 2);
+});
+
+test('recursos: junto al aterrizaje hay hierro, cobre, carbón, piedra y un campo de petróleo; las vetas dan su mineral', () => {
+  const gen = new MoonGenerator(777);
+  const spawn = gen.findSpawn();
+  const scx = Math.floor(spawn.x / CHUNK_SIZE), scz = Math.floor(spawn.z / CHUNK_SIZE);
+  const count = new Map<number, number>();
+  for (let cz = scz - 4; cz <= scz + 4; cz++) {
+    for (let cx = scx - 4; cx <= scx + 4; cx++) {
+      const g = gen.generate(cx, cz);
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) for (let lx = 0; lx < CHUNK_SIZE; lx++) for (let y = MIN_Y; y < MAX_Y; y++) {
+        const b = g.blocks[blockIndex(lx, y, lz)];
+        if (b === MOON_IRON_VEIN || b === MOON_COPPER_VEIN || b === MOON_COAL_VEIN || b === MOON_STONE_VEIN || b === MOON_OIL_WELL) count.set(b, (count.get(b) ?? 0) + 1);
+      }
+    }
+  }
+  for (const b of [MOON_IRON_VEIN, MOON_COPPER_VEIN, MOON_COAL_VEIN, MOON_STONE_VEIN]) assert.ok((count.get(b) ?? 0) >= 40, `${BLOCKS[b].name}: ${count.get(b)}`);
+  assert.ok((count.get(MOON_OIL_WELL) ?? 0) >= 3, `pozos ${count.get(MOON_OIL_WELL)}`);
+  assert.equal(veinYield(MOON_COPPER_VEIN)?.item, RAW_COPPER);
+  assert.equal(veinYield(MOON_COAL_VEIN)?.item, COAL);
+  assert.equal(veinYield(MOON_STONE_VEIN)?.item, COBBLESTONE);
+  assert.equal(veinYield(MOON_OIL_WELL), null, 'el petróleo no sale con el extractor');
 });
 
 function lab(dim?: number) {

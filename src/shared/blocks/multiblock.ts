@@ -220,3 +220,27 @@ export function turnModel(boxes: ModelBox[], w: number, d: number, dir: number):
   }
   return out;
 }
+
+/**
+ * Un punto de conexión de una máquina, dado en su huella SIN girar (mirando al norte, −Z): la casilla local (lx, ly, lz) y la cara `face`
+ * de esa casilla (0 +x, 1 −x, 2 +y, 3 −y, 4 +z, 5 −z). Devuelve la casilla del mundo y la cara ya giradas para el sentido `dir` de una
+ * máquina cuyo controlador está en (cx, cy, cz).
+ */
+export function multiPort(
+  base: number, dir: number, cx: number, cy: number, cz: number, lx: number, ly: number, lz: number, face: number,
+): { x: number; y: number; z: number; face: number } {
+  const multi = MULTI.get(familyBase(base))!;
+  const spec = multi.spec;
+  const turns = spec.oriented ? TURNS[dir & 3] : 0;
+  let [x, y, z] = [lx, ly, lz];
+  let [ax, ay, az] = spec.anchor;
+  let d = spec.size[2], w = spec.size[0];
+  let f = face;
+  for (let k = 0; k < turns; k++) {
+    [x, z] = [d - 1 - z, x];
+    [ax, az] = [d - 1 - az, ax];
+    [w, d] = [d, w];
+    f = f === 0 ? 4 : f === 4 ? 1 : f === 1 ? 5 : f === 5 ? 0 : f;
+  }
+  return { x: cx + (x - ax), y: cy + (y - ay), z: cz + (z - az), face: f };
+}

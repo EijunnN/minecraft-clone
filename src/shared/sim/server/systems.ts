@@ -68,6 +68,8 @@ import { MachineHub } from './machineHub';
 import { Research } from './research'; // Programa lunar: la investigación
 import { Labs } from './labs';
 import { Fluids } from './fluids'; // Programa lunar: tuberías, tanques y bombas
+import { Pumpjacks } from './pumpjacks';
+import { Steam } from './steam'; // Programa lunar: calderas y máquinas de vapor
 import { Extractors } from './extractors'; // Programa lunar: los extractores
 import { MultiBlocks } from './multiblocks'; // Programa lunar: máquinas de varias casillas
 import { MachineConfig } from './machineConfig'; // Programa lunar: configuración de divisores y brazos
@@ -172,6 +174,8 @@ export class ServerSystems {
   readonly research: Research;
   readonly labs: Labs;
   readonly fluids: Fluids;
+  readonly pumpjacks: Pumpjacks;
+  readonly steam: Steam;
   /** Programa lunar: los extractores eléctricos y las reservas de las vetas. */
   readonly extractors: Extractors;
   /** Fase 7 (encantamientos): mesa, yunque, afiladora, yunques que caen, Paso helado y Conductividad. */
@@ -284,6 +288,8 @@ export class ServerSystems {
     this.research = new Research(ctx, store);
     this.labs = new Labs(ctx, rs, store, this.power, this.research);
     this.fluids = new Fluids(ctx, rs, store, this.power);
+    this.pumpjacks = new Pumpjacks(ctx, rs, store, this.power, this.fluids);
+    this.steam = new Steam(ctx, rs, store, this.power, this.fluids);
     this.machines.research = this.assemblers.research = this.furnaces.research = this.research;
     this.commands.research = this.research; // /investigar
     rs.hooks = {
@@ -318,7 +324,7 @@ export class ServerSystems {
       fertilize: (x, y, z) => this.farming.fertilize(x, y, z),
     }));
     this.inserters = new Inserters(ctx, rs, this.belts, mech.inventories, this.power, store); // Programa lunar
-    mech.inventories.machines = new MachineHub([this.machines, this.assemblers, this.furnaces, this.labs]); // los brazos meten y sacan de las máquinas por sus puertos
+    mech.inventories.machines = new MachineHub([this.machines, this.assemblers, this.furnaces, this.labs, this.steam]); // los brazos meten y sacan de las máquinas por sus puertos
     const stackBonus = () => {
       this.inserters.bonus = { inserter: this.research.modifier('inserter-stack-size-bonus'), bulk: this.research.modifier('bulk-inserter-capacity-bonus') };
     };
@@ -332,6 +338,7 @@ export class ServerSystems {
     this.power.register(this.assemblers);
     this.power.register(this.labs);
     this.power.register(this.fluids);
+    this.power.register(this.pumpjacks);
     this.power.register(this.extractors);
     this.fire.igniters.add((x, y, z) => mech.light(x, y, z));
     this.fire.burned = (x, y, z) => mech.light(x, y, z);
@@ -430,6 +437,8 @@ export class ServerSystems {
     this.rockets.tick();
     this.furnaces.tick();
     this.power.tick();
+    this.pumpjacks.tick();
+    this.steam.tick();
     this.fluids.tick(); // la energía se reparte y avanzan brazos, hornos y extractores
     this.belts.tick();
     this.inserters.sync();
@@ -517,6 +526,8 @@ export class ServerSystems {
     this.furnaces.flush(store);
     this.labs.flush(store);
     this.fluids.flush(store);
+    this.pumpjacks.flush(store);
+    this.steam.flush(store);
     this.research.flush();
     this.extractors.flush(store);
     this.campfires.flush(store);

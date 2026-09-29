@@ -145,3 +145,37 @@ test('fluidos: se guardan con el mundo', () => {
 });
 
 void PIPE_TO_GROUND;
+
+test('pozo de petróleo: saca 10 × rendimiento por segundo con energía, lo lleva por la tubería al tanque, y gasta el pozo', async () => {
+  const { PUMPJACK, MOON_OIL_WELL } = await import('../src/shared/blocks');
+  const l = lab();
+  l.set(l.bx, l.by - 1, l.bz, MOON_OIL_WELL);
+  putMulti(l.W, PUMPJACK, 0, l.bx, l.by, l.bz);
+  l.set(l.bx + 2, l.by, l.bz, PIPE);
+  putMulti(l.W, STORAGE_TANK, 0, l.bx + 4, l.by, l.bz);
+  l.power(l.bx + 1, l.bz + 3, [[4, 0], [-4, 0], [0, 4]]);
+  l.h.tick(3);
+  const y0 = l.sys().pumpjacks.yieldAt(l.bx, l.by - 1, l.bz);
+  assert.ok(y0 >= 0.5 && y0 <= 3, `rendimiento ${y0}`);
+  l.h.tick(20 * 30);
+  const t = l.sys().fluids.boxAt(l.bx + 4, l.by, l.bz)!;
+  const crude = fluidByName('crude-oil')!.id;
+  assert.equal(t.fluid, crude);
+  const want = 10 * y0 * 30;
+  assert.ok(t.amount > want * 0.85 && t.amount < want * 1.02 + 100, `sacó ${t.amount}, esperaba ~${want}`);
+  assert.ok(l.sys().pumpjacks.yieldAt(l.bx, l.by - 1, l.bz) < y0, 'el pozo pierde rendimiento');
+});
+
+test('pozo de petróleo: sin energía no saca, y sólo se pone sobre un pozo', async () => {
+  const { PUMPJACK, MOON_OIL_WELL } = await import('../src/shared/blocks');
+  const l = lab();
+  l.set(l.bx, l.by - 1, l.bz, MOON_OIL_WELL);
+  putMulti(l.W, PUMPJACK, 0, l.bx, l.by, l.bz);
+  l.set(l.bx + 2, l.by, l.bz, PIPE);
+  l.h.tick(20 * 5);
+  assert.equal(l.sys().fluids.boxAt(l.bx + 2, l.by, l.bz)!.amount, 0);
+  const { planLogistics } = await import('../src/shared/logisticsPlacement');
+  const get = (x: number, y: number, z: number) => l.W.getBlock(x, y, z);
+  assert.equal(planLogistics(get, { x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0 } as never, PUMPJACK, l.bx + 10, l.by, l.bz + 10, 0), null, 'sobre suelo normal no');
+  void STONE;
+});

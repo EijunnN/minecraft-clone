@@ -13,6 +13,21 @@ export const MOON_IRON_VEIN = family('moon_iron_vein', 'Veta de hierro lunar', [
   hardness: 5, tool: 'pickaxe' as const, tier: 0, sound: 'stone' as const, category: 'luna' as const, all: 'iron_ore',
 }));
 
+// Las demás vetas de la Luna (como las manchas de Factorio): cobre, carbón y piedra. Igual que la de hierro: una reserva finita por bloque
+// que sólo saca el extractor; a mano dan un trozo. Y el petróleo: un pozo de un bloque que sólo aprovecha el pozo de petróleo (bomba).
+export const MOON_COPPER_VEIN = family('moon_copper_vein', 'Veta de cobre lunar', [], () => ({
+  hardness: 5, tool: 'pickaxe' as const, tier: 0, sound: 'stone' as const, category: 'luna' as const, all: 'copper_ore',
+}));
+export const MOON_COAL_VEIN = family('moon_coal_vein', 'Veta de carbón lunar', [], () => ({
+  hardness: 4, tool: 'pickaxe' as const, tier: 0, sound: 'stone' as const, category: 'luna' as const, all: 'coal_ore',
+}));
+export const MOON_STONE_VEIN = family('moon_stone_vein', 'Veta de piedra lunar', [], () => ({
+  hardness: 4, tool: 'pickaxe' as const, tier: 0, sound: 'stone' as const, category: 'luna' as const, all: 'andesite',
+}));
+export const MOON_OIL_WELL = family('moon_oil_well', 'Pozo de petróleo', [], () => ({
+  hardness: 8, tool: 'pickaxe' as const, tier: 1, sound: 'stone' as const, category: 'luna' as const, all: 'coal_block',
+}));
+
 const six = (n: number) => [n, n, n, n, n, n];
 
 /**
@@ -42,4 +57,4 @@ export function extractorInfo(id: number): { dir: number } | null {
 // El extractor es eléctrico: entra en las redes de energía y sale en el inventario junto a las demás piezas.
 (POWER_BLOCKS as number[]).push(EXTRACTOR);
 /** Su sitio en el inventario creativo (la veta, con el suelo de la Luna; el extractor, con la logística). */
-export const EXTRACTION_INVENTORY: readonly number[] = [MOON_IRON_VEIN, EXTRACTOR];
+export const EXTRACTION_INVENTORY: readonly number[] = [MOON_IRON_VEIN, MOON_COPPER_VEIN, MOON_COAL_VEIN, MOON_STONE_VEIN, MOON_OIL_WELL, EXTRACTOR];
