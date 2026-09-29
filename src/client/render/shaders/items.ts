@@ -56,6 +56,8 @@ uniform vec3 uLightDirView;
 uniform vec2 uLightLevel;
 uniform vec3 uGrassTint;
 uniform vec3 uTint;
+// Programa lunar: fantasma de colocación (0 = opaco, normal; >0 = opacidad del fantasma).
+uniform float uGhost;
 // Fase 7 (encantamientos): brillo de lo encantado (0 = nada) y el reloj que lo hace correr.
 uniform float uGlint;
 uniform float uTime;
@@ -111,7 +113,7 @@ void main() {
   }
   col = col * uTint + albedo * emissive;
   if (uGlint > 0.0) col += glint(vObj.xy + vObj.zz * 0.6, uTime) * uGlint; // Fase 7 (encantamientos)
-  outColor = vec4(col, 1.0);
+  outColor = vec4(col, uGhost > 0.0 ? uGhost : 1.0);
 }
 `;
 

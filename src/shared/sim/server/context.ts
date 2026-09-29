@@ -88,7 +88,9 @@ export type Arrival =
   /** A la cama o al punto de aparición (reaparecer). */
   | { kind: 'spawn' }
   /** A un punto concreto (comandos), o al punto de aparición de la dimensión si no se da. */
-  | { kind: 'pos'; x?: number; y?: number; z?: number };
+  | { kind: 'pos'; x?: number; y?: number; z?: number }
+  /** Programa lunar: en un cohete que llega (su vuelo, su plaza, de qué dimensión y plataforma sale, y dónde aterrizar si se sabe). */
+  | { kind: 'rocket'; flight: number; seat: number; from: number; pad: [number, number, number]; landAt: [number, number, number] | null };
 
 export interface ServerContext {
   readonly world: WorldSim;
@@ -129,6 +131,8 @@ export interface ServerContext {
   savePlayer(s: Session): void;
   setTime(days: number): void;
   setDifficulty(d: number): void;
+  /** Programa lunar: algo compartido entre dimensiones (la investigación) cambió: que las demás lo recarguen. */
+  sharedChanged(): void;
   /** Jefes reforzados (bossRules.ts): el modo del mundo y cambiarlo. */
   readonly bossMode: BossMode;
   setBossMode(m: BossMode): void;

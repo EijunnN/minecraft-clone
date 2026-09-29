@@ -103,6 +103,8 @@ export class EntityRenderer {
   private elytraTex!: WebGLTexture;
   private skins = new Map<string, { key: string; tex: WebGLTexture }>();
   private outlineVao: WebGLVertexArrayObject;
+  private fillVao!: WebGLVertexArrayObject; // Programa lunar: fantasma de colocación
+  private arrowVaos: WebGLVertexArrayObject[] = [];
   /** Partículas (sistema nuevo) y sus efectos con nombre. */
   readonly particles: ParticleSystem;
   readonly pfx: ParticleFx;
@@ -188,6 +190,38 @@ export class EntityRenderer {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
+
+    // Programa lunar (fantasma de colocación): el cubo unitario relleno y una flecha por sentido de marcha (0 +x, 1 +z, 2 −x, 3 −z),
+    // dibujada sobre la cara de arriba (y = 1 se escala a la altura de la caja).
+    const quad = (a: number, b: number, cc: number, d: number) => [...c[a], ...c[b], ...c[cc], ...c[a], ...c[cc], ...c[d]];
+    const solid = [
+      ...quad(0, 1, 2, 3), ...quad(4, 7, 6, 5), ...quad(0, 4, 5, 1), ...quad(1, 5, 6, 2), ...quad(2, 6, 7, 3), ...quad(3, 7, 4, 0),
+    ];
+    this.fillVao = this.staticVao(solid);
+    const DX = [1, 0, -1, 0], DZ = [0, 1, 0, -1];
+    for (let d = 0; d < 4; d++) {
+      const vx = DX[d], vz = DZ[d], px = -vz, pz = vx; // sentido y su perpendicular
+      const at = (t: number, s = 0): number[] => [0.5 + vx * t + px * s, 1, 0.5 + vz * t + pz * s];
+      // Flecha rellena: un rastro estrecho y una punta triangular.
+      const tail = -0.32, neck = 0.06, tip = 0.34, w = 0.07, hw = 0.2;
+      this.arrowVaos[d] = this.staticVao([
+        ...at(tail, w), ...at(tail, -w), ...at(neck, -w), ...at(tail, w), ...at(neck, -w), ...at(neck, w),
+        ...at(neck, hw), ...at(neck, -hw), ...at(tip),
+      ]);
+    }
+  }
+
+  private staticVao(data: number[]): WebGLVertexArrayObject {
+    const gl = this.gl;
+    const vao = gl.createVertexArray()!;
+    gl.bindVertexArray(vao);
+    const b = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    gl.bindVertexArray(null);
+    return vao;
   }
 
   // ---------------------------------------------------------------- jugadores
@@ -545,6 +579,153 @@ export class EntityRenderer {
       .f4('uColor', 0.02, 0.02, 0.02, 0.55);
     gl.bindVertexArray(this.outlineVao);
     gl.drawArrays(gl.LINES, 0, 24);
+    gl.bindVertexArray(null);
+    gl.disable(gl.BLEND);
+  }
+
+  /**
+   * Programa lunar: la vista previa de lo que se va a colocar. Una caja translúcida (verde si cabe, roja si no) con su contorno, y
+   * encima la flecha del sentido de marcha en cintas y brazos.
+   */
+  drawGhost(g: { x: number; y: number; z: number; box: number[]; ok: boolean; dir: number; area?: number[]; links?: number[]; linkFrom?: number[] }, camX: number, camY: number, camZ: number, boxes = true): void {
+    const gl = this.gl;
+    const b = g.box.length >= 6 ? g.box : [0, 0, 0, 1, 1, 1];
+    const e = 0.004;
+    const [r, gr, bl] = g.ok ? [0.25, 0.95, 0.4] : [1, 0.25, 0.2];
+    const off: [number, number, number] = [g.x + b[0] - camX - e, g.y + b[1] - camY - e, g.z + b[2] - camZ - e];
+    const scale: [number, number, number] = [b[3] - b[0] + 2 * e, b[4] - b[1] + 2 * e, b[5] - b[2] + 2 * e];
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const p = this.pOutline.use().f3('uOffset', ...off).f3('uScale', ...scale);
+    if (boxes) {
+      p.f4('uColor', r, gr, bl, 0.3);
+      gl.bindVertexArray(this.fillVao);
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+      p.f4('uColor', r, gr, bl, 0.95);
+      gl.bindVertexArray(this.outlineVao);
+      gl.drawArrays(gl.LINES, 0, 24);
+      if (g.dir >= 0) {
+        p.f4('uColor', 1, 0.86, 0.2, 0.95);
+        gl.bindVertexArray(this.arrowVaos[g.dir & 3]);
+        gl.drawArrays(gl.TRIANGLES, 0, 9);
+      }
+    }
+    if (g.area) {
+      // El área de explotación: una caja de líneas celestes, con un suelo apenas teñido.
+      const a = g.area;
+      p.f3('uOffset', a[0] - camX, a[1] - camY, a[2] - camZ).f3('uScale', a[3] - a[0], a[4] - a[1], a[5] - a[2]);
+      p.f4('uColor', 0.35, 0.8, 1, 0.06);
+      gl.bindVertexArray(this.fillVao);
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+      p.f4('uColor', 0.45, 0.85, 1, 0.9);
+      gl.bindVertexArray(this.outlineVao);
+      gl.drawArrays(gl.LINES, 0, 24);
+    }
+    gl.bindVertexArray(null);
+    if (g.links?.length) {
+      // Los cables que se pondrán: del poste nuevo a cada uno de los que alcanza.
+      const pts: number[] = [];
+      const from = g.linkFrom ?? [g.x + 0.5, g.y + 0.9, g.z + 0.5];
+      for (let i = 0; i + 2 < g.links.length; i += 3) pts.push(from[0], from[1], from[2], g.links[i], g.links[i + 1], g.links[i + 2]);
+      this.drawLines(pts, camX, camY, camZ, [0.45, 0.85, 1, 0.95]);
+    }
+    gl.disable(gl.BLEND);
+  }
+
+  private tmpVao: WebGLVertexArrayObject | null = null;
+  private tmpBuf: WebGLBuffer | null = null;
+
+  /** Dibuja unas líneas sueltas (pares de vértices en coordenadas del mundo) con un color. */
+  private drawLines(pts: number[], camX: number, camY: number, camZ: number, c: number[]): void {
+    const gl = this.gl;
+    if (!this.tmpVao) {
+      this.tmpVao = gl.createVertexArray()!;
+      this.tmpBuf = gl.createBuffer()!;
+      gl.bindVertexArray(this.tmpVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.tmpBuf);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    }
+    gl.bindVertexArray(this.tmpVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.tmpBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.DYNAMIC_DRAW);
+    this.pOutline.use().f3('uOffset', -camX, -camY, -camZ).f3('uScale', 1, 1, 1).f4('uColor', c[0], c[1], c[2], c[3]);
+    gl.drawArrays(gl.LINES, 0, pts.length / 3);
+    gl.bindVertexArray(null);
+  }
+
+  /**
+   * Programa lunar: el rayo rojo de «sin energía» sobre lo que pide y no recibe: un círculo con un rayo, de cara a la cámara, que parpadea
+   * y se ve a través de las máquinas (como los iconos de alerta de Factorio).
+   */
+  drawNoPower(list: number[][], camX: number, camY: number, camZ: number): void {
+    const gl = this.gl;
+    const blink = 0.55 + 0.45 * Math.sin(performance.now() / 260);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.disable(gl.DEPTH_TEST);
+    const bolt = [[0.12, 0.42], [-0.12, 0.02], [0.03, 0.02], [-0.1, -0.4], [0.16, 0.06], [0.01, 0.06], [0.12, 0.42]];
+    for (const [x, y, z] of list) {
+      const dx = x - camX, dz = z - camZ;
+      const d = Math.hypot(dx, dz) || 1;
+      if (d > 64) continue;
+      const rx = dz / d, rz = -dx / d; // horizontal, perpendicular a la mirada
+      const size = 0.85 + Math.min(1.4, d * 0.04); // se agranda un poco con la distancia para leerse
+      const at = (u: number, v: number): number[] => [x + rx * u * size, y + 0.45 * size + v * size, z + rz * u * size];
+      const pts: number[] = [];
+      const ring = 20;
+      for (let i = 0; i < ring; i++) {
+        const a = (i / ring) * Math.PI * 2, b = ((i + 1) / ring) * Math.PI * 2;
+        pts.push(...at(Math.cos(a) * 0.5, Math.sin(a) * 0.5), ...at(Math.cos(b) * 0.5, Math.sin(b) * 0.5));
+      }
+      for (let i = 0; i + 1 < bolt.length; i++) {
+        // Dos pasadas separadas un pelo para que el trazo se vea más grueso.
+        for (const o of [0, 0.012, -0.012]) pts.push(...at(bolt[i][0] + o, bolt[i][1]), ...at(bolt[i + 1][0] + o, bolt[i + 1][1]));
+      }
+      this.drawLines(pts, camX, camY, camZ, [1, 0.12, 0.1, blink]);
+    }
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+  }
+
+  private wireVao: WebGLVertexArrayObject | null = null;
+  private wireBuf: WebGLBuffer | null = null;
+  private wireLast: { small: Float32Array; medium: Float32Array } | null = null;
+  private wireCounts = [0, 0];
+
+  /** Programa lunar: los cables entre postes (líneas colgantes); cobre entre pequeños, gris con el mediano. */
+  drawWires(w: { small: Float32Array; medium: Float32Array }, camX: number, camY: number, camZ: number): void {
+    const gl = this.gl;
+    if (!this.wireVao) {
+      this.wireVao = gl.createVertexArray()!;
+      this.wireBuf = gl.createBuffer()!;
+      gl.bindVertexArray(this.wireVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.wireBuf);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    }
+    gl.bindVertexArray(this.wireVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.wireBuf);
+    if (this.wireLast !== w) {
+      // Los dos tipos, uno tras otro en el mismo buffer: sólo se sube cuando cambian.
+      const all = new Float32Array(w.small.length + w.medium.length);
+      all.set(w.small, 0);
+      all.set(w.medium, w.small.length);
+      gl.bufferData(gl.ARRAY_BUFFER, all, gl.DYNAMIC_DRAW);
+      this.wireLast = w;
+      this.wireCounts = [w.small.length / 3, w.medium.length / 3];
+    }
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const p = this.pOutline.use().f3('uOffset', -camX, -camY, -camZ).f3('uScale', 1, 1, 1);
+    if (this.wireCounts[0] > 0) {
+      p.f4('uColor', 0.85, 0.5, 0.25, 1);
+      gl.drawArrays(gl.LINES, 0, this.wireCounts[0]);
+    }
+    if (this.wireCounts[1] > 0) {
+      p.f4('uColor', 0.72, 0.76, 0.8, 1);
+      gl.drawArrays(gl.LINES, this.wireCounts[0], this.wireCounts[1]);
+    }
     gl.bindVertexArray(null);
     gl.disable(gl.BLEND);
   }

@@ -226,7 +226,8 @@ export class LifeCycle {
       const exposed = g.world!.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) >> 4 >= 15;
       const feet = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y + 0.05), Math.floor(p.z));
       surv.update(dt, {
-        eyeInWater: p.eyeInWater, eyeInBubble: p.eyeInBubble, inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
+        eyeInWater: p.eyeInWater, eyeInBubble: p.eyeInBubble, noAir: !dimensionDef(g.world!.dim).breathable && !g.rocket.active, // programa lunar: la cabina tiene aire
+         inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
         onCampfire: isCampfire(feet) && stateProps(feet)!.lit === 1,
         soulCampfire: familyBase(feet) === SOUL_CAMPFIRE, // Fase 8.5: la de almas quema el doble

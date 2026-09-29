@@ -61,6 +61,8 @@ import { NETHER_GOODS_GENERATORS } from './genNetherGoods'; // Fase 8.5 (lo que 
 import { END_GENERATORS } from './genEnd'; // Fase 8.6 (el End)
 import { FROG_GENERATORS } from './genFrog';
 import { WITHER_GENERATORS } from './genWither'; // Fase 8.7
+import { MOON_GENERATORS } from './genMoon'; // Programa lunar
+import { LOGISTICS_GENERATORS } from './genLogistics'; // Programa lunar: cintas
 
 export interface GeneratedTextures {
   /** Lado de cada capa en píxeles (16). */
@@ -114,6 +116,8 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
   ...END_GENERATORS, // Fase 8.6 (el End)
   ...FROG_GENERATORS, // luces de rana
   ...WITHER_GENERATORS, // Fase 8.7: la rosa marchita
+  ...MOON_GENERATORS, // Programa lunar: el suelo de la Luna
+  ...LOGISTICS_GENERATORS, // Programa lunar: las cintas
 };
 
 /** Marcador visible para texturas que aún no tienen generador (cuadros magenta y negros). */

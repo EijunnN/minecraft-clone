@@ -110,6 +110,44 @@ function paint(mat: VehicleMaterial, p: Face, wood: RGB, lit: boolean, gx: numbe
       if (p.f === 2) return p.u === 0 || p.v === 0 || p.u === p.w - 1 || p.v === p.h - 1 ? [120, 120, 128] : shade([40, 40, 44], 0.9 + n * 0.2);
       return shade([74, 74, 80], (p.v === 0 ? 1.3 : 1) + (n - 0.5) * 0.1);
     }
+    // Programa lunar: el cohete Selene (blanco con bandas naranjas, ojiva roja, ventanal azul y toberas de acero).
+    case 'rkHull': {
+      // Chapas de 16 px con sus juntas, remaches en las esquinas de cada chapa y un poco de tizne abajo.
+      const seamU = p.u % 16 === 15, seamV = p.v % 16 === 15;
+      let k = 1 + (n - 0.5) * 0.05 - (p.f === 0 || p.f === 5 ? 0.09 : p.f === 3 ? 0.3 : 0);
+      if (seamU || seamV) k -= 0.16;
+      const rivet = (p.u % 16 === 2 || p.u % 16 === 13) && (p.v % 16 === 2 || p.v % 16 === 13);
+      if (rivet) k -= 0.12;
+      if (p.f <= 1 || p.f >= 4) k -= Math.max(0, (p.v - (p.h - 10)) / 10) * 0.12 * n; // tizne del borde de abajo
+      return shade([238, 240, 243], k);
+    }
+    case 'rkBand': {
+      const seamV = p.v % 16 === 15;
+      const stripe = p.v === 3 || p.v === p.h - 4;
+      const k = 1 + (n - 0.5) * 0.06 - (p.f === 0 || p.f === 5 ? 0.1 : p.f === 3 ? 0.3 : 0) - (seamV ? 0.14 : 0);
+      return stripe ? shade([245, 245, 248], k) : shade([224, 98, 38], k);
+    }
+    case 'rkNose':
+      return shade([204, 42, 42], 1 + (n - 0.5) * 0.06 - (p.f === 0 || p.f === 5 ? 0.1 : 0) + (p.v === 0 || p.f === 2 ? 0.1 : 0));
+    case 'rkTip':
+      return shade([64, 66, 72], 1 + (n - 0.5) * 0.1 + (p.f === 2 ? 0.3 : 0));
+    case 'rkWindow': {
+      // Cristal azul oscuro con un reflejo diagonal; sólo el frente lleva reflejo.
+      const glint = p.f === 4 && ((p.u + p.v) % 9 === 0 || (p.u + p.v) % 9 === 1) ? 0.45 : 0;
+      const edge = p.u === 0 || p.v === 0 || p.u === p.w - 1 || p.v === p.h - 1;
+      if (edge) return [40, 42, 48];
+      return [30 + glint * 150, 56 + glint * 150, 104 + glint * 120];
+    }
+    case 'rkEngine': {
+      const base: RGB = [78, 80, 88];
+      let k = 1 + (n - 0.5) * 0.12;
+      if (p.f === 3) return [30 + n * 30, 24 + n * 16, 22 + n * 12]; // la boca de la tobera, ennegrecida
+      if (p.v === 0) k += 0.2;
+      if (p.v % 6 === 5) k -= 0.15;
+      return shade(base, k);
+    }
+    case 'rkFin':
+      return p.u === 0 || p.u === p.w - 1 || p.v === 0 ? shade([240, 240, 244], 0.95 + n * 0.05) : shade([196, 44, 44], 1 + (n - 0.5) * 0.08 - (p.f === 3 ? 0.25 : 0));
     case 'tnt': {
       if (lit) return shade([250, 250, 250], 0.95 + n * 0.05);
       if (p.f === 2 || p.f === 3) {

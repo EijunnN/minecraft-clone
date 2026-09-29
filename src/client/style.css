@@ -1033,10 +1033,33 @@ kbd {
   flex: 1;
 }
 
+/* Programa lunar: el selector de mundo (Tierra / Luna) sobre las pestañas de cada uno. */
+#invworlds {
+  display: flex;
+  gap: 0;
+  margin: 14px 0 0;
+  border-bottom: 1px solid var(--line);
+}
+#invworlds button {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: 700 14px var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+#invworlds button.active {
+  color: #eaf2ff;
+  border-bottom-color: #7cc4ff;
+}
+
 #invtabs {
   display: flex;
   gap: 6px;
-  margin: 14px 0 10px;
+  margin: 10px 0 10px;
   flex-wrap: wrap;
 }
 

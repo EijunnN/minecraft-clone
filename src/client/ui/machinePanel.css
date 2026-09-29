@@ -1,0 +1,114 @@
+/* Programa lunar: ventana de configuración de una máquina (divisores, brazos). */
+#machine-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+#machine-panel.hidden {
+  display: none;
+}
+
+#machine-panel .panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(440px, calc(100vw - 32px));
+  padding: 18px;
+  background: rgba(14, 17, 24, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#machine-panel h3 {
+  margin: 0;
+  font: 700 16px var(--font);
+  color: #fff;
+  text-align: center;
+}
+
+#machine-panel .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#machine-panel .row.end {
+  justify-content: flex-end;
+}
+
+#machine-panel .lbl {
+  font: 600 13px var(--font);
+  color: #cfd6e4;
+}
+
+#machine-panel .opts,
+#machine-panel .slots {
+  display: flex;
+  gap: 6px;
+}
+
+#machine-panel .opt {
+  padding: 6px 10px;
+  font: 600 12px var(--font);
+  color: #cfd6e4;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+#machine-panel .opt.on {
+  color: #0b1a06;
+  background: #7ccd4f;
+  border-color: #7ccd4f;
+}
+
+#machine-panel p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#machine-panel .slot2 {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#machine-panel .slot2 .ico {
+  position: absolute;
+  inset: 4px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  image-rendering: pixelated;
+}
+
+#machine-panel .slot2 .cnt,
+#machine-panel .slot2 .dur {
+  display: none;
+}
+
+#machine-panel .grid2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+#machine-panel .slot2.on {
+  border-color: #7ccd4f;
+  background: rgba(124, 205, 79, 0.18);
+}

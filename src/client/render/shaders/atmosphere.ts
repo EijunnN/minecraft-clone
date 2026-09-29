@@ -323,6 +323,8 @@ void main() {
   } else {
     outColor = vec4(zenith, 1.0);
   }
+  // Programa lunar (sin aire): la Luna no tiene luz de cielo; sólo el Sol directo y la tenue luz de la Tierra.
+  if (uDimFog.w > 1.5) outColor.rgb *= 0.02;
 }
 `;
 
@@ -391,8 +393,10 @@ void main() {
       col += moonCol * camT * 0.35 * above * (0.4 + 0.6 * night);
     }
   }
-  // Estrellas.
-  if (night > 0.0 && rd.y > -0.05) col += starField(rd) * night * camT * 0.05;
+  // Estrellas: de noche y, a partir de ~20 km de altura (el cohete), también de día: casi no queda aire.
+  float space = smoothstep(18.0, 60.0, r - Rg);
+  float starK = max(night, space);
+  if (starK > 0.0 && rd.y > -0.05) col += starField(rd) * starK * camT * 0.05;
   outColor = vec4(col, 1.0);
 }
 `;

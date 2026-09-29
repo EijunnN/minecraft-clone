@@ -1,0 +1,111 @@
+/* Programa lunar: la cabina del cohete Selene (marco de la ventana, cuenta atrás, telemetría y el fundido a negro del tránsito). */
+#rk-hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: #d7f4ff;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+#rk-hud.on { opacity: 1; }
+
+/* Marco de la ventana: el borde oscuro de la cabina, con esquinas redondeadas y el panel de mandos abajo. */
+#rk-hud .rk-frame {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(6, 9, 14, 0.95) 0, rgba(6, 9, 14, 0) 7%),
+    linear-gradient(to top, rgba(6, 9, 14, 0.97) 0, rgba(6, 9, 14, 0.9) 6%, rgba(6, 9, 14, 0) 15%),
+    linear-gradient(to right, rgba(6, 9, 14, 0.95) 0, rgba(6, 9, 14, 0) 5%),
+    linear-gradient(to left, rgba(6, 9, 14, 0.95) 0, rgba(6, 9, 14, 0) 5%);
+  box-shadow: inset 0 0 140px 30px rgba(0, 0, 0, 0.55);
+}
+
+#rk-hud .rk-count {
+  position: absolute;
+  top: 16%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: min(18vw, 190px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 24px rgba(120, 200, 255, 0.7), 0 4px 0 rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: scale(1);
+}
+#rk-hud .rk-count.pulse { animation: rk-pulse 1s ease-out; }
+@keyframes rk-pulse {
+  0% { opacity: 1; transform: scale(1.35); }
+  70% { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0.85; transform: scale(0.96); }
+}
+#rk-hud .rk-count.go { color: #ffd07a; text-shadow: 0 0 30px rgba(255, 150, 40, 0.85), 0 4px 0 rgba(0, 0, 0, 0.5); }
+
+#rk-hud .rk-status {
+  position: absolute;
+  top: 7%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: clamp(14px, 2vw, 22px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(120, 200, 255, 0.6);
+}
+
+/* Telemetría: abajo a la izquierda, sobre el panel de mandos. */
+#rk-hud .rk-panel {
+  position: absolute;
+  left: 4.5%;
+  bottom: 3.2%;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 4px 28px;
+  font-size: clamp(12px, 1.5vw, 17px);
+  text-shadow: 0 0 8px rgba(120, 200, 255, 0.5);
+}
+#rk-hud .rk-panel b { display: block; font-size: 0.72em; font-weight: 400; letter-spacing: 0.2em; color: #7faac0; }
+#rk-hud .rk-panel span { font-size: 1.5em; font-variant-numeric: tabular-nums; }
+
+#rk-hud .rk-hint {
+  position: absolute;
+  bottom: 3.2%;
+  right: 4.5%;
+  text-align: right;
+  font-size: clamp(12px, 1.4vw, 16px);
+  line-height: 1.6;
+  color: #a9d3e6;
+}
+#rk-hud .rk-hint kbd {
+  display: inline-block;
+  padding: 0 7px;
+  margin-right: 6px;
+  border: 1px solid #5c8aa1;
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  background: rgba(10, 20, 30, 0.75);
+  color: #eaf8ff;
+  font: inherit;
+}
+
+/* Fundido a negro del tránsito entre mundos. */
+#rk-hud .rk-fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: clamp(16px, 2.6vw, 30px);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: #cfeefc;
+}
+#rk-hud .rk-fade.on { opacity: 1; }
+#rk-hud .rk-fade small { display: block; margin-top: 1em; font-size: 0.5em; letter-spacing: 0.25em; opacity: 0.7; }

@@ -32,6 +32,7 @@ import { DEEP_DARK_SPRITES } from './deepDarkSprites'; // Fase 7.5 (abismo)
 import { NETHER_MOB_SPRITES } from './netherMobSprites'; // Fase 8.3 (criaturas del Nether)
 import { NETHER_GOODS_SPRITES } from './netherGoodsSprites'; // Fase 8.5 (lo que da el Nether)
 import { END_SPRITES } from './endSprites'; // Fase 8.6 (el End)
+import { FACTORIO_SPRITES } from './factorioSprites'; // Programa lunar: objetos de Factorio
 
 export interface ItemSprites {
   /** Lado de cada sprite en píxeles (16). */
@@ -2313,6 +2314,8 @@ Object.assign(SPRITES, NETHER_MOB_SPRITES);
 Object.assign(SPRITES, NETHER_GOODS_SPRITES);
 // Fase 8.6 (el End): los objetos del End.
 Object.assign(SPRITES, END_SPRITES);
+// Programa lunar: los intermedios, paquetes de ciencia y módulos de Factorio.
+Object.assign(SPRITES, FACTORIO_SPRITES);
 
 // ---------------------------------------------------------------------------
 // Rasterizado

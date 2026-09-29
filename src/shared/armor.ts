@@ -50,7 +50,7 @@ export const ARMOR_STATS: Readonly<Record<ArmorMaterial, { points: readonly numb
 export const ARMOR_KNOCKBACK_RESISTANCE: Readonly<Partial<Record<ArmorMaterial, number>>> = { netherite: 0.1 };
 
 /** Causas de daño que la armadura no reduce (como en Minecraft). */
-export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'starve', 'kill', 'poison', 'wither',
+export const ARMOR_BYPASS: ReadonlySet<string> = new Set(['fall', 'void', 'suffocate', 'drown', 'vacuum', 'starve', 'kill', 'poison', 'wither',
   'guardian_laser', // Fase 7.5 (océano): el daño mágico del láser del guardián
   'fly_into_wall', // Fase 8.6: chocar planeando (como la caída)
 ]);

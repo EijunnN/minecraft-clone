@@ -3,6 +3,7 @@
 // entrar al mundo (hello, ping) los atiende GameServer.
 import { STATE_DEAD, type ClientMsg } from '../../protocol';
 import { ENT_END_CRYSTAL } from '../../mobs'; // Fase 8.6
+import { ENT_ROCKET } from '../../rocket'; // programa lunar
 import type { ServerContext, Session } from './context';
 import type { ServerSystems } from './systems';
 
@@ -48,6 +49,7 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
     if (fb && Math.hypot(fb.x - s.p[0], fb.y - s.p[1], fb.z - s.p[2]) < 7 && h.ctx.entities.mobs.nether.flyers.deflect(fb, s.id, s.r[0], s.r[1])) return;
     // Fase 8.6: el cristal del End estalla con cualquier golpe.
     const ent = h.ctx.entities.list.get(e);
+    if (ent?.type === ENT_ROCKET) return; // programa lunar: el cohete no se rompe a golpes
     if (ent?.type === ENT_END_CRYSTAL && Math.hypot(ent.x - s.p[0], ent.y + 1 - s.p[1] - 1.6, ent.z - s.p[2]) < 8) {
       h.ctx.entities.dragon.crystalHit(ent, s.id);
       return;
@@ -73,6 +75,15 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
   sign: route<'sign'>(2, (h, s, m) => h.sys.signs.onSign(s, m)),
   open: route<'open'>(1, (h, s, m) => h.sys.containers.onOpen(s, m)),
   close: route<'close'>(0, (h, s) => h.sys.containers.close(s)), // los cofres trampa cuentan quién mira
+  rq: route<'rq'>(1, (h, s, m) => {
+    if (typeof m.tech === 'string') h.sys.research.request(m.tech, !!m.add);
+  }), // Programa lunar: la cola de investigación
+  crafted: route<'crafted'>(1, (h, s, m) => {
+    const n = Math.trunc(Number(m.n));
+    if (Number.isInteger(m.item) && n > 0 && n <= 1000) h.sys.research.noteProduced(m.item, n);
+  }), // Programa lunar: lo fabricado a mano
+  mcfg: route<'mcfg'>(1, (h, s, m) => h.sys.machineConfig.onConfig(s, m)), // Programa lunar: divisores y brazos
+  rot: route<'rot'>(1, (h, s, m) => h.sys.machineConfig.onRotate(s, m)), // Programa lunar: girar cintas, brazos y máquinas
   cclick: route<'cclick'>(0, (h, s, m) => h.sys.containers.onOp(s, m)),
   cput: route<'cput'>(0, (h, s, m) => h.sys.containers.onOp(s, m)),
   ctake: route<'ctake'>(0, (h, s, m) => h.sys.containers.onOp(s, m)),
@@ -126,6 +137,11 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
   vride: route<'vride'>(1, (h, s, m) => h.sys.transport.onRide(s, m)),
   vleave: route<'vleave'>(0, (h, s) => h.sys.transport.leave(s.id)),
   vpos: route<'vpos'>(0.2, (h, s, m) => h.sys.transport.onMove(s, m)),
+  // Programa lunar: subir al cohete, bajar, despegar y abortar.
+  rboard: route<'rboard'>(1, (h, s, m) => h.sys.rockets.onBoard(s, m)),
+  rleave: route<'rleave'>(0, (h, s) => h.sys.rockets.onLeaveSeat(s)),
+  rlaunch: route<'rlaunch'>(0, (h, s) => h.sys.rockets.onLaunch(s)),
+  rabort: route<'rabort'>(0, (h, s) => h.sys.rockets.onAbort(s)),
   // Fase 7 (encantamientos)
   work: route<'work'>(2, (h, s, m) => h.sys.enchantWork.onWork(s, m)),
   beacon: route<'beacon'>(2, (h, s, m) => h.sys.netherGoods.onBeacon(s, m)), // Fase 8.5: el faro

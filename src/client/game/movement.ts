@@ -110,14 +110,14 @@ export class Movement {
       jumpPressed: active && input.wasPressed(k.jump), // Fase 8.6: abrir los élitros
     };
     // Fase 8.6: los élitros sirven puestos en el pecho, con más de un uso, sin ir montado.
-    p.canGlide = canGlideWith(g.inv.armor[1]) && !g.riding.active && !g.vehicles.active;
+    p.canGlide = canGlideWith(g.inv.armor[1]) && !g.riding.active && !g.vehicles.active && !g.rocket.active;
     // Fase 6 (monturas): montado se mueve la montura (o nada, si la lleva el servidor) y no el jugador.
     // Fase 7 (transporte): en barca o vagoneta tampoco (la mueve su sistema).
     g.vehicles.collidePlayer(dt); // Fase 7 (remate): barcas sólidas y vagonetas que apartan
-    if (!g.riding.active && !g.vehicles.active) this.pushedByMobs(dt); // las criaturas con las que se solapa le apartan
-    if (!g.riding.update(dt, controls, active) && !g.vehicles.update(dt, controls, active)) p.update(dt, controls, world);
+    if (!g.riding.active && !g.vehicles.active && !g.rocket.active) this.pushedByMobs(dt); // las criaturas con las que se solapa le apartan
+    if (!g.riding.update(dt, controls, active) && !g.vehicles.update(dt, controls, active) && !g.rocket.update(dt, controls, active)) p.update(dt, controls, world);
     g.mechanisms.update(); // Fase 7 (mecanismos): los bloques que empujan los pistones apartan al jugador
-    const moved = g.riding.active || g.vehicles.active ? 0 : Math.hypot(p.x - ox, p.z - oz);
+    const moved = g.riding.active || g.vehicles.active || g.rocket.active ? 0 : Math.hypot(p.x - ox, p.z - oz);
     // Fase 8.6: lo que gasta el vuelo (1 cada 20 ticks, con Irrompibilidad) y el golpe al chocar de lado.
     for (; p.glideWear > 0; p.glideWear--) {
       const el = g.inv.armor[1];

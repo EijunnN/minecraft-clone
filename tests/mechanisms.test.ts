@@ -1,6 +1,7 @@
 // Fase 7 (mecanismos): pistones (fila, límite de 12, adhesivo, slime y miel, cuasi-conectividad, pulso
 // corto), observador, tolvas (entre cofres, horno, bloqueo, comparador), dispensador (flecha, cubo, dinamita),
 // soltador, dinamita (mecha, explosión, cadena) y vagonetas con tolva y con dinamita.
+import { MAX_TEXTURE_LAYERS } from '../src/shared/constants';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -576,7 +577,7 @@ test('registro: recetas, colocación, huecos y texturas', () => {
   assert.equal(craft([HOPPER, MINECART, 0, 0, 0, 0, 0, 0, 0])?.id, HOPPER_MINECART);
   assert.equal(craft([MINECART, TNT, 0, 0, 0, 0, 0, 0, 0])?.id, TNT_MINECART);
   assert.deepEqual([mechanismSlots(HOPPER), mechanismSlots(DISPENSER), mechanismSlots(DROPPER)], [5, 9, 9]);
-  assert.ok(TEXTURE_DEFS.length <= 1024);
+  assert.ok(TEXTURE_DEFS.length <= MAX_TEXTURE_LAYERS);
   // Colocación: el pistón mira al jugador (también hacia arriba), el observador al revés y la tolva al bloque tocado.
   const hit = (nx: number, ny: number, nz: number): PlaceHit => ({ x: 0, y: 9, z: 0, nx, ny, nz, px: 0.5, py: 9.5, pz: 0.5, id: STONE });
   const floor = (_x: number, y: number) => (y === 9 ? STONE : AIR);

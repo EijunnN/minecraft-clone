@@ -65,7 +65,7 @@ export function dimEntries(m: Map<string, string>, dim: number): [number, string
 }
 
 /** Fase 8: lo guardado que comparten todas las dimensiones (el resto de `meta` va con prefijo). */
-const SHARED_META = new Set(['seed', 'time', 'difficulty', 'mode']);
+const SHARED_META = new Set(['seed', 'time', 'difficulty', 'mode', 'research']);
 
 /**
  * Fase 8: vista del almacenamiento para una dimensión. El mundo normal usa las claves de siempre (los

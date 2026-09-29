@@ -72,6 +72,10 @@ export const BIOME_END_MIDLANDS = 59;
 export const BIOME_SMALL_END_ISLANDS = 60;
 export const BIOME_END_BARRENS = 61;
 
+// Programa lunar: las tierras altas y los mares de la Luna.
+export const BIOME_MOON_HIGHLANDS = 62;
+export const BIOME_MOON_MARE = 63;
+
 /** ¿Es un bioma del End? */
 export function isEndBiome(b: number): boolean {
   return b >= BIOME_THE_END && b <= BIOME_END_BARRENS;
@@ -95,6 +99,8 @@ export const BIOME_NAMES = [
   'Valle de almas', 'Bosque carmesí', 'Bosque distorsionado', 'Deltas de basalto',
   // Fase 8.6
   'El End', 'Tierras altas del End', 'Tierras medias del End', 'Islas pequeñas del End', 'Páramos del End',
+  // Programa lunar
+  'Tierras altas lunares', 'Mares lunares',
 ];
 
 /**

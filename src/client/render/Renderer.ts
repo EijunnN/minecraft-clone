@@ -10,7 +10,8 @@
 //  7. TAA → contorno de selección y bloque en la mano
 //  8. Exposición automática, bloom, tonemapping ACES (+ FXAA si no hay TAA)
 import { dyeDecorKey } from './dyeArt'; // el cuero teñido
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, vec3, quat } from 'gl-matrix';
+import { INSERTER_PAINT } from '../../shared/blocks';
 import {
   createContext, Program, RenderTarget, UniformBuffer, FullscreenTriangle, FULLSCREEN_VS, type GL, type GLCaps,
 } from '../engine/gl';
@@ -128,6 +129,14 @@ export interface FrameState {
   cloudCoverage: number;
   mist: number;
   selection: { x: number; y: number; z: number; box?: number[] } | null;
+  /** Programa lunar: vista previa de lo que se va a colocar (verde si cabe, rojo si no; dir: sentido de marcha o −1). */
+  ghost?: { x: number; y: number; z: number; id: number; box: number[]; ok: boolean; dir: number; area?: number[]; links?: number[]; linkFrom?: number[] } | null;
+  /** Programa lunar: puntos sobre los que dibujar el rayo rojo de «sin energía». */
+  noPower?: number[][];
+  /** Programa lunar: los brazos (inserters): pivote y pinza de cada uno. */
+  arms?: { tier: number; px: number; py: number; pz: number; hx: number; hy: number; hz: number }[] | null;
+  /** Programa lunar: los cables entre postes (pares de vértices en coordenadas del mundo, por tipo). */
+  wires?: { small: Float32Array; medium: Float32Array } | null;
   /** Objeto en la mano (id de objeto; 0 = mano vacía). */
   heldItem: number;
   /** Uso del objeto: 0..1 (tensar el arco, comer). */
@@ -494,15 +503,17 @@ export class Renderer {
     const moon = [-sun[0], -sun[1], -sun[2]];
     const sunUp = sun[1] >= 0;
     const light = sunUp ? sun : moon;
-    const T = Atmosphere.transmittance(s.camY, light[1], this.tmpT);
+    const vac = !!dimensionDef(s.dim ?? 0).vacuum; // Programa lunar: sin aire, el Sol llega entero
+    const T = vac ? this.tmpT.fill(1) : Atmosphere.transmittance(s.camY, light[1], this.tmpT);
     const phase = ((s.day % 8) + 8) % 8 / 8;
     const moonFull = 0.5 + 0.5 * Math.cos(phase * Math.PI * 2);
     const moonIllum = SUN_ILLUMINANCE[0] * 0.009 * (0.3 + 0.7 * moonFull);
     // Luz directa atenuada por el cielo cubierto cuando llueve.
     // Fase 8: sin cielo no hay luz directa (ni sombras ni rayos de luz).
-    const fade = dimensionDef(s.dim ?? 0).sky ? smooth(0.0, 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain) * (1 - 0.4 * (s.bossDark ?? 0)) : 0; // 8.7: el Wither oscurece
+    const fade = dimensionDef(s.dim ?? 0).sky ? smooth(0.0, vac ? 0.012 : 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain) * (1 - 0.4 * (s.bossDark ?? 0)) : 0; // 8.7: el Wither oscurece
+    const kSun = vac ? 0.4 : 1; // sin aire el Sol llega sin filtrar y el ojo se adapta: si no, todo sale blanco
     const lc = sunUp
-      ? [SUN_ILLUMINANCE[0] * T[0] * fade, SUN_ILLUMINANCE[1] * T[1] * fade, SUN_ILLUMINANCE[2] * T[2] * fade]
+      ? [SUN_ILLUMINANCE[0] * T[0] * fade * kSun, SUN_ILLUMINANCE[1] * T[1] * fade * kSun, SUN_ILLUMINANCE[2] * T[2] * fade * kSun]
       : [moonIllum * 0.75 * T[0] * fade, moonIllum * 0.85 * T[1] * fade, moonIllum * T[2] * fade];
     return { sun, moon, light, lightColor: lc, sunUp, moonIllum, phase };
   }
@@ -531,7 +542,7 @@ export class Renderer {
     d[140] = s.cloudCoverage; d[141] = 230; d[142] = 560; d[143] = 1.0;
     d[144] = s.time * 7.0; d[145] = s.time * 2.5; d[146] = 1.0 + s.rain * 1.5; d[147] = s.time % 10000;
     d[148] = Math.max(1, this.shadowSize); d[149] = this.settings.pcfSamples;
-    d[150] = this.settings.ssrSteps; d[151] = this.settings.volumetricSteps;
+    d[150] = this.settings.ssrSteps; d[151] = dimensionDef(s.dim ?? 0).vacuum ? 0 : this.settings.volumetricSteps; // (sin aire no hay rayos de luz)
     const fovY = (this.settings.fov * Math.PI) / 180;
     d[152] = NEAR; d[153] = FAR; d[154] = Math.tan(fovY / 2); d[155] = this.width / this.height;
     // Fase 8: la dimensión (cielo, niebla y penumbra). La niebla se cierra antes que el borde normal.
@@ -540,7 +551,7 @@ export class Renderer {
     d[156] = dd.sky ? 1 : 0; d[157] = dd.lavaSea ?? 0; d[158] = dd.sky ? 0 : (1.3 / (R * dd.fogDistance)) * (1 + (s.bossFog ?? 0) * 1.6); d[159] = dd.skyLight ? 0 : 1;
     // Fase 8.2: la niebla es la del bioma (mezclada con los de alrededor) y la penumbra toma su tono.
     const fog = s.fog ?? dd.fog;
-    d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = dd.skybox === 'end' ? 1 : 0;
+    d[160] = lin(fog[0]) * 0.8; d[161] = lin(fog[1]) * 0.8; d[162] = lin(fog[2]) * 0.8; d[163] = dd.skybox === 'end' ? 1 : dd.vacuum ? 2 : 0;
     const top = Math.max(fog[0], fog[1], fog[2], 1);
     const hue = (c: number) => 0.55 + 0.45 * (c / top);
     // Fase 8 (entorno del Nether): una penumbra algo más clara, para que lo oscuro (arena de alma, basalto) se lea
@@ -727,12 +738,12 @@ export class Renderer {
     gl.disable(gl.DEPTH_TEST);
 
     // --- 5. Nubes y luz volumétrica ---
-    const cloudsOn = set.clouds && dimensionDef(s.dim ?? 0).sky; // Fase 8: sin cielo no hay nubes
+    const cloudsOn = set.clouds && dimensionDef(s.dim ?? 0).sky && !dimensionDef(s.dim ?? 0).vacuum; // Fase 8: sin cielo no hay nubes; sin aire, tampoco
     if (cloudsOn) {
       this.clouds.resize(W, H, set.cloudScale);
       this.clouds.render(this.main.depth!, this.atmosphere.skyView.color, this.atmosphere.irradiance.color, set.cloudSteps, set.taa);
     }
-    const volOn = set.volumetric && this.shadowSize > 0 && lightOn;
+    const volOn = set.volumetric && this.shadowSize > 0 && lightOn && !dimensionDef(s.dim ?? 0).vacuum; // (sin aire no hay rayos de luz)
     if (volOn) {
       this.volRT.bind();
       this.pVol.use()
@@ -793,6 +804,53 @@ export class Renderer {
       this.entities.drawOutline(s.selection, s.camX, s.camY, s.camZ);
       gl.depthMask(true);
     }
+    if (s.wires) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      gl.depthMask(false);
+      this.entities.drawWires(s.wires, s.camX, s.camY, s.camZ);
+      gl.depthMask(true);
+    }
+    if (s.arms && s.arms.length) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      const bar = this.items.textureCube('iron_block');
+      const q = quat.create();
+      for (const a of s.arms) {
+        const dx = a.hx - a.px, dy = a.hy - a.py, dz = a.hz - a.pz;
+        const len = Math.hypot(dx, dy, dz) || 0.001;
+        quat.rotationTo(q, [0, 1, 0], [dx / len, dy / len, dz / len]);
+        const l = s.lightAt(Math.floor(a.px), Math.floor(a.py), Math.floor(a.pz));
+        const light: [number, number] = [(l >> 4) / 15, (l & 15) / 15];
+        const mm = mat4.create();
+        mat4.fromRotationTranslationScale(mm, q, [(a.px + a.hx) / 2 - s.camX, (a.py + a.hy) / 2 - s.camY, (a.pz + a.hz) / 2 - s.camZ], [0.09, len, 0.09]);
+        this.items.drawGhost(bar, mm, this.viewProjUnjit, light, [1, 1, 1], 1, s.grassTint, bindLighting);
+        const hand = this.items.textureCube(INSERTER_PAINT[a.tier]);
+        mat4.fromRotationTranslationScale(mm, q, [a.hx - s.camX, a.hy - s.camY, a.hz - s.camZ], [0.16, 0.16, 0.16]);
+        this.items.drawGhost(hand, mm, this.viewProjUnjit, light, [1, 1, 1], 1, s.grassTint, bindLighting);
+      }
+    }
+    if (s.noPower && s.noPower.length) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      this.entities.drawNoPower(s.noPower, s.camX, s.camY, s.camZ);
+    }
+    if (s.ghost) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      gl.depthMask(false);
+      // El propio bloque, translúcido y tal como quedará (con su orientación): verde si cabe, rojo si no. Sin modelo (plantas…), una caja.
+      const g = s.ghost;
+      const model = this.items.placedModel(g.id);
+      if (model) {
+        const mm = mat4.create();
+        mat4.translate(mm, mm, [g.x + 0.5 - s.camX, g.y + 0.5 - s.camY, g.z + 0.5 - s.camZ]);
+        const l = s.lightAt(g.x, g.y, g.z);
+        this.items.drawGhost(model, mm, this.viewProjUnjit, [(l >> 4) / 15, (l & 15) / 15], g.ok ? [0.7, 1.15, 0.85] : [1.3, 0.45, 0.4], 0.6, s.grassTint, bindLighting);
+      }
+      this.entities.drawGhost(g, s.camX, s.camY, s.camZ, !model);
+      gl.depthMask(true);
+    }
     // Partículas (después del TAA, como la lluvia, para que no dejen estela): se desvanecen contra la
     // geometría con una copia de la profundidad de la escena.
     if (this.entities.particles.n > 0) {
@@ -839,7 +897,8 @@ export class Renderer {
       .tex2D('uLum', this.lumTex)
       .tex2D('uPrev', expPrev.color)
       .f1('uDt', Math.min(s.dt, 0.1))
-      .f1('uEV', set.brightness - s.rain * 0.7 + (s.nightVision ?? 0) * 2.5)
+      // Programa lunar: con el cielo negro la exposición automática sube de más y el suelo iluminado sale blanco: se compensa.
+      .f1('uEV', set.brightness - s.rain * 0.7 + (s.nightVision ?? 0) * 2.5 - (dimensionDef(s.dim ?? 0).vacuum ? 1.7 : 0))
       .f1('uLevels', 6)
       .f1('uReset', this.exposureReset ? 1 : 0);
     this.tri.draw();

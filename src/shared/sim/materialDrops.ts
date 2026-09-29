@@ -2,7 +2,7 @@
 // Minecraft 1.17+) y los bloques nuevos que no se sueltan a sí mismos. drops.ts lo consulta antes de
 // sus reglas; null = no es asunto de este módulo.
 import {
-  IRON_ORE, GOLD_ORE, DIRT, BLUE_ICE, PODZOL, DIRT_PATH, POWDER_SNOW, FROGSPAWN, isCandleCake, candleOfCake,
+  IRON_ORE, GOLD_ORE, MOON_IRON_VEIN, DIRT, BLUE_ICE, PODZOL, DIRT_PATH, POWDER_SNOW, FROGSPAWN, isCandleCake, candleOfCake,
 } from '../blocks';
 import { RAW_IRON, RAW_GOLD, type ItemStack } from '../items';
 
@@ -12,6 +12,9 @@ export function materialDrops(block: number): ItemStack[] | null {
       return [{ id: RAW_IRON, count: 1 }];
     case GOLD_ORE:
       return [{ id: RAW_GOLD, count: 1 }];
+    // Programa lunar: a mano, una veta da un solo trozo y se pierde entera; el extractor es quien la aprovecha.
+    case MOON_IRON_VEIN:
+      return [{ id: RAW_IRON, count: 1 }];
     // Podsol y camino de tierra: tierra (sin toque de seda).
     case PODZOL:
     case DIRT_PATH:

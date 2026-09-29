@@ -2,6 +2,7 @@
 // flechas (vuelan, se clavan, hieren) y bloques que caen (arena y grava).
 import { clipSegment, CLIP_CELL } from '../../collide'; // choque contra la forma real de los bloques
 import { MOBS, ENT_ITEM, ENT_ARROW, isRaider , MOB_ENDER_DRAGON } from '../../mobs';
+import { carryVelocity } from '../../logistics/carry'; // Programa lunar: las cintas llevan lo que hay encima
 import { ITEMS, ARROW, maxStack, sameKind, type ItemStack } from '../../items';
 import { AIR, BLOCK_SOLID, BLOCK_FLUID } from '../../blocks';
 import { EF_PICKABLE, EF_FIRE } from '../../protocol';
@@ -60,6 +61,15 @@ export class ItemPhysics {
       const fr = e.onGround ? 8 : 0.5;
       e.vx *= 1 - Math.min(1, dt * fr);
       e.vz *= 1 - Math.min(1, dt * fr);
+      // Programa lunar: sobre una cinta, se lo lleva (como en Factorio).
+      if (e.onGround) {
+        const carry = carryVelocity(this.m.w.getBlock(Math.floor(e.x), Math.floor(e.y - 0.05), Math.floor(e.z)));
+        if (carry) {
+          const k = Math.min(1, dt * 12);
+          e.vx += (carry[0] - e.vx) * k;
+          e.vz += (carry[1] - e.vz) * k;
+        }
+      }
     }
     if (e.inLava && !fireproof) {
       this.m.remove(e.id);

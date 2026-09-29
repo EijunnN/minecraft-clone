@@ -2,6 +2,7 @@
 // eficiencia, toque de seda, fortuna, irrompibilidad, protección, caída de pluma, botín…), yunque
 // (reparar, combinar, renombrar, coste), afiladora, pilas encantadas de ida y vuelta y el servidor
 // (yunque que se deteriora, afiladora, Paso helado, Espinas, botella con experiencia, aldeanos).
+import { MAX_TEXTURE_LAYERS } from '../src/shared/constants';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -53,7 +54,7 @@ test('registro: bloques, objetos, texturas, recetas y encantamientos', () => {
   assert.equal(ITEMS[FROSTED_ICE], undefined, 'el hielo escarchado no es un objeto');
   assert.equal(ITEMS[ENCHANTED_BOOK].stack, 1);
   for (const id of [ENCHANTED_BOOK, EXPERIENCE_BOTTLE]) assert.ok(itemSpriteIndex(id) >= 0, `sprite ${ITEMS[id].key}`);
-  assert.ok(TEXTURE_DEFS.length <= 1024);
+  assert.ok(TEXTURE_DEFS.length <= MAX_TEXTURE_LAYERS);
   for (const t of ['enchanting_table_top', 'anvil', 'damaged_anvil_top', 'frosted_ice_3']) assert.ok(TEXTURE_DEFS.some((d) => d.name === t), t);
   // Recetas de Minecraft.
   const O = OBSIDIAN, D = DIAMOND, I = IRON_INGOT, B = IRON_BLOCK;

@@ -1,6 +1,7 @@
 // Fase 6.5 (maderas): mangle, roble pálido y bambú con todas sus formas; troncos sin corteza y leños
 // de todas las maderas (recetas, combustible, descortezar con el hacha); el bambú que crece y se cae
 // entero; propágulos que dan mangles; y que el mundo genere mangles en los pantanos y bambú en la jungla.
+import { MAX_TEXTURE_LAYERS } from '../src/shared/constants';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -45,7 +46,7 @@ test('maderas nuevas: familias completas, nombres y texturas', () => {
   assert.equal(ITEMS[HANGING_PROPAGULE], undefined, 'el propágulo colgando no es un objeto');
   assert.equal(new Set(INVENTORY_ORDER).size, INVENTORY_ORDER.length, 'sin repetidos en el creativo');
   assert.equal(WOOD_EXTRAS.length, 9, 'sin corteza y leños para las nueve maderas');
-  assert.ok(TEXTURE_DEFS.length <= 1024);
+  assert.ok(TEXTURE_DEFS.length <= MAX_TEXTURE_LAYERS);
   const mine = TEXTURE_DEFS.filter((t) => /mangrove|pale_oak|bamboo|stripped_/.test(t.name)).length;
   assert.ok(mine <= 80, `${mine} texturas nuevas (presupuesto de ~80)`);
 });

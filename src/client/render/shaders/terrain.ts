@@ -4,7 +4,7 @@ import { ATMOSPHERE } from './atmosphere';
 
 /** Decodificación del vértice empaquetado y viento en hojas/plantas. */
 export const TERRAIN_VERTEX_COMMON = /* glsl */ `
-layout(location = 0) in uvec2 aData;
+layout(location = 0) in uvec3 aData;
 uniform vec3 uChunkOffset;
 uniform highp sampler2D uLayerProps;
 
@@ -25,7 +25,7 @@ TerrainVertex decodeVertex() {
   uint b = aData.y;
   v.local = vec3(float(a & 511u) - 16.0, float((a >> 18) & 8191u), float((a >> 9) & 511u) - 16.0) / 16.0;
   v.uv = vec2(float(b & 31u), float((b >> 5) & 31u)) / 16.0;
-  v.layer = int(((b >> 10) & 511u) | ((a >> 31) << 9));
+  v.layer = int(((b >> 10) & 511u) | ((a >> 31) << 9) | ((aData.z & 15u) << 10));
   v.normal = int((b >> 19) & 7u);
   v.ao = float((b >> 22) & 3u) / 3.0;
   v.sky = float((b >> 24) & 15u) / 15.0;
@@ -293,6 +293,18 @@ void main() {
     if (flowAmt > 0.0) uv -= normalize(gN.xz) * uCamPos.w * 0.12 * flowAmt;
     else if (vNormal != 2 && vNormal != 3) uv.y -= uCamPos.w * 0.25;
     else uv += vec2(sin(uCamPos.w * 0.15 + vWorld.z * 0.1) * 0.05, uCamPos.w * 0.035);
+  }
+  // Programa lunar: la cara de arriba de una cinta se desliza a la velocidad de su nivel (bloques/s = uv por segundo). El tiempo
+  // se envuelve cada 3 600 s y las tres velocidades dan un número entero de vueltas, así que no da saltos.
+  if (special >= 7 && special <= 18 && vNormal == 2) {
+    int bk = special - 7;
+    int tierB = bk / 4;
+    int dirB = bk - tierB * 4;
+    float off = uCamPos.w * (tierB == 0 ? 1.875 : tierB == 1 ? 3.75 : 5.625);
+    if (dirB == 0) uv.x -= off;
+    else if (dirB == 1) uv.y -= off;
+    else if (dirB == 2) uv.x += off;
+    else uv.y += off;
   }
   // Fase 6.5 (equipo): fuego: las llamas suben, ondulan y su borde de arriba parpadea.
   bool fireCut = false;

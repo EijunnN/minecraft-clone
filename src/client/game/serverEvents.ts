@@ -21,6 +21,13 @@ export class ServerEvents {
   onServerMessage(msg: ServerMsg): void {
     if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
     if (this.g.vehicles.onMessage(msg)) return; // Fase 7 (transporte): 'vpass' y 'vfix'
+    if (this.g.rocket.onMessage(msg)) return; // Programa lunar: 'rocket'
+    if (this.g.belts.onMessage(msg)) return; // Programa lunar: 'belts'
+    if (this.g.arms.onMessage(msg)) return; // Programa lunar: 'arms'
+    if (this.g.research.onMessage(msg)) return; // Programa lunar: 'research'
+    if (this.g.wires.onMessage(msg)) return; // Programa lunar: 'wires'
+    if (msg.t === 'mview') return this.g.interaction.onMachineView(msg); // Programa lunar: ventana de ensambladoras y hornos
+    if (msg.t === 'icfg') return this.g.interaction.onInserterConfig(msg); // Programa lunar: la ventana de un brazo
     if (this.g.books.onMessage(msg)) return; // Fase 6.5 (libros y estandartes): 'banner' y 'lbook'
     if (this.g.enchant.onServer(msg)) return; // Fase 7 (encantamientos): /encantar
     if (this.g.mechanisms.onMessage(msg)) return; // Fase 7 (mecanismos): armadura que pone un dispensador

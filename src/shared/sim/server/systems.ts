@@ -57,6 +57,19 @@ import { Fire } from './fire';
 import { Conduits } from './conduits';
 import { Equipment } from './equipment';
 import { Transport } from './vehicles';
+import { Rockets } from './rockets'; // Programa lunar: el cohete Selene
+import { Belts } from './belts'; // Programa lunar: las cintas transportadoras
+import { Inserters } from './inserters'; // Programa lunar: los brazos
+import { Power } from './power'; // Programa lunar: las redes de energía
+import { Machines } from './machines'; // Programa lunar: las máquinas
+import { Assemblers } from './assemblers'; // Programa lunar: ensambladoras
+import { Furnaces } from './furnaces'; // Programa lunar: hornos de combustible
+import { MachineHub } from './machineHub';
+import { Research } from './research'; // Programa lunar: la investigación
+import { Labs } from './labs';
+import { Extractors } from './extractors'; // Programa lunar: los extractores
+import { MultiBlocks } from './multiblocks'; // Programa lunar: máquinas de varias casillas
+import { MachineConfig } from './machineConfig'; // Programa lunar: configuración de divisores y brazos
 import { ENT_CHEST_MINECART } from '../../vehicles'; // las vagonetas con cofre de las minas
 import { LOOT_TABLES, rollLoot, scatterLoot } from '../../loot';
 import { EnchantWork } from './enchantWork';
@@ -140,6 +153,25 @@ export class ServerSystems {
   readonly bells: BellResonance;
   /** Fase 7 (transporte): barcas, vagonetas y raíles. */
   readonly transport: Transport;
+  /** Programa lunar: el cohete Selene (sube, viaja a otra dimensión y baja frenando). */
+  readonly rockets: Rockets;
+  /** Programa lunar: las cintas transportadoras (logística de la Luna). */
+  readonly belts: Belts;
+  /** Programa lunar: los brazos (pasan objetos de un contenedor o cinta a otro). */
+  readonly inserters: Inserters;
+  /** Programa lunar: las redes de energía (cables, paneles y baterías) y las máquinas que cuelgan de ellas. */
+  readonly power: Power;
+  /** Programa lunar: al romper una casilla de una máquina grande, se quita entera. */
+  readonly multi: MultiBlocks;
+  /** Programa lunar: lo que el jugador configura en una máquina (divisores, brazos). */
+  readonly machineConfig: MachineConfig;
+  readonly machines: Machines;
+  readonly assemblers: Assemblers;
+  readonly furnaces: Furnaces;
+  readonly research: Research;
+  readonly labs: Labs;
+  /** Programa lunar: los extractores eléctricos y las reservas de las vetas. */
+  readonly extractors: Extractors;
   /** Fase 7 (encantamientos): mesa, yunque, afiladora, yunques que caen, Paso helado y Conductividad. */
   readonly enchantWork: EnchantWork;
   /** Fase 7 (redstone): potencia, componentes y ticks programados. */
@@ -191,6 +223,7 @@ export class ServerSystems {
     this.trading.heroAmp = (name) => this.raids.heroAmp(name);
     this.commands.raids = this.raids;
     this.commands.lightning = (x, y, z) => this.storms.strike(x, y, z);
+    this.commands.rocket = (x, y, z, yaw) => void this.rockets.spawn(x, y, z, yaw); // Programa lunar: /cohete
     this.colorBlocks = new ColorBlocks(ctx);
     this.oceanLife = new OceanLife(ctx, this.nature, this.rules);
     this.farming.extraFertilize = (x, y, z) => this.oceanLife.fertilize(x, y, z);
@@ -228,6 +261,7 @@ export class ServerSystems {
     this.bells = new BellResonance(ctx);
     this.equipment = new Equipment(ctx, this.fire, this.riding);
     this.transport = new Transport(ctx, store, this.riding);
+    this.rockets = new Rockets(ctx, store);
     this.containers.virtual = {
       container: (x, y, z, s) => this.transport.container(x, y, z, s),
       changed: () => this.transport.containerChanged(),
@@ -239,6 +273,16 @@ export class ServerSystems {
     entities.gearShots.thundering = () => thunderAt(ctx.worldTime(), ctx.seed) > 0;
     // La redstone: el motor, lo que lee de otros sistemas y los avisos que le llegan de ellos.
     const rs = (this.redstone = new Redstone(ctx, this.nature));
+    this.belts = new Belts(ctx, rs, store); // (antes de cargar los chunks: su gancho avisa de las cintas que ya hay)
+    this.multi = new MultiBlocks(ctx, rs);
+    this.power = new Power(ctx, rs, store); // (igual: sus ganchos avisan de lo eléctrico que ya hay)
+    this.machines = new Machines(ctx, rs, store, this.power);
+    this.assemblers = new Assemblers(ctx, rs, store, this.power);
+    this.furnaces = new Furnaces(ctx, rs, store);
+    this.research = new Research(ctx, store);
+    this.labs = new Labs(ctx, rs, store, this.power, this.research);
+    this.machines.research = this.assemblers.research = this.furnaces.research = this.research;
+    this.commands.research = this.research; // /investigar
     rs.hooks = {
       slots: (x, y, z) => this.containers.slotsAt(x, y, z),
       viewers: (x, y, z) => this.containers.viewers(x, y, z),
@@ -270,6 +314,21 @@ export class ServerSystems {
       collections: this.collections, shelves: this.shelves, transport: this.transport, fire: this.fire, stands: this.stands,
       fertilize: (x, y, z) => this.farming.fertilize(x, y, z),
     }));
+    this.inserters = new Inserters(ctx, rs, this.belts, mech.inventories, this.power, store); // Programa lunar
+    mech.inventories.machines = new MachineHub([this.machines, this.assemblers, this.furnaces, this.labs]); // los brazos meten y sacan de las máquinas por sus puertos
+    const stackBonus = () => {
+      this.inserters.bonus = { inserter: this.research.modifier('inserter-stack-size-bonus'), bulk: this.research.modifier('bulk-inserter-capacity-bonus') };
+    };
+    stackBonus();
+    this.research.onChange.push(stackBonus);
+    this.extractors = new Extractors(ctx, rs, store, this.belts, mech.inventories, this.power);
+    this.machineConfig = new MachineConfig(ctx, this.belts, this.inserters, this.assemblers, this.furnaces);
+    // Lo que consume energía, en el orden de siempre: brazos, hornos, extractores.
+    this.power.register(this.inserters);
+    this.power.register(this.machines);
+    this.power.register(this.assemblers);
+    this.power.register(this.labs);
+    this.power.register(this.extractors);
     this.fire.igniters.add((x, y, z) => mech.light(x, y, z));
     this.fire.burned = (x, y, z) => mech.light(x, y, z);
     this.deepDark = new DeepDark(ctx, store, rs);
@@ -364,6 +423,11 @@ export class ServerSystems {
     this.cauldrons.tick();
     this.riding.tick();
     this.transport.tick();
+    this.rockets.tick();
+    this.furnaces.tick();
+    this.power.tick(); // la energía se reparte y avanzan brazos, hornos y extractores
+    this.belts.tick();
+    this.inserters.sync();
     this.beds.tick();
     this.composters.tick();
     this.fishing.tick();
@@ -407,9 +471,11 @@ export class ServerSystems {
 
   /** Un jugador acaba de entrar: lo que tiene que saber y no va en la bienvenida. */
   onJoin(s: Session): void {
+    this.research.sendTo(s); // Programa lunar: qué está investigado
     this.riding.onJoin(s); // quién va montado
     this.collections.onJoin(s); // los tocadiscos que están sonando
     this.transport.onJoin(s); // quién va en cada barca o vagoneta
+    this.rockets.onJoin(s); // cómo están los cohetes
     this.deepDark.onJoin(s); // su última muerte (brújula de recuperación)
     this.netherGoods.onJoin(s); // Fase 8.5: los efectos de los faros
   }
@@ -424,6 +490,7 @@ export class ServerSystems {
     this.raids.onLeave(s);
     this.leashes.onLeave(s);
     this.transport.onLeave(s);
+    this.rockets.onLeave(s);
     this.portals.onLeave(s);
   }
 
@@ -436,6 +503,16 @@ export class ServerSystems {
   /** Guarda lo pendiente de cada sistema. */
   flush(store: ServerStore): void {
     this.containers.flush(store);
+    this.rockets.flush(store);
+    this.belts.flush(store);
+    this.inserters.flush(store);
+    this.power.flush(store);
+    this.machines.flush(store);
+    this.assemblers.flush(store);
+    this.furnaces.flush(store);
+    this.labs.flush(store);
+    this.research.flush();
+    this.extractors.flush(store);
     this.campfires.flush(store);
     this.netherGoods.flush(store); // Fase 8.5: los faros
     this.signs.flush(store);

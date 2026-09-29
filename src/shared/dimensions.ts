@@ -11,6 +11,8 @@ export const DIM_OVERWORLD = 0;
 export const DIM_NETHER = 1;
 /** Fase 8.6. */
 export const DIM_END = 2;
+/** Programa lunar (idea-luna.md): la Luna. Su generador y su cielo llegan con sus pasos; aquí, sus reglas. */
+export const DIM_MOON = 3;
 
 /** Ticks dentro de un portal del Nether para viajar en supervivencia (4 s; en creativo, al momento). */
 export const PORTAL_TICKS = 80;
@@ -54,7 +56,11 @@ export interface DimensionDef {
    * Fase 8.6: el cielo que se dibuja sin sol ('end': el vacío del End con sus nebulosas y sus destellos; sin él, el
    * color de la niebla). La luz del cielo sigue existiendo aparte (skyLight: en el End sí, en el Nether no).
    */
-  skybox?: 'end';
+  skybox?: 'end' | 'moon';
+  /** Sin atmósfera (la Luna): la luz del Sol llega entera y dura, no hay cielo azul ni bruma ni nubes, y las sombras son negras. */
+  vacuum?: boolean;
+  /** Otros nombres con los que los comandos reconocen la dimensión (`/dimension luna`). */
+  aliases?: readonly string[];
   /** Fase 8.6: color de la penumbra (visual/ambient_light_color; sin él, el tono de la niebla). */
   ambientColor?: [number, number, number];
   /** Fase 8 (entorno): altura de la superficie de su mar de lava (la niebla se enciende y el aire ondula encima). */
@@ -79,6 +85,13 @@ const DEFS: DimensionDef[] = [
     ambient: 0.25, ambientColor: [63, 71, 63], fog: [24, 19, 24], fogDistance: 1, gravity: 1, breathable: true, evaporatesWater: false,
     fastLava: false, beds: false, respawn: false, compass: false, anchors: false, skybox: 'end',
   },
+  // La Luna: sin aire ni agua líquida, un sexto de la gravedad, cielo negro con estrellas y la Tierra a la vista. Sin
+  // ciclo de nubes ni lluvia; la luz del Sol es dura (skyLight) y las sombras, negras (ambient casi 0).
+  {
+    id: DIM_MOON, key: 'moon', name: 'La Luna', scale: 1, skyLight: true, sky: true, vacuum: true, weather: false,
+    ambient: 0.04, ambientColor: [70, 76, 92], fog: [0, 0, 0], fogDistance: 3, gravity: 1 / 6, breathable: false, evaporatesWater: true,
+    fastLava: false, beds: false, respawn: false, compass: false, anchors: false, skybox: 'moon', aliases: ['luna'],
+  },
 ];
 
 /** Definición de una dimensión (la del mundo normal si el id no existe). */
@@ -93,7 +106,7 @@ export function isDimension(id: unknown): id is number {
 /** Dimensión por su clave o su nombre (para los comandos), o -1. */
 export function dimensionByKey(key: string): number {
   const k = key.trim().toLowerCase();
-  const d = DEFS.find((d) => d.key === k || d.name.toLowerCase() === k || d.name.toLowerCase().replace(/^el /, '') === k);
+  const d = DEFS.find((d) => d.key === k || d.name.toLowerCase() === k || d.name.toLowerCase().replace(/^(el|la) /, '') === k || d.aliases?.includes(k));
   return d ? d.id : -1;
 }
 

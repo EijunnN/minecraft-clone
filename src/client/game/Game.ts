@@ -58,6 +58,13 @@ import { ServerEvents } from './serverEvents';
 import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
 import { VehicleClient } from './vehicleClient'; // Fase 7 (transporte)
+import { RocketClient } from './rocketClient'; // Programa lunar
+import { BeltClient } from './beltClient'; // Programa lunar: cintas
+import { ArmClient } from './armClient';
+import { ResearchClient } from './researchClient'; // Programa lunar: investigación
+import { ResearchScreen, CraftScreen } from '../ui/factorioScreens';
+import { WireClient } from './wireClient'; // Programa lunar: cables de los postes
+import { MachinePanel, type PanelSpec, type PanelPatch } from '../ui/MachinePanel'; // Programa lunar: configuración de máquinas
 import { vehicleFrame } from './vehicleFx';
 import { Trading } from './trading'; // Fase 6 (aldeanos)
 import type { RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
@@ -111,6 +118,13 @@ export class Game {
   rainNow = 0;
   readonly riding = new Riding(this); // Fase 6 (monturas)
   readonly vehicles = new VehicleClient(this); // Fase 7 (transporte): barcas y vagonetas
+  readonly rocket = new RocketClient(this); // Programa lunar: el cohete Selene
+  readonly belts = new BeltClient(this); // Programa lunar: las cintas transportadoras
+  readonly arms = new ArmClient(this); // Programa lunar: los brazos
+  readonly research = new ResearchClient(); // Programa lunar: qué está investigado
+  researchScreen!: ResearchScreen;
+  craftScreen!: CraftScreen;
+  readonly wires = new WireClient(); // Programa lunar: los cables entre postes eléctricos
   /** Fase 6 (aldeanos): comercio con los aldeanos. */
   readonly trading = new Trading(this);
   /** Chat de voz por proximidad. */
@@ -187,6 +201,8 @@ export class Game {
   survival = new Survival();
   ents = new ClientEntities();
   screen: InventoryScreen;
+  /** Programa lunar: la ventana de configuración de divisores y brazos. */
+  machinePanel!: MachinePanel;
   spawn: [number, number, number] = [0.5, 100, 0.5];
   private lookTimer = 0;
   private stateTimer = 0;
@@ -214,6 +230,18 @@ export class Game {
       work: this.enchant.host, // Fase 7 (encantamientos)
       recipes: { has: (r) => this.recipes.has(r), version: () => this.recipes.version }, // Fase 9 (libro de recetas)
     }, this.inv);
+    this.machinePanel = new MachinePanel(this.ui.icons, () => this.heldId);
+    this.researchScreen = new ResearchScreen(this.ui.icons, this.research, (tech, add) => this.net?.send({ t: 'rq', tech, add }));
+    this.craftScreen = new CraftScreen(this.ui.icons, this.research, {
+      count: (id) => this.inv.count(id),
+      remove: (id, n) => void this.inv.remove(id, n),
+      give: (id, n) => {
+        // Lo que no quepa se tira al suelo, delante del jugador.
+        const rest = this.inv.add({ id, count: n });
+        if (rest) this.net?.send({ t: 'drop', items: [rest], p: [this.player.x, this.player.y + 1.4, this.player.z] });
+      },
+      crafted: (id, n) => this.net?.send({ t: 'crafted', item: id, n }),
+    });
     this.survival.armor = this.interaction.armor;
     this.ents.playerPos = (id) => {
       if (id === this.net?.id) return [this.player.x, this.player.y, this.player.z];
@@ -279,8 +307,8 @@ export class Game {
     if (!this.offline) {
       // Diagnóstico de la latencia: en qué centro de datos vive este mundo.
       void fetch(`/api/room/${encodeURIComponent(this.cfg.room)}/donde`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d: { servidor?: string; ciudad?: string } | null) => {
+        .then((r) => (r.ok ? (r.json() as Promise<{ servidor?: string; ciudad?: string }>) : null))
+        .then((d) => {
           if (d?.servidor) this.serverWhere = d.ciudad && d.ciudad !== d.servidor ? `${d.ciudad} (${d.servidor})` : d.servidor;
         })
         .catch(() => {});
@@ -300,6 +328,12 @@ export class Game {
     this.books.onWelcome(w.banners); // Fase 6.5 (libros y estandartes)
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
+    this.player.gravityScale = dimensionDef(w.dim).gravity;
+    this.rocket.reset(); // Programa lunar: los cohetes del mundo anterior ya no están
+    this.belts.reset();
+    this.arms.reset();
+    this.research.reset();
+    this.wires.reset(); // Programa lunar: los cables del mundo anterior
     this.beacons.reset(); // Fase 8.5: los faros de este mundo
     resetGateways();
     this.world.onColumnMeshed = (col) => {
@@ -380,6 +414,12 @@ export class Game {
     this.world?.dispose();
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
+    this.player.gravityScale = dimensionDef(w.dim).gravity;
+    this.rocket.reset(); // Programa lunar: los cohetes del mundo anterior ya no están
+    this.belts.reset();
+    this.arms.reset();
+    this.research.reset();
+    this.wires.reset(); // Programa lunar: los cables del mundo anterior
     this.beacons.reset(); // Fase 8.5: los faros de este mundo
     resetGateways();
     this.world.onColumnMeshed = (col) => {
@@ -494,7 +534,7 @@ export class Game {
 
   anyScreenOpen(): boolean {
     return this.ui.isChatOpen() || this.ui.isInventoryOpen() || this.ui.isSettingsOpen() || this.screen.isOpen() || this.ui.isDeathOpen() ||
-      this.signEditor.isOpen() || this.trading.isOpen() || this.namePrompt.isOpen() || this.books.isOpen(); // Fase 6 (aldeanos): + comercio
+      this.signEditor.isOpen() || this.trading.isOpen() || this.namePrompt.isOpen() || this.books.isOpen() || this.machinePanel.isOpen() || this.researchScreen.isOpen() || this.craftScreen.isOpen(); // Fase 6 (aldeanos): + comercio
   }
 
   stop(): void {
@@ -652,6 +692,29 @@ export class Game {
     });
   }
 
+  /** Programa lunar: abre la ventana de configuración de una máquina; lo que se cambia se manda al servidor ('mcfg'). */
+  openMachinePanel(spec: PanelSpec, pos: [number, number, number], onClose?: () => void): void {
+    this.interaction.mining = null;
+    this.interaction.use = null;
+    this.input.gameKeys = false;
+    this.input.releaseAll();
+    this.input.exitLock();
+    this.machinePanel.open(spec, (patch: PanelPatch) => this.net?.send({ t: 'mcfg', x: pos[0], y: pos[1], z: pos[2], c: patch }), () => {
+      onClose?.();
+      this.afterScreenClosed();
+    });
+  }
+
+  /** Abre la ventana de investigación (G) o la de fabricación (C). */
+  openFactorioScreen(which: 'research' | 'craft'): void {
+    this.interaction.mining = null;
+    this.interaction.use = null;
+    this.input.gameKeys = false;
+    this.input.releaseAll();
+    this.input.exitLock();
+    (which === 'research' ? this.researchScreen : this.craftScreen).open(() => this.afterScreenClosed());
+  }
+
   openSignEditor(x: number, y: number, z: number): void {
     this.interaction.mining = null;
     this.interaction.use = null;
@@ -784,10 +847,12 @@ export class Game {
       input.movement = new Set([k.forward, k.back, k.left, k.right]);
     }
     if (!ui.isChatOpen() && !surv.dead) {
-      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen() && !this.namePrompt.isOpen() && !this.books.isOpen()) this.toggleInventory();
+      if (input.wasPressed(k.inventory) && !ui.isSettingsOpen() && !ui.isPauseOpen() && !this.signEditor.isOpen() && !this.namePrompt.isOpen() && !this.books.isOpen() && !this.machinePanel.isOpen()) this.toggleInventory();
       else if (input.wasPressed('Escape') && (ui.isInventoryOpen() || this.screen.isOpen())) this.toggleInventory();
       if (input.locked && !this.anyScreenOpen()) {
-        if (input.wasPressed(k.chat) || input.wasPressed('Enter')) this.openChat('');
+        if (input.wasPressed(k.craft)) this.openFactorioScreen('craft');
+        else if (input.wasPressed(k.research)) this.openFactorioScreen('research');
+        else if (input.wasPressed(k.chat) || input.wasPressed('Enter')) this.openChat('');
         else if (input.wasPressed(k.command)) this.openChat('/');
         if (input.wasPressed('F1')) {
           this.hudHidden = !this.hudHidden;
@@ -801,6 +866,7 @@ export class Game {
         }
         if (input.wheel !== 0) this.selectSlot((this.selected + (input.wheel > 0 ? 1 : -1) + 9) % 9);
         if (input.wasPressed(k.swapHands)) this.swapHands();
+        if (input.wasPressed(k.rotate)) this.interaction.rotate(); // Programa lunar: girar cintas y brazos antes de ponerlos
         if (input.wasPressed(k.drop)) this.interaction.dropHeld(input.wasPressedWithCtrl(k.drop) || input.isDown('ControlLeft') || input.isDown('ControlRight'));
       }
     }
@@ -885,6 +951,10 @@ export class Game {
     this.ents.update(dt, nowS);
     this.riding.afterEntities(dt); // Fase 6 (monturas)
     this.vehicles.afterEntities(dt); // Fase 7 (transporte)
+    this.rocket.afterEntities(dt); // Programa lunar
+    this.belts.update(dt);
+    this.arms.update(dt);
+    this.craftScreen.update(dt); // la cola de fabricación a mano avanza aunque la ventana esté cerrada
     vehicleFrame(this, dt);
     this.interaction.autoPickup(nowS);
     this.lookTimer -= dt;
@@ -937,9 +1007,9 @@ export class Game {
 
     // --- Dibujar ---
     animateHand(this, dt);
-    const { mobs, drops } = splitEntities(this);
+    const { mobs, drops, arms } = splitEntities(this);
     this.renderer.entities.lightDir = this.renderer.sunDir[1] >= 0 ? this.renderer.sunDir : this.renderer.sunDir.map((v) => -v);
-    this.renderer.render(frameState(this, { dt, cam, eye, sky, rain, views, mobs, drops, target }));
+    this.renderer.render(frameState(this, { dt, cam, eye, sky, rain, views, mobs, drops, arms, target }));
     this.hurtRoll *= Math.exp(-dt * 5);
     this.nav.update();
     // Rayos: envejecen y se retiran; el destello blanco de la pantalla se apaga rápido.

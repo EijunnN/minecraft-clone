@@ -59,7 +59,9 @@ export type SoundMaterial =
   | 'lodestone';
 
 export type BlockCategory = 'construccion' | 'naturaleza' | 'minerales' | 'decoracion' | 'colores'
-  | 'redstone'; // Fase 7 (redstone)
+  | 'redstone' // Fase 7 (redstone)
+  | 'luna' // Programa lunar: el suelo de la Luna y lo que vaya saliendo de su árbol
+  | 'logistica'; // Programa lunar: cintas, brazos, almacenes, tuberías y cables
 
 export interface BlockDef {
   id: number;

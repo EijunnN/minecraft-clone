@@ -1,6 +1,7 @@
 // Vegetación que cambia sola: ticks aleatorios (brotes que crecen, hierba que se extiende o muere,
 // cactus y caña que crecen) y hojas que se caen cuando se tala su árbol. Otros sistemas (la granja)
 // añaden sus propios manejadores de ticks aleatorios.
+import { dimensionDef } from '../../dimensions';
 import { DIR_VEC, amethystBudAt, amethystBudInfo } from '../../blocks'; // los brotes de amatista
 import {
   AIR, GRASS, DIRT, SNOWY_GRASS, CACTUS, SUGAR_CANE, BLOCK_OPAQUE, BLOCK_FLUID, BLOCK_RENDER, BLOCK_REPLACEABLE,
@@ -62,6 +63,8 @@ export class Nature {
 
   /** Clima en la columna (x, z): congela el agua a la intemperie y, si nieva, posa una capa de nieve. */
   weatherTickAt(x: number, z: number, snowing: boolean): void {
+    // Sin clima (la Luna, el Nether, el End) no nieva ni se hiela nada, aunque la columna sea «fría» (la Luna tiene temp −2).
+    if (!dimensionDef(this.ctx.dim).weather) return;
     const w = this.ctx.world;
     const top = w.skyTop(x, z);
     if (top < MIN_Y) return;

@@ -2,10 +2,11 @@
 // Se ejecuta en los Web Workers. Trabaja sobre un volumen de 3x3 columnas (48x48) para que la luz
 // que llega desde los chunks vecinos (hasta 15 bloques) sea correcta.
 //
-// Formato de vértice (2 x uint32):
+// Formato de vértice (3 x uint32):
 //   A: x+16 (9 bits, 1/16 de bloque) | z+16 (9 bits) << 9 | y − MIN_Y (13 bits) << 18 | capa bit 9 << 31
 //   B: u (5) | v (5) << 5 | capa bits 0–8 << 10 | normal (3) << 19 | ao (2) << 22 | cielo (4) << 24 | bloque (4) << 28
-// (La capa de textura tiene 10 bits: hasta 1024 texturas.)
+//   C: capa bits 10–13 (los altos: 14 bits en total, hasta 16 384 texturas) | libre (el resto, para lo que haga falta por vértice)
+// (Antes eran 2 uint32 y 10 bits de capa: 1 024 texturas, que ya no cabían con la logística de la Luna.)
 // Cada quad son 4 vértices; se dibujan con un buffer de índices compartido (0,1,2, 0,2,3).
 import {
   AIR, BEDROCK, ICE, GLASS, CACTUS, SUGAR_CANE,
@@ -513,7 +514,7 @@ export class Mesher {
     const flip = ao[0] + ao[2] > ao[1] + ao[3];
     // Textura girada 90° (troncos tumbados): cada esquina toma la UV de la siguiente.
     const rot = (BLOCK_TEXROT[id] >> f) & 1;
-    buf.ensure(8);
+    buf.ensure(12);
     const d = buf.data;
     let o = buf.length;
     for (let kk = 0; kk < 4; kk++) {
@@ -531,6 +532,7 @@ export class Mesher {
       }
       d[o++] = (px + 16) | ((pz + 16) << 9) | (py << 18) | ((layer >> 9) << 31);
       d[o++] = CORNER_U[kr] | (v << 5) | ((layer & 511) << 10) | (f << 19) | (ao[k] << 22) | (sl[k] << 24) | (bl[k] << 28);
+      d[o++] = layer >> 10;
     }
     buf.length = o;
   }
@@ -543,7 +545,8 @@ export class Mesher {
     const o = buf.length;
     d[o] = (px + 16) | ((pz + 16) << 9) | (py << 18) | ((layer >> 9) << 31);
     d[o + 1] = u | (v << 5) | ((layer & 511) << 10) | (normal << 19) | (ao << 22) | (sl << 24) | (bl << 28);
-    buf.length = o + 2;
+    d[o + 2] = layer >> 10;
+    buf.length = o + 3;
   }
 
   private emitCross(i: number, id: number, x: number, y: number, z: number, cx: number, cz: number): void {
@@ -560,7 +563,7 @@ export class Mesher {
     const bz = z * 16 + oz;
     const by = y * 16 - (isCrop(id) && isFarmland(this.vox[i - SY]) ? 1 : 0);
     const buf = this.cutout;
-    buf.ensure(32);
+    buf.ensure(48);
     // Dos planos diagonales, cada uno con sus dos caras.
     const planes = [
       [1, 1, 15, 15],
@@ -588,7 +591,7 @@ export class Mesher {
     const bx = x * 16, bz = z * 16;
     const by = y * 16 - (isFarmland(this.vox[i - SY]) ? 1 : 0);
     const buf = this.cutout;
-    buf.ensure(64);
+    buf.ensure(96);
     for (const k of [4, 12]) {
       // Plano paralelo a Z (x = k) y plano paralelo a X (z = k), cada uno con sus dos caras.
       const planes = [
@@ -614,7 +617,7 @@ export class Mesher {
     const bl = this.blk[i];
     const bx = x * 16, by = y * 16, bz = z * 16;
     const buf = this.cutout;
-    buf.ensure(40);
+    buf.ensure(60);
     // Antorcha de pared: la base se acerca a la pared (5/16) y la punta se inclina hacia fuera.
     const wall = BLOCK_WALL[id];
     const wx = wall >= 0 ? -DIR_X[wall] : 0, wz = wall >= 0 ? -DIR_Z[wall] : 0;
@@ -665,7 +668,7 @@ export class Mesher {
           li = n;
         }
         const sl = this.sky[li], bl = this.blk[li];
-        buf.ensure(8);
+        buf.ensure(12);
         const corners = FACE_CORNERS[f];
         for (let k = 0; k < 4; k++) {
           const c = corners[k];
@@ -722,7 +725,7 @@ export class Mesher {
       if ((shape === 2 && cx[k] === 16) || (shape === 3 && cx[k] === 0) || (shape === 4 && cz[k] === 0) || (shape === 5 && cz[k] === 16)) h[k] = 17;
     }
     const buf = this.cutout;
-    buf.ensure(16);
+    buf.ensure(24);
     const us = this.tU, vs = this.tV;
     for (let k = 0; k < 4; k++) {
       // UV: el punto de la textura sin girar que cae en esta esquina (girar hacia atrás `turns` veces).
@@ -741,7 +744,7 @@ export class Mesher {
     const bl = this.blk[i];
     const bx = x * 16, by = y * 16, bz = z * 16;
     const buf = this.cutout;
-    buf.ensure(48);
+    buf.ensure(72);
     const side = BLOCK_TEX[id * 6];
     const topL = BLOCK_TEX[id * 6 + 2];
     const botL = BLOCK_TEX[id * 6 + 3];

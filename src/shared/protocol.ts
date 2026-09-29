@@ -204,6 +204,14 @@ export type ClientMsg =
   /** Escribir el texto de un cartel (cuatro líneas). */
   | { t: 'sign'; x: number; y: number; z: number; l: string[] }
   | { t: 'open'; x: number; y: number; z: number }
+  /** Programa lunar: configuración de una máquina (divisor, brazo…): los campos que cambian, por nombre. */
+  | { t: 'mcfg'; x: number; y: number; z: number; c: Record<string, number | number[]> }
+  /** Programa lunar: poner o quitar una tecnología de la cola de investigación. */
+  | { t: 'rq'; tech: string; add: boolean }
+  /** Programa lunar: el jugador fabricó a mano `n` de un objeto (cuenta para las tecnologías que se abren al fabricar algo). */
+  | { t: 'crafted'; item: number; n: number }
+  /** Programa lunar: girar una pieza ya puesta (cinta, subterránea, brazo o máquina orientable) al sentido `d` (0 +x, 1 +z, 2 −x, 3 −z). */
+  | { t: 'rot'; x: number; y: number; z: number; d: number }
   | { t: 'close' }
   | { t: 'cclick'; x: number; y: number; z: number; slot: number; btn: number; cur: ItemStack | null; q: number }
   | { t: 'cput'; x: number; y: number; z: number; stack: ItemStack; q: number }
@@ -251,6 +259,11 @@ export type ClientMsg =
   | { t: 'vplace'; item: number; p: [number, number, number]; b?: [number, number, number]; yaw: number; q: number }
   | { t: 'vride'; e: number }
   | { t: 'vleave' }
+  // Programa lunar (cohete): subir a una plaza, bajar (en tierra), despegar y abortar la cuenta atrás.
+  | { t: 'rboard'; e: number }
+  | { t: 'rleave' }
+  | { t: 'rlaunch' }
+  | { t: 'rabort' }
   | { t: 'vpos'; e: number; p: [number, number, number]; r: number; pi?: number; v: [number, number, number]; k?: number }
   // Fase 7 (encantamientos): se usó la mesa de encantamientos, el yunque (el servidor decide si se
   // deteriora) o la afiladora (n: experiencia que suelta en orbes) en (x, y, z); Paso helado de nivel l
@@ -340,6 +353,42 @@ export type ServerMsg =
   | { t: 'ride'; id: string; e: number; c?: boolean; st?: [number, number] }
   /** Movimiento de la montura rechazado: vuelve a p. */
   | { t: 'mfix'; e: number; p: [number, number, number] }
+  /**
+   * Programa lunar: estado de un cohete (ph: fase, pt: segundos que lleva en ella, seats: quién va en cada plaza, d: dimensión a la
+   * que va, k: 1 si ya no existe). Se manda a todos al cambiar y a quien entra.
+   */
+  | { t: 'rocket'; e: number; ph: number; pt: number; seats: (string | null)[]; d: number; k?: 1 }
+  /**
+   * Programa lunar: lo que llevan las cintas de alrededor. Cada fila: x, y, z, bits de «avanza» (1 carril izquierdo, 2 derecho), cuántos
+   * objetos hay en el carril izquierdo n0, y luego (id, posición 0..255) de los n0 del izquierdo y de todos los del derecho.
+   */
+  | { t: 'belts'; l: number[][]; u?: number[][]; c?: number[][] }
+  /** Programa lunar: cómo van los brazos de alrededor. Cada fila: x, y, z, fase (0 quieto, 1 llevando, 2 volviendo), avance 0..255, objeto en la mano, cuántos. */
+  | { t: 'arms'; l: number[][] }
+  /** Programa lunar: la investigación de todo el mundo: tecnologías hechas, cola (la primera es la actual) y unidades hechas de la actual. */
+  | { t: 'research'; done: string[]; queue: string[]; progress: number }
+  /** Programa lunar: lo que pide energía y no la recibe (el rayo rojo). Cada fila: [x, y, z] del punto sobre el que se dibuja. La lista completa reemplaza a la anterior. */
+  | { t: 'nopower'; l: number[][] }
+  /**
+   * Programa lunar: la ventana de una máquina de fabricar (respuesta a `mcfg`). kind 0 ensambladora / 1 horno de combustible.
+   * `needs`: por ingrediente [objeto que hay, cuántos, cuántos pide una tanda, cuántos admite]; `progress` en milésimas; `took`: cuánto de
+   * lo ofrecido aceptó; `open` 1 si hay que abrir (o refrescar) la ventana.
+   */
+  | {
+      t: 'mview'; x: number; y: number; z: number; kind: 0 | 1; tier: number; recipe: number; alts: number[]; needs: number[][];
+      out: [number, number] | null; progress: number; working: 0 | 1; fuel: [number, number] | null; input: [number, number] | null; energy: number;
+      took: number; open: 0 | 1;
+    }
+  /** Programa lunar: la configuración de un brazo (respuesta a `mcfg`): filtro, modo, tope de pila, combustible, y cuánto de lo ofrecido aceptó. */
+  | {
+      t: 'icfg'; x: number; y: number; z: number; tier: number; filter: number[]; mode: number; stack: number; cap: number;
+      fuel: [number, number] | null; energy: number; took: number; open: 0 | 1;
+    }
+  /**
+   * Programa lunar: los cables entre postes eléctricos de alrededor (la lista completa: reemplaza a la anterior). Cada fila:
+   * [x1, y1, z1, x2, y2, z2, mediano (1 si alguno de los dos postes es mediano)].
+   */
+  | { t: 'wires'; l: number[][] }
   // Fase 6 (aldeanos): ofertas de un aldeano (p profesión, lvl nivel, xp experiencia; o ofertas
   // [pide, n, pide2, n2, da, n, usos, máximo]), resultado de un trato (give lo que recibe, back lo que
   // se le devuelve si no salió) y cierre de la pantalla.

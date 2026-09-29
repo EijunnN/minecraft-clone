@@ -4,6 +4,8 @@
 import { AMETHYST_BUD, AMETHYST_BUD_ITEM_KEYS } from './blocks'; // los brotes de amatista
 import { SHULKER_BOXES, SHULKER_BOX_COLORS } from './blocks'; // Fase 8.6
 import { NETHER_WART_CROP } from './blocks'; // Fase 8.4
+import { FACTORIO_ITEM_DEFS, factorioKey } from './factorio/itemDefs'; // Programa lunar: los objetos de Factorio
+import namesEs from './factorio/names-es.json';
 import { ARMOR_MATERIALS, ARMOR_PIECES, ARMOR_STATS, type ArmorInfo, type ArmorSlot } from './armor';
 import {
   EFFECT_HUNGER, EFFECT_POISON, EFFECT_REGENERATION, EFFECT_ABSORPTION, EFFECT_BAD_OMEN, BAD_OMEN_SECONDS, type FoodEffect,
@@ -659,6 +661,11 @@ export const ELYTRA = item('elytra', 'Élitros', {
 
 // Fase 8.7 (el Wither): su huevo generador (id nuevo, el último).
 for (const e of WITHER_SPAWN_EGG_DEFS) SPAWN_EGGS[e.mob] = item(`${e.mob}_spawn_egg`, `Huevo generador de ${e.name}`);
+
+// Programa lunar: los intermedios, paquetes de ciencia y módulos de Factorio (ids nuevos, los últimos). Ver factorio/catalog.ts.
+export const FACTORIO_NEW: Readonly<Record<string, number>> = Object.fromEntries(
+  FACTORIO_ITEM_DEFS.map((d) => [d.name, item(factorioKey(d.name), (namesEs.item as Record<string, string>)[d.name] ?? d.es, { stack: d.stack })]),
+);
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');

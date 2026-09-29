@@ -215,3 +215,21 @@ test('reglas del Nether: el agua se evapora, la cama explota; /fill, /setblock y
   assert.ok(a.conn.take('fx').some((m) => m.k === 'explode'), 'explota');
   void FIRE;
 });
+
+test('la Luna no tiene clima: aunque el mundo normal nieve, no caen capas de nieve sobre su suelo «frío»', async () => {
+  const { makeServer } = await import('./harness');
+  const { DIM_MOON } = await import('../src/shared/dimensions');
+  const { SNOW_LAYER, isSnowLayer } = await import('../src/shared/blocks');
+  const h = makeServer(4243, undefined, DIM_MOON);
+  const c = h.join('Ingeniera', 'c');
+  const [sx, , sz] = c.welcome.spawn as [number, number, number];
+  c.pos(sx, 100, sz);
+  h.tick(60);
+  const W = h.gs.world;
+  const x0 = Math.floor(sx), z0 = Math.floor(sz);
+  for (let dx = -20; dx <= 20; dx++) for (let dz = -20; dz <= 20; dz++) h.gs.sys.nature.weatherTickAt(x0 + dx, z0 + dz, true);
+  let snow = 0;
+  for (let dx = -20; dx <= 20; dx++) for (let dz = -20; dz <= 20; dz++) for (let y = 60; y < 120; y++) if (isSnowLayer(W.getBlock(x0 + dx, y, z0 + dz))) snow++;
+  assert.equal(snow, 0, 'ninguna capa de nieve');
+  void SNOW_LAYER;
+});

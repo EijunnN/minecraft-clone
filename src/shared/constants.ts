@@ -32,6 +32,11 @@ export const WORLD_LIMIT = 1_000_000;
 /** Identificadores de bloque de 16 bits (estados incluidos). Los ids 256–1023 son objetos. */
 export type BlockArray = Uint16Array;
 export const MAX_BLOCK_ID = 8192;
+/**
+ * Capas de textura que se admiten: el vértice del terreno guarda 14 bits de capa (16 384), pero el array de texturas lo limita la tarjeta
+ * (WebGL 2 garantiza 256 y casi todas admiten 2 048), así que ese es el tope del contenido.
+ */
+export const MAX_TEXTURE_LAYERS = 2048;
 /** Primer id de los bloques nuevos (los 0–255 antiguos no cambian; 256–1023 son objetos). */
 export const FIRST_EXTENDED_BLOCK = 1024;
 

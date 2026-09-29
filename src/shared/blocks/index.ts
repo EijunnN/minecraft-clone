@@ -247,3 +247,22 @@ export * from './amethystBuds';
 import { WITHER_INVENTORY } from './witherBlocks';
 export * from './witherBlocks';
 (INVENTORY_ORDER as number[]).push(...WITHER_INVENTORY);
+// Programa lunar: el suelo de la Luna (ids nuevos, al final) y su sitio en el inventario creativo.
+import { MOON_INVENTORY } from './moonBlocks';
+export * from './moonBlocks';
+(INVENTORY_ORDER as number[]).push(...MOON_INVENTORY);
+// Programa lunar: la logística (cintas), ids nuevos al final, y su sitio en el inventario creativo.
+import { LOGISTICS_INVENTORY } from './logisticsBlocks';
+export * from './logisticsBlocks';
+(INVENTORY_ORDER as number[]).push(...LOGISTICS_INVENTORY);
+export * from './multiblock'; // Programa lunar: máquinas de varias casillas
+import { POWER_INVENTORY } from './powerBlocks'; // Programa lunar: energía y máquinas
+export * from './powerBlocks';
+(INVENTORY_ORDER as number[]).push(...POWER_INVENTORY);
+import { EXTRACTION_INVENTORY } from './extractionBlocks'; // Programa lunar: vetas y extractor
+export * from './extractionBlocks';
+(INVENTORY_ORDER as number[]).push(...EXTRACTION_INVENTORY);
+
+import { MACHINE_INVENTORY } from './machineBlocks'; // Programa lunar: ensambladoras y hornos de combustible
+export * from './machineBlocks';
+(INVENTORY_ORDER as number[]).push(...MACHINE_INVENTORY);

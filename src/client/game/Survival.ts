@@ -7,6 +7,8 @@ export interface SurvivalContext {
   eyeInWater: boolean;
   /** Fase 8.5: el ojo está en una columna de burbujas (se respira). */
   eyeInBubble?: boolean;
+  /** Programa lunar: no hay aire que respirar (la Luna) y no se lleva nada que lo dé. El aire baja como bajo el agua. */
+  noAir?: boolean;
   inLava: boolean;
   inWater: boolean;
   /** Bajo la lluvia a cielo abierto (apaga el fuego). */
@@ -79,6 +81,7 @@ export function deathMessage(cause: DamageCause): string {
     case 'sweet_berry_bush': return 'murió pinchado por un arbusto de bayas dulces'; // Fase 6.5
     case 'freeze': return 'se congeló hasta morir'; // Fase 6.5 (materiales)
     case 'drown': return 'se ahogó';
+    case 'vacuum': return 'se quedó sin aire en el vacío'; // programa lunar
     case 'starve': return 'murió de hambre';
     case 'void': return 'cayó al vacío';
     case 'suffocate': return 'se asfixió dentro de un bloque';
@@ -264,14 +267,15 @@ export class Survival {
         if (this.health > floor) this.damage(1, 'starve', true);
       }
     } else this.starveTimer = 0;
-    // Aire bajo el agua.
-    if (ctx.eyeInWater && !ctx.waterBreathing && !ctx.eyeInBubble) {
+    // Aire bajo el agua (y en el vacío, donde no hay aire: la Respiración lo estira; la Respiración acuática no sirve).
+    const underwater = ctx.eyeInWater && !ctx.waterBreathing && !ctx.eyeInBubble;
+    if (underwater || ctx.noAir) {
       this.air = Math.max(0, this.air - dt * this.respiration); // Fase 7: Respiración
       if (this.air <= 0) {
         this.drownTimer += dt;
         if (this.drownTimer >= 1) {
           this.drownTimer = 0;
-          this.damage(2, 'drown', true);
+          this.damage(2, underwater ? 'drown' : 'vacuum', true);
         }
       }
     } else {

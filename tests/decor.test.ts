@@ -1,6 +1,7 @@
 // Fase 6.5 (decoración): comida nueva, macetas, faroles, cadenas, barrotes, campanas, andamios,
 // vasijas, cuadros y marcos, huevos generadores, catalejo y reloj (registro, recetas, colocación,
 // servidor y persistencia).
+import { MAX_TEXTURE_LAYERS } from '../src/shared/constants';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -60,11 +61,11 @@ test('decoración: bloques, objetos, texturas y sprites registrados', () => {
     assert.ok(CREATIVE_ITEMS.includes(id), `en el inventario creativo: ${ITEMS[id].key}`);
   }
   assert.ok(ITEM_COUNT <= 1024);
-  // Texturas: todas con generador y dentro del límite de 1024 capas.
+  // Texturas: todas con generador y dentro del límite de capas de textura.
   const mine = TEXTURE_DEFS.slice(textureLayer('flower_pot'), textureLayer('tube_coral_block')).map((d) => d.name);
   assert.equal(mine.length, 14 + PAINTING_TEXTURES.length);
   for (const n of mine) assert.ok(DECOR_GENERATORS[n], `textura con generador: ${n}`);
-  assert.ok(TEXTURE_COUNT <= 1024);
+  assert.ok(TEXTURE_COUNT <= MAX_TEXTURE_LAYERS);
   const sprites = generateItemSprites();
   assert.ok(sprites.count > 0);
 });

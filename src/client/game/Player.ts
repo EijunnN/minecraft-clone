@@ -1,6 +1,7 @@
 // Física del jugador: caminar, correr, agacharse (sin caer por los bordes), saltar, nadar (y bucear
 // en postura horizontal corriendo bajo el agua), gatear por huecos de un bloque, volar, subir
 // escalones bajos (losas, escaleras) y trepar por escaleras de mano.
+import { carryVelocity } from '../../shared/logistics/carry'; // Programa lunar: las cintas llevan a quien está encima
 import { BLOCK_SOLID, BLOCK_FLUID, BLOCK_FLUID_LEVEL, BLOCK_CLIMB, COBWEB, fluidHeight } from '../../shared/blocks';
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { isSoulGround } from '../../shared/blocks'; // Fase 8.3: Velocidad de alma
@@ -91,6 +92,8 @@ export class Player {
   landedSpeed = 0;
   justLanded = false;
   justEnteredWater = false;
+  /** Gravedad de la dimensión (1 = la del mundo normal; la Luna, 1/6). La fija Game al entrar en un mundo. */
+  gravityScale = 1;
   /** Distancia de caída acumulada (para el daño por caída). */
   fallDistance = 0;
   /** Caída total al aterrizar en este frame (0 si no aterrizó). */
@@ -357,7 +360,7 @@ export class Player {
       // Fase 7 (pociones): con Caída lenta se cae con poca gravedad y muy despacio.
       // Fase 7 (efectos): con Levitación no hay gravedad y se sube despacio (ni saltar ni escaleras).
       if (this.levitation >= 0) this.vy = levitate(this.vy, this.levitation, dt);
-      else this.vy -= (this.slowFall && this.vy <= 0 ? SLOW_FALL_GRAVITY : GRAVITY) * dt;
+      else this.vy -= (this.slowFall && this.vy <= 0 ? SLOW_FALL_GRAVITY : GRAVITY * this.gravityScale) * dt;
       if (this.vy < -78) this.vy = -78;
       if (this.slowFall && this.vy < -SLOW_FALL_SPEED) this.vy = -SLOW_FALL_SPEED;
       if (this.levitation >= 0) this.fallDistance = 0;
@@ -404,6 +407,14 @@ export class Player {
     let dx = (this.vx + this.kx) * dt;
     let dy = this.vy * dt;
     let dz = (this.vz + this.kz) * dt;
+    // Programa lunar: sobre una cinta (subterránea o divisor), la cinta lleva a quien está encima a su velocidad.
+    if (this.onGround && !this.flying && !this.inWater && !this.inLava && this.pose !== 'swim') {
+      const carry = carryVelocity(world.getBlock(Math.floor(this.x), Math.floor(this.y - 0.01), Math.floor(this.z)));
+      if (carry) {
+        dx += carry[0] * dt;
+        dz += carry[1] * dt;
+      }
+    }
     // Telaraña: casi no se avanza y se cae muy despacio (como en Minecraft).
     if (this.inWeb && !this.flying) {
       dx *= 0.25;
@@ -491,7 +502,8 @@ export class Player {
     // Distancia de caída: se acumula al bajar y se consume al aterrizar (el agua la anula).
     this.landedFall = 0;
     if (this.flying || this.inWater || this.slowFall) this.fallDistance = 0; // Fase 7: la caída lenta no hace daño
-    else if (this.y < oy) this.fallDistance += oy - this.y;
+    // El daño sale de la energía del impacto (v² = 2·g·h): con menos gravedad, la misma altura duele menos.
+    else if (this.y < oy) this.fallDistance += (oy - this.y) * this.gravityScale;
     if (this.onGround) {
       if (this.justLanded) this.landedFall = this.fallDistance;
       this.fallDistance = 0;

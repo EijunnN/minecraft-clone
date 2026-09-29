@@ -10,6 +10,7 @@ import { ENT_EFFECT_CLOUD } from '../../shared/potions'; // Fase 7 (pociones)
 import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL, ENT_SHULKER_BULLET } from '../../shared/mobs'; // Fase 8.6
 import { dragonPartBoxes } from './dragonClient';
 import { isVehicleType, vehicleSize } from '../../shared/vehicles'; // Fase 7 (transporte)
+import { ENT_ROCKET, ROCKET_WIDTH, ROCKET_HEIGHT } from '../../shared/rocket'; // Programa lunar
 import { ENT_TNT } from '../../shared/mechanisms'; // Fase 7 (mecanismos)
 
 interface Snap {
@@ -270,7 +271,7 @@ export class ClientEntities {
       // Fase 7 (transporte): las barcas y vagonetas también se apuntan (para subirse y golpearlas).
       // Fase 8.3: la bola de fuego del ghast también se apunta (un golpe la devuelve).
       // Fase 8.6: y el cristal del End (estalla).
-      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : e.type === ENT_LARGE_FIREBALL ? ([1, 1] as const)
+      const vs = def ? null : isVehicleType(e.type) ? vehicleSize(e.type) : e.type === ENT_ROCKET ? ([ROCKET_WIDTH, ROCKET_HEIGHT] as const) : e.type === ENT_LARGE_FIREBALL ? ([1, 1] as const)
         : e.type === ENT_END_CRYSTAL ? ([2, 2] as const) : e.type === ENT_SHULKER_BULLET ? ([0.3125, 0.3125] as const) : null;
       if ((!def && !vs) || def?.inert || e.gone || e.deathT >= 0 || e.id === skip) continue; // skip: la montura propia; inert: colmillos (fase 6)
       const k = e.flags & EF_BABY && def ? 0.5 : 1;

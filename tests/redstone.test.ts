@@ -1,5 +1,6 @@
 // Fase 7 (redstone): potencia, polvo, antorchas, repetidores, comparadores, relojes, placas, puertas,
 // lámparas, sensores, cofres trampa, pararrayos, bombillas, colocación, recetas y rendimiento.
+import { MAX_TEXTURE_LAYERS } from '../src/shared/constants';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -77,7 +78,7 @@ test('registro: bloques, objetos, texturas, colocación y recetas', () => {
   for (const id of [REDSTONE_TORCH, LEVER, REPEATER, COMPARATOR, REDSTONE_LAMP, NOTE_BLOCK, TRAPPED_CHEST, IRON_DOOR, TARGET]) {
     assert.ok(ITEMS[id], `${id} tiene objeto`);
   }
-  assert.ok(TEXTURE_DEFS.length <= 1024);
+  assert.ok(TEXTURE_DEFS.length <= MAX_TEXTURE_LAYERS);
   // Botín: el polvo suelta redstone; la mena encendida, lo mismo que la apagada; la cuerda, cuerda.
   assert.deepEqual(blockDrops(wireState(9, false), 0, () => 0.5), [{ id: REDSTONE, count: 1 }]);
   assert.deepEqual(blockDrops(TRIPWIRE, 0, () => 0.5), [{ id: STRING, count: 1 }]);

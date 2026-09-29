@@ -15,7 +15,7 @@ import { locateNetherStructure, NETHER_STRUCTURE_NAMES, NETHER_STRUCTURE_OF } fr
 import { enchantByName, MAX_ENCHANT_LEVEL } from '../../enchantments'; // Fase 7 (encantamientos)
 import { EndGenerator } from '../../world/end'; // Fase 8.6
 import { DIM_OVERWORLD, DIM_NETHER, DIM_END, dimensionByKey, dimensionDef, allDimensions } from '../../dimensions'; // Fase 8 (dimensiones)
-import { BLOCKS, isValidBlockId } from '../../blocks';
+import { BLOCKS, BLOCK_SOLID, isValidBlockId } from '../../blocks';
 import { MIN_Y, MAX_Y, WORLD_LIMIT, CHUNK_SIZE } from '../../constants';
 
 /** Bloques como máximo en un /fill (como en Minecraft). */
@@ -45,6 +45,11 @@ export class Commands {
   raids: Raids | null = null;
   /** Fase 6.5 (colecciones): para /invocar rayo. */
   lightning: ((x: number, y: number, z: number) => void) | null = null;
+  /** Programa lunar: para /cohete (pone un cohete Selene posado con la base en x, y, z). */
+  rocket: ((x: number, y: number, z: number, yaw: number) => void) | null = null;
+
+  /** Programa lunar: para /investigar. */
+  research: { grant(name: string): boolean; grantAll(): void } | null = null;
 
   constructor(private ctx: ServerContext) {}
 
@@ -128,6 +133,35 @@ export class Commands {
         const [x, y, z] = args.slice(1, 4).map(Number);
         const at = [x, y, z].every(Number.isFinite) ? { x, y, z } : {};
         if (!ctx.travel(s, d, { kind: 'pos', ...at })) reply('Aquí no se puede cambiar de dimensión.');
+        return;
+      }
+      // Programa lunar: un cohete Selene posado, cinco bloques delante (sobre el primer suelo que haya).
+      case 'cohete':
+      case 'rocket': {
+        if (!this.rocket) {
+          reply('Aquí no hay cohetes.');
+          return;
+        }
+        const x = Math.floor(s.p[0] - Math.sin(s.r[0]) * 5) + 0.5, z = Math.floor(s.p[2] - Math.cos(s.r[0]) * 5) + 0.5;
+        ctx.world.ensureChunk(Math.floor(x / CHUNK_SIZE), Math.floor(z / CHUNK_SIZE), ctx.now());
+        let y = Math.min(MAX_Y - 2, Math.floor(s.p[1]) + 8);
+        while (y > MIN_Y && !BLOCK_SOLID[ctx.world.getBlock(Math.floor(x), y - 1, Math.floor(z))]) y--;
+        this.rocket(x, y, z, s.r[0]);
+        reply('Cohete Selene listo: acércate, súbete y pulsa despegar.');
+        return;
+      }
+      // Programa lunar: /investigar <tecnología|todo> da por hecha una tecnología (o todas) sin gastar ciencia.
+      case 'investigar':
+      case 'research': {
+        const t = args[0] ?? '';
+        if (!this.research || !t) {
+          reply('Uso: /investigar <tecnología|todo> (nombre de Factorio, p. ej. steel-processing)');
+          return;
+        }
+        if (t === 'todo' || t === 'all') {
+          this.research.grantAll();
+          reply('Toda la investigación está hecha.');
+        } else reply(this.research.grant(t) ? `Investigación hecha: ${t}.` : `No existe la tecnología «${t}».`);
         return;
       }
       case 'gamemode':
@@ -379,7 +413,7 @@ export class Commands {
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, /jefes <auto|java|duros>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar [criatura], ' +
           '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
-          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether> [x y z], /setblock, /fill, ' +
+          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether|luna> [x y z], /cohete, /setblock, /fill, ' +
           '/voz [on|off|silenciar|activar|volumen], /grupo <nombre|salir> (chat de voz: V para hablar, B para susurrar)',
         );
         return;

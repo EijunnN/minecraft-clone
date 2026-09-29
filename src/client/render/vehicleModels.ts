@@ -12,12 +12,14 @@ import {
   VF_HURT_FLIP, VF_LIT, isVehicleType, isCartType,
 } from '../../shared/vehicles';
 import { ENT_HOPPER_MINECART, ENT_TNT_MINECART, VF_PRIMED } from '../../shared/vehicles'; // Fase 7 (mecanismos)
+import { ENT_ROCKET, RF_BURN, rocketPhaseOf, RK_PHASE } from '../../shared/rocket'; // Programa lunar
 import type { ClientEntity } from '../game/ClientEntities';
 
 export type VehicleMaterial =
   | 'hull' | 'floor' | 'paddle' | 'blade' | 'chest' | 'lid' | 'latch' | 'iron' | 'ironFloor' | 'wheel' | 'furnace' | 'stalk'
   | 'beam'
-  | 'hopper' | 'tnt'; // Fase 7 (mecanismos)
+  | 'hopper' | 'tnt' // Fase 7 (mecanismos)
+  | 'rkHull' | 'rkBand' | 'rkNose' | 'rkTip' | 'rkWindow' | 'rkEngine' | 'rkFin'; // Programa lunar: el cohete Selene
 
 export interface VehiclePart extends ModelPart {
   mat: VehicleMaterial;
@@ -39,13 +41,13 @@ const box = (name: string, mat: VehicleMaterial, pivot: [number, number, number]
   ({ name, mat, pivot, from, size, ...o });
 
 /** Coloca las cajas en el atlas (en filas, de izquierda a derecha) y devuelve su tamaño. */
-function pack(boxes: Box[]): { parts: VehiclePart[]; atlas: [number, number] } {
+function pack(boxes: Box[], atlasW = ATLAS_W): { parts: VehiclePart[]; atlas: [number, number] } {
   let x = 0, y = 0, rowH = 0;
   const parts: VehiclePart[] = [];
   for (const b of boxes) {
     const [w, h, d] = b.size.map((v) => Math.ceil(v));
     const bw = 2 * (w + d), bh = d + h;
-    if (x + bw > ATLAS_W) {
+    if (x + bw > atlasW) {
       x = 0;
       y += rowH;
       rowH = 0;
@@ -54,7 +56,7 @@ function pack(boxes: Box[]): { parts: VehiclePart[]; atlas: [number, number] } {
     x += bw;
     rowH = Math.max(rowH, bh);
   }
-  return { parts, atlas: [ATLAS_W, y + rowH] };
+  return { parts, atlas: [atlasW, y + rowH] };
 }
 
 function makeDef(id: number, key: string, name: string, parts: ModelPart[], atlas: [number, number]): MobDef {
@@ -130,8 +132,8 @@ function cartBoxes(content: 'none' | 'chest' | 'furnace' | 'hopper' | 'tnt'): Bo
   return out;
 }
 
-function model(id: number, key: string, name: string, boxes: Box[], mask: [number, number, number, number, number] | null): VehicleModel {
-  const { parts, atlas } = pack(boxes);
+function model(id: number, key: string, name: string, boxes: Box[], mask: [number, number, number, number, number] | null, atlasW = ATLAS_W): VehicleModel {
+  const { parts, atlas } = pack(boxes, atlasW);
   // La tapa: un plano (caja de alto 0) a la altura y, de x0..x1 y z0..z1.
   const m = mask ? makeDef(id + 2000, `${key}_mask`, name, [
     { name: 'mask', pivot: [0, 0, 0], from: [mask[0], mask[4], mask[1]], size: [mask[2] - mask[0], 0, mask[3] - mask[1]], uv: [0, 0] },
@@ -151,6 +153,44 @@ add(model(ENT_FURNACE_MINECART, 'furnace_minecart', 'Vagoneta con horno', cartBo
 add(model(ENT_HOPPER_MINECART, 'hopper_minecart', 'Vagoneta con tolva', cartBoxes('hopper'), null)); // Fase 7 (mecanismos)
 add(model(ENT_TNT_MINECART, 'tnt_minecart', 'Vagoneta con dinamita', cartBoxes('tnt'), null));
 
+
+// ------------------------------------------------------------------ el cohete Selene (programa lunar)
+// 24 bloques de alto sobre una base de 3 × 3, mirando hacia −Z como todo. De abajo arriba: cinco toberas, cuatro aletas,
+// la primera etapa (tres tramos de 3 × 3 × 3 bloques con una banda), el anillo, la segunda etapa (más estrecha), la cabina
+// con su ventanal y la ojiva escalonada. Las medidas son en píxeles (16 por bloque).
+function rocketBoxes(): Box[] {
+  const b = (name: string, mat: VehicleMaterial, from: [number, number, number], size: [number, number, number]) => box(name, mat, [0, 0, 0], from, size);
+  const out: Box[] = [
+    // Toberas: una central y cuatro alrededor.
+    b('bellC', 'rkEngine', [-7, 0, -7], [14, 14, 14]),
+    b('bellA', 'rkEngine', [-21, 2, -21], [10, 12, 10]), b('bellB', 'rkEngine', [11, 2, -21], [10, 12, 10]),
+    b('bellD', 'rkEngine', [-21, 2, 11], [10, 12, 10]), b('bellE', 'rkEngine', [11, 2, 11], [10, 12, 10]),
+    // Aletas.
+    b('finL', 'rkFin', [-46, 14, -3], [22, 60, 6]), b('finR', 'rkFin', [24, 14, -3], [22, 60, 6]),
+    b('finF', 'rkFin', [-3, 14, -46], [6, 60, 22]), b('finB', 'rkFin', [-3, 14, 24], [6, 60, 22]),
+    // Primera etapa.
+    b('s1a', 'rkHull', [-24, 14, -24], [48, 48, 48]), b('s1b', 'rkBand', [-24, 62, -24], [48, 48, 48]), b('s1c', 'rkHull', [-24, 110, -24], [48, 48, 48]),
+    b('ring', 'rkEngine', [-22, 158, -22], [44, 6, 44]),
+    // Segunda etapa.
+    b('s2a', 'rkHull', [-20, 164, -20], [40, 48, 40]), b('s2b', 'rkBand', [-20, 212, -20], [40, 24, 40]),
+    // Cabina y ventanal (delante, en −Z).
+    b('cabin', 'rkHull', [-16, 236, -16], [32, 40, 32]),
+    b('window', 'rkWindow', [-11, 246, -17], [22, 18, 1]),
+    // Ojiva.
+    b('n1', 'rkNose', [-13, 276, -13], [26, 14, 26]), b('n2', 'rkNose', [-9, 290, -9], [18, 14, 18]), b('n3', 'rkNose', [-5, 304, -5], [10, 14, 10]),
+    b('tip', 'rkTip', [-2, 318, -2], [4, 14, 4]),
+  ];
+  return out;
+}
+add(model(ENT_ROCKET, 'rocket', 'Cohete Selene', rocketBoxes(), null, 256));
+
+/** Cuánto se sacude el cohete (bloques) según su fase: retumba al encender y sube el rugido en el ascenso. */
+function rocketShake(e: ClientEntity): number {
+  const ph = rocketPhaseOf(e.flags);
+  if (!(e.flags & RF_BURN)) return 0;
+  return ph === RK_PHASE.COUNTDOWN ? 0.035 : ph === RK_PHASE.ASCENT ? 0.06 : 0.02;
+}
+
 /** Modelo de un id de modelo (el tipo de entidad, o el de la balsa). */
 export function vehicleModelById(id: number): VehicleModel | undefined {
   return MODELS.get(id);
@@ -158,6 +198,7 @@ export function vehicleModelById(id: number): VehicleModel | undefined {
 
 /** Modelo con el que se dibuja una entidad (undefined si no es una barca ni una vagoneta con modelo). */
 export function vehicleModel(e: ClientEntity): VehicleModel | undefined {
+  if (e.type === ENT_ROCKET) return MODELS.get(ENT_ROCKET);
   if (!isVehicleType(e.type)) return undefined;
   if (e.variant === RAFT_VARIANT) {
     if (e.type === ENT_BOAT) return MODELS.get(RAFT_MODEL);
@@ -213,6 +254,16 @@ export function animateVehicle(def: MobDef, e: ClientEntity, time: number, name:
 /** Balanceo al golpearla (de lado a lado) e inclinación de la vagoneta en las cuestas. */
 export function vehicleRoot(def: MobDef, e: ClientEntity, m: mat4): void {
   if (!MODELS.has(def.id)) return;
+  if (def.id === ENT_ROCKET) {
+    // Programa lunar: sin balanceo por golpes; con los motores encendidos, un temblor a lo largo del cuerpo.
+    const k = rocketShake(e);
+    if (k > 0) {
+      const t = performance.now() / 1000;
+      mat4.translate(m, m, [Math.sin(t * 61 + e.id) * k, 0, Math.cos(t * 53) * k]);
+      mat4.rotateZ(m, m, Math.sin(t * 47) * k * 0.05);
+    }
+    return;
+  }
   if (isCartType(e.type) && e.pitch) {
     mat4.translate(m, m, [0, 0.35, 0]);
     mat4.rotateX(m, m, e.pitch);

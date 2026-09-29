@@ -46,6 +46,57 @@ export class ParticleFx {
     });
   }
 
+
+  /**
+   * Programa lunar: la llama de una tobera del cohete (x, y, z: la boca). Un núcleo blanco azulado, la llama naranja que se
+   * estira hacia abajo y un rastro de humo que se queda en el aire. `power` 0..1 (potencia), `n` partículas por llamada.
+   */
+  rocketPlume(x: number, y: number, z: number, power: number, n = 6, down = 26): void {
+    const k = 0.6 + power * 0.6;
+    // La llama: rayas largas que se estiran hacia abajo, del blanco amarillo del núcleo al naranja del borde.
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, r = Math.random() * 0.5 * k;
+      const sp = (0.6 + Math.random() * 0.4) * down * (0.45 + power * 0.7);
+      this.ps.spawn({
+        x: x + Math.cos(a) * r, y: y - Math.random() * 0.5, z: z + Math.sin(a) * r,
+        vx: Math.cos(a) * r * 1.6, vy: -sp, vz: Math.sin(a) * r * 1.6, life: rnd(0.22, 0.42),
+        size: rnd(0.7, 1.1) * k, size1: 0.18, sprite: SPRITE.streak,
+        r: 6, g: 3.6, b: 1.4, r1: 3, g1: 0.9, b1: 0.25, a: 1, drag: 0.2, flags: PF.EMISSIVE | PF.STRETCH,
+      });
+    }
+    // Resplandor suave alrededor de la boca (el calor que se ve) y un núcleo blanco azulado, más corto.
+    this.ps.spawn({ x, y: y - 0.6, z, life: 0.09, size: 3.4 * k, size1: 2.2 * k, sprite: SPRITE.glow, r: 3.2, g: 1.7, b: 0.7, a: 0.9, flags: PF.EMISSIVE });
+    for (let i = 0; i < Math.ceil(n / 2); i++) {
+      this.ps.spawn({
+        x: x + rnd(-0.2, 0.2), y: y - rnd(0, 0.6), z: z + rnd(-0.2, 0.2), vx: rnd(-0.6, 0.6), vy: -down * rnd(0.25, 0.55) * (0.4 + power * 0.8), vz: rnd(-0.6, 0.6),
+        life: rnd(0.1, 0.2), size: rnd(1.0, 1.7) * k, size1: 0.3, sprite: SPRITE.glow, r: 6.2, g: 6.6, b: 8.4, a: 1, drag: 0.6, flags: PF.EMISSIVE,
+      });
+    }
+    // Humo: grande, gris claro, se queda donde nace y se abre.
+    if (Math.random() < 0.7) {
+      const a = Math.random() * Math.PI * 2, rr = Math.random() * 0.9;
+      this.ps.spawn({
+        x: x + Math.cos(a) * rr, y: y - 0.5, z: z + Math.sin(a) * rr, vx: Math.cos(a) * 1.4, vy: -down * 0.05, vz: Math.sin(a) * 1.4,
+        life: rnd(2.2, 4), size: rnd(1.6, 2.6) * (0.6 + power * 0.6), size1: rnd(4.5, 7), sprite: SPRITE.smoke + Math.floor(Math.random() * 4),
+        r: 0.78, g: 0.76, b: 0.74, r1: 0.4, g1: 0.4, b1: 0.4, a: 0.62, grav: -0.15, drag: 1.4, wind: 0.6, rot: Math.random() * 6.3, spin: rnd(-0.5, 0.5),
+        flags: PF.FADE_IN,
+      });
+    }
+  }
+
+  /** Programa lunar: el estallido de humo y polvo al encender o al posarse (x, y, z: el suelo bajo la tobera). */
+  rocketBlast(x: number, y: number, z: number, power: number): void {
+    for (let i = 0; i < 6; i++) {
+      const a = Math.random() * Math.PI * 2, s = rnd(4, 11) * power;
+      this.ps.spawn({
+        x: x + Math.cos(a) * rnd(0, 1.5), y: y + 0.3, z: z + Math.sin(a) * rnd(0, 1.5), vx: Math.cos(a) * s, vy: rnd(0.2, 1.6), vz: Math.sin(a) * s,
+        life: rnd(1.6, 3.4), size: rnd(1.3, 2.2), size1: rnd(4.5, 8) * power, sprite: SPRITE.smoke + Math.floor(Math.random() * 4),
+        r: 0.72, g: 0.68, b: 0.62, r1: 0.42, g1: 0.4, b1: 0.38, a: 0.7, grav: -0.1, drag: 2.2, wind: 0.5, rot: Math.random() * 6.3, spin: rnd(-0.4, 0.4),
+        flags: PF.FADE_IN,
+      });
+    }
+  }
+
   /** Corazones (animales enamorados, domesticados, crías). */
   hearts(x: number, y: number, z: number, n: number, spread = 0.4): void {
     for (let i = 0; i < n; i++) {

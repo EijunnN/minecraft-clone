@@ -62,6 +62,15 @@ import { EXPERIENCE_BOTTLE } from '../../shared/items'; // Fase 7 (encantamiento
 import { INFINITY, enchLevel } from '../../shared/enchantments';
 import { redstoneUse } from './redstoneClient'; // Fase 7 (redstone)
 import { dimensionDef } from '../../shared/dimensions'; // Fase 8 (dimensiones)
+import { isOrientable, dirYaw, lookDir, marchDir } from '../../shared/logisticsPlacement'; // Programa lunar: sentido de cintas y brazos
+import { isGhostBlock, EXTRACTOR, BELTS, beltInfo, beltState, poleInfo, poleSpec, multiInfo, multiFootprint, multiControllerPos, isMultiPart, isSplitter, inserterInfo, isAssemblerBlock, isFuelFurnace, isLabBlock, type PoleInfo } from '../../shared/blocks';
+import type { PanelSpec } from '../ui/MachinePanel';
+import { INSERTER_TYPES, INSERTER_FILTERS } from '../../shared/logistics/inserters';
+import { assemblerRecipe, assemblerRecipes } from '../../shared/logistics/assembly';
+import { ASSEMBLERS, FURNACES } from '../../shared/logistics/assemblyTypes'; // Programa lunar: lo que enseña un fantasma al colocarlo
+import { POLE_MAX_WIRES } from '../../shared/logistics/energy';
+import { EXTRACTOR_RADIUS, EXTRACTOR_DEPTH } from '../../shared/logistics/veins';
+import { blockSelectionBoxes } from '../../shared/blocks';
 
 /** Herramientas que no se gastan al picar ni al golpear (sólo con su propio uso). */
 const WEARLESS: ReadonlySet<string> = new Set(['bow', 'shield', 'fishing_rod', ...EQUIPMENT_WEARLESS]); // Fase 6.5 (equipo)
@@ -167,6 +176,10 @@ export class Interaction {
       return;
     }
     const pressed = input.mousePressed[2];
+    if (!input.mouseDown[2]) {
+      if (this.drag) this.rotDir = null; // acabó el arrastre: el sentido vuelve a ser el de la mirada
+      this.drag = null;
+    } else if (!pressed && this.drag && this.dragStep(held)) return;
     if (!pressed && !(input.mouseDown[2] && this.placeCooldown <= 0)) return;
     this.placeCooldown = 0.2;
     // Fase 6.5 (decoración): marcos, cuadros, macetas, campanas, huevos generadores y catalejo.
@@ -189,7 +202,7 @@ export class Interaction {
     // Fase 6 (monturas): poner la silla o montarse.
     if (pressed && target && this.g.riding.onUse(target, held?.id ?? 0)) return;
     // Fase 7 (transporte): subirse, abrir el cofre o echar carbón; poner barcas y vagonetas.
-    if (pressed && target && this.g.vehicles.onUse(target, held)) return;
+    if (pressed && target && (this.g.rocket.onUse(target) || this.g.vehicles.onUse(target, held))) return; // programa lunar: el cohete
     if (this.g.vehicles.place(this, pressed, target ? null : hit, held, dir)) return;
     // Criatura delante: dar de comer, esquilar u ordeñar (Fase 6: domesticar y sentar, también con la mano vacía).
     if (pressed && target && this.canInteract(target, held?.id ?? 0)) {
@@ -210,6 +223,8 @@ export class Interaction {
     if (netherGoodsUse(this.g, pressed, hit, held)) return;
     // Fase 8.6 (el End): el ojo de ender en un marco del portal del End.
     if (endFrameUse(this.g, pressed, hit, held)) return;
+    // Programa lunar: la ventana de un divisor (o de un brazo): con la mano vacía o con algo que no sea una pieza de logística; agachado, siempre.
+    if (pressed && hit && this.openMachineConfig(hit, held)) return;
     // Abrir contenedores y la mesa de trabajo (agachado se coloca encima).
     if (pressed && hit && !this.g.player.sneaking) {
       // Fase 6.5 (colores): con la misma vela en la mano se añade otra en vez de encenderla o apagarla.
@@ -327,7 +342,9 @@ export class Interaction {
       if (pressed && wet) this.placeBlock(wet, LILY_PAD);
       return;
     }
-    if (def.block !== undefined && hit) this.placeBlock(hit, def.block);
+    if (def.block !== undefined && hit && this.placeBlock(hit, def.block) && pressed && BELTS.includes(familyBase(def.block)) && this.lastPlaced) {
+      this.drag = { x: this.lastPlaced[0], y: this.lastPlaced[1], z: this.lastPlaced[2], dir: marchDir(this.g.world!.getBlock(...this.lastPlaced)) };
+    }
   }
 
   /**
@@ -429,6 +446,141 @@ export class Interaction {
     this.g.swing(true);
   }
 
+  /**
+   * Programa lunar: clic derecho sobre un divisor: abre su ventana de configuración (prioridades y filtro). Si el jugador lleva una pieza
+   * de logística en la mano se sigue colocando (así se alargan las filas), salvo agachado.
+   */
+  private openMachineConfig(hit: RayHit, held: ItemStack | null): boolean {
+    const heldBlock = held ? ITEMS[held.id]?.block : undefined;
+    if (heldBlock !== undefined && isGhostBlock(heldBlock) && !this.g.player.sneaking) return false;
+    if (isSplitter(hit.id)) {
+      const c = multiControllerPos(hit.id, hit.x, hit.y, hit.z)!;
+      const cfg = this.g.belts.splitterConfig(c[0], c[1], c[2]) ?? { inPri: 0, outPri: 0, filter: 0, filterSide: -1 };
+      const sides: [number, string][] = [[-1, 'Izquierda'], [0, 'Ninguna'], [1, 'Derecha']];
+      this.g.openMachinePanel({
+        title: 'Divisor',
+        choices: [
+          { key: 'inPri', label: 'Prioridad de entrada', options: sides, value: cfg.inPri },
+          { key: 'outPri', label: 'Prioridad de salida', options: sides, value: cfg.outPri },
+          { key: 'filterSide', label: 'Lado del filtro', options: [[-1, 'Izquierda'], [1, 'Derecha']], value: cfg.filterSide },
+        ],
+        slots: [{ key: 'filter', label: 'Filtro de objeto', ids: [cfg.filter] }],
+        hint: 'Sin filtro reparte a partes iguales entre las dos salidas. Con filtro, el objeto elegido sólo sale por su lado y todo lo demás por el otro.',
+      }, [c[0], c[1], c[2]]);
+      return true;
+    }
+    if (isLabBlock(hit.id)) {
+      this.g.openFactorioScreen('research'); // el laboratorio: la ventana de investigación
+      return true;
+    }
+    if (isAssemblerBlock(hit.id) || isFuelFurnace(hit.id)) {
+      // Un horno de combustible acepta lo que se lleve en la mano (mineral o combustible) con el clic; la ensambladora, su ventana.
+      const furnace = isFuelFurnace(hit.id);
+      if (furnace && held && !this.g.player.sneaking && (ITEMS[held.id]?.smelt !== undefined || (ITEMS[held.id]?.fuel ?? 0) > 0)) {
+        this.g.net?.send({ t: 'mcfg', x: hit.x, y: hit.y, z: hit.z, c: { fuel: held.id, n: held.count } });
+      } else {
+        this.g.net?.send({ t: 'mcfg', x: hit.x, y: hit.y, z: hit.z, c: { q: 1 } });
+      }
+      this.g.swing(true);
+      return true;
+    }
+    const ins = inserterInfo(hit.id);
+    if (ins) {
+      // Con combustible en la mano, el brazo de combustible lo acepta (como en Factorio); si no, su ventana.
+      if (INSERTER_TYPES[ins.tier].burner && held && (ITEMS[held.id]?.fuel ?? 0) > 0 && !this.g.player.sneaking) {
+        this.g.net?.send({ t: 'mcfg', x: hit.x, y: hit.y, z: hit.z, c: { fuel: held.id, n: held.count } });
+      } else {
+        this.g.net?.send({ t: 'mcfg', x: hit.x, y: hit.y, z: hit.z, c: { q: 1 } });
+      }
+      this.g.swing(true);
+      return true;
+    }
+    return false;
+  }
+
+  private machineTimer: ReturnType<typeof setInterval> | null = null;
+  private machineOpenAt: [number, number, number] | null = null;
+
+  /** La ventana de una ensambladora o de un horno de combustible: se abre con la primera respuesta y se refresca mientras se mira. */
+  onMachineView(msg: Extract<ServerMsg, { t: 'mview' }>): void {
+    if (msg.took > 0 && !this.g.creative) {
+      const held = this.g.inv.get(this.g.selected);
+      if (held) this.g.inv.consume(this.g.selected, Math.min(msg.took, held.count));
+    }
+    const open = this.machineOpenAt;
+    const same = !!open && open[0] === msg.x && open[1] === msg.y && open[2] === msg.z;
+    if (same && this.g.machinePanel.isOpen()) {
+      this.g.machinePanel.update(this.machineSpec(msg));
+      return;
+    }
+    if (!msg.open) return;
+    this.machineOpenAt = [msg.x, msg.y, msg.z];
+    this.g.openMachinePanel(this.machineSpec(msg), [msg.x, msg.y, msg.z], () => {
+      if (this.machineTimer) clearInterval(this.machineTimer);
+      this.machineTimer = null;
+      this.machineOpenAt = null;
+    });
+    if (this.machineTimer) clearInterval(this.machineTimer);
+    this.machineTimer = setInterval(() => this.g.net?.send({ t: 'mcfg', x: msg.x, y: msg.y, z: msg.z, c: { q: 1, r: 1 } }), 500);
+  }
+
+  private machineSpec(msg: Extract<ServerMsg, { t: 'mview' }>): PanelSpec {
+    const name = (id: number) => ITEMS[id]?.name ?? '?';
+    const pct = `${Math.round(msg.progress / 10)} %`;
+    if (msg.kind === 1) {
+      const f = FURNACES[msg.tier];
+      const st = (s: [number, number] | null) => (s ? `${name(s[0])} ×${s[1]}` : 'vacío');
+      return {
+        title: f.name,
+        choices: [],
+        hint: `Entrada: ${st(msg.input)}. Combustible: ${st(msg.fuel)} (${msg.energy} kJ en la llama). Salida: ${st(msg.out)}. Progreso: ${pct}${msg.working ? ' (fundiendo)' : ''}. ` +
+          `Velocidad ${f.speed}, ${f.kw} kW de combustible. Clic con mineral o combustible en la mano para llenarlo.`,
+      };
+    }
+    const t = ASSEMBLERS[msg.tier];
+    const r = msg.recipe ? assemblerRecipe(msg.recipe) : undefined;
+    const choices = msg.alts.length > 1
+      ? [{ key: 'recipe', label: 'Receta', options: msg.alts.map((k, i): [number, string] => [k, `Opción ${i + 1}`]), value: msg.recipe }]
+      : [];
+    const needs = r ? r.needs.map((n, i) => `${msg.needs[i]?.[0] ? name(msg.needs[i][0]) : name(n.alts[0])} ${msg.needs[i]?.[1] ?? 0}/${msg.needs[i]?.[3] ?? n.n} (pide ${n.n})`).join('; ') : '';
+    return {
+      title: t.name,
+      choices,
+      grid: {
+        key: 'out', label: 'Receta (lo que fabrica)', value: r?.out.id ?? 0,
+        ids: [...new Set(assemblerRecipes().filter((x) => this.g.research.recipeUnlocked(x.name)).map((x) => x.out.id))],
+      },
+      hint: r
+        ? `Ingredientes: ${needs}. Resultado: ${msg.out ? `${name(msg.out[0])} ×${msg.out[1]}` : 'nada aún'} (por tanda: ${r.out.count}). Progreso: ${pct}${msg.working ? ' (trabajando)' : ''}. ` +
+          `Velocidad ${t.speed}, ${t.kw} kW.`
+        : `Sin receta. Clic en la ranura con el objeto que quieres fabricar en la mano. Velocidad ${t.speed}, ${t.kw} kW.`,
+    };
+  }
+
+  /** La configuración de un brazo que manda el servidor: abre su ventana o gasta el combustible que aceptó. */
+  onInserterConfig(msg: Extract<ServerMsg, { t: 'icfg' }>): void {
+    if (msg.took > 0 && !this.g.creative) {
+      const held = this.g.inv.get(this.g.selected);
+      if (held && (ITEMS[held.id]?.fuel ?? 0) > 0) this.g.inv.consume(this.g.selected, Math.min(msg.took, held.count));
+    }
+    if (!msg.open) return;
+    const t = INSERTER_TYPES[msg.tier];
+    const filter = msg.filter.slice(0, INSERTER_FILTERS);
+    while (filter.length < INSERTER_FILTERS) filter.push(0);
+    const stacks: [number, string][] = [[0, 'Todos']];
+    for (let n = 1; n <= msg.cap; n++) stacks.push([n, String(n)]);
+    const fuelTxt = t.burner ? ` Combustible: ${msg.fuel ? `${ITEMS[msg.fuel[0]]?.name ?? '?'} ×${msg.fuel[1]}` : 'ninguno'} (${msg.energy} kJ en reserva). Clic con carbón en la mano para llenarlo.` : '';
+    this.g.openMachinePanel({
+      title: `Brazo ${t.name}`,
+      choices: [
+        { key: 'mode', label: 'Filtro', options: [[0, 'Lista blanca'], [1, 'Lista negra']], value: msg.mode },
+        ...(msg.cap > 1 ? [{ key: 'stack', label: 'Objetos por viaje', options: stacks, value: msg.stack }] : []),
+      ],
+      slots: [{ key: 'filter', label: 'Filtro de objetos', ids: filter }],
+      hint: `Sin filtro coge cualquier cosa que quepa delante. Con lista blanca sólo coge lo elegido; con lista negra, todo menos eso.${fuelTxt}`,
+    }, [msg.x, msg.y, msg.z]);
+  }
+
   /** Clic derecho en puertas, trampillas y portillos (se abren al momento) o en una cama. */
   useBlock(hit: RayHit): void {
     const world = this.g.world!;
@@ -499,6 +651,14 @@ export class Interaction {
     const silk = levelIn(this.g.enchant.held(), SILK_TOUCH) > 0;
     world.setBlock(x, y, z, emptyAfterPlayerBreak(id, world.getBlock(x, y - 1, z), !this.g.creative, silk));
     // La otra mitad de una puerta o de una cama cae con ella (el servidor lo confirma).
+    // Una máquina de varias casillas se quita entera (el servidor lo confirma).
+    if (isMultiPart(id)) {
+      const info = multiInfo(id)!;
+      const c = [x - (info.cell[0] - info.anchor[0]), y - (info.cell[1] - info.anchor[1]), z - (info.cell[2] - info.anchor[2])];
+      for (const [cx, cy, cz] of multiFootprint(info.multi.base, info.dir, c[0], c[1], c[2])) {
+        if (familyBase(world.getBlock(cx, cy, cz)) === info.multi.base) world.setBlock(cx, cy, cz, AIR);
+      }
+    }
     const pp = partnerOf(x, y, z, id);
     if (pp && familyBase(world.getBlock(pp[0], pp[1], pp[2])) === familyBase(id)) world.setBlock(pp[0], pp[1], pp[2], AIR);
     this.g.net?.sendSet(x, y, z, AIR, this.g.heldId, this.g.enchant.held()); // Fase 7: Toque de seda y Fortuna
@@ -694,31 +854,187 @@ export class Interaction {
     return false;
   }
 
-  placeBlock(hit: RayHit, base: number, slot = this.g.selected): boolean {
+  /** Programa lunar: sentido de marcha que el jugador ha fijado con R para lo que lleva en la mano (null: el de su mirada). */
+  rotDir: number | null = null;
+  private rotBlock = -1;
+
+  /**
+   * R: con una cinta, brazo o máquina orientable en la mano, gira lo que se va a poner (el fantasma enseña hacia dónde irá); con la mano
+   * libre (o con otra cosa), gira la pieza a la que se apunta, un cuarto de vuelta.
+   */
+  rotate(): void {
+    const base = ITEMS[this.g.heldId]?.block;
+    if (base !== undefined && isOrientable(base)) {
+      const cur = this.rotBlock === base && this.rotDir !== null ? this.rotDir : lookDir(this.g.player.yaw);
+      this.rotDir = (cur + 1) % 4;
+      this.rotBlock = base;
+      return;
+    }
+    const hit = this.g.hit;
+    if (!hit || !isOrientable(hit.id)) return;
+    const cur = marchDir(hit.id);
+    if (cur < 0) return;
+    this.g.net?.send({ t: 'rot', x: hit.x, y: hit.y, z: hit.z, d: (cur + 1) % 4 });
+    this.g.swing(false);
+  }
+
+  /** Arrastrar con el clic derecho colocando cintas en fila: la última puesta en este arrastre y hacia dónde iba. */
+  private drag: { x: number; y: number; z: number; dir: number } | null = null;
+  private lastPlaced: [number, number, number] | null = null;
+
+  /**
+   * Con una cinta en la mano y el clic derecho mantenido, cada casilla nueva por la que pasa la mira pone una cinta hacia donde se
+   * avanza (y gira la anterior para que apunte a ésta, así las esquinas salen solas). true si lo atendió.
+   */
+  private dragStep(held: ItemStack | null): boolean {
+    const d0 = this.drag;
+    const base = held ? ITEMS[held.id]?.block : undefined;
+    if (!d0 || base === undefined || !BELTS.includes(familyBase(base))) {
+      this.drag = null;
+      return false;
+    }
+    const gh = this.ghost();
+    if (!gh || gh.y !== d0.y) return true;
+    const dx = gh.x - d0.x, dz = gh.z - d0.z;
+    if ((dx !== 0) === (dz !== 0)) return true; // en su sitio, o en diagonal: espera a que se alinee
+    const sx = Math.sign(dx), sz = Math.sign(dz);
+    const dir = sx > 0 ? 0 : sz > 0 ? 1 : sx < 0 ? 2 : 3;
+    const steps = Math.min(Math.abs(dx) + Math.abs(dz), 8);
+    const world = this.g.world!;
+    let last: { x: number; y: number; z: number; dir: number } = d0;
+    for (let i = 1; i <= steps; i++) {
+      const cx = d0.x + sx * i, cz = d0.z + sz * i;
+      // La anterior pasa a apuntar a ésta.
+      const prev = beltInfo(world.getBlock(last.x, last.y, last.z));
+      if (prev && prev.dir !== dir) {
+        world.setBlock(last.x, last.y, last.z, beltState(prev.tier, dir, 0));
+        this.g.net?.send({ t: 'rot', x: last.x, y: last.y, z: last.z, d: dir });
+      }
+      const below = world.getBlock(cx, d0.y - 1, cz);
+      if (below <= 0) break;
+      this.rotDir = dir;
+      this.rotBlock = base;
+      const ok = this.placeBlock({ x: cx, y: d0.y - 1, z: cz, nx: 0, ny: 1, nz: 0, px: cx + 0.5, py: d0.y, pz: cz + 0.5, id: below } as RayHit, base);
+      if (!ok) break;
+      last = { x: cx, y: d0.y, z: cz, dir };
+    }
+    this.drag = last;
+    return true;
+  }
+
+  /** Mirada con la que se coloca `base`: la del jugador, o la que fijó con R para ese mismo bloque. */
+  private placeYaw(base: number): number {
+    return this.rotDir !== null && this.rotBlock === base && isOrientable(base) ? dirYaw(this.rotDir) : this.g.player.yaw;
+  }
+
+  /** Lo que se pondría al colocar `base` sobre `hit` con esa mirada, o null si no se puede (sin sitio, o estorba alguien). */
+  private planFor(hit: RayHit, base: number, yaw: number): [number, number, number, number][] | null {
     const world = this.g.world!;
     const get = (x: number, y: number, z: number) => world.getBlock(x, y, z);
-    const edits = planPlacement(get, hit, base, this.g.player.yaw, this.g.player.pitch); // Fase 7 (mecanismos): pitch
-    if (!edits) return false;
+    const edits = planPlacement(get, hit, base, yaw, this.g.player.pitch); // Fase 7 (mecanismos): pitch
+    if (!edits) return null;
     for (const [x, y, z, id] of edits) {
-      if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return false;
+      if (BLOCK_COLLIDE[id] && this.blockedByBodies(x, y, z, id)) return null;
       // Plantas, antorchas de pie, cactus y caña necesitan apoyo.
       const r = BLOCK_RENDER[id];
       if ((r === R_CROSS || (r === R_TORCH && BLOCK_WALL[id] < 0) || id === CACTUS || id === SUGAR_CANE) && !BLOCK_NEEDS_SUPPORT[id]) {
         const under = world.getBlock(x, y - 1, z);
         if (SAPLINGS.has(id)) {
-          if (!SOIL.has(under)) return false;
+          if (!SOIL.has(under)) return null;
         } else if (id === CACTUS) {
-          if (under !== CACTUS && under !== SAND && under !== RED_SAND) return false;
+          if (under !== CACTUS && under !== SAND && under !== RED_SAND) return null;
         } else {
           const okSame = id === SUGAR_CANE && under === id;
-          if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return false;
+          if (!okSame && (under <= 0 || !BLOCK_SOLID[under] || BLOCK_RENDER[under] === R_CROSS)) return null;
         }
       }
     }
+    return edits;
+  }
+
+  /**
+   * Programa lunar: el «fantasma» de lo que se va a colocar (cintas, brazos, cables, paneles, baterías y máquinas), en la celda a la
+   * que apunta el jugador: verde si cabe, rojo si no, y con la flecha del sentido de marcha. null si no lleva uno de esos en la mano.
+   */
+  ghost(): { x: number; y: number; z: number; id: number; box: number[]; ok: boolean; dir: number; area?: number[]; links?: number[]; linkFrom?: number[] } | null {
+    const held = this.g.heldStack;
+    const base = held ? ITEMS[held.id]?.block : undefined;
+    if (base === undefined || !isGhostBlock(base) || !this.g.hit || this.g.hudHidden) return null;
+    const hit = this.g.hit;
+    const world = this.g.world!;
+    const edits = this.planFor(hit, base, this.placeYaw(base));
+    const cell = edits?.[0] ?? (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]
+      ? [hit.x, hit.y, hit.z, base] : [hit.x + hit.nx, hit.y + hit.ny, hit.z + hit.nz, base]);
+    const [x, y, z, id] = cell;
+    const box = blockSelectionBoxes(id, (dx, dy, dz) => world.getBlock(x + dx, y + dy, z + dz));
+    const dir = isOrientable(base) ? (marchDir(id) >= 0 ? marchDir(id) : lookDir(this.placeYaw(base))) : -1;
+    // El extractor enseña el área que va a explotar (5×5 y 3 de fondo), y se pone verde si cubre alguna veta.
+    let area: number[] | undefined;
+    if (familyBase(base) === EXTRACTOR) {
+      area = [x - EXTRACTOR_RADIUS, y - EXTRACTOR_DEPTH, z - EXTRACTOR_RADIUS, x + EXTRACTOR_RADIUS + 1, y, z + EXTRACTOR_RADIUS + 1];
+    }
+    // Un poste enseña lo que va a alimentar (su área de suministro) y los cables que se le pondrán.
+    let links: number[] | undefined;
+    const pi = poleInfo(id, x, y, z);
+    if (pi) {
+      const spec = poleSpec(pi.kind);
+      const [cx, cy, cz] = pi.center;
+      area = [
+        Math.floor(cx - spec.area + 1e-9), Math.floor(cy - spec.area + 1e-9), Math.floor(cz - spec.area + 1e-9),
+        Math.ceil(cx + spec.area - 1e-9), Math.ceil(cy + spec.area - 1e-9), Math.ceil(cz + spec.area - 1e-9),
+      ];
+      links = this.poleLinks(pi);
+    }
+    return { x, y, z, id, box: box.slice(0, 6), ok: !!edits, dir, ...(area ? { area } : {}), ...(links?.length ? { links, linkFrom: pi!.attach } : {}) };
+  }
+
+  private linkCache: { key: string; links: number[] } | null = null;
+  private linkTick = 0;
+
+  /** Los postes a los que se cablearía uno nuevo, como en el servidor (más cercanos primero, hasta 5, sin triángulos): sus puntos de enganche. */
+  private poleLinks(me: PoleInfo): number[] {
+    const key = `${me.ctrl.join(',')},${me.kind},${this.g.wires.size}`;
+    if (this.linkCache?.key === key && (this.linkTick = (this.linkTick + 1) % 30) !== 0) return this.linkCache.links;
+    const world = this.g.world!;
+    const spec = poleSpec(me.kind);
+    const R = Math.ceil(spec.reach) + 2;
+    const found = new Map<string, { info: PoleInfo; d: number }>();
+    const [cx, cy, cz] = me.center;
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dz = -R; dz <= R; dz++) {
+        for (let dx = -R; dx <= R; dx++) {
+          const bx = Math.floor(cx) + dx, by = Math.floor(cy) + dy, bz = Math.floor(cz) + dz;
+          const info = poleInfo(world.getBlock(bx, by, bz), bx, by, bz);
+          if (!info || info.ctrl.join() === me.ctrl.join() || found.has(info.ctrl.join())) continue;
+          const d = Math.hypot(info.center[0] - cx, info.center[1] - cy, info.center[2] - cz);
+          if (d <= Math.min(spec.reach, poleSpec(info.kind).reach) + 1e-9) found.set(info.ctrl.join(), { info, d });
+        }
+      }
+    }
+    const sorted = [...found.values()].sort((a, b) => a.d - b.d);
+    const links: number[] = [];
+    const joined: PoleInfo[] = [];
+    for (const c of sorted) {
+      if (joined.length >= POLE_MAX_WIRES) break;
+      if (this.g.wires.wireCount(c.info.attach) >= POLE_MAX_WIRES) continue;
+      if (joined.some((j) => this.g.wires.connected(j.attach, c.info.attach))) continue;
+      joined.push(c.info);
+      links.push(...c.info.attach);
+    }
+    this.linkCache = { key, links };
+    return links;
+  }
+
+  placeBlock(hit: RayHit, base: number, slot = this.g.selected): boolean {
+    const world = this.g.world!;
+    const yaw = this.placeYaw(base);
+    const edits = this.planFor(hit, base, yaw);
+    if (!edits) return false;
     for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id);
+    this.lastPlaced = [edits[0][0], edits[0][1], edits[0][2]];
     this.g.net?.send({
       t: 'place', x: hit.x, y: hit.y, z: hit.z, n: [hit.nx, hit.ny, hit.nz], p: [hit.px, hit.py, hit.pz], item: base,
-      yaw: this.g.player.yaw, pi: Math.round(this.g.player.pitch * 1000) / 1000, // Fase 7 (mecanismos)
+      yaw, pi: Math.round(this.g.player.pitch * 1000) / 1000, // Fase 7 (mecanismos)
       ...this.g.books.placeExtras(this.g.inv.get(slot), edits), // Fase 6.5 (libros y estandartes): capas del estandarte
       ...(isShulkerBox(base) && this.g.inv.get(slot)?.bag ? { bx: stackToWire(this.g.inv.get(slot))! } : {}), // Fase 8.6: lo que lleva la caja
     });

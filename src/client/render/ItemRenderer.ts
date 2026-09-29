@@ -9,6 +9,7 @@ import {
   BLOCKS, BLOCK_RENDER, BLOCK_TEX, BLOCK_MODEL_CUTOUT, R_CROSS, R_TORCH, R_NONE, R_MODEL, blockItemModel,
 } from '../../shared/blocks';
 import { modelQuads } from '../../shared/blockModels';
+import { blockModel as sharedBlockModel, multiFullModel, multiOf } from '../../shared/blocks';
 import { ITEMS, itemSpriteIndex } from '../../shared/items';
 import { TEXTURE_DEFS, textureLayer } from '../../shared/textureDefs';
 import type { BlockTextures } from './BlockTextures';
@@ -289,6 +290,32 @@ export class ItemRenderer {
     return m;
   }
 
+  /**
+   * Programa lunar: el bloque tal como quedará colocado (con su orientación, no el modelo del objeto de la mano), para el fantasma de
+   * colocación. null si no se dibuja así (plantas, antorchas…).
+   */
+  placedModel(block: number): ItemModel | null {
+    const key = 'g' + block;
+    const hit = this.cache.get(key);
+    if (hit) return hit;
+    const r = BLOCK_RENDER[block];
+    if (r === R_NONE || r === R_CROSS || r === R_TORCH) return null;
+    let m: ItemModel;
+    if (r === R_MODEL) {
+      // Una máquina de varias casillas se enseña entera (relativa a su casilla principal), no la porción de una casilla.
+      const boxes = (multiOf(block) ? multiFullModel(block) : sharedBlockModel(block, () => 0)) ?? [];
+      const out: number[] = [];
+      const NORMAL = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+      for (const q of modelQuads(boxes)) {
+        const n = NORMAL[q.face];
+        for (let k = 0; k < 4; k++) out.push(q.p[k * 3] / 16 - 0.5, q.p[k * 3 + 1] / 16 - 0.5, q.p[k * 3 + 2] / 16 - 0.5, n[0], n[1], n[2], q.uv[k * 2] / 16, q.uv[k * 2 + 1] / 16, q.layer);
+      }
+      m = this.upload(out, true, BLOCK_MODEL_CUTOUT[block] === 1, false);
+    } else m = this.blockModel(block);
+    this.cache.set(key, m);
+    return m;
+  }
+
   /** Fase 7 (encantamientos): cubo con la textura `name` en las seis caras (el libro de la mesa). */
   textureCube(name: string): ItemModel {
     const key = 't' + name;
@@ -342,6 +369,36 @@ export class ItemRenderer {
       gl.drawElements(gl.TRIANGLES, d.model.indexCount, gl.UNSIGNED_SHORT, 0);
     }
     gl.bindVertexArray(null);
+  }
+
+  /**
+   * Programa lunar: dibuja el fantasma de colocación, translúcido y con un tinte (verde si cabe, rojo si no). Va después de la escena, con
+   * la mezcla activada y sin escribir profundidad.
+   */
+  drawGhost(
+    model: ItemModel, m: mat4, viewProj: mat4, light: [number, number], tint: [number, number, number], alpha: number,
+    grassTint: [number, number, number], bindLighting: (p: Program) => Program,
+  ): void {
+    const gl = this.gl;
+    const p = bindLighting(this.prog.use());
+    p.tex('uSpecular', gl.TEXTURE_2D_ARRAY, this.blocks.specular)
+      .tex2D('uLayerProps', this.blocks.layerProps)
+      .m4('uProjM', viewProj as Float32Array)
+      .i1('uHand', 0)
+      .i1('uCrack', 0)
+      .f3('uGrassTint', grassTint[0], grassTint[1], grassTint[2])
+      .f1('uTime', glintTime());
+    this.bindCommon(p, model);
+    p.m4('uModel', m as Float32Array).f2('uLightLevel', light[0], light[1]).f3('uTint', tint[0], tint[1], tint[2]).f1('uGlint', 0).f1('uGhost', alpha);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(model.vao);
+    gl.drawElements(gl.TRIANGLES, model.indexCount, gl.UNSIGNED_SHORT, 0);
+    gl.bindVertexArray(null);
+    gl.disable(gl.CULL_FACE);
+    gl.disable(gl.BLEND);
+    p.f1('uGhost', 0); // los demás dibujos de este programa son opacos
   }
 
   drawShadow(list: ItemDraw[]): void {

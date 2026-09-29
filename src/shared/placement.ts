@@ -34,6 +34,7 @@ import { isAnvil, anvilFacing } from './blocks'; // Fase 7 (encantamientos)
 import { planRedstone } from './redstonePlacement'; // Fase 7 (redstone)
 import { isIronOpenable } from './blocks'; // Fase 7 (redstone)
 import { planMechanism } from './mechanismPlacement'; // Fase 7 (mecanismos)
+import { planLogistics, planFastReplace } from './logisticsPlacement'; // Programa lunar: cintas y sustitución rápida
 import { planDeepDark } from './deepDarkPlacement'; // Fase 7.5 (abismo)
 
 export type Edit = [number, number, number, number];
@@ -113,6 +114,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 6.5 (decoración): andamio en lo alto de una torre de andamios (clic desde abajo).
   const tower = planScaffoldTower(get, hit, item);
   if (tower !== undefined) return tower;
+  // Programa lunar: una cinta, brazo o poste mejor sobre uno del mismo tipo lo sustituye (fast replace).
+  const fast = planFastReplace(hit, item, yaw);
+  if (fast !== undefined) return fast;
   let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (BLOCK_REPLACEABLE[hit.id] && !BLOCK_FLUID[hit.id]) {
     x = hit.x;
@@ -148,6 +152,9 @@ export function planPlacement(get: GetBlock, hit: PlaceHit, item: number, yaw: n
   // Fase 7 (mecanismos): pistones, observadores, tolvas, dispensadores y soltadores orientados.
   const mech = planMechanism(hit, base, x, y, z, yaw, pitch);
   if (mech !== undefined) return mech;
+  // Programa lunar: las cintas avanzan hacia donde mira el jugador.
+  const logi = planLogistics(get, hit, base, x, y, z, yaw);
+  if (logi !== undefined) return logi;
   // Fase 7.5 (abismo): sensores, chilladores, venas de sculk y antorcha y farol de alma.
   const dd = planDeepDark(get, base, x, y, z, cur, [hit.nx, hit.ny, hit.nz], facing);
   if (dd !== undefined) return dd;

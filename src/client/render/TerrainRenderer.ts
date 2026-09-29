@@ -89,7 +89,7 @@ export class TerrainRenderer implements MeshSink {
   }
 
   private createPass(data: Uint32Array): PassMesh | null {
-    const quads = data.length / 8;
+    const quads = data.length / 12; // 4 vértices de 3 enteros por quad
     if (quads === 0) return null;
     this.ensureIndices(quads);
     const gl = this.gl;
@@ -99,7 +99,7 @@ export class TerrainRenderer implements MeshSink {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribIPointer(0, 2, gl.UNSIGNED_INT, 8, 0);
+    gl.vertexAttribIPointer(0, 3, gl.UNSIGNED_INT, 12, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bindVertexArray(null);
     return { vao, buffer, quads };

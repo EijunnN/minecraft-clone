@@ -25,7 +25,7 @@ layout(std140) uniform Frame {
   vec4 uQuality;      // x = tamaño del mapa de sombras, y = muestras PCF, z = pasos SSR, w = pasos volumétricos
   vec4 uNearFar;      // x = near, y = far, z = tan(fov/2), w = aspecto
   vec4 uDim;          // Fase 8 (dimensiones): x = hay cielo (sol, luna, luz del cielo), y = altura de su mar de lava (0: no), z = densidad de su niebla, w = el canal del cielo lleva la luz de alma (sin luz del cielo)
-  vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal), w = cielo del End
+  vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal), w = cielo del End (1) o de la Luna, sin aire (2)
   vec4 uDimAmb;       // rgb = luz mínima de todo sin cielo (la penumbra del Nether)
   vec4 uEndFlash;     // Fase 8.6: xyz = dirección del destello del End, w = su intensidad (0..1)
 };
@@ -43,14 +43,15 @@ vec4 saturate(vec4 x) { return clamp(x, 0.0, 1.0); }
 vec3 saturate3(vec3 x) { return clamp(x, 0.0, 1.0); }
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 /** Luz mínima (para que la oscuridad total no sea negro puro); Fase 8: la penumbra de las dimensiones sin cielo. */
-vec3 minAmbient() { return mix(vec3(0.012, 0.013, 0.016), uDimAmb.rgb, 1.0 - uDim.x); }
+// Programa lunar (uDimFog.w = 2: sin aire): en sombra sólo queda la luz de la Tierra, muy tenue y azulada.
+vec3 minAmbient() { return uDimFog.w > 1.5 ? vec3(0.010, 0.012, 0.018) : mix(vec3(0.012, 0.013, 0.016), uDimAmb.rgb, 1.0 - uDim.x); }
 /**
  * Fase 8 (entorno del Nether): la luz de fondo sin cielo según la cara y la altura: la penumbra del bioma, algo más
  * por arriba que por los lados, y el resplandor del mar de lava que sube desde abajo (más cerca de su altura y en
  * las caras que miran hacia abajo: los techos y los salientes se tiñen de naranja).
  */
 vec3 minAmbientAt(vec3 n, float y) {
-  if (uDim.x > 0.5) return vec3(0.012, 0.013, 0.016);
+  if (uDim.x > 0.5) return uDimFog.w > 1.5 ? vec3(0.010, 0.012, 0.018) : vec3(0.012, 0.013, 0.016);
   vec3 a = uDimAmb.rgb * (0.8 + 0.2 * n.y);
   if (uDim.y > 0.0) a += vec3(1.0, 0.36, 0.09) * 0.06 * exp(-max(y - uDim.y, 0.0) / 22.0) * (0.55 - 0.45 * n.y);
   return a;

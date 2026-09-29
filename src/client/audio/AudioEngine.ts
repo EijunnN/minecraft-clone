@@ -39,6 +39,7 @@ import { buildLevelUp, buildXpOrb } from './experienceSounds';
 import { FluidAmbience } from './fluidAmbience';
 import { Heartbeat } from './heartbeat';
 import { GlideWind } from './glideWind'; // Fase 8.6
+import { RocketEngine } from './rocketEngine'; // Programa lunar
 import { buildMaterialSound, buildSplashSound, buildUiSound } from './materials';
 import { createNoiseBuffers, createReverbImpulse, type NoiseBuffers } from './noise';
 import { MusicEngine } from './music';
@@ -92,6 +93,7 @@ export class AudioEngine {
   private fluids: FluidAmbience | null = null;
   private heartbeat: Heartbeat | null = null;
   private glideWind: GlideWind | null = null; // Fase 8.6
+  private rocketEngine: RocketEngine | null = null; // Programa lunar
   /** Fase 6.5 (colecciones): tocadiscos que suenan y los que llegaron antes de arrancar el audio. */
   private jukeboxes: Jukeboxes | null = null;
   /** Fase 8.2 (biomas del Nether): bucles, sonidos sueltos y «mood» de cada bioma del Nether. */
@@ -143,6 +145,7 @@ export class AudioEngine {
       this.heartbeat = new Heartbeat(ctx, this.masterGain);
       this.heartbeat.setLevel(this.pendingHeartbeat);
       this.glideWind = new GlideWind(ctx, this.noise, this.sfxBus); // Fase 8.6
+      this.rocketEngine = new RocketEngine(ctx, this.noise, this.sfxBus); // Programa lunar
       // Fase 6.5 (colecciones)
       this.jukeboxes = new Jukeboxes(ctx, this.noise, this.sfxBus, this.reverbSend);
       this.nether = new NetherAmbience(ctx, this.noise, this.ambientBus, this.reverbSend);
@@ -161,6 +164,7 @@ export class AudioEngine {
       this.fluids = null;
       this.heartbeat = null;
       this.glideWind = null; // Fase 8.6
+      this.rocketEngine = null; // Programa lunar
       this.jukeboxes = null; // Fase 6.5 (colecciones)
       this.nether = null; // Fase 8.2
       this.noise = null;
@@ -637,6 +641,11 @@ export class AudioEngine {
     this.safe(() => this.glideWind?.set(volume, pitch));
   }
 
+  /** Programa lunar: el rugido de los motores del cohete dentro de la cabina (volumen 0..1 y potencia 0..1). */
+  setRocketEngine(volume: number, power: number): void {
+    this.safe(() => this.rocketEngine?.set(volume, power));
+  }
+
   update(dt: number, state: AmbientState): void {
     this.safe(() => {
       const ctx = this.ctx;
@@ -651,6 +660,7 @@ export class AudioEngine {
       this.fluids?.update(dt);
       this.heartbeat?.update(dt);
       this.glideWind?.update(); // Fase 8.6
+      this.rocketEngine?.update(); // Programa lunar
       this.jukeboxes?.update(this.listenerPos); // Fase 6.5 (colecciones)
     });
   }
@@ -663,6 +673,7 @@ export class AudioEngine {
       this.fluids?.dispose();
       this.heartbeat?.dispose();
       this.glideWind?.dispose(); // Fase 8.6
+      this.rocketEngine?.dispose(); // Programa lunar
       this.jukeboxes?.dispose(); // Fase 6.5 (colecciones)
       this.jukeboxes = null;
       this.nether?.dispose(); // Fase 8.2

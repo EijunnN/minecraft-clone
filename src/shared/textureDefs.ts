@@ -18,7 +18,9 @@ export interface TextureDef {
   tint?: 0 | 1 | 2 | 3;
   wave?: 0 | 1 | 2;
   sss?: number;
-  special?: 0 | 1 | 2 | 3 | 4 | 5 | 6; // Fase 6.5 (equipo): 5 = fuego (llamas que suben y ondulan). Fase 8.6: 6 = portal del End (estrellas)
+  // Fase 6.5 (equipo): 5 = fuego (llamas que suben y ondulan). Fase 8.6: 6 = portal del End (estrellas). Programa lunar: 7..18 = la
+  // cara de arriba de una cinta que se desliza (7 + nivel·4 + sentido: 0 +x, 1 +z, 2 −x, 3 −z).
+  special?: number;
   cutout?: boolean;
 }
 
@@ -469,6 +471,13 @@ export const TEXTURE_DEFS: readonly TextureDef[] = [
     'soul_campfire_embers', 'respawn_anchor_top_off', 'respawn_anchor_top', 'respawn_anchor_bottom', 'beacon',
     ...[0, 1, 2, 3, 4].map((c) => `respawn_anchor_side${c}`)].map((name): TextureDef => ({ name })),
   { name: 'soul_campfire_fire', wave: 2, cutout: true },
+  // Programa lunar: la cara de arriba de las cintas (una por nivel y sentido; se desliza: ver `special` arriba). De lado, las cintas y los
+  // brazos usan la chapa del bloque de hierro.
+  ...[0, 1, 2].flatMap((t) => [0, 1, 2, 3].map((d): TextureDef => ({ name: `belt_t${t}_d${d}`, special: 7 + t * 4 + d }))),
+  // Programa lunar: el suelo de la Luna.
+  ...['moon_regolith', 'moon_regolith_dark', 'moon_rock', 'dirty_ice'].map((name): TextureDef => ({ name })),
+  // Programa lunar: el panel solar (lo demás de la energía reutiliza texturas de hierro, cobre, redstone y horno).
+  { name: 'solar_panel_top' },
   // Fase 8.6 (el End).
   ...['end_stone', 'end_stone_bricks', 'purpur_block', 'purpur_pillar', 'purpur_pillar_top', 'end_rod'].map((name): TextureDef => ({ name })),
   ...['chorus_plant', 'chorus_flower', 'chorus_flower_dead'].map((name): TextureDef => ({ name, sss: 0.3 })),

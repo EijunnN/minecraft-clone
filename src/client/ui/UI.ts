@@ -30,6 +30,16 @@ export interface NameTagInfo {
 
 type InvCategory = BlockCategory | 'todo' | 'objetos' | 'pociones'; // Fase 7 (pociones)
 
+/** Programa lunar: el creativo tiene dos mundos, cada uno con sus pestañas: lo de la Tierra y lo de la Luna. */
+type InvWorld = 'tierra' | 'luna';
+const LUNA_CATEGORIES: { id: InvCategory; label: string }[] = [
+  { id: 'todo', label: 'Todo' },
+  { id: 'luna', label: 'Suelo' },
+  { id: 'logistica', label: 'Logística' }, // cintas, brazos, almacenes… (irán saliendo más: materiales, máquinas, equipo)
+];
+/** Categorías de bloque que son de la Luna (el resto es de la Tierra). */
+const LUNAR_BLOCKS = new Set<string>(['luna', 'logistica']);
+
 const CATEGORIES: { id: InvCategory; label: string }[] = [
   { id: 'todo', label: 'Todo' },
   { id: 'construccion', label: 'Construcción' },
@@ -77,6 +87,7 @@ export class UI {
   private blockNameTimer: ReturnType<typeof setTimeout> | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private invCategory: InvCategory = 'todo';
+  private invWorld: InvWorld = 'tierra';
   private hoveredItem: number | null = null;
   /** Fase 7: la pila señalada si lleva tipo o datos (una poción, un libro encantado). */
   private hoveredStack: ItemStack | undefined;
@@ -637,9 +648,25 @@ export class UI {
   }
 
   private renderInventoryTabs(): void {
+    // Los dos mundos, arriba: Tierra y Luna no comparten pestañas.
+    const worlds = $('invworlds');
+    worlds.innerHTML = '';
+    for (const [id, label] of [['tierra', 'Tierra'], ['luna', 'Luna']] as const) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.className = id === this.invWorld ? 'active' : '';
+      b.addEventListener('click', () => {
+        this.invWorld = id;
+        this.invCategory = 'todo';
+        this.onUiSound?.('click');
+        this.renderInventoryTabs();
+        this.renderInventoryGrid();
+      });
+      worlds.appendChild(b);
+    }
     const tabs = $('invtabs');
     tabs.innerHTML = '';
-    for (const c of CATEGORIES) {
+    for (const c of this.invWorld === 'luna' ? LUNA_CATEGORIES : CATEGORIES) {
       const b = document.createElement('button');
       b.textContent = c.label;
       b.className = c.id === this.invCategory ? 'active' : '';
@@ -674,19 +701,21 @@ export class UI {
     this.gridObserver = observer;
     const q = $<HTMLInputElement>('invsearch').value.trim().toLowerCase();
     const ids: number[] = [];
-    if (this.invCategory !== 'objetos' && this.invCategory !== 'pociones') {
+    const luna = this.invWorld === 'luna';
+    if (luna || (this.invCategory !== 'objetos' && this.invCategory !== 'pociones')) {
       for (const id of INVENTORY_ORDER) {
+        if (LUNAR_BLOCKS.has(BLOCKS[id].category ?? '') !== luna) continue; // cada mundo, lo suyo
         if (this.invCategory === 'todo' || BLOCKS[id].category === this.invCategory) ids.push(id);
       }
     }
-    if (this.invCategory === 'redstone') ids.unshift(REDSTONE); // Fase 7 (redstone): el polvo, el primero
-    if (this.invCategory === 'todo' || this.invCategory === 'objetos') ids.push(...CREATIVE_ITEMS);
+    if (!luna && this.invCategory === 'redstone') ids.unshift(REDSTONE); // Fase 7 (redstone): el polvo, el primero
+    if (!luna && (this.invCategory === 'todo' || this.invCategory === 'objetos')) ids.push(...CREATIVE_ITEMS); // (lo de la Luna, por ahora sólo bloques)
     // Fase 7 (pociones): su pestaña (alambique, frascos e ingredientes) y cada poción con su tipo.
     if (this.invCategory === 'pociones') ids.push(...CREATIVE_BREWING);
     const stacks: ItemStack[] = ids.map((id) => ({ id, count: 1 }));
-    if (this.invCategory === 'todo' || this.invCategory === 'pociones') stacks.push(...CREATIVE_POTIONS);
+    if (!luna && (this.invCategory === 'todo' || this.invCategory === 'pociones')) stacks.push(...CREATIVE_POTIONS);
     // Fase 7 (encantamientos): un libro encantado por cada encantamiento y nivel (como en Minecraft).
-    if (this.invCategory === 'todo' || this.invCategory === 'objetos') {
+    if (!luna && (this.invCategory === 'todo' || this.invCategory === 'objetos')) {
       for (const e of ENCHANT_IDS) for (let l = 1; l <= ENCHANTS[e].max; l++) stacks.push(enchantedBook([[e, l]]));
     }
     for (const st of stacks) {

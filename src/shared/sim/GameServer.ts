@@ -259,6 +259,7 @@ export class GameServer {
         this.hub?.sharedChanged(this);
       },
       markCollected: (id, who) => this.sys.entitySync.markCollected(id, who),
+      sharedChanged: () => this.hub?.sharedChanged(this),
     };
   }
 
@@ -444,6 +445,7 @@ export class GameServer {
 
   /** Fase 8: la hora y la dificultad guardadas cambiaron en otra dimensión. */
   reloadShared(): void {
+    this.sys.research.reload(); // Programa lunar: la investigación es de todas las dimensiones
     try {
       const t = JSON.parse(this.store.getMeta('time') ?? '') as WorldTime;
       if (Number.isFinite(t.base) && Number.isFinite(t.at)) {
@@ -533,6 +535,7 @@ export class GameServer {
       const p = this.sys.portals.arrive(arrival.x, arrival.y, arrival.z, arrival.axis);
       return [p[0], p[1], p[2]];
     }
+    if (arrival.kind === 'rocket') return this.sys.rockets.arrive(s, arrival); // Programa lunar: en lo alto, sentado en su cohete
     if (arrival.kind === 'pos' && [arrival.x, arrival.y, arrival.z].every(Number.isFinite)) return [arrival.x!, arrival.y!, arrival.z!];
     if (arrival.kind === 'spawn' && s.bed && (s.bedDim ?? DIM_OVERWORLD) === this.dim) return [s.bed[0] + 0.5, s.bed[1] + 0.5625, s.bed[2] + 0.5];
     const sp = this.spawn();
@@ -681,7 +684,10 @@ export class GameServer {
   }
 
   private onPos(s: Session, msg: Extract<ClientMsg, { t: 'pos' }>): void {
+    // Programa lunar: quien va en un cohete va donde lo lleva el cohete; de su cliente sólo cuenta hacia dónde mira.
+    const seated = this.sys.rockets.isSeated(s.id) ? ([...s.p] as [number, number, number]) : null;
     if (!applyPos(s, msg)) return;
+    if (seated) s.p = seated;
     this.broadcast({ t: 'pos', id: s.id, p: s.p, r: s.r, s: s.s, h: s.h, o: s.o, a: s.a, ...(s.ec ? { ec: s.ec } : {}), ...(s.g ? { g: s.g } : {}), ...handPotions(s) }, s);
   }
 

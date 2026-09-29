@@ -12,6 +12,7 @@ import { STATE_DEAD } from '../../shared/protocol';
 import { STATE_INVISIBLE } from '../../shared/potions';
 import { hasGlint } from '../../shared/enchantments';
 import { isVehicleType } from '../../shared/vehicles';
+import { ENT_ROCKET } from '../../shared/rocket'; // Programa lunar
 import { TerrainGenerator, BIOME_NAMES } from '../../shared/world/terrain';
 import { BIOME_LUSH_CAVES, BIOME_DRIPSTONE_CAVES } from '../../shared/world/biomeIds';
 import { isDeepDark } from '../../shared/world/deepDark';
@@ -24,6 +25,7 @@ import { fishingLines } from './fishingLines';
 import { leashLines } from './leashLines';
 import { guardianBeams } from './guardianBeams';
 import { itemDecorKey as shieldDecorKey } from '../render/shieldArt'; // (o el color del cuero teñido)
+import type { ArmDraw } from './armClient';
 import type { FrameState } from '../render/Renderer';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import type { ClientEntity } from './ClientEntities';
@@ -46,7 +48,7 @@ export function remoteViews(g: Game, dt: number): RemotePlayerView[] {
   for (const rp of g.remote.values()) {
     rp.update(dt);
     g.riding.placeRemote(rp.id, rp.view); // Fase 6 (monturas): sentado en su montura
-    g.vehicles.placeRemote(rp.id, rp.view); // Fase 7 (transporte): en su barca o vagoneta
+    if (!g.vehicles.placeRemote(rp.id, rp.view)) g.rocket.placeRemote(rp.id, rp.view); // Fase 7 (transporte): en su barca o vagoneta; programa lunar: en su cohete
     if (rp.state & STATE_DEAD) continue;
     const v = rp.view;
     v.invisible = (rp.state & STATE_INVISIBLE) !== 0; // Fase 7 (remate): del invisible sólo se ve lo que lleva puesto
@@ -78,7 +80,7 @@ export function selfView(g: Game, eye: EyeLight): RemotePlayerView {
     use: ((k) => (k === 'none' ? null : k))(useLook(g.interaction.use).kind), light: [eye.skyAtEye, (eye.le & 15) / 15],
     armor: g.inv.armorIds(),
     armorDye: g.inv.armor.map((a) => dyedColor(a) ?? -1), // el cuero teñido
-    riding: g.riding.active || g.vehicles.active, // Fase 6 (monturas) y 7 (transporte): sentado
+    riding: g.riding.active || g.vehicles.active || g.rocket.active, // Fase 6 (monturas) y 7 (transporte): sentado
     glint: g.enchant.glintBits(), // Fase 7 (encantamientos)
     invisible: g.statusEffects.invisible, // Fase 7 (remate): sin cuerpo, pero con la armadura y lo de las manos
     glowing: g.statusEffects.glowing, // Fase 7 (efectos)
@@ -97,16 +99,19 @@ export function animateHand(g: Game, dt: number): void {
 }
 
 /** Criaturas y vehículos (modelos de cajas) por un lado; objetos, flechas y demás por otro. */
-export function splitEntities(g: Game): { mobs: ClientEntity[]; drops: ClientEntity[] } {
+export function splitEntities(g: Game): { mobs: ClientEntity[]; drops: ClientEntity[]; arms: ArmDraw[] } {
   const mobs: ClientEntity[] = [];
   const drops: ClientEntity[] = [];
   for (const e of g.ents.list.values()) {
     // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
     // lo que llevan (lo decide MobRenderer).
-    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_END_CRYSTAL || e.type === ENT_SHULKER_BULLET || e.type === ENT_WITHER_SKULL) mobs.push(e); // Fase 8.6: y los cristales del End y las balas de shulker
+    if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_ROCKET || e.type === ENT_END_CRYSTAL || e.type === ENT_SHULKER_BULLET || e.type === ENT_WITHER_SKULL) mobs.push(e); // Fase 8.6: y los cristales del End y las balas de shulker
     else drops.push(e);
   }
-  return { mobs, drops };
+  drops.push(...g.belts.draws()); // Programa lunar: lo que llevan las cintas, tumbado encima
+  const arm = g.arms.draws(); // y lo que llevan los brazos en la pinza
+  drops.push(...arm.hands);
+  return { mobs, drops, arms: arm.bars };
 }
 
 export interface FrameInput {
@@ -118,6 +123,8 @@ export interface FrameInput {
   views: RemotePlayerView[];
   mobs: ClientEntity[];
   drops: ClientEntity[];
+  /** Programa lunar: las barras de los brazos. */
+  arms: ArmDraw[];
   /** La entidad a la que se apunta (sin recuadro de selección del bloque). */
   target: ClientEntity | null;
 }
@@ -165,6 +172,10 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     cloudCoverage: f.sky.cloudCoverage,
     mist: f.sky.mist,
     selection: g.hit && !g.hudHidden && !f.target ? { x: g.hit.x, y: g.hit.y, z: g.hit.z, box: g.hit.box } : null,
+    ghost: f.target ? null : g.interaction.ghost(), // Programa lunar: la vista previa de lo que se va a colocar
+    arms: f.arms,
+    noPower: g.wires.noPower,
+    wires: g.wires.geometry(), // Programa lunar: los cables entre postes
     heldItem: dead ? 0 : g.heldId,
     heldDmg: g.heldStack?.dmg ?? 0, // Fase 7 (pociones): color de la poción
     offhandDmg: g.inv.offhand?.dmg ?? 0,

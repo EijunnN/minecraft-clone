@@ -24,6 +24,7 @@ import type { ContainerSystem } from './containerSystem';
 import type { Composters } from './composters';
 import type { Collections } from './collections';
 import type { Shelves } from './shelves';
+import type { MachinePorts } from './machines';
 import type { Entity } from '../entities';
 import type { ServerContext } from './context';
 
@@ -106,6 +107,8 @@ export class Inventories {
   /** Objetos tirados por celda (igual, una vez por tick). */
   private items = new Map<number, Entity[]>();
   private itemsTick = -1;
+  /** Programa lunar: las máquinas (puertos por cualquier cara); las pone el servidor al crearlas. */
+  machines: MachinePorts | null = null;
 
   constructor(
     private ctx: ServerContext, private containers: ContainerSystem, private composters: Composters, private collections: Collections,
@@ -183,6 +186,7 @@ export class Inventories {
   hasInventory(x: number, y: number, z: number): boolean {
     const id = this.ctx.world.getBlock(x, y, z);
     if (id <= 0) return this.cartsAt(x, y, z).length > 0;
+    if (this.machines?.has(x, y, z)) return true;
     return isContainer(id) || familyBase(id) === COMPOSTER || isJukebox(id) || isChiseledShelf(id) || this.cartsAt(x, y, z).length > 0;
   }
 
@@ -194,6 +198,7 @@ export class Inventories {
   /** Mete lo que quepa de `s` en lo que haya en (x, y, z) por su cara `face`; devuelve cuántos entraron. */
   insert(x: number, y: number, z: number, face: number, s: ItemStack): number {
     const id = this.ctx.world.getBlock(x, y, z);
+    if (this.machines?.has(x, y, z)) return this.machines.insert(x, y, z, s);
     if (id > 0 && familyBase(id) === COMPOSTER) return face === UP && this.composters.insert(x, y, z, s.id) ? 1 : 0;
     if (id > 0 && isJukebox(id)) return this.collections.insertDisc(x, y, z, s.id) ? 1 : 0;
     if (id > 0 && isChiseledShelf(id)) return this.shelves.insertBook(x, y, z, s) ? 1 : 0;
@@ -210,6 +215,7 @@ export class Inventories {
    */
   extractOne(x: number, y: number, z: number, face: number, take: (s: ItemStack) => boolean): boolean {
     const id = this.ctx.world.getBlock(x, y, z);
+    if (this.machines?.has(x, y, z)) return this.machines.extractOne(x, y, z, take);
     if (id > 0 && familyBase(id) === COMPOSTER) {
       if (face !== DOWN || composterLevel(id) !== COMPOSTER_READY || !take({ id: BONE_MEAL, count: 1 })) return false;
       return this.composters.takeReady(x, y, z);
