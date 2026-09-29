@@ -134,6 +134,8 @@ export interface PlayerSave {
   xp?: number;
   /** Fase 7 (encantamientos): semilla de encantamiento (las ofertas de la mesa; cambia al encantar). */
   es?: number;
+  /** Fase 9 (libro de recetas): claves de las recetas desbloqueadas (sólo se manda cuando cambian). */
+  rb?: number[];
 }
 
 /** Entidad nueva: [id, tipo, x, y, z, yaw, cuerpo, pitch, flags, extra...]. */

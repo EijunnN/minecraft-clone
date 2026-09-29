@@ -64,6 +64,7 @@ import type { RaidState } from '../ui/raidBar'; // Fase 6 (asaltos)
 import { raycastHangings } from './decorInteraction'; // Fase 6.5 (decoración): cuadros y marcos
 // Fase 7 (encantamientos)
 import { EnchantClient } from './enchantClient';
+import { RecipeBookState } from './recipeBookClient'; // Fase 9 (libro de recetas)
 import { EnchantBooks } from './enchantBooks';
 import { Beacons } from './beacons'; // Fase 8.5 (lo que da el Nether)
 import { EndAtmosphere } from './endAtmosphere'; // Fase 8.6 (el End)
@@ -151,6 +152,7 @@ export class Game {
   readonly books = new BooksClient(this);
   /** Fase 7 (encantamientos): mesa, yunque, afiladora, efectos de los encantamientos y el libro de la mesa. */
   readonly enchant = new EnchantClient(this);
+  readonly recipes = new RecipeBookState(this); // Fase 9 (libro de recetas)
   readonly enchantBooks = new EnchantBooks(this);
   /** Fase 8.5: los faros (el haz, su nivel y sus efectos elegidos). */
   readonly beacons = new Beacons(this);
@@ -210,6 +212,7 @@ export class Game {
       sound: (k) => (k === 'craft' ? this.audio.playCraft() : this.audio.playUi('click')),
       keys: () => this.cfg.settings.keys,
       work: this.enchant.host, // Fase 7 (encantamientos)
+      recipes: { has: (r) => this.recipes.has(r), version: () => this.recipes.version }, // Fase 9 (libro de recetas)
     }, this.inv);
     this.survival.armor = this.interaction.armor;
     this.ents.playerPos = (id) => {
@@ -446,6 +449,7 @@ export class Game {
       this.inv.offhandFromWire(save.off);
       this.xp.total = Math.max(0, Math.floor(Number(save.xp) || 0));
       this.enchant.restore(save); // Fase 7 (encantamientos): semilla de encantamiento
+      this.recipes.restore(save); // Fase 9 (libro de recetas)
       this.survival.reset();
       this.survival.health = Math.max(0, Math.min(MAX_HEALTH_CAP, save.hp)); // Fase 7 (efectos): Salud mejorada
       this.survival.food = Math.max(0, Math.min(20, save.food));
@@ -713,7 +717,7 @@ export class Game {
   sendState(force: boolean): void {
     if (!this.net || !this.playing) return;
     const p = this.player, s = this.survival;
-    const key = `${this.inv.version}|${s.version}|${this.xp.version}|${this.statusEffects.version}|${Math.round(p.x)}|${Math.round(p.y)}|${Math.round(p.z)}|${this.selected}|${s.dead}`;
+    const key = `${this.inv.version}|${this.recipes.version}|${s.version}|${this.xp.version}|${this.statusEffects.version}|${Math.round(p.x)}|${Math.round(p.y)}|${Math.round(p.z)}|${this.selected}|${s.dead}`;
     if (!force && key === this.stateKey) return;
     this.stateKey = key;
     this.net.send({
@@ -723,6 +727,7 @@ export class Game {
         pos: [p.x, p.y, p.z], rot: [p.yaw, p.pitch], fly: p.flying, sel: this.selected, dead: s.dead,
         armor: this.inv.armorToWire(), off: this.inv.offhandToWire(), xp: this.xp.total, fx: this.statusEffects.toWire(), abs: s.absorption,
         es: this.enchant.seed, // Fase 7 (encantamientos)
+        ...this.recipes.toWire(), // Fase 9 (libro de recetas): sólo si cambió
       },
     });
   }
@@ -845,6 +850,7 @@ export class Game {
     const worldTime = worldTimeAt(this.time, Date.now() + (this.net?.serverOffset ?? 0));
     const rain = this.environment.weatherAt(worldTime);
     this.rainNow = rain;
+    this.recipes.update(); // Fase 9 (libro de recetas): recetas nuevas al tener el ingrediente
     this.enchant.update(dt); // Fase 7 (encantamientos): Respiración, Agilidad acuática, Paso helado, runas
     this.enchantBooks.update(dt);
     this.beacons.update(dt); // Fase 8.5

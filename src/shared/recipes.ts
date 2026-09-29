@@ -548,6 +548,23 @@ export function matchRecipe(grid: readonly number[], size: number): RecipeMatch 
   return null;
 }
 
+/** Una receta de fabricación tal como la ve el libro de recetas (con forma: `cells` en filas; sin forma: en fila, `h` = 1). */
+export interface CraftRecipe {
+  shapeless: boolean;
+  w: number;
+  h: number;
+  cells: readonly (readonly number[] | null)[];
+  out: ItemStack;
+}
+
+/** Todas las recetas registradas (con forma y sin forma); el libro las lista y las coloca. */
+export function craftRecipes(): CraftRecipe[] {
+  return [
+    ...shaped.map((r) => ({ shapeless: false, w: r.w, h: r.h, cells: r.cells, out: r.out })),
+    ...shapeless.map((r) => ({ shapeless: true, w: r.items.length, h: 1, cells: r.items, out: r.out })),
+  ];
+}
+
 /** Número de recetas (para la cobertura; cuenta también las que se registran más abajo). */
 export function recipeCount(): number {
   return shaped.length + shapeless.length;

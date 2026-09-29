@@ -34,6 +34,9 @@ import { FILLED_MAP, EMPTY_MAP, PAPER } from '../../shared/items';
 import { GLASS_PANE } from '../../shared/blocks';
 import { repairCraft, shieldDecorCraft, shulkerDyeCraft, bannerCopyCraft } from '../../shared/craftSpecials';
 import { dyeArmorCraft } from '../../shared/dyedColor';
+// Fase 9: libro de recetas.
+import { RecipeBook, BOOK_BUTTON, type BookHost } from './recipeBook';
+import { planFill, stockOf, type BookKind, type BookRecipe } from '../../shared/recipeBook';
 
 export type ScreenKind = 'player' | 'table' | 'chest' | 'furnace' | 'stonecutter' | 'loom'
   | 'brewing' // Fase 7 (pociones): alambique
@@ -52,6 +55,8 @@ export interface ScreenHost {
   keys(): Keybinds;
   /** Fase 7 (encantamientos): experiencia, semilla y avisos de la mesa, el yunque y la afiladora. */
   work?: WorkHost;
+  /** Fase 9 (libro de recetas): qué recetas tiene desbloqueadas. */
+  recipes?: Pick<BookHost, 'has' | 'version'>;
 }
 
 type SlotRef =
@@ -102,6 +107,9 @@ export class InventoryScreen {
   private lastClick = { key: '', at: 0 };
   /** Fase 7 (encantamientos): la descripción flotante muestra la pista de una oferta de la mesa. */
   private workTip = false;
+  /** Fase 9 (libro de recetas): el panel de al lado y lo que espera a que el servidor devuelva algo del horno. */
+  private book: RecipeBook | null = null;
+  private resume = new Map<number, () => void>();
 
   constructor(host: ScreenHost, inv: Inventory) {
     this.host = host;
@@ -109,6 +117,11 @@ export class InventoryScreen {
     this.root = $('#invscreen');
     this.panel = $('#invscreen .inv2');
     this.cursorEl = $('#cursor-stack');
+    if (host.recipes) {
+      const rec = host.recipes;
+      this.book = new RecipeBook(this.root, { icons: host.icons, has: rec.has, version: rec.version, sound: () => host.sound('click') },
+        () => stockOf(this.inv.slots), () => this.inv.version, (r, many) => this.pickRecipe(r, many));
+    }
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'tooltip hidden';
     document.body.appendChild(this.tooltip);
@@ -174,6 +187,12 @@ export class InventoryScreen {
       if (this.loom.pick(Number(b.dataset.loom), this.grid)) this.host.sound('click');
       this.render();
     });
+    // Fase 9: el botón del libro de recetas.
+    this.panel.addEventListener('mousedown', (e) => {
+      if (!(e.target as HTMLElement).closest('[data-rb]')) return;
+      e.preventDefault();
+      this.book?.toggle();
+    });
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {
       this.mouse = [e.clientX, e.clientY];
@@ -200,8 +219,17 @@ export class InventoryScreen {
     this.grid = new Array(this.gridSize * this.gridSize).fill(null);
     this.busy = 0;
     this.build();
+    this.book?.setContext(this.bookContext());
     this.root.classList.remove('hidden');
     this.render();
+  }
+
+  /** Fase 9: el libro que toca en esta pantalla (null: ninguno). */
+  private bookContext(): { kind: BookKind; size: number } | null {
+    if (this.kind === 'player') return { kind: 'craft', size: 2 };
+    if (this.kind === 'table') return { kind: 'craft', size: 3 };
+    if (this.kind !== 'furnace') return null;
+    return { kind: this.title === 'Ahumador' ? 'smoker' : this.title === 'Alto horno' ? 'blast' : 'furnace', size: 1 };
   }
 
   /** Fase 7 (encantamientos): panel de la mesa, el yunque o la afiladora (null en las demás pantallas). */
@@ -232,6 +260,8 @@ export class InventoryScreen {
     this.root.classList.add('hidden');
     this.tooltip.classList.add('hidden');
     this.cursorEl.classList.add('hidden');
+    this.book?.setContext(null);
+    this.resume.clear();
   }
 
   private giveOrDrop(s: ItemStack | null): void {
@@ -259,6 +289,11 @@ export class InventoryScreen {
       if (this.busy === msg.q) this.busy = 0;
       this.inv.changed();
       this.render();
+      const next = this.resume.get(msg.q);
+      if (next) {
+        this.resume.delete(msg.q);
+        if (this.kind) next();
+      }
     } else if (msg.t === 'cclose') {
       if (this.kind === 'chest' || this.kind === 'furnace' || this.kind === 'brewing') this.close();
     }
@@ -285,7 +320,7 @@ export class InventoryScreen {
     let top = '';
     if (kind === 'player' || kind === 'table') {
       const n = this.gridSize;
-      top = `<h3>${kind === 'table' ? 'Mesa de trabajo' : 'Fabricación'}</h3><div class="craft">` +
+      top = `<h3>${kind === 'table' ? 'Mesa de trabajo' : 'Fabricación'}</h3><div class="craft">${this.book ? BOOK_BUTTON : ''}` +
         `<div class="grid g${n}">${Array.from({ length: n * n }, (_, i) => `<div class="slot2" data-s="grid:${i}"></div>`).join('')}</div>` +
         `<div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
       // Inventario del jugador: la armadura en columna (cabeza arriba) a la izquierda.
@@ -313,7 +348,7 @@ export class InventoryScreen {
       top = `<h3>Cortapiedras</h3><div class="cutter"><div class="slot2" data-s="grid:0"></div>` +
         `<div class="cut-list"></div><div class="arrow"></div><div class="slot2 big" data-s="out"></div></div>`;
     } else {
-      top = `<h3>${this.title || 'Horno'}</h3><div class="furnace">` +
+      top = `<h3>${this.title || 'Horno'}</h3><div class="furnace">${this.book ? BOOK_BUTTON : ''}` +
         `<div class="fcol"><div class="slot2" data-s="cont:${FURNACE_IN}"></div><div class="flame"><i></i></div>` +
         `<div class="slot2" data-s="cont:${FURNACE_FUEL}"></div></div>` +
         `<div class="arrow prog"><i></i></div><div class="slot2 big" data-s="cont:${FURNACE_OUT}"></div></div>`;
@@ -807,8 +842,88 @@ export class InventoryScreen {
     this.work?.render(this.panel, this.grid, this.host.icons); // Fase 7 (encantamientos)
     const out = this.slotEls.get('out');
     if (out) out.classList.toggle('ready', !!this.result());
+    this.book?.render();
     this.placeCursor();
     if (this.hovered) this.showTooltip();
+  }
+
+  // ---------------------------------------------------------------- Fase 9: libro de recetas
+
+  /** Un clic en una receta del libro: la coloca en la cuadrícula o, en un horno, en su entrada. */
+  private pickRecipe(r: BookRecipe, many: boolean): void {
+    if (!this.kind || this.isBusy() || this.work) return;
+    if (r.kind === 'craft') this.fillGrid(r, many);
+    else this.fillFurnace(r, many);
+  }
+
+  /** Quita hasta `n` de este objeto del inventario (de la mochila y la barra) y lo devuelve como una pila. */
+  private takeFromInventory(id: number, n: number): ItemStack | null {
+    let out = null as ItemStack | null;
+    for (let i = 0; i < this.inv.slots.length && n > 0; i++) {
+      const s = this.inv.slots[i];
+      if (!s || s.id !== id) continue;
+      const k = Math.min(n, s.count);
+      out = out ? { ...out, count: out.count + k } : { ...cloneStack(s)!, count: k };
+      this.inv.slots[i] = s.count > k ? { ...s, count: s.count - k } : null;
+      n -= k;
+    }
+    return out;
+  }
+
+  /** Vacía la cuadrícula hacia el inventario y coloca la receta (con Mayús, las veces que dé el material). */
+  private fillGrid(r: BookRecipe, many: boolean): void {
+    for (let i = 0; i < this.grid.length; i++) {
+      const s = this.grid[i];
+      if (s) this.grid[i] = this.inv.add(s);
+    }
+    if (this.grid.some((s) => s)) {
+      this.host.sound('click'); // la mochila está llena: no hay dónde guardar lo que había
+      this.inv.changed();
+      this.render();
+      return;
+    }
+    const plan = planFill(r, this.gridSize, stockOf(this.inv.slots), many);
+    if (plan) {
+      plan.cells.forEach((id, i) => {
+        if (id) this.grid[i] = this.takeFromInventory(id, plan.n);
+      });
+    }
+    this.host.sound('click');
+    this.inv.changed();
+    this.render();
+  }
+
+  /**
+   * Coloca en la entrada del horno lo que se funde en la receta. Si ya hay otra cosa en la entrada, primero la
+   * devuelve al inventario (el servidor contesta) y luego pone lo nuevo.
+   */
+  private fillFurnace(r: BookRecipe, many: boolean): void {
+    const pos = this.containerPos;
+    if (!this.container || !pos) return;
+    const plan = planFill(r, 1, stockOf(this.inv.slots), many);
+    if (!plan) return;
+    const id = plan.cells[0];
+    const cur = this.container.slots[FURNACE_IN];
+    const put = () => {
+      const stack = this.takeFromInventory(id, plan.n);
+      if (!stack) return;
+      const slot = this.inv.slots.findIndex((x) => x === null);
+      const q = this.seq++;
+      this.track(q, 'put', slot < 0 ? 0 : slot, stack);
+      this.host.send({ t: 'cput', x: pos[0], y: pos[1], z: pos[2], stack, q });
+      this.inv.changed();
+      this.render();
+    };
+    if (cur && cur.id !== id) {
+      const room = this.inv.room(cur);
+      if (room < cur.count) return; // no cabe lo que hay: no se cambia
+      const q = this.seq++;
+      this.track(q, 'take');
+      this.resume.set(q, put);
+      this.host.send({ t: 'ctake', x: pos[0], y: pos[1], z: pos[2], slot: FURNACE_IN, max: room, q });
+      return;
+    }
+    put();
   }
 
   /** Opciones del cortapiedras para la piedra puesta (si cambia la piedra, se deselecciona). */

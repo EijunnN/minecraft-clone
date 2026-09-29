@@ -103,6 +103,8 @@ export function sanitizeSave(d: unknown): PlayerSave | null {
   // Fase 7 (encantamientos): semilla de encantamiento (entero de 32 bits).
   const es = Number(raw.es);
   if (Number.isInteger(es)) save.es = es | 0;
+  // Fase 9 (libro de recetas): claves de 32 bits de las recetas desbloqueadas.
+  if (Array.isArray(raw.rb)) save.rb = raw.rb.slice(0, 4096).map(Number).filter((n) => Number.isInteger(n)).map((n) => n | 0);
   if (Array.isArray(raw.fx)) {
     // Efectos activos: sólo los conocidos, con nivel y duración acotados.
     save.fx = raw.fx.slice(0, 16).flatMap((f) => {

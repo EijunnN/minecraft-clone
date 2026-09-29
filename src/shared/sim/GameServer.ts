@@ -701,6 +701,7 @@ export class GameServer {
   private onState(s: Session, d: unknown): void {
     const save = sanitizeSave(d);
     if (!save) return;
+    if (!save.rb && s.save?.rb) save.rb = s.save.rb; // Fase 9: el libro sólo se manda cuando cambia
     s.save = save;
     s.saveDirty = true;
   }

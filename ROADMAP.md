@@ -19,7 +19,7 @@ catálogo exportado de la 26.3 con el registro del juego.
 | Objetos | 1.658 | 🟡 ~1.350 (bloques incluidos) |
 | Recetas | 2.042 | 🟡 1.015 (las demás usan objetos que aún no existen) |
 | Altura del mundo | 384 (y de -64 a 320) | ✅ 384 (y de -64 a 319); el Nether, 128 |
-| Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | 🟡 todos salvo logros y estadísticas, libro de recetas, modos aventura/espectador/extremo y reglas del juego (fase 9) |
+| Sistemas | redstone, encantamientos, pociones, comercio, asaltos, logros… | 🟡 todos salvo logros y estadísticas, modos aventura/espectador/extremo y reglas del juego (fase 9) |
 
 El mundo normal está completo salvo lo de 2024–2026 (fase 9). El Nether (8.1–8.5) y el End (8.6) ya
 están enteros. Lo que queda es el Wither (8.7) y el metajuego de la fase 9.
@@ -102,7 +102,7 @@ la vaca y el pollo, la armadura al azar de zombis y esqueletos y el arnés del g
 | Brújula, reloj, mapas, mapas de explorador, libro y pluma, etiqueta, correa, silla | ✅ (y la brújula de recuperación) |
 | Mesa de trabajo 3×3 e inventario 2×2 | ✅ |
 | Recetas | 🟡 (1.015 de 2.042; las que faltan usan objetos que aún no existen) |
-| Libro de recetas | ❌ (fase 9) |
+| Libro de recetas | ✅ (mesa, inventario, horno, ahumador y alto horno; recetas que se desbloquean al tener el ingrediente, con pestañas, buscador, «hacer ya» y colocar con un clic) |
 | Horno, ahumador, alto horno, fogata | ✅ |
 | Cortapiedras, telar, afiladora, yunque, mesa de herrería, mesa de cartografía, fabricador automático (crafter) | 🟡 (todos salvo el crafter, fase 9; la mesa de herrería mejora a netherita y los adornos son de la fase 9) |
 | Cofre, barril, tolva, saco (bundle), estantería cincelada | ✅ (también cofre doble y cofre trampa) |
@@ -791,7 +791,7 @@ fortalezas y bastiones, netherita; fortaleza con ojos de ender, dragón del End,
 
 ### Fase 9 — Metajuego y novedades recientes (L)
 Logros y estadísticas, modos aventura, espectador y extremo, reglas del juego, más comandos,
-permisos y operadores, libro de recetas, subtítulos; contenido de 2025–2026: la Edad del Cobre
+permisos y operadores, subtítulos (el libro de recetas ya está hecho); contenido de 2025–2026: la Edad del Cobre
 (gólem de cobre, herramientas y armadura de cobre), ghast feliz, lanzas y nautilos, jardín pálido y
 creaking, cámaras de desafío y breeze, arqueología, cuevas de azufre, bosque moteado y campamentos.
 
