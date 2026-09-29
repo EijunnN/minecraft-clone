@@ -266,3 +266,7 @@ export * from './extractionBlocks';
 import { MACHINE_INVENTORY } from './machineBlocks'; // Programa lunar: ensambladoras y hornos de combustible
 export * from './machineBlocks';
 (INVENTORY_ORDER as number[]).push(...MACHINE_INVENTORY);
+
+import { FLUID_INVENTORY } from './fluidBlocks'; // Programa lunar: tuberías, tanque y bombas
+export * from './fluidBlocks';
+(INVENTORY_ORDER as number[]).push(...FLUID_INVENTORY);

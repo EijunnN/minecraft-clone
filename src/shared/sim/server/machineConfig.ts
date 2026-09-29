@@ -2,7 +2,7 @@
 // la ventana de la máquina y manda ('mcfg') los campos que cambian. Todo se valida aquí: alcance, que haya lo que dice y valores en rango.
 import {
   splitterInfo, multiControllerPos, multiInfo, multiFootprint, beltInfo, beltState, undergroundInfo, undergroundState, inserterInfo, inserterState,
-  AIR, BLOCK_REPLACEABLE, familyBase,
+  AIR, BLOCK_REPLACEABLE, familyBase, isUndergroundPipe, isOffshorePump, undergroundPipeDir, offshorePumpDir,
 } from '../../blocks';
 import { isValidItem } from '../../items';
 import type { ClientMsg } from '../../protocol';
@@ -139,6 +139,12 @@ export function rotateBlock(ctx: ServerContext, x: number, y: number, z: number,
   if (u) {
     if (u.dir === d) return false;
     w.setBlock(x, y, z, undergroundState(u.tier, d, u.kind));
+    return true;
+  }
+  if (isUndergroundPipe(id) || isOffshorePump(id)) {
+    const cur = isUndergroundPipe(id) ? undergroundPipeDir(id) : offshorePumpDir(id);
+    if (cur === d) return false;
+    w.setBlock(x, y, z, familyBase(id) + d);
     return true;
   }
   const i = inserterInfo(id);

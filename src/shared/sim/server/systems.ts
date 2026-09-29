@@ -67,6 +67,7 @@ import { Furnaces } from './furnaces'; // Programa lunar: hornos de combustible
 import { MachineHub } from './machineHub';
 import { Research } from './research'; // Programa lunar: la investigación
 import { Labs } from './labs';
+import { Fluids } from './fluids'; // Programa lunar: tuberías, tanques y bombas
 import { Extractors } from './extractors'; // Programa lunar: los extractores
 import { MultiBlocks } from './multiblocks'; // Programa lunar: máquinas de varias casillas
 import { MachineConfig } from './machineConfig'; // Programa lunar: configuración de divisores y brazos
@@ -170,6 +171,7 @@ export class ServerSystems {
   readonly furnaces: Furnaces;
   readonly research: Research;
   readonly labs: Labs;
+  readonly fluids: Fluids;
   /** Programa lunar: los extractores eléctricos y las reservas de las vetas. */
   readonly extractors: Extractors;
   /** Fase 7 (encantamientos): mesa, yunque, afiladora, yunques que caen, Paso helado y Conductividad. */
@@ -281,6 +283,7 @@ export class ServerSystems {
     this.furnaces = new Furnaces(ctx, rs, store);
     this.research = new Research(ctx, store);
     this.labs = new Labs(ctx, rs, store, this.power, this.research);
+    this.fluids = new Fluids(ctx, rs, store, this.power);
     this.machines.research = this.assemblers.research = this.furnaces.research = this.research;
     this.commands.research = this.research; // /investigar
     rs.hooks = {
@@ -328,6 +331,7 @@ export class ServerSystems {
     this.power.register(this.machines);
     this.power.register(this.assemblers);
     this.power.register(this.labs);
+    this.power.register(this.fluids);
     this.power.register(this.extractors);
     this.fire.igniters.add((x, y, z) => mech.light(x, y, z));
     this.fire.burned = (x, y, z) => mech.light(x, y, z);
@@ -425,7 +429,8 @@ export class ServerSystems {
     this.transport.tick();
     this.rockets.tick();
     this.furnaces.tick();
-    this.power.tick(); // la energía se reparte y avanzan brazos, hornos y extractores
+    this.power.tick();
+    this.fluids.tick(); // la energía se reparte y avanzan brazos, hornos y extractores
     this.belts.tick();
     this.inserters.sync();
     this.beds.tick();
@@ -511,6 +516,7 @@ export class ServerSystems {
     this.assemblers.flush(store);
     this.furnaces.flush(store);
     this.labs.flush(store);
+    this.fluids.flush(store);
     this.research.flush();
     this.extractors.flush(store);
     this.campfires.flush(store);

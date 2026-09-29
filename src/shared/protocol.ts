@@ -365,6 +365,8 @@ export type ServerMsg =
   | { t: 'belts'; l: number[][]; u?: number[][]; c?: number[][] }
   /** Programa lunar: cómo van los brazos de alrededor. Cada fila: x, y, z, fase (0 quieto, 1 llevando, 2 volviendo), avance 0..255, objeto en la mano, cuántos. */
   | { t: 'arms'; l: number[][] }
+  /** Programa lunar: lo que hay en las cajas de fluido de alrededor. Cada fila: [x, y, z, fluido, cantidad, volumen]. */
+  | { t: 'fluids'; l: number[][] }
   /** Programa lunar: la investigación de todo el mundo: tecnologías hechas, cola (la primera es la actual) y unidades hechas de la actual. */
   | { t: 'research'; done: string[]; queue: string[]; progress: number }
   /** Programa lunar: lo que pide energía y no la recibe (el rayo rojo). Cada fila: [x, y, z] del punto sobre el que se dibuja. La lista completa reemplaza a la anterior. */

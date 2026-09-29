@@ -3,7 +3,8 @@
 // según las cintas de alrededor (Belts).
 import {
   BELTS, INSERTERS, UNDERGROUNDS, SPLITTERS, UNDERGROUND_MAX, POLE_SMALL, POLE_MEDIUM, beltState, inserterState, undergroundState, beltInfo,
-  inserterInfo, undergroundInfo, splitterInfo, familyBase, multiOf, multiInfo, multiFootprint, multiControllerPos, BLOCK_REPLACEABLE, BLOCK_FLUID,
+  inserterInfo, undergroundInfo, splitterInfo, PIPE_TO_GROUND, OFFSHORE_PUMP, undergroundPipeState, undergroundPipeDir, isUndergroundPipe, isOffshorePump,
+  offshorePumpDir, familyBase, multiOf, multiInfo, multiFootprint, multiControllerPos, BLOCK_REPLACEABLE, BLOCK_FLUID,
 } from './blocks';
 import { BELT_DX, BELT_DZ } from './logistics/belts';
 import { MIN_Y, MAX_Y } from './constants';
@@ -87,13 +88,14 @@ export function planFastReplace(
 /** ¿Tiene sentido de marcha este bloque (cinta, brazo o máquina orientable), que el jugador puede girar con R antes de ponerlo? */
 export function isOrientable(block: number): boolean {
   const f = familyBase(block);
-  return BELTS.includes(f) || INSERTERS.includes(f) || UNDERGROUNDS.includes(f) || !!multiOf(f)?.spec.oriented;
+  return BELTS.includes(f) || INSERTERS.includes(f) || UNDERGROUNDS.includes(f) || f === PIPE_TO_GROUND || f === OFFSHORE_PUMP || !!multiOf(f)?.spec.oriented;
 }
 
 /** Sentido de marcha de una cinta, un brazo o una máquina orientable ya colocados (−1 si no lo es). */
 export function marchDir(id: number): number {
   const m = multiInfo(id);
-  return beltInfo(id)?.dir ?? inserterInfo(id)?.dir ?? undergroundInfo(id)?.dir ?? (m && m.multi.spec.oriented ? m.dir : -1);
+  const pd = isUndergroundPipe(id) ? undergroundPipeDir(id) : isOffshorePump(id) ? offshorePumpDir(id) : -1;
+  return beltInfo(id)?.dir ?? inserterInfo(id)?.dir ?? undergroundInfo(id)?.dir ?? (pd >= 0 ? pd : m && m.multi.spec.oriented ? m.dir : -1);
 }
 
 /** Estado que pone un bloque de logística orientable en (x, y, z); undefined si no es uno de ellos. */
@@ -109,6 +111,9 @@ export function planLogistics(
     const dir = lookDir(yaw);
     return [[x, y, z, undergroundState(ug, dir, undergroundKindFor(get, ug, dir, x, y, z))]];
   }
+  // Tubería subterránea y bomba de agua: la punta / la salida mira hacia el jugador (lo de detrás va bajo tierra / al agua).
+  if (familyBase(base) === PIPE_TO_GROUND) return [[x, y, z, undergroundPipeState((lookDir(yaw) + 2) % 4)]];
+  if (familyBase(base) === OFFSHORE_PUMP) return [[x, y, z, OFFSHORE_PUMP + ((lookDir(yaw) + 2) % 4)]];
   // Máquinas de varias casillas: toda la huella de una vez, con el ancla donde apunta el jugador y el frente hacia donde mira.
   const multi = multiOf(base);
   if (multi) {
