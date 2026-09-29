@@ -4,7 +4,7 @@
 // servidor), effects (sonidos y partículas), environment (cielo, lluvia y océano lejano), hudView
 // (barras del HUD) y frameView (lo que se dibuja).
 import { dyedColor } from '../../shared/dyedColor'; // el cuero teñido
-import { bossState } from './endFightClient'; // Fase 8.6
+import { bossState, onColumn as gatewayColumn, resetGateways } from './endFightClient'; // Fase 8.6
 import { Navigation } from './navigation';
 import { Movement } from './movement';
 import { CameraRig } from './cameraRig';
@@ -298,7 +298,11 @@ export class Game {
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
     this.beacons.reset(); // Fase 8.5: los faros de este mundo
-    this.world.onColumnMeshed = (col) => this.beacons.onColumn(col);
+    resetGateways();
+    this.world.onColumnMeshed = (col) => {
+      this.beacons.onColumn(col);
+      gatewayColumn(col, w.dim);
+    };
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
     this.world.loadEdits(w.edits);
 
@@ -374,7 +378,11 @@ export class Game {
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
     this.beacons.reset(); // Fase 8.5: los faros de este mundo
-    this.world.onColumnMeshed = (col) => this.beacons.onColumn(col);
+    resetGateways();
+    this.world.onColumnMeshed = (col) => {
+      this.beacons.onColumn(col);
+      gatewayColumn(col, w.dim);
+    };
     this.world.renderDistance = this.cfg.settings.render.renderDistance;
     this.world.loadEdits(w.edits);
     this.time = w.time;

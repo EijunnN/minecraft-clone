@@ -2,8 +2,13 @@
 // - La barra del jefe que manda el servidor (y, mientras se ve, más niebla y la música del combate).
 // - Los haces de los cristales (hasta el dragón que curan, o a donde apuntan en la reaparición) y los rayos de la
 //   muerte del dragón.
-// - Las puertas del End: el haz morado cuando sale una nueva (10 s) o cuando alguien la cruza (2 s).
+// - Las puertas del End: el haz morado cuando sale una nueva (10 s) o cuando alguien la cruza (2 s); y, aparte de Java,
+//   un haz tenue y permanente sobre cada una, para poder encontrarlas (y la de vuelta) desde lejos.
 import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL } from '../../shared/mobs';
+import { END_GATEWAY } from '../../shared/blocks';
+import { DIM_END } from '../../shared/dimensions';
+import { indexY } from '../../shared/constants';
+import type { Column } from '../world/World';
 import type { CrystalBeam, DragonRays } from '../render/EndFxRenderer';
 import type { BeaconBeam } from './beacons';
 import type { Game } from './Game';
@@ -13,6 +18,24 @@ let boss: { name: string; h: number; c?: string } | null = null;
 /** Niebla del combate (0..1, suavizada) y cuándo se calculó; Fase 8.7: y el cielo oscurecido del Wither. */
 let fogK = 0, fogAt = 0, darkK = 0;
 const gates: { x: number; y: number; z: number; until: number; born: number }[] = [];
+/** Las puertas de cada columna mallada del End (clave de la columna → sus posiciones). */
+const known = new Map<string, [number, number, number][]>();
+
+/** Una columna se malló: sus puertas del End. */
+export function onColumn(col: Column, dim: number): void {
+  if (dim !== DIM_END) return;
+  const blocks = col.blocks;
+  if (!blocks) return;
+  const found: [number, number, number][] = [];
+  for (let i = 0; i < blocks.length; i++) if (blocks[i] === END_GATEWAY) found.push([col.cx * 16 + (i & 15), indexY(i), col.cz * 16 + ((i >> 4) & 15)]);
+  if (found.length) known.set(col.key, found);
+  else known.delete(col.key);
+}
+
+/** Cambio de mundo o de dimensión: se olvidan. */
+export function resetGateways(): void {
+  known.clear();
+}
 
 export function bossState(): { name: string; h: number; c?: string } | null {
   return boss;
@@ -61,6 +84,18 @@ export function frame(g: Game): { endRays?: DragonRays[]; crystalBeams?: Crystal
   const gatewayBeams: BeaconBeam[] = gates.map((q) => ({
     x: q.x, y: q.y, z: q.z, age: now - q.born, segments: [{ y0: q.y + 0.5, y1: q.y + 256, color: [0.78, 0.35, 0.95] as [number, number, number] }],
   })) as BeaconBeam[];
+  // El haz de siempre (más tenue que el que sale al crearse o cruzarse); sin él si ya lo lleva uno de los de arriba.
+  const world = g.world;
+  for (const [key, list] of known) {
+    if (!world || !world.columns.has(key)) {
+      known.delete(key);
+      continue;
+    }
+    for (const [x, y, z] of list) {
+      if (gates.some((q) => q.x === x && q.y === y && q.z === z)) continue;
+      gatewayBeams.push({ x, y, z, age: 100, segments: [{ y0: y + 0.5, y1: y + 256, color: [0.55, 0.28, 0.75] as [number, number, number] }] } as BeaconBeam);
+    }
+  }
   // La niebla del jefe (BossEvent.createWorldFog) entra y sale despacio.
   const dt = Math.min(0.1, fogAt ? time - fogAt : 0);
   fogAt = time;

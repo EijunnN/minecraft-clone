@@ -12,8 +12,8 @@
 // - Cristal del End (objeto): sobre obsidiana o lecho de roca con aire encima y sin nadie en medio.
 // - Huevo de dragón: al usarlo (o golpearlo) salta a un sitio libre cercano.
 import { AIR, OBSIDIAN, BEDROCK, END_STONE, END_GATEWAY, DRAGON_EGG, FIRE, BLOCK_COLLIDE, BLOCK_OPAQUE } from '../../blocks';
-import { END_CRYSTAL } from '../../items';
-import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL, DRAGON_HEALTH } from '../../mobs';
+import { END_CRYSTAL, ENDER_PEARL } from '../../items';
+import { MOB_ENDER_DRAGON, ENT_END_CRYSTAL, ENT_ITEM, DRAGON_HEALTH } from '../../mobs';
 import { DIM_END } from '../../dimensions';
 import { CHUNK_SIZE } from '../../constants';
 import { STATE_DEAD } from '../../protocol';
@@ -46,6 +46,10 @@ export class EndFight {
   private bossSent = new Map<string, number>();
   /** Espera de cada jugador tras cruzar una puerta (ticks del servidor). */
   private gateCooldown = new Map<string, number>();
+  /** Lo mismo para objetos y criaturas que cruzaron una. */
+  private entityGate = new Map<number | string, number>();
+  /** Dónde estaba cada perla en el tick anterior. */
+  private entityPrev = new Map<number | string, [number, number, number]>();
   /** Reaparición en marcha: fase, ticks y los cristales que la hacen. */
   private respawn: { stage: number; time: number; spike: number; crystals: number[] } | null = null;
   private portalY = -1;
@@ -256,7 +260,67 @@ export class EndFight {
       this.ctx.fx('gateway_beam', x + 0.5, gy + 0.5, z + 0.5);
       s.p = [to[0], to[1], to[2]];
       this.ctx.send(s, { t: 'moveTo', p: [to[0], to[1], to[2]] });
+      this.tellReturn(s, x, gy, z);
     }
+    this.gatewayEntities(players);
+  }
+
+  /**
+   * TheEndGatewayBlockEntity.teleportEntity: lo que cae dentro de una puerta (objetos, criaturas) sale por su otra
+   * punta; una perla de ender lleva a su dueño en su lugar y desaparece.
+   */
+  private gatewayEntities(players: Session[]): void {
+    const w = this.ctx.world;
+    const tick = this.ctx.tickCount;
+    for (const [id, until] of this.entityGate) if (tick >= until) this.entityGate.delete(id);
+    for (const id of this.entityPrev.keys()) if (!this.ctx.entities.list.has(id as number)) this.entityPrev.delete(id);
+    for (const e of [...this.ctx.entities.list.values()]) {
+      if (e.dead || e.type === ENT_END_CRYSTAL || e.type === MOB_ENDER_DRAGON || this.entityGate.has(e.id)) continue;
+      const pearl = e.stack?.id === ENDER_PEARL;
+      if (!pearl && !e.ai && e.type !== ENT_ITEM) continue;
+      // Lo rápido (la perla) recorre más de una celda por tick: se mira todo el tramo desde donde estaba.
+      const prev = this.entityPrev.get(e.id) ?? [e.x, e.y, e.z];
+      if (pearl) this.entityPrev.set(e.id, [e.x, e.y, e.z]);
+      const steps = Math.max(1, Math.ceil(Math.hypot(e.x - prev[0], e.y - prev[1], e.z - prev[2]) / 0.25));
+      let x = 0, z = 0, gy = -1;
+      for (let i = steps; i >= 0 && gy < 0; i--) {
+        const k = i / steps;
+        const px = Math.floor(prev[0] + (e.x - prev[0]) * k), py = Math.floor(prev[1] + (e.y - prev[1]) * k), pz = Math.floor(prev[2] + (e.z - prev[2]) * k);
+        if (w.getBlock(px, py, pz) === END_GATEWAY) gy = py;
+        else if (w.getBlock(px, py + 1, pz) === END_GATEWAY) gy = py + 1;
+        x = px;
+        z = pz;
+      }
+      if (gy < 0) continue;
+      const to = this.gatewayExit(x, gy, z);
+      if (!to) continue;
+      this.ctx.fx('gateway_beam', x + 0.5, gy + 0.5, z + 0.5);
+      this.entityPrev.delete(e.id);
+      if (pearl) {
+        const owner = players.find((s) => s.id === e.shooter);
+        if (owner) this.tellReturn(owner, x, gy, z);
+        this.ctx.entities.remove(e.id);
+        if (owner) {
+          this.gateCooldown.set(owner.id, tick + 40);
+          owner.p = [to[0], to[1], to[2]];
+          this.ctx.send(owner, { t: 'moveTo', p: [to[0], to[1], to[2]] });
+        }
+        continue;
+      }
+      this.entityGate.set(e.id, tick + 40);
+      e.x = to[0];
+      e.y = to[1];
+      e.z = to[2];
+      e.vx = e.vy = e.vz = 0;
+    }
+  }
+
+  /** Aparte de Java: al cruzar, se apunta en el chat dónde queda la puerta del otro lado, para no perderla. */
+  private tellReturn(s: Session, x: number, y: number, z: number): void {
+    const link = this.save.links.find((l) => (l[0] === x && l[1] === y && l[2] === z) || (l[3] === x && l[4] === y && l[5] === z));
+    if (!link) return;
+    const there = link[0] === x && link[1] === y && link[2] === z ? [link[3], link[4], link[5]] : [link[0], link[1], link[2]];
+    this.ctx.tell(s, `Puerta del End al otro lado: ${there[0]}, ${there[1]}, ${there[2]}. Apúntala para volver.`);
   }
 
   /** A dónde lleva la puerta de (x, y, z) (TheEndGatewayBlockEntity.getPortalPosition). */

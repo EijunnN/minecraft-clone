@@ -260,6 +260,7 @@ test('puertas del End: la del anillo lleva lejos (y deja una de vuelta); el huev
   assert.equal(moved.length, 1, 'la puerta lleva a otro sitio');
   const [tx, , tz] = moved[0].p;
   assert.ok(Math.hypot(tx, tz) > 700, `lejos del centro: ${tx.toFixed(0)}, ${tz.toFixed(0)}`);
+  assert.ok(c.conn.take('chat').some((m) => /Puerta del End al otro lado: -?\d+, -?\d+, -?\d+/.test(String(m.m))), 'avisa de la puerta de vuelta');
   // El huevo: al usarlo salta a otro sitio.
   W.ensureChunk(0, 0, h.clock.now);
   const y = 100;
@@ -268,6 +269,31 @@ test('puertas del End: la del anillo lleva lejos (y deja una de vuelta); el huev
   c.pos(2.5, y, 4.5);
   c.send({ t: 'use', x: 2, y, z: 2, yaw: 0, item: 0 });
   assert.notEqual(W.getBlock(2, y, 2), DRAGON_EGG, 'el huevo ya no está ahí');
+});
+
+test('puertas del End: una perla que entra lleva a su dueño y un objeto que cae dentro sale lejos', () => {
+  const h = makeServer(8609, undefined, DIM_END);
+  const W = h.gs.world;
+  const c = h.join('ana', 'c');
+  c.pos(0.5, 90, 0.5);
+  h.tick(5);
+  const [gx, gy, gz] = gatewayPos(5);
+  W.ensureChunk(gx >> 4, gz >> 4, h.clock.now);
+  W.setBlock(gx, gy, gz, END_GATEWAY);
+  for (let dx = -6; dx < 0; dx++) W.setBlock(gx + dx, gy, gz, AIR);
+  // El objeto: suelto dentro de la puerta.
+  const item = h.gs.entities.spawnItem({ id: DIAMOND, count: 1 }, gx + 0.5, gy + 0.3, gz + 0.5);
+  h.tick(3);
+  assert.ok(Math.hypot(item.x, item.z) > 700, `el objeto sale lejos: ${item.x.toFixed(0)}, ${item.z.toFixed(0)}`);
+  // La perla: lanzada hacia la puerta, en vez de romperse lleva a su dueño a su salida.
+  c.conn.take('moveTo');
+  c.pos(gx - 4.5, gy - 1, gz + 0.5);
+  c.send({ t: 'throw', p: [gx - 4.5, gy + 0.5, gz + 0.5], d: [1, 0, 0], item: ENDER_PEARL });
+  h.tick(9);
+  const moved = c.conn.take('moveTo');
+  assert.equal(moved.length, 1, 'la perla lo lleva por la puerta');
+  assert.ok(Math.hypot(moved[0].p[0], moved[0].p[2]) > 700, `lejos del centro: ${JSON.stringify(moved[0].p)}`);
+  assert.ok(![...h.gs.entities.list.values()].some((e) => e.stack?.id === ENDER_PEARL), 'la perla desaparece');
 });
 
 // ------------------------------------------------------------------ parte 4: ciudades del End, shulkers, élitros, cajas
