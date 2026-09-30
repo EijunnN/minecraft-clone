@@ -27,6 +27,9 @@ import type { ClientEntity } from './ClientEntities';
 import type { RemotePlayerView } from '../render/EntityRenderer';
 import type { SpaceFrame } from '../render/Renderer';
 import type { Game } from './Game';
+import type { Interaction } from './interaction';
+import type { RayHit } from './raycast';
+import { SELENE_ROCKET, type ItemStack } from '../../shared/items';
 import '../ui/rocket.css';
 
 interface View {
@@ -190,6 +193,22 @@ export class RocketClient {
       this.entityId = -1;
       if (!this.voyage) this.showHud(false);
     }
+    return true;
+  }
+
+  /**
+   * Clic derecho con un cohete Selene fabricado en la mano: ponerlo en el suelo donde se apunta ('rplace'; el objeto se gasta con la
+   * respuesta 'ires', como las barcas). Devuelve true si el objeto era el cohete.
+   */
+  place(ia: Interaction, pressed: boolean, hit: RayHit | null, held: ItemStack | null): boolean {
+    if (!held || held.id !== SELENE_ROCKET) return false;
+    if (!pressed || !hit || this.active) return true;
+    const g = this.g;
+    const q = ++ia.interactQ;
+    ia.pendingInteract.set(q, { slot: g.selected, item: held.id });
+    if (ia.pendingInteract.size > 32) ia.pendingInteract.delete(ia.pendingInteract.keys().next().value!);
+    g.net?.send({ t: 'rplace', p: [hit.x + 0.5 + hit.nx, hit.y + (hit.ny >= 0 ? 1 : 0), hit.z + 0.5 + hit.nz], yaw: g.player.yaw, q });
+    g.swing(false);
     return true;
   }
 

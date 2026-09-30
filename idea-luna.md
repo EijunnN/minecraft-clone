@@ -67,6 +67,24 @@ la Plataforma de lanzamiento, y todo el árbol de la Luna (secciones 5 en adelan
 
 ## 1. El lore: por qué vamos a la Luna
 
+> **Vigente desde 2026-09-30: «La caída del Ancla».** Sustituye a la Señal, las Bitácoras, el Receptor, la Plataforma y los tres vuelos
+> (1.1 y 1.3, y los pasos T1–T6 de la sección 3), que quedan como ideas. Todo lo que no se fabrica lo da el Dragón. Hecho en
+> `shared/meteors.ts` y `sim/server/meteors.ts`.
+>
+> 1. **El Dragón era el Ancla**: mantenía este mundo escondido. Al matarlo, algo nos encuentra: **el Errante**, un punto rojizo que aparece
+>    en el cielo y crece con cada lluvia. Nadie sabe qué es: es el siguiente mundo, después de la Luna.
+> 2. **La radio de la Estación Selene** (los Vigías, desde la Luna) suena en ese momento: «…el Ancla cayó… el Errante los vio…».
+> 3. **La Primera Lluvia**, en cuanto hay alguien en el mundo normal: aviso de 2 minutos con sirena y el cielo que se tiñe de rojo, 40
+>    meteoritos que rompen lo que pillan, y al final **el grande**, que cae delante del jugador y deja en el centro del cráter el
+>    **Núcleo**: dentro, el **Corazón del Ancla** (lo único que no se fabrica) y los **Planos de Selene** (un libro con la receta).
+> 4. **El cohete se fabrica**: 3 etapas (acero, circuitos, tuberías y engranajes de la fábrica de la Tierra) + el Corazón + 50 de carbón.
+>    `/cohete` queda para el creativo.
+> 5. **Después, una lluvia cada hora jugada** (sólo corre con gente en el mundo normal), con 5 minutos de aviso y cada vez más fuerte.
+>    Rompen construcciones y dejan meteoritos con **fragmentos del Errante**, que aún no sirven para nada: la pista del siguiente mundo.
+> 6. La Estación Selene se construyó **para vigilar al Errante**: ir a la Luna no es huir, es ir a entender qué nos ataca.
+>
+> Pendiente: escudos o cúpulas para proteger la base, lluvias en la Luna, el diario de la Estación Selene y para qué sirven los fragmentos.
+
 ### 1.1 Lo que pasa después del Dragón
 
 1. **Matas al dragón.** Sale el portal de salida, el huevo y la puerta a las islas exteriores (ya está hecho).

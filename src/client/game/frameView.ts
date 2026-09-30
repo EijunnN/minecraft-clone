@@ -162,6 +162,8 @@ export function frameState(g: Game, f: FrameInput): FrameState {
   const out: FrameState = {
     camX, camY, camZ, yaw, pitch, roll: g.hurtRoll,
     space: g.rocket.spaceFrame(camX, camY, camZ, performance.now() / 1000), // Programa lunar: los planetas
+    errante: g.meteors.errante, // Programa lunar: el Errante en el cielo y la alarma de meteoritos
+    alarm: g.meteors.alarm,
     time: performance.now() / 1000,
     dt: f.dt,
     dayTime: f.sky.dayTime,

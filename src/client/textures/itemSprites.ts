@@ -2318,6 +2318,104 @@ Object.assign(SPRITES, NETHER_GOODS_SPRITES);
 Object.assign(SPRITES, END_SPRITES);
 // Programa lunar: los intermedios, paquetes de ciencia y módulos de Factorio.
 Object.assign(SPRITES, FACTORIO_SPRITES);
+// Programa lunar (meteors.ts): el Corazón del Ancla (un cristal violeta que late, como los del Dragón), el fragmento del Errante (roca
+// negra con vetas rojizas), la etapa de cohete (un cilindro con la tobera) y el cohete Selene (blanco, con la franja naranja).
+SPRITES.anchor_heart = {
+  rows: [
+    '................',
+    '................',
+    '.......oo.......',
+    '......o11o......',
+    '.....o1221o.....',
+    '....o122221o....',
+    '...o12233221o...',
+    '...o12344321o...',
+    '...o12344321o...',
+    '...o12233221o...',
+    '....o122221o....',
+    '.....o1221o.....',
+    '......o11o......',
+    '.......oo.......',
+    '................',
+    '................',
+  ],
+  inks: {
+    o: ink([40, 12, 60]),
+    '1': ink([120, 50, 190]),
+    '2': ink([176, 92, 236]),
+    '3': ink([226, 160, 255]),
+    '4': ink([255, 236, 255]),
+  },
+};
+SPRITES.errant_fragment = {
+  rows: [
+    '................',
+    '................',
+    '................',
+    '......oooo......',
+    '....oo1112o.....',
+    '...o112r211o....',
+    '...o1rr21121o...',
+    '..o1121122r1o...',
+    '..o12111rr21o...',
+    '..o1r1121121o...',
+    '...o1122r11o....',
+    '....oo1221o.....',
+    '......oooo......',
+    '................',
+    '................',
+    '................',
+  ],
+  inks: { o: ink([12, 10, 12]), '1': ink([46, 40, 44]), '2': ink([72, 64, 68]), r: ink([214, 70, 36]) },
+};
+SPRITES.rocket_stage = {
+  rows: [
+    '................',
+    '.....oooooo.....',
+    '....o122223o....',
+    '....o122223o....',
+    '....o1ffff3o....',
+    '....o122223o....',
+    '....o122223o....',
+    '....o122223o....',
+    '....o1ffff3o....',
+    '....o122223o....',
+    '....o122223o....',
+    '.....o4444o.....',
+    '....o455554o....',
+    '...o45555554o...',
+    '...oooooooooo...',
+    '................',
+  ],
+  inks: {
+    o: ink([40, 42, 50]), '1': ink([250, 250, 252]), '2': ink([220, 222, 228]), '3': ink([170, 172, 182]),
+    f: ink([236, 112, 36]), '4': ink([96, 98, 108]), '5': ink([60, 62, 70]),
+  },
+};
+SPRITES.selene_rocket = {
+  rows: [
+    '.......oo.......',
+    '......o12o......',
+    '......o12o......',
+    '.....o1223o.....',
+    '.....oc22co.....',
+    '.....oc22co.....',
+    '.....o1223o.....',
+    '.....offffo.....',
+    '.....o1223o.....',
+    '.....o1223o.....',
+    '....oo1223oo....',
+    '...o4o1223o4o...',
+    '...o4offffo4o...',
+    '...o44o55o44o...',
+    '...ooo.yy.ooo...',
+    '........y.......',
+  ],
+  inks: {
+    o: ink([40, 42, 50]), '1': ink([252, 252, 252]), '2': ink([224, 226, 232]), '3': ink([172, 174, 184]),
+    c: ink([90, 170, 230]), f: ink([236, 112, 36]), '4': ink([140, 142, 152]), '5': ink([70, 72, 80]), y: ink([255, 200, 90]),
+  },
+};
 // Programa lunar: la botella de oxígeno (acero con la válvula arriba y la franja azul del oxígeno).
 SPRITES.oxygen_bottle = {
   rows: [

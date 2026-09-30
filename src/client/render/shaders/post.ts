@@ -259,6 +259,12 @@ void main() {
     col = col * Tw + scatter * (1.0 - Tw);
   }
   if (uVolumetricOn > 0.5) col += texture(uVolumetric, vUV).rgb;
+  // Programa lunar (meteors.ts): con la alarma de meteoritos todo se tiñe de rojo (el cielo más, con un resplandor en el horizonte).
+  float alarm = uSpaceSun.w;
+  if (alarm > 0.0 && uDim.x > 0.5 && uDimFog.w < 0.5 && !under) {
+    col = mix(col, col * vec3(1.18, 0.66, 0.52), alarm * (sky ? 0.75 : 0.4));
+    if (sky) col += vec3(0.9, 0.16, 0.03) * alarm * 0.08 * exp(-abs(rd.y) * 5.0) * max(luma(col) * 4.0, 0.08);
+  }
   outColor = vec4(max(col, 0.0), 1.0);
 }
 `;

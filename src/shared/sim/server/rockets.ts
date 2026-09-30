@@ -14,6 +14,8 @@ import {
   DESCENT_DECEL, RF_PHASE_SHIFT, RF_BURN, ascentHeight, descentStep, rocketSeatPos, type RocketPhase,
 } from '../../rocket';
 import { DIM_OVERWORLD, DIM_MOON } from '../../dimensions';
+import { BLOCK_SOLID } from '../../blocks';
+import { MIN_Y, MAX_Y } from '../../constants';
 import type { Entity } from '../entities';
 import type { ServerStore } from '../store';
 import { DT, r2, type Arrival, type ServerContext, type Session } from './context';
@@ -156,6 +158,34 @@ export class Rockets {
     s.p = at;
     this.ctx.send(s, { t: 'moveTo', p: [r2(at[0]), r2(at[1]), r2(at[2])] });
     this.publish(r);
+  }
+
+  /**
+   * Poner en el suelo un cohete Selene fabricado donde apunta el jugador (a 7 bloques como mucho), con la base sobre el primer suelo que
+   * haya debajo y mirando hacia donde mira. La respuesta 'ires' gasta el objeto (en supervivencia).
+   */
+  onPlace(s: Session, msg: Extract<ClientMsg, { t: 'rplace' }>): void {
+    const ctx = this.ctx;
+    const q = Number(msg.q) | 0;
+    const reply = (ok: boolean) => ctx.send(s, { t: 'ires', q, ok, take: ok && s.mode !== 'c' ? 1 : 0 });
+    const p = Array.isArray(msg.p) && msg.p.length === 3 ? msg.p.map(Number) : [];
+    const yaw = Number(msg.yaw);
+    if (p.length !== 3 || !p.every(Number.isFinite) || !Number.isFinite(yaw) || s.s & STATE_DEAD || this.isSeated(s.id)) return reply(false);
+    if (!ctx.local && Math.hypot(p[0] - s.p[0], p[1] - (s.p[1] + 1.6), p[2] - s.p[2]) > 8) return reply(false);
+    const x = Math.floor(p[0]) + 0.5, z = Math.floor(p[2]) + 0.5;
+    const w = ctx.world;
+    let y = Math.min(MAX_Y - ROCKET_HEIGHT - 1, Math.floor(p[1]) + 1);
+    while (y > MIN_Y && !BLOCK_SOLID[w.getBlock(Math.floor(x), y - 1, Math.floor(z))]) y--;
+    // Sitio libre: la base de 3 × 3 y la altura del cohete, sin bloques sólidos ni otro cohete.
+    for (let dy = 0; dy < ROCKET_HEIGHT; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) if (BLOCK_SOLID[w.getBlock(Math.floor(x) + dx, y + dy, Math.floor(z) + dz)]) return reply(false);
+      }
+    }
+    for (const r of this.rockets.values()) if (Math.hypot(r.e.x - x, r.e.z - z) < ROCKET_WIDTH + 1) return reply(false);
+    this.spawn(x, y, z, yaw);
+    ctx.fx('vehicle_place', x, y, z, ENT_ROCKET);
+    reply(true);
   }
 
   onLaunch(s: Session): void {

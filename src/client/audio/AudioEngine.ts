@@ -40,6 +40,7 @@ import { FluidAmbience } from './fluidAmbience';
 import { Heartbeat } from './heartbeat';
 import { GlideWind } from './glideWind'; // Fase 8.6
 import { RocketEngine } from './rocketEngine'; // Programa lunar
+import { buildSiren, buildMeteorWhoosh, buildRadioStatic } from './meteorSounds'; // Programa lunar: las lluvias de meteoritos
 import { buildMaterialSound, buildSplashSound, buildUiSound } from './materials';
 import { createNoiseBuffers, createReverbImpulse, type NoiseBuffers } from './noise';
 import { MusicEngine } from './music';
@@ -452,6 +453,21 @@ export class AudioEngine {
   // --- Combate ---
 
   /** Explosión de creeper en `pos`; `power` ~1..4 (potencia/radio). */
+  /** Programa lunar (meteors.ts): un aullido de la sirena del aviso de meteoritos. */
+  playSiren(seconds: number, loud: number): void {
+    this.safe(() => this.spawnLocal(0.4, (ctx, _noise, dest, now) => buildSiren(ctx, dest, now, seconds, loud)));
+  }
+
+  /** Programa lunar: un meteorito que pasa (se oye desde donde está, con el alcance de un sonido fuerte). */
+  playMeteorWhoosh(pos: Vec3, power: number): void {
+    this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildMeteorWhoosh(ctx, noise, dest, now, power), 0.5, 6));
+  }
+
+  /** Programa lunar: la estática de la radio de la Estación Selene. */
+  playRadioStatic(): void {
+    this.safe(() => this.spawnLocal(0.2, (ctx, noise, dest, now) => buildRadioStatic(ctx, noise, dest, now)));
+  }
+
   playExplosion(pos: Vec3, power: number): void {
     this.safe(() => this.spawnPositional(pos, (ctx, noise, dest, now) => buildExplosion(ctx, noise, dest, now, power), 0.55));
   }

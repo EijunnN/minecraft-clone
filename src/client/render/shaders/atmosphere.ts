@@ -411,6 +411,8 @@ void main() {
   float space = smoothstep(18.0, 60.0, r - Rg);
   float starK = max(night, space);
   if (starK > 0.0 && above > 0.5) col += starField(rd) * starK * camT * 0.05;
+  // Programa lunar (meteors.ts): el Errante, más visible de noche.
+  if (uOrbit.w > 0.0 && above > 0.5) col += erranteGlow(rd) * camT * (0.12 + 0.5 * max(night, space));
   // Sin aire alrededor el Sol ilumina con la escala del espacio (la misma que en el tránsito y en la Luna).
   outColor = vec4(col * uOrbit.y, 1.0);
 }

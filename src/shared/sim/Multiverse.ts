@@ -41,6 +41,8 @@ export class Multiverse {
         for (const g of mv.servers.values()) if (g !== from) g.reloadShared();
       },
       anchorRespawn: (dim, x, y, z) => mv.server(dim).anchorRespawn(x, y, z), // Fase 8.5
+      awakenMeteors: () => mv.overworld.sys.meteors.awaken(), // Programa lunar
+      meteorInfo: () => mv.overworld.sys.meteors.info(),
     };
     this.server(DIM_OVERWORLD);
   }

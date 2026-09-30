@@ -682,6 +682,15 @@ ARMOR_PIECES.forEach((piece, slot) => {
 export const OXYGEN_BOTTLE = item('oxygen_bottle', 'Botella de oxígeno', { stack: 1 });
 setOxygenBottleId(OXYGEN_BOTTLE);
 setSuitPieces(ARMOR_PIECES.map((p) => ARMOR[SPACE_ARMOR][p]));
+// Programa lunar (meteors.ts, «La caída del Ancla»): lo que trae el meteorito grande de la Primera Lluvia y lo que se fabrica con ello.
+/** El Corazón del Ancla: lo que quedaba del Dragón; es el núcleo del motor del cohete (no se fabrica). No arde ni lo rompe una explosión. */
+export const ANCHOR_HEART = item('anchor_heart', 'Corazón del Ancla', { stack: 1 });
+/** Fragmento del Errante: lo que sueltan los meteoritos. Nadie sabe aún para qué sirve. */
+export const ERRANT_FRAGMENT = item('errant_fragment', 'Fragmento del Errante');
+/** Una etapa del cohete (estructura, tanques y motor): tres por cohete. */
+export const ROCKET_STAGE = item('rocket_stage', 'Etapa de cohete', { stack: 4 });
+/** El cohete Selene montado: se pone en el suelo (clic derecho) como el que da /cohete. */
+export const SELENE_ROCKET = item('selene_rocket', 'Cohete Selene', { stack: 1 });
 
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
@@ -924,3 +933,7 @@ smelt(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
 
 // Programa lunar: el traje espacial y la botella de oxígeno, en el creativo.
 (CREATIVE_ITEMS as number[]).push(...Object.values(ARMOR[SPACE_ARMOR]), OXYGEN_BOTTLE);
+// Programa lunar: lo del Errante y el cohete (en el creativo; el Corazón no arde ni lo destruye una explosión).
+(CREATIVE_ITEMS as number[]).push(ANCHOR_HEART, ERRANT_FRAGMENT, ROCKET_STAGE, SELENE_ROCKET);
+(FIRE_RESISTANT_ITEMS as Set<number>).add(ANCHOR_HEART);
+(EXPLOSION_RESISTANT_ITEMS as Set<number>).add(ANCHOR_HEART);

@@ -210,6 +210,9 @@ export interface FrameState {
   sight?: SightFog | null;
   /** Programa lunar: la Tierra y la Luna como planetas (el viaje en cohete, la Tierra desde lo alto, el cielo de la Luna). */
   space?: SpaceFrame;
+  /** Programa lunar (meteors.ts): tamaño del Errante en el cielo (0: no se ve) y tinte rojo de la alarma de meteoritos (0..1). */
+  errante?: number;
+  alarm?: number;
 }
 
 /** Programa lunar: lo que hace falta para pintar los planetas. Tamaños y distancias en km, en el marco del juego. */
@@ -612,10 +615,10 @@ export class Renderer {
     d[168] = fl ? fl[0] : 0; d[169] = fl ? fl[1] : 1; d[170] = fl ? fl[2] : 0; d[171] = fl ? fl[3] : 0;
     // Programa lunar: el viaje y los planetas.
     const sp = s.space;
-    d[172] = sp?.transit ? 1 : 0; d[173] = 1 - 0.6 * (dd.vacuum || sp?.transit ? 1 : sp?.spaceness ?? 0); d[174] = sp?.plasma ?? 0; d[175] = 0;
+    d[172] = sp?.transit ? 1 : 0; d[173] = 1 - 0.6 * (dd.vacuum || sp?.transit ? 1 : sp?.spaceness ?? 0); d[174] = sp?.plasma ?? 0; d[175] = s.errante ?? 0;
     d[176] = sp?.site[0] ?? 0; d[177] = sp?.site[1] ?? 0; d[178] = sp?.moonShift ?? 0; d[179] = sp?.earthShift ?? 0;
     const ss = sp?.sun ?? L.sun;
-    d[180] = ss[0]; d[181] = ss[1]; d[182] = ss[2]; d[183] = 0;
+    d[180] = ss[0]; d[181] = ss[1]; d[182] = ss[2]; d[183] = s.alarm ?? 0;
     this.ubo.upload();
   }
 

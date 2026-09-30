@@ -22,6 +22,7 @@ export class ServerEvents {
     if (this.g.riding.onMessage(msg)) return; // Fase 6 (monturas): 'ride' y 'mfix'
     if (this.g.vehicles.onMessage(msg)) return; // Fase 7 (transporte): 'vpass' y 'vfix'
     if (this.g.rocket.onMessage(msg)) return; // Programa lunar: 'rocket'
+    if (this.g.meteors.onMessage(msg)) return; // Programa lunar: 'meteors', 'meteor' y 'radio'
     if (this.g.belts.onMessage(msg)) return; // Programa lunar: 'belts'
     if (this.g.arms.onMessage(msg)) return; // Programa lunar: 'arms'
     if (this.g.research.onMessage(msg)) return; // Programa lunar: 'research'

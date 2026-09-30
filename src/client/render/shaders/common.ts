@@ -28,9 +28,9 @@ layout(std140) uniform Frame {
   vec4 uDimFog;       // rgb = color de la niebla y del fondo sin cielo (lineal), w = cielo del End (1) o de la Luna, sin aire (2)
   vec4 uDimAmb;       // rgb = luz mínima de todo sin cielo (la penumbra del Nether)
   vec4 uEndFlash;     // Fase 8.6: xyz = dirección del destello del End, w = su intensidad (0..1)
-  vec4 uOrbit;        // Programa lunar: x = en tránsito por el espacio (1), y = escala de la luz del Sol (1 con aire, 0,4 sin él), z = plasma de la reentrada, w = sin uso
+  vec4 uOrbit;        // Programa lunar: x = en tránsito por el espacio (1), y = escala de la luz del Sol (1 con aire, 0,4 sin él), z = plasma de la reentrada, w = tamaño del Errante (0: no se ve)
   vec4 uSite;         // Programa lunar: xy = sitio lunar (x, z) de salida o llegada, z = lo que ha avanzado la nave sobre la Luna (m), w = sobre la Tierra (m)
-  vec4 uSpaceSun;     // Programa lunar: xyz = dirección del Sol para los planetas (en el tránsito gira con la nave)
+  vec4 uSpaceSun;     // Programa lunar: xyz = dirección del Sol para los planetas (en el tránsito gira con la nave), w = alarma de meteoritos (0..1)
 };
 `;
 

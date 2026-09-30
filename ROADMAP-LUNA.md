@@ -30,9 +30,13 @@ comparte ids de bloques y capas de textura con la Tierra.
 - ✅ Entorno lunar más real: horizonte curvo a su distancia real (~2,4 km) con el suelo pintado más allá de los bloques con el mismo
   relieve del generador (mapa lejano) y cráteres grandes que se ven desde órbita; reflectancia del regolito (efecto oposición); la
   Tierra en el cielo a su tamaño real (2°) y girando; cráteres con taludes en vez de muros; rocas sueltas en sus bordes.
+- ✅ «La caída del Ancla» (2026-09-30, `shared/meteors.ts`): al matar al Dragón, radio de la Estación Selene y la Primera Lluvia de
+  meteoritos (aviso, sirena, cielo rojo, 40 meteoritos que rompen, cráteres) con el Núcleo: el Corazón del Ancla y los Planos de Selene.
+  El cohete se fabrica (3 etapas + Corazón + carbón) y se pone en el suelo; `/cohete` sólo en creativo. Lluvias cada hora jugada, cada vez
+  más fuertes; el Errante crece en el cielo. `/meteoritos [ya|despertar|off|on]` en creativo.
 - ❌ Montaje por módulos (tanques, motores, cabina) con combustible y Δv reales (idea-luna §4).
-- ❌ Plataforma de lanzamiento, Receptor de la Señal y los tres vuelos (Centella, Baliza, Selene I).
-- ❌ La Señal en el cielo tras el Dragón y las Bitácoras en las ciudades del End.
+- ⏸ Plataforma de lanzamiento, Receptor de la Señal y los tres vuelos (Centella, Baliza, Selene I): sustituidos por «La caída del Ancla».
+- ⏸ La Señal en el cielo tras el Dragón y las Bitácoras en las ciudades del End: sustituidas por la radio de Selene y el Errante.
 - ❌ Órbita como lugar (dimensión), mapa estelar y elección de sitio de aterrizaje.
 - ❌ Experiencia de vuelo al estilo Outer Wilds (pilotaje manual, órbitas, Δv). Ahora el vuelo lo guía el servidor y se puede sustituir.
 

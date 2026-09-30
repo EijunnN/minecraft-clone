@@ -67,6 +67,32 @@ float pn_fbmPlane(vec2 p, float s0, int oct, float fpKm) {
   return s / max(norm, 1e-4);
 }
 
+/**
+ * Programa lunar (meteors.ts): el Errante, un disco rojizo con un halo en una dirección fija del cielo (ERRANTE_DIR), que crece con cada
+ * lluvia (uOrbit.w: 0 no se ve … 1). Nadie sabe qué es: se le ve una cara iluminada y bandas oscuras, nada más.
+ */
+vec3 erranteGlow(vec3 rd) {
+  float size = uOrbit.w;
+  if (size <= 0.0) return vec3(0.0);
+  vec3 ed = normalize(vec3(0.62, 0.52, -0.59));
+  float c = dot(rd, ed);
+  float R = 0.0022 + 0.0085 * size;
+  float ang = acos(clamp(c, -1.0, 1.0));
+  vec3 col = vec3(0.0);
+  if (ang < R) {
+    float x = ang / R;
+    vec3 t = normalize(cross(vec3(0.0, 1.0, 0.0), ed));
+    vec3 b = cross(ed, t);
+    vec2 q = vec2(dot(rd - ed, t), dot(rd - ed, b)) / R;
+    float lit = smoothstep(-0.35, 0.55, q.x * 0.8 + 0.35);
+    float bands = 0.75 + 0.25 * sin(q.y * 11.0 + sin(q.x * 3.0) * 1.5);
+    col = vec3(1.0, 0.36, 0.16) * (0.08 + 1.3 * lit) * bands * smoothstep(1.0, 0.9, x);
+  }
+  // Halo: un resplandor rojo alrededor (más ancho cuanto más cerca).
+  col += vec3(1.0, 0.3, 0.12) * 0.25 * exp(-max(ang - R, 0.0) / (R * 1.8)) * size;
+  return col;
+}
+
 /** Tamaño (en la misma unidad que t) que ocupa un píxel a la distancia t. */
 float pixelFootprint(float t) {
   return t * 2.0 * uNearFar.z / uRes.y;
@@ -471,7 +497,7 @@ uniform mat4 uMoonM;
 
 /** Estrellas sin titilar, la Vía Láctea y el Sol, como se ven sin aire. */
 vec3 starsAndSun(vec3 rd, vec3 sunDir) {
-  vec3 c = vec3(0.0);
+  vec3 c = erranteGlow(rd) * 0.8;
   vec3 q = rd * 230.0;
   vec3 cell = floor(q);
   float h = pn_hash3(cell);

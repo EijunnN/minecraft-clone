@@ -60,6 +60,7 @@ import { Environment } from './environment';
 import { Riding } from './riding'; // Fase 6 (monturas)
 import { VehicleClient } from './vehicleClient'; // Fase 7 (transporte)
 import { RocketClient } from './rocketClient'; // Programa lunar
+import { MeteorClient } from './meteorClient'; // Programa lunar: las lluvias de meteoritos
 import { BeltClient } from './beltClient'; // Programa lunar: cintas
 import { ArmClient } from './armClient';
 import { ResearchClient } from './researchClient'; // Programa lunar: investigación
@@ -121,6 +122,7 @@ export class Game {
   readonly riding = new Riding(this); // Fase 6 (monturas)
   readonly vehicles = new VehicleClient(this); // Fase 7 (transporte): barcas y vagonetas
   readonly rocket = new RocketClient(this); // Programa lunar: el cohete Selene
+  readonly meteors = new MeteorClient(this); // Programa lunar: las lluvias de meteoritos del Errante
   readonly belts = new BeltClient(this); // Programa lunar: las cintas transportadoras
   readonly arms = new ArmClient(this); // Programa lunar: los brazos
   readonly research = new ResearchClient(); // Programa lunar: qué está investigado
@@ -420,6 +422,7 @@ export class Game {
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
     this.player.gravityScale = dimensionDef(w.dim).gravity;
     this.rocket.reset(); // Programa lunar: los cohetes del mundo anterior ya no están (el viaje en curso, si lo hay, sigue)
+    this.meteors.reset();
     this.belts.reset();
     this.arms.reset();
     this.research.reset();
@@ -988,6 +991,7 @@ export class Game {
     this.riding.afterEntities(dt); // Fase 6 (monturas)
     this.vehicles.afterEntities(dt); // Fase 7 (transporte)
     this.rocket.afterEntities(dt); // Programa lunar
+    this.meteors.update(dt); // Programa lunar: las lluvias de meteoritos
     this.belts.update(dt);
     this.arms.update(dt);
     this.fluidsHud.update();
