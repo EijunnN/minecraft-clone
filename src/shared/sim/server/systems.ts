@@ -58,6 +58,7 @@ import { Conduits } from './conduits';
 import { Equipment } from './equipment';
 import { Transport } from './vehicles';
 import { Rockets } from './rockets'; // Programa lunar: el cohete Selene
+import { Meteors } from './meteors'; // Programa lunar: las lluvias de meteoritos del Errante
 import { Belts } from './belts'; // Programa lunar: las cintas transportadoras
 import { Inserters } from './inserters'; // Programa lunar: los brazos
 import { Power } from './power'; // Programa lunar: las redes de energía
@@ -158,6 +159,7 @@ export class ServerSystems {
   readonly transport: Transport;
   /** Programa lunar: el cohete Selene (sube, viaja a otra dimensión y baja frenando). */
   readonly rockets: Rockets;
+  readonly meteors: Meteors;
   /** Programa lunar: las cintas transportadoras (logística de la Luna). */
   readonly belts: Belts;
   /** Programa lunar: los brazos (pasan objetos de un contenedor o cinta a otro). */
@@ -268,6 +270,13 @@ export class ServerSystems {
     this.equipment = new Equipment(ctx, this.fire, this.riding);
     this.transport = new Transport(ctx, store, this.riding);
     this.rockets = new Rockets(ctx, store);
+    this.meteors = new Meteors(ctx, store);
+    this.commands.meteors = this.meteors;
+    // Programa lunar: al morir el Dragón cae el Ancla: la radio suena aquí y el mundo normal se despierta.
+    this.endFight.onAnchorFell = () => {
+      this.meteors.anchorFell();
+      ctx.awakenMeteors();
+    };
     this.containers.virtual = {
       container: (x, y, z, s) => this.transport.container(x, y, z, s),
       changed: () => this.transport.containerChanged(),
@@ -437,6 +446,7 @@ export class ServerSystems {
     this.riding.tick();
     this.transport.tick();
     this.rockets.tick();
+    this.meteors.tick();
     this.furnaces.tick();
     this.power.tick();
     this.pumpjacks.tick();
@@ -492,6 +502,7 @@ export class ServerSystems {
     this.collections.onJoin(s); // los tocadiscos que están sonando
     this.transport.onJoin(s); // quién va en cada barca o vagoneta
     this.rockets.onJoin(s); // cómo están los cohetes
+    this.meteors.onJoin(s); // las lluvias de meteoritos
     this.deepDark.onJoin(s); // su última muerte (brújula de recuperación)
     this.netherGoods.onJoin(s); // Fase 8.5: los efectos de los faros
   }
@@ -520,6 +531,7 @@ export class ServerSystems {
   flush(store: ServerStore): void {
     this.containers.flush(store);
     this.rockets.flush(store);
+    this.meteors.flush(store);
     this.belts.flush(store);
     this.inserters.flush(store);
     this.power.flush(store);

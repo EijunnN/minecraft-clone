@@ -14,6 +14,8 @@ import { renderDecorHud } from '../ui/decorHud';
 import { renderFrostHud } from '../ui/frostHud';
 import { Freezing } from './freezing';
 import type { Game } from './Game';
+import { renderOxygenHud } from '../ui/oxygenHud'; // Programa lunar
+import { oxygenTotal, suitSealed, wearsSuitPiece, SUIT_TANK } from '../../shared/spacesuit';
 
 export function updateHud(g: Game, worldTime: number): void {
   const surv = g.survival;
@@ -34,4 +36,10 @@ export function updateHud(g: Game, worldTime: number): void {
   renderAttackIndicator(g.interaction.attackCharge(), shown && !g.anyScreenOpen());
   renderArmorBar(g.inv.armorPoints(), !g.creative && !surv.dead);
   renderXpBar(g.xp, !g.creative && !surv.dead);
+  // Programa lunar: el oxígeno del traje, en el vacío o cuando se lleva el traje sin el depósito lleno.
+  const vacuum = !dimensionDef(g.world?.dim ?? 0).breathable && !g.rocket.active;
+  const sealed = suitSealed(g.inv.armor);
+  const ox = oxygenTotal(sealed ? surv.oxygen : 0, g.inv.slots);
+  const oxShown = shown && !g.creative && (vacuum || (wearsSuitPiece(g.inv.armor) && surv.oxygen < SUIT_TANK - 0.5));
+  renderOxygenHud(oxShown, sealed ? surv.oxygen : 0, ox.seconds, sealed, vacuum);
 }

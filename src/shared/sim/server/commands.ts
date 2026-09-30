@@ -48,6 +48,9 @@ export class Commands {
   /** Programa lunar: para /cohete (pone un cohete Selene posado con la base en x, y, z). */
   rocket: ((x: number, y: number, z: number, yaw: number) => void) | null = null;
 
+  /** Programa lunar: para /meteoritos. */
+  meteors: { command(arg: string): string } | null = null;
+
   /** Programa lunar: para /investigar. */
   research: { grant(name: string): boolean; grantAll(): void } | null = null;
 
@@ -135,11 +138,31 @@ export class Commands {
         if (!ctx.travel(s, d, { kind: 'pos', ...at })) reply('Aquí no se puede cambiar de dimensión.');
         return;
       }
+      // Programa lunar (meteors.ts): el estado de las lluvias de meteoritos; en creativo, además, lanzarlas, despertarlas o apagarlas.
+      case 'meteoritos':
+      case 'meteors': {
+        if (!this.meteors) {
+          reply('Aquí no hay meteoritos.');
+          return;
+        }
+        const arg = norm(args[0] ?? '');
+        if (arg && s.mode !== 'c') {
+          reply('Sólo en creativo se pueden lanzar o apagar las lluvias.');
+          return;
+        }
+        reply(this.meteors.command(arg));
+        return;
+      }
       // Programa lunar: un cohete Selene posado, cinco bloques delante (sobre el primer suelo que haya).
       case 'cohete':
       case 'rocket': {
         if (!this.rocket) {
           reply('Aquí no hay cohetes.');
+          return;
+        }
+        // En supervivencia el cohete se fabrica (hace falta el Corazón del Ancla: meteors.ts).
+        if (s.mode !== 'c') {
+          reply('El cohete se fabrica: 3 etapas de cohete, el Corazón del Ancla y 50 de carbón. Sólo en creativo sale con /cohete.');
           return;
         }
         const x = Math.floor(s.p[0] - Math.sin(s.r[0]) * 5) + 0.5, z = Math.floor(s.p[2] - Math.cos(s.r[0]) * 5) + 0.5;
@@ -413,7 +436,7 @@ export class Commands {
           'Comandos: /modo <supervivencia|creativo>, /dificultad <pacifico|facil|normal|dificil>, /jefes <auto|java|duros>, ' +
           '/time set <dia|noche|...>, /invocar <criatura>, /dar <objeto> [n], /efecto <efecto> [s] [nivel], /matar [criatura], ' +
           '/seed, /lista, /tp <jugador>, /localizar <estructura>, /asalto, /patrulla, /encantar <encantamiento> [nivel], ' +
-          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether|luna> [x y z], /cohete, /setblock, /fill, ' +
+          '/experiencia <n> [puntos|niveles], /dimension <overworld|nether|luna> [x y z], /cohete, /meteoritos, /setblock, /fill, ' +
           '/voz [on|off|silenciar|activar|volumen], /grupo <nombre|salir> (chat de voz: V para hablar, B para susurrar)',
         );
         return;

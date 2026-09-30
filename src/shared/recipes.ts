@@ -851,3 +851,18 @@ import { SHULKER_SHELL as SSH } from './items';
 import { SHULKER_BOXES as SBX, ENDER_CHEST as ECH, OBSIDIAN as OBS8, CHEST as CHS8 } from './blocks';
 shape(['S', 'C', 'S'], { S: SSH, C: CHS8 }, SBX['']);
 shape(['OOO', 'OEO', 'OOO'], { O: OBS8, E: ENDER_EYE }, ECH);
+
+// ------------------------------------------------------------------ Programa lunar: el traje espacial y la botella de oxígeno
+// Placas de acero (de la fábrica) con lana blanca de aislante; el casco lleva un visor de cristal. La botella sale llena (se llena en la
+// Tierra al fabricarla); vacía, se rellena donde haya aire (spacesuit.ts).
+import { ARMOR as ARM9, OXYGEN_BOTTLE, FACTORIO_NEW as FN9 } from './items';
+import { SPACE_ARMOR } from './armor';
+import { WOOL as WOOL9, GLASS as GLASS9 } from './blocks';
+{
+  const S = FN9['steel-plate'], W = WOOL9.white, G = GLASS9;
+  shape(['SSS', 'SGS'], { S, G }, ARM9[SPACE_ARMOR].helmet);
+  shape(['S S', 'WSW', 'SWS'], { S, W }, ARM9[SPACE_ARMOR].chestplate);
+  shape(['SWS', 'W W', 'S S'], { S, W }, ARM9[SPACE_ARMOR].leggings);
+  shape(['W W', 'S S'], { S, W }, ARM9[SPACE_ARMOR].boots);
+  shape([' S ', 'S S', ' S '], { S }, OXYGEN_BOTTLE);
+}

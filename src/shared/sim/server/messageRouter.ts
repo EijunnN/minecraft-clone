@@ -142,6 +142,7 @@ const ROUTES: { [T in ClientMsg['t']]?: Route } = {
   rleave: route<'rleave'>(0, (h, s) => h.sys.rockets.onLeaveSeat(s)),
   rlaunch: route<'rlaunch'>(0, (h, s) => h.sys.rockets.onLaunch(s)),
   rabort: route<'rabort'>(0, (h, s) => h.sys.rockets.onAbort(s)),
+  rplace: route<'rplace'>(1, (h, s, m) => h.sys.rockets.onPlace(s, m)), // Programa lunar: el cohete fabricado
   // Fase 7 (encantamientos)
   work: route<'work'>(2, (h, s, m) => h.sys.enchantWork.onWork(s, m)),
   beacon: route<'beacon'>(2, (h, s, m) => h.sys.netherGoods.onBeacon(s, m)), // Fase 8.5: el faro

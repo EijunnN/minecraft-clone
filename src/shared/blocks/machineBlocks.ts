@@ -6,7 +6,7 @@ import { L, familyBase } from './registry';
 import { multiblock, multiInfo } from './multiblock';
 import { mbox } from '../blockModels';
 import { POWER_BLOCKS } from './powerBlocks';
-import { LOGISTICS_INVENTORY } from './logisticsBlocks';
+import { GHOST_BLOCKS } from './logisticsBlocks';
 import { ASSEMBLERS, FURNACES, LAB } from '../logistics/assemblyTypes';
 
 const six = (n: number) => [n, n, n, n, n, n];
@@ -126,7 +126,7 @@ export function furnaceInfo(id: number): { tier: number; dir: number } | null {
   return i && i.controller ? { tier: FURNACE_BLOCKS.indexOf(familyBase(id)), dir: i.dir } : null;
 }
 
-// Las ensambladoras son eléctricas; unas y otros se colocan con «fantasma» y salen en el inventario junto a la logística.
+// Las ensambladoras son eléctricas; unas y otros se colocan con «fantasma».
 (POWER_BLOCKS as number[]).push(...ASSEMBLER_BLOCKS, LAB_BLOCK);
-(LOGISTICS_INVENTORY as number[]).push(...FURNACE_BLOCKS);
+GHOST_BLOCKS.push(...FURNACE_BLOCKS);
 export const MACHINE_INVENTORY: readonly number[] = [...ASSEMBLER_BLOCKS, ...FURNACE_BLOCKS, LAB_BLOCK];

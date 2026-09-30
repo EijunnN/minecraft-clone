@@ -4,6 +4,11 @@
 // El vuelo lo lleva SIEMPRE el servidor (a diferencia de las barcas, que las guía el cliente): sube por una curva
 // cerrada (ascenso) o baja frenando por una velocidad que depende de la altura (descenso), así que dos clientes ven
 // lo mismo y no hay nada que validar. Los pasajeros van de plaza: su posición sale del cohete.
+//
+// El viaje, de punta a punta (en tiempo comprimido; los números que ve el piloto son los de una misión real):
+//   cuenta atrás → ascenso hasta ~96 km (el planeta se curva debajo) → [otra dimensión] tránsito: inyección, crucero con la
+//   maniobra de giro e inserción en órbita (o reentrada) a 15 km del destino → descenso motorizado → posado.
+// El tránsito ya transcurre en la dimensión de destino: el cliente carga su terreno mientras pinta el espacio (voyage.ts).
 
 export const ENT_ROCKET = 170;
 
@@ -23,7 +28,8 @@ export const RK_PHASE = {
   COUNTDOWN: 1,
   /** Sube (los motores empujan). */
   ASCENT: 2,
-  /** Sin motores, camino de otro mundo: pantalla negra mientras se carga el destino. */
+  /** Tránsito entre los dos mundos, ya en la dimensión de destino: el cohete espera quieto en lo alto mientras el cliente
+   * pinta el viaje por el espacio y carga el terreno de abajo. */
   COAST: 3,
   /** Baja frenando hacia el suelo. */
   DESCENT: 4,
@@ -46,47 +52,82 @@ export function rocketPhaseOf(flags: number): RocketPhase {
 /** Segundos de cuenta atrás (los motores se encienden en los últimos IGNITION_AT). */
 export const COUNTDOWN_S = 10;
 export const IGNITION_AT = 3;
-/** Segundos que dura el ascenso y altura (sobre la plataforma) a la que se corta el motor. */
-export const ASCENT_S = 30;
-/** Segundos de tránsito a oscuras entre un mundo y otro. */
-export const COAST_S = 4;
+/** Segundos que dura el ascenso. */
+export const ASCENT_S = 48;
+/** Segundos del tránsito entre los dos mundos (en la dimensión de destino). */
+export const COAST_S = 46;
 
 // ------------------------------------------------------------------ ascenso
-// Velocidad v(t) = V·(1 − e^(−t/T)): arranca despacio (pesa mucho), coge velocidad y se acerca a V. La altura es su
-// integral: y(t) = V·(t − T·(1 − e^(−t/T))). Con V = 3 200 (bloques/s, casi 3 km/s) y T = 12, el ascenso de 30 s llega a ~61 km: el
-// cielo, que es físico (1 bloque = 1 m), acaba negro y con estrellas. No pasar de los 100 km del modelo de atmósfera.
-const ASC_V = 3200;
-const ASC_T = 12;
+// Altura h(t) = TOP · g(t) / g(T) con g(t) = e^(kt) − 1 − kt: arranca muy despacio (un cohete pesado despega a paso de hombre:
+// ~30 m a los 3 s), coge velocidad y acaba casi fuera de la atmósfera. No pasar de los 100 km del modelo de cielo (atmosphere.ts).
+const ASC_TOP = 96_000;
+const ASC_K = 0.11;
+const ascG = (t: number) => Math.exp(ASC_K * t) - 1 - ASC_K * t;
+const ASC_GT = ascG(ASCENT_S);
 
 /** Altura (sobre la plataforma) `t` segundos después del despegue. */
 export function ascentHeight(t: number): number {
   if (t <= 0) return 0;
-  return ASC_V * (t - ASC_T * (1 - Math.exp(-t / ASC_T)));
+  return (ASC_TOP * ascG(Math.min(t, ASCENT_S))) / ASC_GT;
 }
 
 /** Velocidad vertical (bloques/s) `t` segundos después del despegue. */
 export function ascentSpeed(t: number): number {
   if (t <= 0) return 0;
-  return ASC_V * (1 - Math.exp(-t / ASC_T));
+  return (ASC_TOP * ASC_K * (Math.exp(ASC_K * Math.min(t, ASCENT_S)) - 1)) / ASC_GT;
 }
 
 /** Altura a la que llega el ascenso completo. */
 export const ASCENT_TOP = ascentHeight(ASCENT_S);
 
+/**
+ * Cuánto se ha desplazado el suelo bajo el cohete en el ascenso (m): el giro gravitatorio lo lleva hacia delante. Es la cifra que
+ * mueve el planeta dibujado debajo (no la de una misión real, que a esta escala de tiempo lo haría girar demasiado rápido).
+ */
+export function ascentDownrange(t: number): number {
+  const x = Math.max(0, Math.min(1, t / ASCENT_S));
+  return 200_000 * x * x * x;
+}
+
+/** Interpolación lineal por tramos en una tabla [x, y] (x creciente). */
+function table(t: readonly (readonly [number, number])[], x: number): number {
+  if (x <= t[0][0]) return t[0][1];
+  for (let i = 1; i < t.length; i++) {
+    if (x <= t[i][0]) {
+      const [x0, y0] = t[i - 1], [x1, y1] = t[i];
+      return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+    }
+  }
+  return t[t.length - 1][1];
+}
+
+// Lo que marca la telemetría en el ascenso según la altura: la velocidad y el tiempo de misión de un lanzamiento real (la primera
+// etapa se apaga hacia los 65 km a ~2 km/s; la segunda llega a la velocidad orbital).
+const ASC_V: readonly (readonly [number, number])[] = [[0, 0], [100, 38], [1000, 150], [5000, 310], [12000, 480], [30000, 1100], [60000, 2050], [80000, 4200], [96000, 7650]];
+const ASC_MET: readonly (readonly [number, number])[] = [[0, 0], [100, 9], [1000, 25], [5000, 48], [12000, 72], [30000, 112], [60000, 162], [80000, 330], [96000, 525]];
+
+/** Telemetría del ascenso a los `t` s del despegue: velocidad (m/s) y tiempo de misión (s) de una misión real a esa altura. */
+export function ascentTelemetry(t: number): { speed: number; met: number } {
+  const h = ascentHeight(t);
+  return { speed: table(ASC_V, h), met: Math.max(t, table(ASC_MET, h)) };
+}
+
+/** Tiempo de misión (s) al acabar el ascenso (de ahí sigue el tránsito). */
+export const ASCENT_MET = table(ASC_MET, ASC_TOP);
+
 // ------------------------------------------------------------------ descenso
-/** Altura (sobre el suelo) desde la que se llega y velocidad de crucero antes de frenar (bloques/s). */
-export const DESCENT_START = 1200;
-const DESC_CRUISE = 70;
+/** Altura (sobre el suelo) desde la que empieza el descenso motorizado (la del final de la órbita baja). */
+export const DESCENT_START = 15_000;
 /** Velocidad con la que se toca el suelo. */
 const DESC_TOUCH = 2.2;
 
 /**
- * Velocidad de bajada (positiva) a la altura `h` sobre el suelo con un motor que frena `decel` bloques/s²: el
- * crucero mientras quede espacio para frenar y, después, la que permite parar justo al llegar (v = √(2·a·h)).
+ * Velocidad de bajada (positiva) a la altura `h` sobre el suelo con un motor que frena `decel` bloques/s²: la que permite parar
+ * justo al llegar (v = √(2·a·h)) y, en los últimos cien metros, una aproximación lenta que acaba a paso de hombre.
  */
 export function descentSpeed(h: number, decel: number): number {
   const brake = Math.sqrt(2 * decel * Math.max(0, h));
-  return Math.max(DESC_TOUCH, Math.min(DESC_CRUISE, brake));
+  return Math.max(DESC_TOUCH, Math.min(brake, DESC_TOUCH + 0.35 * Math.max(0, h)));
 }
 
 /** Un paso del descenso: nueva altura tras `dt` segundos (nunca por debajo de 0). */
@@ -94,8 +135,25 @@ export function descentStep(h: number, dt: number, decel: number): number {
   return Math.max(0, h - descentSpeed(h, decel) * dt);
 }
 
-/** Frenada de cada mundo (bloques/s²): en la Luna, con un sexto de gravedad, se frena con menos. */
-export const DESCENT_DECEL = { moon: 6, earth: 9 } as const;
+/** Frenada de cada mundo (bloques/s²): lo que da ~50 s de descenso desde los 15 km. */
+export const DESCENT_DECEL = { moon: 12, earth: 12 } as const;
+
+/**
+ * Cuánto le queda al cohete por recorrer en horizontal en el descenso (m): empieza a ~2 km/s de lado, como un módulo lunar al
+ * empezar a frenar, y ya cae en vertical por debajo de 1 500 m (donde se empieza a ver el terreno de bloques).
+ */
+export function descentDownrange(h: number): number {
+  const x = Math.max(0, Math.min(1, (h - 1500) / (DESCENT_START - 1500)));
+  return 22_000 * x * x;
+}
+
+/** Velocidad total (m/s) en el descenso a la altura `h`: la vertical y la horizontal que se lleva el suelo. */
+export function descentTelemetrySpeed(h: number, decel: number): number {
+  const v = descentSpeed(h, decel);
+  const dh = 1;
+  const vh = ((descentDownrange(h + dh) - descentDownrange(h)) / dh) * v;
+  return Math.hypot(v, vh);
+}
 
 // ------------------------------------------------------------------ plazas
 /** Posición del pasajero de la plaza `seat` (la cadera) con el cohete en (x, y, z) mirando `yaw`: 2 × 2 en la cabina. */

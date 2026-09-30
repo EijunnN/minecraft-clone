@@ -4,6 +4,8 @@ import { isShulkerBox } from '../../shared/blocks'; // Fase 8.6
 import { mapArea, mapZoom, mapLocked } from '../../shared/mapOps'; // Fase 7.6
 import { isBundle, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { FILLED_MAP } from '../../shared/items';
+import { isOxygenBottle, bottleLeft, BOTTLE_UO, BREATH_UO } from '../../shared/spacesuit'; // Programa lunar
+import { SPACE_ARMOR } from '../../shared/armor';
 import { STRUCTURE_MAPS, structureMapArea } from '../../shared/structureMapData'; // Fase 7.5 (mansión)
 import './itemTooltip.css';
 import { dyedColor } from '../../shared/dyedColor'; // el cuero teñido
@@ -131,5 +133,12 @@ export function itemTooltipHtml(s: ItemStack): string {
   lines.push(...equipmentTooltip(s)); // Fase 6.5 (equipo)
   const max = tool?.durability ?? armor?.durability;
   if (max) lines.push(`<span class="tt-dim">Durabilidad: ${max - (s.dmg ?? 0)} / ${max}</span>`);
+  // Programa lunar: la botella de oxígeno y el traje.
+  if (isOxygenBottle(s.id)) {
+    const left = bottleLeft(s);
+    lines.push(`<span class="tt-dim">Oxígeno: ${left} / ${BOTTLE_UO} uO (${Math.floor(left / BREATH_UO / 60)} min)</span>`);
+    lines.push('<span class="tt-dim">El traje la gasta sola; se rellena en el cohete o donde haya aire</span>');
+  }
+  if (armor?.material === SPACE_ARMOR) lines.push('<span class="tt-dim">Con las cuatro piezas, el traje sella y da aire en el vacío</span>');
   return lines.join('');
 }

@@ -28,6 +28,9 @@ import { netherBiomeDrops } from './netherDrops'; // Fase 8.2 (biomas del Nether
 import { POISONOUS_POTATO } from '../items'; // Fase 6.5 (equipo)
 import { NETHER_QUARTZ_ORE, NETHER_GOLD_ORE } from '../blocks'; // Fase 8 (dimensiones)
 import { QUARTZ, GOLD_NUGGET } from '../items';
+import { METEORITE, METEOR_CORE } from '../blocks'; // Programa lunar: los meteoritos del Errante
+import { ERRANT_FRAGMENT, ANCHOR_HEART, WRITTEN_BOOK as WRITTEN_BOOK_M } from '../items';
+import { SELENE_PLANS_PAGES } from '../meteors';
 import {
   ITEMS, COAL, DIAMOND, LAPIS, REDSTONE, FLINT, CLAY_BALL, APPLE, STICK, BOOK, WHEAT_SEEDS, WHEAT, CARROT, POTATO,
   BEETROOT, BEETROOT_SEEDS, PUMPKIN_SEEDS, MELON_SEEDS, MELON_SLICE, BONE_MEAL, CHARCOAL, EMERALD, AMETHYST_SHARD,
@@ -58,6 +61,11 @@ export function blockDrops(block: number, toolId: number, rand: () => number = M
   if (nb) return nb;
   const one = (id: number, n = 1): ItemStack[] => [{ id, count: n }];
   const rnd = (a: number, c: number) => a + Math.floor(rand() * (c - a + 1));
+  // Programa lunar (meteors.ts): el meteorito suelta fragmentos del Errante; el Núcleo, el Corazón del Ancla y los Planos de Selene.
+  if (block === METEORITE) return one(ERRANT_FRAGMENT, rnd(1, 3));
+  if (block === METEOR_CORE) {
+    return [{ id: ANCHOR_HEART, count: 1 }, { id: WRITTEN_BOOK_M, count: 1, data: { title: 'Planos de Selene', author: 'Estación Selene', pages: [...SELENE_PLANS_PAGES] } }];
+  }
   // Puertas y camas sueltan el objeto una sola vez (por la mitad de abajo / los pies).
   if (isDoor(block)) return stateProps(block)!.half === 0 ? one(baseBlock(block)) : [];
   if (isBed(block)) return stateProps(block)!.part === 0 ? one(baseBlock(block)) : [];

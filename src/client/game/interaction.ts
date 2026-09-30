@@ -206,6 +206,7 @@ export class Interaction {
     // Fase 7 (transporte): subirse, abrir el cofre o echar carbón; poner barcas y vagonetas.
     if (pressed && target && (this.g.rocket.onUse(target) || this.g.vehicles.onUse(target, held))) return; // programa lunar: el cohete
     if (this.g.vehicles.place(this, pressed, target ? null : hit, held, dir)) return;
+    if (this.g.rocket.place(this, pressed, target ? null : hit, held)) return; // Programa lunar: el cohete Selene fabricado
     // Criatura delante: dar de comer, esquilar u ordeñar (Fase 6: domesticar y sentar, también con la mano vacía).
     if (pressed && target && this.canInteract(target, held?.id ?? 0)) {
       this.interactEntity(target, held?.id ?? 0, undefined, target.type === MOB_ALLAY && held ? held : undefined); // Fase 7.5: al alay, la pila entera

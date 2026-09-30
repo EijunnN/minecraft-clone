@@ -117,6 +117,8 @@ export interface PlayerSave {
   food: number;
   sat: number;
   air?: number;
+  /** Programa lunar: oxígeno en el depósito del traje (uO). */
+  oxy?: number;
   pos?: [number, number, number];
   rot?: [number, number];
   fly?: boolean;
@@ -264,6 +266,8 @@ export type ClientMsg =
   | { t: 'rleave' }
   | { t: 'rlaunch' }
   | { t: 'rabort' }
+  // Programa lunar: poner en el suelo un cohete Selene fabricado (el objeto se gasta con la respuesta 'ires').
+  | { t: 'rplace'; p: [number, number, number]; yaw: number; q: number }
   | { t: 'vpos'; e: number; p: [number, number, number]; r: number; pi?: number; v: [number, number, number]; k?: number }
   // Fase 7 (encantamientos): se usó la mesa de encantamientos, el yunque (el servidor decide si se
   // deteriora) o la afiladora (n: experiencia que suelta en orbes) en (x, y, z); Paso helado de nivel l
@@ -358,6 +362,11 @@ export type ServerMsg =
    * que va, k: 1 si ya no existe). Se manda a todos al cambiar y a quien entra.
    */
   | { t: 'rocket'; e: number; ph: number; pt: number; seats: (string | null)[]; d: number; k?: 1 }
+  // Programa lunar (meteors.ts): la lluvia de meteoritos (fase, segundos que quedan de ella, lluvias caídas, el Ancla cayó), cada
+  // meteorito (de dónde se le ve venir, dónde cae, su potencia y si es el del Núcleo) y la radio de la Estación Selene.
+  | { t: 'meteors'; ph: number; left: number; n: number; awake: 0 | 1 }
+  | { t: 'meteor'; s: [number, number, number]; p: [number, number, number]; k: number; c?: 1 }
+  | { t: 'radio'; m: string }
   /**
    * Programa lunar: lo que llevan las cintas de alrededor. Cada fila: x, y, z, bits de «avanza» (1 carril izquierdo, 2 derecho), cuántos
    * objetos hay en el carril izquierdo n0, y luego (id, posición 0..255) de los n0 del izquierdo y de todos los del derecho.

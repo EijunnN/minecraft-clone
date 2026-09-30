@@ -8,6 +8,7 @@ import {
 import { WORLD_LIMIT, VOID_Y } from '../../constants';
 import { sanitizeStack } from '../../containers';
 import { ITEMS, SHIELD, isValidItem } from '../../items';
+import { SUIT_TANK } from '../../spacesuit'; // Programa lunar
 import { EFFECTS, MAX_EFFECT_AMP, MAX_EFFECT_SECONDS, STATE_GLOWING, MAX_HEALTH_CAP } from '../../effects';
 import { STATE_INVISIBLE, potionKind, isPotionType } from '../../potions';
 import { effectColorFrom } from './potionPlayers';
@@ -94,6 +95,7 @@ export function sanitizeSave(d: unknown): PlayerSave | null {
     food: num(raw.food, 0, 20, 20),
     sat: num(raw.sat, 0, 20, 5),
     air: num(raw.air, 0, 15, 15),
+    oxy: num(raw.oxy, 0, SUIT_TANK, SUIT_TANK), // Programa lunar
     sel: num(raw.sel, 0, 8, 0) | 0,
     fly: !!raw.fly,
     dead: !!raw.dead,

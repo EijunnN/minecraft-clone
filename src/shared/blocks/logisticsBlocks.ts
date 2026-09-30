@@ -205,3 +205,8 @@ export function inserterState(tier: number, dir: number): number {
 
 /** Su sitio en el inventario creativo. */
 export const LOGISTICS_INVENTORY: readonly number[] = [...BELTS, ...UNDERGROUNDS, ...SPLITTERS, ...INSERTERS];
+/**
+ * Lo que se coloca con «fantasma» sin ser eléctrico: la logística y, después, los hornos de combustible y los fluidos (lo añaden sus
+ * módulos). Aparte del inventario creativo, donde cada familia sale en su propia sección (si no, salían repetidos).
+ */
+export const GHOST_BLOCKS: number[] = [...LOGISTICS_INVENTORY];

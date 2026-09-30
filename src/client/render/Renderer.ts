@@ -21,6 +21,8 @@ import {
   VOLUMETRIC_FS, COMPOSITE_FS, TAA_FS, LUMINANCE_FS, ADAPT_FS, BLOOM_DOWN_FS, BLOOM_UP_FS, FINAL_FS, FXAA_FS,
 } from './shaders/post';
 import { Atmosphere, SUN_ILLUMINANCE } from './Atmosphere';
+import { MoonFarMap } from './MoonFarMap'; // Programa lunar: el suelo de la Luna hasta el horizonte
+import type { BodyView } from '../../shared/voyage';
 import { Clouds } from './Clouds';
 import { TerrainRenderer } from './TerrainRenderer';
 import { BlockTextures } from './BlockTextures';
@@ -206,6 +208,46 @@ export interface FrameState {
   /** Fase 8.2: color de la niebla del bioma (sRGB 0..255; sin él, el de la dimensión). */
   fog?: readonly [number, number, number] | null;
   sight?: SightFog | null;
+  /** Programa lunar: la Tierra y la Luna como planetas (el viaje en cohete, la Tierra desde lo alto, el cielo de la Luna). */
+  space?: SpaceFrame;
+  /** Programa lunar (meteors.ts): tamaño del Errante en el cielo (0: no se ve) y tinte rojo de la alarma de meteoritos (0..1). */
+  errante?: number;
+  alarm?: number;
+}
+
+/** Programa lunar: lo que hace falta para pintar los planetas. Tamaños y distancias en km, en el marco del juego. */
+export interface SpaceFrame {
+  /** En tránsito por el espacio: el cielo es el espacio, en cualquier dimensión. */
+  transit: boolean;
+  /** 0 con aire alrededor, 1 en el vacío (en la Luna, en el espacio, o casi fuera de la atmósfera): exposición y luz del Sol. */
+  spaceness: number;
+  earth: BodyView;
+  moon: BodyView;
+  /** Dirección del Sol con la que se iluminan los planetas (en el tránsito gira con la nave; si no, la del cielo). */
+  sun: [number, number, number];
+  /** Sitio lunar (x, z) al que se refiere la superficie de la Luna, y lo que ha avanzado la nave sobre la Luna y la Tierra (m). */
+  site: [number, number];
+  moonShift: number;
+  earthShift: number;
+  /** Plasma de la reentrada (0..1). */
+  plasma: number;
+}
+
+/** Programa lunar: un cuerpo (ejes, centro y radio) en una mat4 por columnas, como la leen los shaders (uEarthM, uMoonM). */
+function bodyMatrix(out: Float32Array, b: BodyView | undefined): Float32Array {
+  if (!b) {
+    out.fill(0);
+    out[0] = out[5] = out[10] = 1;
+    out[13] = -1e7; // muy lejos, debajo
+    out[15] = 1;
+    return out;
+  }
+  const a = b.axes;
+  out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = 0;
+  out[4] = a[3]; out[5] = a[4]; out[6] = a[5]; out[7] = 0;
+  out[8] = a[6]; out[9] = a[7]; out[10] = a[8]; out[11] = 0;
+  out[12] = b.c[0]; out[13] = b.c[1]; out[14] = b.c[2]; out[15] = b.r;
+  return out;
 }
 
 const NEAR = 0.05;
@@ -229,6 +271,8 @@ export class Renderer {
   readonly caps: GLCaps;
   readonly canvas: HTMLCanvasElement;
   readonly terrain: TerrainRenderer;
+  /** Programa lunar: alturas del generador de la Luna alrededor del jugador (el suelo lejano). */
+  readonly moonMap: MoonFarMap;
   readonly textures: BlockTextures;
   readonly entities: EntityRenderer;
   readonly weather: Weather;
@@ -250,6 +294,8 @@ export class Renderer {
 
   private tri: FullscreenTriangle;
   private ubo: UniformBuffer;
+  private earthM = new Float32Array(16);
+  private moonM = new Float32Array(16);
   private atmosphere: Atmosphere;
   private clouds: Clouds;
 
@@ -322,10 +368,11 @@ export class Renderer {
     this.caps = caps;
     this.settings = settings;
     this.tri = new FullscreenTriangle(gl);
-    this.ubo = new UniformBuffer(gl, 172); // Fase 8: + uDim, uDimFog y uDimAmb; 8.6: + uEndFlash
+    this.ubo = new UniformBuffer(gl, 184); // Fase 8: + uDim, uDimFog y uDimAmb; 8.6: + uEndFlash; programa lunar: + uOrbit, uSite y uSpaceSun
     this.textures = new BlockTextures(gl, caps, tex);
     this.terrain = new TerrainRenderer(gl);
     this.atmosphere = new Atmosphere(gl, this.tri);
+    this.moonMap = new MoonFarMap(gl);
     this.clouds = new Clouds(gl, this.tri);
     this.entities = new EntityRenderer(gl, this.textures);
     this.weather = new Weather(gl);
@@ -503,7 +550,7 @@ export class Renderer {
     const moon = [-sun[0], -sun[1], -sun[2]];
     const sunUp = sun[1] >= 0;
     const light = sunUp ? sun : moon;
-    const vac = !!dimensionDef(s.dim ?? 0).vacuum; // Programa lunar: sin aire, el Sol llega entero
+    const vac = !!dimensionDef(s.dim ?? 0).vacuum || !!s.space?.transit; // Programa lunar: sin aire, el Sol llega entero
     const T = vac ? this.tmpT.fill(1) : Atmosphere.transmittance(s.camY, light[1], this.tmpT);
     const phase = ((s.day % 8) + 8) % 8 / 8;
     const moonFull = 0.5 + 0.5 * Math.cos(phase * Math.PI * 2);
@@ -511,7 +558,8 @@ export class Renderer {
     // Luz directa atenuada por el cielo cubierto cuando llueve.
     // Fase 8: sin cielo no hay luz directa (ni sombras ni rayos de luz).
     const fade = dimensionDef(s.dim ?? 0).sky ? smooth(0.0, vac ? 0.012 : 0.07, Math.abs(sun[1])) * (1 - 0.82 * s.rain) * (1 - 0.4 * (s.bossDark ?? 0)) : 0; // 8.7: el Wither oscurece
-    const kSun = vac ? 0.4 : 1; // sin aire el Sol llega sin filtrar y el ojo se adapta: si no, todo sale blanco
+    // Sin aire el Sol llega sin filtrar y el ojo se adapta: si no, todo sale blanco (y al subir en cohete se pasa poco a poco a esa luz).
+    const kSun = 1 - 0.6 * (vac ? 1 : s.space?.spaceness ?? 0);
     const lc = sunUp
       ? [SUN_ILLUMINANCE[0] * T[0] * fade * kSun, SUN_ILLUMINANCE[1] * T[1] * fade * kSun, SUN_ILLUMINANCE[2] * T[2] * fade * kSun]
       : [moonIllum * 0.75 * T[0] * fade, moonIllum * 0.85 * T[1] * fade, moonIllum * T[2] * fade];
@@ -565,6 +613,12 @@ export class Renderer {
     // Fase 8.6: el destello del End (dirección e intensidad).
     const fl = s.endFlash;
     d[168] = fl ? fl[0] : 0; d[169] = fl ? fl[1] : 1; d[170] = fl ? fl[2] : 0; d[171] = fl ? fl[3] : 0;
+    // Programa lunar: el viaje y los planetas.
+    const sp = s.space;
+    d[172] = sp?.transit ? 1 : 0; d[173] = 1 - 0.6 * (dd.vacuum || sp?.transit ? 1 : sp?.spaceness ?? 0); d[174] = sp?.plasma ?? 0; d[175] = s.errante ?? 0;
+    d[176] = sp?.site[0] ?? 0; d[177] = sp?.site[1] ?? 0; d[178] = sp?.moonShift ?? 0; d[179] = sp?.earthShift ?? 0;
+    const ss = sp?.sun ?? L.sun;
+    d[180] = ss[0]; d[181] = ss[1]; d[182] = ss[2]; d[183] = s.alarm ?? 0;
     this.ubo.upload();
   }
 
@@ -738,12 +792,14 @@ export class Renderer {
     gl.disable(gl.DEPTH_TEST);
 
     // --- 5. Nubes y luz volumétrica ---
-    const cloudsOn = set.clouds && dimensionDef(s.dim ?? 0).sky && !dimensionDef(s.dim ?? 0).vacuum; // Fase 8: sin cielo no hay nubes; sin aire, tampoco
+    // Programa lunar: desde lo alto (el cohete) o en el espacio, las nubes de cerca no se ven: las pinta el planeta de abajo.
+    const high = s.camY > 1500 || !!s.space?.transit;
+    const cloudsOn = set.clouds && dimensionDef(s.dim ?? 0).sky && !dimensionDef(s.dim ?? 0).vacuum && !high; // Fase 8: sin cielo no hay nubes; sin aire, tampoco
     if (cloudsOn) {
       this.clouds.resize(W, H, set.cloudScale);
       this.clouds.render(this.main.depth!, this.atmosphere.skyView.color, this.atmosphere.irradiance.color, set.cloudSteps, set.taa);
     }
-    const volOn = set.volumetric && this.shadowSize > 0 && lightOn && !dimensionDef(s.dim ?? 0).vacuum; // (sin aire no hay rayos de luz)
+    const volOn = set.volumetric && this.shadowSize > 0 && lightOn && !dimensionDef(s.dim ?? 0).vacuum && !high; // (sin aire no hay rayos de luz)
     if (volOn) {
       this.volRT.bind();
       this.pVol.use()
@@ -767,7 +823,12 @@ export class Renderer {
       .tex2D('uFarOcean', this.atmosphere.farOcean)
       .f1('uCloudsOn', cloudsOn ? 1 : 0)
       .f1('uCloudBlur', set.taa ? 0 : 1)
-      .f1('uVolumetricOn', volOn ? 1 : 0);
+      .f1('uVolumetricOn', volOn ? 1 : 0)
+      .tex2D('uMoonMap', this.moonMap.tex)
+      .f4('uMoonMapInfo', ...this.moonMap.info)
+      .i1('uMoonSeed', this.moonMap.seed)
+      .m4('uEarthM', bodyMatrix(this.earthM, s.space?.earth))
+      .m4('uMoonM', bodyMatrix(this.moonM, s.space?.moon));
     this.tri.draw();
 
     // --- 7. TAA ---
@@ -898,7 +959,7 @@ export class Renderer {
       .tex2D('uPrev', expPrev.color)
       .f1('uDt', Math.min(s.dt, 0.1))
       // Programa lunar: con el cielo negro la exposición automática sube de más y el suelo iluminado sale blanco: se compensa.
-      .f1('uEV', set.brightness - s.rain * 0.7 + (s.nightVision ?? 0) * 2.5 - (dimensionDef(s.dim ?? 0).vacuum ? 1.7 : 0))
+      .f1('uEV', set.brightness - s.rain * 0.7 + (s.nightVision ?? 0) * 2.5 - 1.7 * (dimensionDef(s.dim ?? 0).vacuum || s.space?.transit ? 1 : s.space?.spaceness ?? 0))
       .f1('uLevels', 6)
       .f1('uReset', this.exposureReset ? 1 : 0);
     this.tri.draw();

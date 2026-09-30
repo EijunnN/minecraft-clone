@@ -64,6 +64,7 @@ export const ARMOR_SHINE: Readonly<Record<ArmorMaterial, { rough: number; metal:
   chainmail: { rough: 0.45, metal: 0.6, sheen: 0.05 }, // Fase 6.5 (equipo)
   turtle: { rough: 0.5, metal: 0, sheen: 0.05 },
   netherite: { rough: 0.26, metal: 0.85, sheen: 0.12 }, // Fase 8.5: metal oscuro muy pulido
+  space: { rough: 0.6, metal: 0.05, sheen: 0.04 }, // Programa lunar: tela blanca del traje, casi mate
 };
 
 export interface ArmorTexture {
@@ -87,13 +88,15 @@ const RAMPS: Readonly<Record<ArmorMaterial, readonly RGB[]>> = {
   turtle: [[150, 214, 110], [84, 160, 62], [58, 124, 46], [38, 90, 34], [22, 56, 20]],
   // Fase 8.5: netherita, gris casi negro con un tinte violáceo en los brillos.
   netherite: [[132, 118, 132], [86, 78, 86], [66, 60, 66], [46, 42, 48], [26, 24, 28]],
+  // Programa lunar: el traje, tela blanca con juntas y anillos grises (y la franja naranja la pone su dibujo).
+  space: [[250, 250, 246], [228, 228, 224], [196, 196, 194], [150, 152, 156], [84, 88, 96]],
 };
 
 /** Pulido base (alpha) de cada material. */
-const GLOSS: Readonly<Record<ArmorMaterial, number>> = { leather: 150, iron: 236, golden: 255, diamond: 255, copper: 240, chainmail: 228, turtle: 200, netherite: 250 };
+const GLOSS: Readonly<Record<ArmorMaterial, number>> = { leather: 150, iron: 236, golden: 255, diamond: 255, copper: 240, chainmail: 228, turtle: 200, netherite: 250, space: 170 };
 
 /** Ruido de color por téxel (el cuero tiene grano, el metal apenas). */
-const GRAIN: Readonly<Record<ArmorMaterial, number>> = { leather: 0.12, iron: 0.05, golden: 0.05, diamond: 0.04, copper: 0.06, chainmail: 0.05, turtle: 0.08, netherite: 0.05 };
+const GRAIN: Readonly<Record<ArmorMaterial, number>> = { leather: 0.12, iron: 0.05, golden: 0.05, diamond: 0.04, copper: 0.06, chainmail: 0.05, turtle: 0.08, netherite: 0.05, space: 0.05 };
 
 // Índices de cara (orden de boxUV).
 const PX = 0;
@@ -277,6 +280,11 @@ function pattern(mat: ArmorMaterial, t: Texel, tone: number, seed: number): numb
       if ((t.i === 1 || t.i === t.fw - 2) && t.j === 1) return 0;
       if (t.j % 5 === 4) return 3;
       return r > 0.95 ? 0 : r < 0.05 ? 2 : 1;
+    case 'space':
+      // Programa lunar: tela acolchada (costuras cada 3 filas) con anillos de junta grises en los bordes de cada pieza.
+      if (t.j === t.fh - 1 || t.j === 0) return 4;
+      if (t.j % 3 === 2) return 2;
+      return r > 0.97 ? 0 : 1;
   }
 }
 

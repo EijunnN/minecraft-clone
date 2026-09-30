@@ -30,7 +30,8 @@ import { // Fase 6.5 (piedras)
 import { COPPER, copperTexture } from './blocks'; // Fase 6.5 (cobre)
 import { COPPER_ARMOR } from './armor'; // Fase 6.5 (cobre)
 // Fase 6.5 (equipo)
-import { CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR, ELYTRA_ARMOR } from './armor';
+import { CHAINMAIL_ARMOR, TURTLE_ARMOR, NETHERITE_ARMOR, ELYTRA_ARMOR, SPACE_ARMOR } from './armor';
+import { setOxygenBottleId, setSuitPieces } from './spacesuit'; // Programa lunar
 import { EFFECT_RESISTANCE, EFFECT_FIRE_RESISTANCE } from './effects';
 import { EFFECT_NAUSEA } from './effects'; // Fase 7 (efectos)
 import { WOLF_ARMOR_DURABILITY } from './equipment';
@@ -667,6 +668,30 @@ export const FACTORIO_NEW: Readonly<Record<string, number>> = Object.fromEntries
   FACTORIO_ITEM_DEFS.map((d) => [d.name, item(factorioKey(d.name), (namesEs.item as Record<string, string>)[d.name] ?? d.es, { stack: d.stack })]),
 );
 
+// Programa lunar (spacesuit.ts): el traje espacial (cuatro piezas) y la botella de oxígeno (ids nuevos, los últimos).
+ARMOR[SPACE_ARMOR] = {};
+const SPACE_PIECE_NAMES = ['Casco espacial', 'Traje espacial (torso)', 'Traje espacial (piernas)', 'Botas espaciales'];
+ARMOR_PIECES.forEach((piece, slot) => {
+  const st = ARMOR_STATS[SPACE_ARMOR];
+  ARMOR[SPACE_ARMOR][piece] = item(`space_${piece}`, SPACE_PIECE_NAMES[slot], {
+    stack: 1,
+    armor: { slot: slot as ArmorSlot, material: SPACE_ARMOR, points: st.points[slot], toughness: st.toughness, durability: st.durability[slot] },
+  });
+});
+/** La botella de oxígeno (600 uO): lo gastado va en su desgaste. No se apila (cada una lleva lo suyo). */
+export const OXYGEN_BOTTLE = item('oxygen_bottle', 'Botella de oxígeno', { stack: 1 });
+setOxygenBottleId(OXYGEN_BOTTLE);
+setSuitPieces(ARMOR_PIECES.map((p) => ARMOR[SPACE_ARMOR][p]));
+// Programa lunar (meteors.ts, «La caída del Ancla»): lo que trae el meteorito grande de la Primera Lluvia y lo que se fabrica con ello.
+/** El Corazón del Ancla: lo que quedaba del Dragón; es el núcleo del motor del cohete (no se fabrica). No arde ni lo rompe una explosión. */
+export const ANCHOR_HEART = item('anchor_heart', 'Corazón del Ancla', { stack: 1 });
+/** Fragmento del Errante: lo que sueltan los meteoritos. Nadie sabe aún para qué sirve. */
+export const ERRANT_FRAGMENT = item('errant_fragment', 'Fragmento del Errante');
+/** Una etapa del cohete (estructura, tanques y motor): tres por cohete. */
+export const ROCKET_STAGE = item('rocket_stage', 'Etapa de cohete', { stack: 4 });
+/** El cohete Selene montado: se pone en el suelo (clic derecho) como el que da /cohete. */
+export const SELENE_ROCKET = item('selene_rocket', 'Cohete Selene', { stack: 1 });
+
 export const ITEM_COUNT = nextId;
 if (ITEM_COUNT > 1024) throw new Error('Demasiados objetos: el rango 256..1023 está lleno');
 
@@ -905,3 +930,10 @@ smelt(QUARTZ_BLOCK, SMOOTH_QUARTZ); // el bloque de cuarzo, en cuarzo liso
 smelt(CHORUS_FRUIT, POPPED_CHORUS_FRUIT);
 (CREATIVE_ITEMS as number[]).push(CHORUS_FRUIT, POPPED_CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, ELYTRA, SHULKER_SHELL, ...END_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob]));
 (CREATIVE_ITEMS as number[]).push(...WITHER_SPAWN_EGG_DEFS.map((e) => SPAWN_EGGS[e.mob])); // Fase 8.7
+
+// Programa lunar: el traje espacial y la botella de oxígeno, en el creativo.
+(CREATIVE_ITEMS as number[]).push(...Object.values(ARMOR[SPACE_ARMOR]), OXYGEN_BOTTLE);
+// Programa lunar: lo del Errante y el cohete (en el creativo; el Corazón no arde ni lo destruye una explosión).
+(CREATIVE_ITEMS as number[]).push(ANCHOR_HEART, ERRANT_FRAGMENT, ROCKET_STAGE, SELENE_ROCKET);
+(FIRE_RESISTANT_ITEMS as Set<number>).add(ANCHOR_HEART);
+(EXPLOSION_RESISTANT_ITEMS as Set<number>).add(ANCHOR_HEART);

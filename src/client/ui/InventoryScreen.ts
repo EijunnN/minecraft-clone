@@ -5,6 +5,7 @@
 // iguales, derecho de uno en uno) y el doble clic junta en el cursor los objetos iguales. Los cofres y hornos son del servidor: los clics se predicen y se confirman.
 import { isBundle, fitsInBundle, bundleInsert, bundleTake, bagWeight, BUNDLE_CAPACITY } from '../../shared/bundles'; // Fase 6.5 (remate)
 import { ITEMS, itemName, maxStack, sameKind, type ItemStack } from '../../shared/items';
+import { isOxygenBottle, bottleLeft, BOTTLE_UO } from '../../shared/spacesuit'; // Programa lunar
 import { matchRecipe, CRAFT_REMAINDER } from '../../shared/recipes';
 import { fireworkCraft } from '../../shared/recipes'; // Fase 6.5 (equipo)
 import {
@@ -966,6 +967,13 @@ export class InventoryScreen {
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
       bar.style.background = `hsl(${Math.round(f * 120)}, 90%, 50%)`;
+    } else if (s && isOxygenBottle(s.id) && s.dmg) {
+      // Programa lunar: lo que le queda a la botella de oxígeno (azul claro).
+      const f = bottleLeft(s) / BOTTLE_UO;
+      dur.style.display = '';
+      const bar = dur.firstElementChild as HTMLElement;
+      bar.style.width = `${Math.round(f * 100)}%`;
+      bar.style.background = '#7cc8ff';
     } else if (s && isBundle(s.id) && s.bag?.length) {
       // Fase 6.5 (remate): lo lleno que está el saco (azul; rojo si no cabe más).
       const f = Math.min(1, bagWeight(s.bag) / BUNDLE_CAPACITY);

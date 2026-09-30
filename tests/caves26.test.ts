@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TerrainGenerator } from '../src/shared/world/terrain';
-import { mineshaftAt, type MineSite } from '../src/shared/world/mineshaft';
+import { mineshaftAt, type MineSite, type MinePiece } from '../src/shared/world/mineshaft';
 import { AIR, WATER, LAVA, STONE, DEEPSLATE, BLOCK_FLUID, DARK_OAK_PLANKS, OAK_PLANKS } from '../src/shared/blocks';
 import { blockIndex, MIN_Y } from '../src/shared/constants';
 import { ENT_CHEST_MINECART } from '../src/shared/vehicles';
@@ -84,11 +84,11 @@ test('minas: una de cada ~250 chunks, piezas de Java que no se pisan y a menos d
       assert.equal(room.kind, 'room');
       assert.ok(m.bounds.y1 <= 53, 'debajo del nivel del mar');
       for (let i = 0; i < m.pieces.length; i++) {
-        const p = m.pieces[i];
+        const p: MinePiece = m.pieces[i];
         // Java mira que la pieza empiece a 80 bloques como mucho; un pasillo puede alargarse 20 más.
         assert.ok(Math.abs(p.box.x0 - room.box.x0) <= 100 && Math.abs(p.box.z0 - room.box.z0) <= 100, 'cerca de la sala');
         if (p.kind === 'corridor') {
-          const w = p.dir === 0 || p.dir === 2 ? p.box.x1 - p.box.x0 + 1 : p.box.z1 - p.box.z0 + 1;
+          const w: number = p.dir === 0 || p.dir === 2 ? p.box.x1 - p.box.x0 + 1 : p.box.z1 - p.box.z0 + 1;
           assert.equal(w, 3, 'pasillos de 3 de ancho');
           assert.ok(p.sections! >= 1 && p.sections! <= 4);
         }

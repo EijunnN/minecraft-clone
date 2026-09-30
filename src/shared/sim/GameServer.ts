@@ -71,6 +71,10 @@ export interface DimensionHub {
   sharedChanged(from: GameServer): void;
   /** Fase 8.5: reaparecer en el nexo de (x, y, z) de la dimensión `dim` (gasta una carga): dónde, o null. */
   anchorRespawn(dim: number, x: number, y: number, z: number): [number, number, number] | null;
+  /** Programa lunar (meteors.ts): cayó el Ancla (murió el Dragón): que empiecen las lluvias del mundo normal. */
+  awakenMeteors(): void;
+  /** Programa lunar: cuántas lluvias han caído y si el Ancla cayó. */
+  meteorInfo(): { awake: boolean; n: number };
 }
 
 /** Fase 8: lo que viaja con un jugador de una dimensión a otra. */
@@ -260,6 +264,12 @@ export class GameServer {
       },
       markCollected: (id, who) => this.sys.entitySync.markCollected(id, who),
       sharedChanged: () => this.hub?.sharedChanged(this),
+      broadcastAll: (msg) => this.chatAll(msg),
+      awakenMeteors: () => {
+        if (this.dim === DIM_OVERWORLD || !this.hub) this.sys.meteors.awaken();
+        else this.hub.awakenMeteors();
+      },
+      meteorInfo: () => (this.dim === DIM_OVERWORLD || !this.hub ? this.sys.meteors.info() : this.hub.meteorInfo()),
     };
   }
 

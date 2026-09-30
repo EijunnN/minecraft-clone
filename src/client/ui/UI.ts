@@ -6,6 +6,7 @@ import { itemTooltipHtml } from './itemTooltip';
 import { ChatCompletion } from './chatCompletion';
 import { BLOCKS, INVENTORY_ORDER, type BlockCategory } from '../../shared/blocks';
 import { CREATIVE_ITEMS, ITEMS, type ItemStack } from '../../shared/items';
+import { isOxygenBottle, bottleLeft, BOTTLE_UO } from '../../shared/spacesuit'; // Programa lunar
 import { REDSTONE } from '../../shared/items'; // Fase 7 (redstone)
 import type { GameMode } from '../../shared/protocol';
 import { applyPreset, saveSettings, type Settings } from '../game/settings';
@@ -967,6 +968,13 @@ export function paintSlot(el: HTMLElement, s: ItemStack | null, icons: Map<numbe
       const bar = dur.firstElementChild as HTMLElement;
       bar.style.width = `${Math.round(f * 100)}%`;
       bar.style.background = `hsl(${Math.round(f * 120)}, 90%, 50%)`;
+    } else if (s && isOxygenBottle(s.id) && s.dmg) {
+      // Programa lunar: lo que le queda a la botella de oxígeno.
+      const f = bottleLeft(s) / BOTTLE_UO;
+      dur.style.display = 'block';
+      const bar = dur.firstElementChild as HTMLElement;
+      bar.style.width = `${Math.round(f * 100)}%`;
+      bar.style.background = '#7cc8ff';
     } else if (s && isBundle(s.id) && s.bag?.length) {
       // Fase 6.5 (remate): lo lleno que está el saco.
       const f = Math.min(1, bagWeight(s.bag) / BUNDLE_CAPACITY);

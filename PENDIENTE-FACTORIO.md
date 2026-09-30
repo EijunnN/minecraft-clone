@@ -14,21 +14,26 @@ paneles solares y acumuladores, extractor con vetas, hornos (eléctrico, de pied
   y **máquina de vapor** (900 kW) que genera a demanda; **planta química** y **refinería** con sus cajas de fluido; **ensambladoras 2 y 3**
   con recetas de fluidos (`crafting-with-fluid`). La investigación «procesado de petróleo» se abre al bombear crudo.
 
+- **Agua en la Luna** (2026-09-30): receta «Fundido de hielo» en la planta química, la *ice-melting* de Factorio 2.0 (Space Age):
+  1 hielo sucio → 20 de agua en 1 s. Decisión: sin máquina propia; se usa la planta química como en Factorio, y la cadena lunar queda
+  paneles → pozo de petróleo → procesado de petróleo → planta química → agua → calderas. El extractor ya saca hielo sucio.
+- **Traje espacial y oxígeno** (2026-09-30, `shared/spacesuit.ts`): traje de 4 piezas que sella con las cuatro puestas, depósito de 300 uO
+  (10 min a 0,5 uO/s), botellas de 600 uO (20 min) que se gastan solas de una en una, relleno en la cabina del cohete y con aire; barra de
+  O₂ propia con el tiempo que queda y avisos. Se fabrican en la mesa con placas de acero, lana y cristal.
+
 ## Siguiente en el plan (en este orden)
-1. **Agua en la Luna**: el hielo sucio debe fundirse a agua (máquina propia, decisión de diseño pendiente: 1 hielo → 100 de agua) para las
-   calderas, el ácido y el sulfuro; hoy la bomba de agua sólo sirve donde hay agua (Tierra).
-2. **Reactor de helio-3 / energía nuclear** y los intercambiadores de calor; hoy: solar, acumuladores y vapor.
-3. **Efectos de la investigación sin aplicar**: productividad de minado del extractor, velocidad de minado a mano, huecos de inventario extra.
+1. **Reactor de helio-3 / energía nuclear** y los intercambiadores de calor; hoy: solar, acumuladores y vapor.
+2. **Efectos de la investigación sin aplicar**: productividad de minado del extractor, velocidad de minado a mano, huecos de inventario extra.
    Tecnologías infinitas (fórmula de nivel) fuera por ahora.
-4. **Módulos y balizas**: los 9 módulos existen como objetos pero no tienen efecto; ranuras en las máquinas.
-5. **Máquinas que faltan**: horno/extractor quemador, centrífuga, reactor, silo de cohetes real, radar, lámparas, cofres de hierro/acero,
+3. **Módulos y balizas**: los 9 módulos existen como objetos pero no tienen efecto; ranuras en las máquinas.
+4. **Máquinas que faltan**: horno/extractor quemador, centrífuga, reactor, silo de cohetes real, radar, lámparas, cofres de hierro/acero,
    ciencia militar y espacial, cintas exprés (ya se pueden hacer con lubricante), lubricante y ácido en las tuberías.
-6. **Red de circuitos** (cables rojo/verde, combinadores, interruptor de energía) y **robots** (roboports, cofres logísticos).
-7. **Transporte lunar**: rover y trenes (rieles, señales).
-8. **Planos, estadísticas de producción, alertas** (el rayo rojo de «sin energía» ya está).
-9. **Ver el fantasma de otros jugadores** al colocar (difundir el objeto en mano/objetivo unas 5 veces por segundo).
-10. **Ciencia espacial**: `send-item-to-orbit` (satélite) para abrir «space-science-pack».
-11. **Misiones / lista de «lo siguiente»** sobre la investigación (ver conversación: capa 1 = tecnologías disponibles; capa 2 = hitos lunares).
+5. **Red de circuitos** (cables rojo/verde, combinadores, interruptor de energía) y **robots** (roboports, cofres logísticos).
+6. **Transporte lunar**: rover y trenes (rieles, señales).
+7. **Planos, estadísticas de producción, alertas** (el rayo rojo de «sin energía» ya está).
+8. **Ver el fantasma de otros jugadores** al colocar (difundir el objeto en mano/objetivo unas 5 veces por segundo).
+9. **Ciencia espacial**: `send-item-to-orbit` (satélite) para abrir «space-science-pack».
+10. **Misiones / lista de «lo siguiente»** sobre la investigación (ver conversación: capa 1 = tecnologías disponibles; capa 2 = hitos lunares).
 
 ## Cosas pequeñas conocidas
 - Los laboratorios no pasan paquetes de uno a otro (en Factorio sí, con brazos).

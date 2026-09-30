@@ -270,3 +270,7 @@ export * from './machineBlocks';
 import { FLUID_INVENTORY } from './fluidBlocks'; // Programa lunar: tuberías, tanque y bombas
 export * from './fluidBlocks';
 (INVENTORY_ORDER as number[]).push(...FLUID_INVENTORY);
+
+import { METEOR_INVENTORY } from './meteorBlocks'; // Programa lunar: lo que dejan los meteoritos del Errante
+export * from './meteorBlocks';
+(INVENTORY_ORDER as number[]).push(...METEOR_INVENTORY);

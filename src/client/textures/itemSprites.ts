@@ -230,6 +230,7 @@ const ARMOR_INKS: Record<string, Record<string, Ink>> = {
   diamond: TOOL_MATERIALS.diamond,
   copper: COPPER_TOOL_INKS, // Fase 6.5 (cobre)
   netherite: TOOL_MATERIALS.netherite, // Fase 8.5
+  space: ramp([255, 255, 252], [232, 232, 228], [196, 198, 200], [146, 150, 158], [60, 64, 74]), // Programa lunar: el traje
 };
 
 /** Detalle claro: costuras en el cuero, destello en el metal. */
@@ -240,6 +241,7 @@ const ARMOR_ACCENT: Record<string, Ink> = {
   diamond: ink([246, 255, 255], [12, 66, 66]),
   copper: COPPER_ARMOR_ACCENT, // Fase 6.5 (cobre)
   netherite: ink([190, 170, 196], [18, 14, 18]), // Fase 8.5
+  space: ink([236, 112, 36], [96, 40, 8]), // Programa lunar: la franja naranja del traje
 };
 
 const HELMET = [
@@ -2316,13 +2318,138 @@ Object.assign(SPRITES, NETHER_GOODS_SPRITES);
 Object.assign(SPRITES, END_SPRITES);
 // Programa lunar: los intermedios, paquetes de ciencia y módulos de Factorio.
 Object.assign(SPRITES, FACTORIO_SPRITES);
+// Programa lunar (meteors.ts): el Corazón del Ancla (un cristal violeta que late, como los del Dragón), el fragmento del Errante (roca
+// negra con vetas rojizas), la etapa de cohete (un cilindro con la tobera) y el cohete Selene (blanco, con la franja naranja).
+SPRITES.anchor_heart = {
+  rows: [
+    '................',
+    '................',
+    '.......oo.......',
+    '......o11o......',
+    '.....o1221o.....',
+    '....o122221o....',
+    '...o12233221o...',
+    '...o12344321o...',
+    '...o12344321o...',
+    '...o12233221o...',
+    '....o122221o....',
+    '.....o1221o.....',
+    '......o11o......',
+    '.......oo.......',
+    '................',
+    '................',
+  ],
+  inks: {
+    o: ink([40, 12, 60]),
+    '1': ink([120, 50, 190]),
+    '2': ink([176, 92, 236]),
+    '3': ink([226, 160, 255]),
+    '4': ink([255, 236, 255]),
+  },
+};
+SPRITES.errant_fragment = {
+  rows: [
+    '................',
+    '................',
+    '................',
+    '......oooo......',
+    '....oo1112o.....',
+    '...o112r211o....',
+    '...o1rr21121o...',
+    '..o1121122r1o...',
+    '..o12111rr21o...',
+    '..o1r1121121o...',
+    '...o1122r11o....',
+    '....oo1221o.....',
+    '......oooo......',
+    '................',
+    '................',
+    '................',
+  ],
+  inks: { o: ink([12, 10, 12]), '1': ink([46, 40, 44]), '2': ink([72, 64, 68]), r: ink([214, 70, 36]) },
+};
+SPRITES.rocket_stage = {
+  rows: [
+    '................',
+    '.....oooooo.....',
+    '....o122223o....',
+    '....o122223o....',
+    '....o1ffff3o....',
+    '....o122223o....',
+    '....o122223o....',
+    '....o122223o....',
+    '....o1ffff3o....',
+    '....o122223o....',
+    '....o122223o....',
+    '.....o4444o.....',
+    '....o455554o....',
+    '...o45555554o...',
+    '...oooooooooo...',
+    '................',
+  ],
+  inks: {
+    o: ink([40, 42, 50]), '1': ink([250, 250, 252]), '2': ink([220, 222, 228]), '3': ink([170, 172, 182]),
+    f: ink([236, 112, 36]), '4': ink([96, 98, 108]), '5': ink([60, 62, 70]),
+  },
+};
+SPRITES.selene_rocket = {
+  rows: [
+    '.......oo.......',
+    '......o12o......',
+    '......o12o......',
+    '.....o1223o.....',
+    '.....oc22co.....',
+    '.....oc22co.....',
+    '.....o1223o.....',
+    '.....offffo.....',
+    '.....o1223o.....',
+    '.....o1223o.....',
+    '....oo1223oo....',
+    '...o4o1223o4o...',
+    '...o4offffo4o...',
+    '...o44o55o44o...',
+    '...ooo.yy.ooo...',
+    '........y.......',
+  ],
+  inks: {
+    o: ink([40, 42, 50]), '1': ink([252, 252, 252]), '2': ink([224, 226, 232]), '3': ink([172, 174, 184]),
+    c: ink([90, 170, 230]), f: ink([236, 112, 36]), '4': ink([140, 142, 152]), '5': ink([70, 72, 80]), y: ink([255, 200, 90]),
+  },
+};
+// Programa lunar: la botella de oxígeno (acero con la válvula arriba y la franja azul del oxígeno).
+SPRITES.oxygen_bottle = {
+  rows: [
+    '................',
+    '......kkkk......',
+    '.......vv.......',
+    '......1221......',
+    '.....122223.....',
+    '.....122223.....',
+    '.....bbbbbb.....',
+    '.....bbbbbb.....',
+    '.....122223.....',
+    '.....122223.....',
+    '.....122223.....',
+    '.....122233.....',
+    '.....122233.....',
+    '.....123333.....',
+    '......4444......',
+    '................',
+  ],
+  inks: {
+    ...ramp([248, 248, 250], [206, 208, 212], [160, 162, 170], [108, 110, 120], [40, 42, 50]),
+    k: ink([60, 62, 70], [20, 20, 24]),
+    v: ink([120, 124, 132], [30, 30, 36]),
+    b: ink([70, 140, 230], [20, 40, 90]),
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Rasterizado
 // ---------------------------------------------------------------------------
 
 const TOOL_RE = /^(wooden|stone|iron|golden|diamond|copper|netherite)_(pickaxe|axe|shovel|sword|hoe)$/; // Fase 6.5: cobre; 8.5: netherita
-const ARMOR_RE = /^(leather|iron|golden|diamond|copper|netherite)_(helmet|chestplate|leggings|boots)$/;
+const ARMOR_RE = /^(leather|iron|golden|diamond|copper|netherite|space)_(helmet|chestplate|leggings|boots)$/;
 
 /** Marcador para sprites que aún no tienen dibujo. */
 const PLACEHOLDER: SpriteDef = {

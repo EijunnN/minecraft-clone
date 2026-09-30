@@ -302,6 +302,44 @@ export class ParticleFx {
     if (Math.random() < 0.5) this.splash(x, y, z, 1);
   }
 
+  /**
+   * Programa lunar (meteors.ts): un meteorito en el aire, en (x, y, z) yendo hacia (dx, dy, dz) (unitario). `power` 2..7. La cabeza: un
+   * fogonazo blanco anaranjado que dura un instante (se pide en cada frame); la estela: llamas que se quedan atrás y humo oscuro que
+   * cuelga en el aire un rato, como los de verdad.
+   */
+  meteor(x: number, y: number, z: number, dx: number, dy: number, dz: number, power: number, k = 1, px = x, py = y, pz = z): void {
+    const s = 0.9 + power * 0.55;
+    this.ps.spawn({ x, y, z, life: 0.09, size: s * 2.2, size1: s * 1.6, sprite: SPRITE.glow, r: 12, g: 7.5, b: 3.4, flags: PF.EMISSIVE });
+    this.ps.spawn({ x, y, z, life: 0.12, size: s * 6, size1: s * 4.5, sprite: SPRITE.glow, r: 2.6, g: 1.0, b: 0.35, a: 0.6, flags: PF.EMISSIVE });
+    // La raya de fuego: el tramo recorrido desde el frame anterior (px, py, pz), relleno cada poco (va a más de 100 bloques por segundo).
+    const seg = Math.hypot(x - px, y - py, z - pz);
+    const steps = Math.min(40, Math.ceil(seg / Math.max(0.8, s * 0.6)));
+    for (let i = 1; i <= steps; i++) {
+      const f = i / (steps + 1);
+      this.ps.spawn({
+        x: px + (x - px) * f, y: py + (y - py) * f, z: pz + (z - pz) * f, life: rnd(0.35, 0.6), size: s * 1.4, size1: s * 0.2,
+        sprite: SPRITE.glow, r: 5, g: 2.2, b: 0.7, a: 0.9, flags: PF.EMISSIVE,
+      });
+    }
+    const n = Math.max(1, Math.round((2 + power) * k));
+    for (let i = 0; i < n; i++) {
+      const back = rnd(0.2, 3) * s;
+      this.ps.spawn({
+        x: x - dx * back + rnd(-0.4, 0.4) * s, y: y - dy * back + rnd(-0.4, 0.4) * s, z: z - dz * back + rnd(-0.4, 0.4) * s,
+        vx: rnd(-1, 1), vy: rnd(-1, 1), vz: rnd(-1, 1), life: rnd(0.25, 0.6), size: s * rnd(0.5, 0.9), size1: s * 0.15,
+        sprite: SPRITE.flame, frames: 4, r: 5, g: 2.4, b: 0.9, a: 1, drag: 2, flags: PF.EMISSIVE,
+      });
+    }
+    if (Math.random() < 0.6 * k) {
+      const g = rnd(0.08, 0.18);
+      this.ps.spawn({
+        x: x - dx * s * 2, y: y - dy * s * 2, z: z - dz * s * 2, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.3), vz: rnd(-0.3, 0.3),
+        life: rnd(6, 11), size: s * rnd(1.2, 1.8), size1: s * rnd(4, 6), sprite: SPRITE.smoke + Math.floor(Math.random() * 4),
+        r: g, g: g * 0.95, b: g * 0.92, a: 0.55, drag: 0.6, wind: 0.6, rot: Math.random() * 6.3, spin: rnd(-0.3, 0.3), flags: PF.FADE_IN,
+      });
+    }
+  }
+
   /** Explosión: fogonazo, bolas de humo que se oscurecen, chispas y humo que queda flotando. */
   explosion(x: number, y: number, z: number, power: number): void {
     this.ps.spawn({ x, y, z, life: 0.25, size: power * 1.6, size1: power * 2.4, sprite: SPRITE.glow, r: 6, g: 4, b: 2.2, flags: PF.EMISSIVE });

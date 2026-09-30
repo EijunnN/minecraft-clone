@@ -125,7 +125,7 @@ test('servidor: ofertas fijas y guardadas, reputación por comerciar, demanda al
   assert.equal(v.uses[k], undefined, 'repuesta');
   assert.equal(v.restocksToday, 1);
   // Guardar y volver a cargar: las mismas ofertas, la demanda, los cotilleos y el tipo.
-  h.gs.flush?.();
+  h.gs.flush?.(true);
   const saved = life.save(e)!;
   const e2 = h.gs.entities.villagers.spawn(bx + 0.5, by, bz + 0.5, null, null)!;
   life.restore(e2, saved);

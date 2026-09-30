@@ -1,4 +1,5 @@
-/* Programa lunar: la cabina del cohete Selene (marco de la ventana, cuenta atrás, telemetría y el fundido a negro del tránsito). */
+/* Programa lunar: la cabina del cohete Selene (marco de la ventana, cuenta atrás, telemetría, notas de la misión, el plasma de la
+   reentrada y el fundido del cambio de etapa). */
 #rk-hud {
   position: fixed;
   inset: 0;
@@ -10,6 +11,10 @@
   transition: opacity 0.35s ease;
 }
 #rk-hud.on { opacity: 1; }
+body.rk-cabin #hotbar,
+body.rk-cabin #crosshair,
+body.rk-cabin #blockname,
+body.rk-cabin #survival-hud { visibility: hidden !important; }
 
 /* Marco de la ventana: el borde oscuro de la cabina, con esquinas redondeadas y el panel de mandos abajo. */
 #rk-hud .rk-frame {
@@ -62,7 +67,8 @@
   left: 4.5%;
   bottom: 3.2%;
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: repeat(4, auto);
+  align-items: end;
   gap: 4px 28px;
   font-size: clamp(12px, 1.5vw, 17px);
   text-shadow: 0 0 8px rgba(120, 200, 255, 0.5);
@@ -91,21 +97,54 @@
   font: inherit;
 }
 
-/* Fundido a negro del tránsito entre mundos. */
+/* Aceleración del tiempo (el viaje de tres días dura menos de un minuto): una etiqueta junto al tiempo de misión. */
+#rk-hud .rk-warp {
+  align-self: end;
+  margin-bottom: 0.35em;
+  padding: 1px 8px;
+  border: 1px solid rgba(127, 170, 192, 0.6);
+  border-radius: 3px;
+  font-size: 0.85em;
+  letter-spacing: 0.08em;
+  color: #9fd2ea;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Notas de la misión: lo que merece la pena mirar ahora. */
+#rk-hud .rk-note {
+  position: absolute;
+  top: 12%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: clamp(12px, 1.35vw, 16px);
+  letter-spacing: 0.12em;
+  color: #a9d3e6;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+#rk-hud .rk-note.on { opacity: 0.9; transform: none; }
+
+/* Plasma de la reentrada: el borde de la ventana al rojo, que parpadea con el aire que se rompe delante. */
+#rk-hud .rk-plasma {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255, 140, 40, 0) 38%, rgba(255, 120, 30, 0.35) 62%, rgba(255, 70, 10, 0.75) 88%);
+  mix-blend-mode: screen;
+  animation: rk-flicker 0.13s steps(2) infinite;
+}
+@keyframes rk-flicker {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+  100% { filter: brightness(0.9); }
+}
+
+/* Fundido del cambio de etapa (lo lleva el código, frame a frame). */
 #rk-hud .rk-fade {
   position: absolute;
   inset: 0;
   background: #000;
   opacity: 0;
-  transition: opacity 1.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: clamp(16px, 2.6vw, 30px);
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  color: #cfeefc;
 }
-#rk-hud .rk-fade.on { opacity: 1; }
-#rk-hud .rk-fade small { display: block; margin-top: 1em; font-size: 0.5em; letter-spacing: 0.25em; opacity: 0.7; }

@@ -8,7 +8,7 @@ import { family, L, R_MODEL, familyBase, stateProps } from './registry';
 import { multiblock, multiInfo } from './multiblock';
 import { mbox, rotateBoxes, type ModelBox } from '../blockModels';
 import { POWER_BLOCKS } from './powerBlocks';
-import { LOGISTICS_INVENTORY } from './logisticsBlocks';
+import { GHOST_BLOCKS } from './logisticsBlocks';
 
 const METAL = { hardness: 2, tool: 'pickaxe' as const, tier: 0, sound: 'metal' as const, category: 'logistica' as const };
 const six = (n: number) => [n, n, n, n, n, n];
@@ -174,5 +174,5 @@ export const isSteamEngine = (id: number): boolean => id > 0 && familyBase(id) =
 /** Todo lo de los fluidos que se coloca con «fantasma» y sale en el inventario. */
 export const FLUID_BLOCKS: readonly number[] = [PIPE, PIPE_TO_GROUND, STORAGE_TANK, PUMP, OFFSHORE_PUMP, PUMPJACK, BOILER, STEAM_ENGINE];
 (POWER_BLOCKS as number[]).push(PUMP, PUMPJACK, BOILER, STEAM_ENGINE); // la bomba lleva energía; la de agua no
-(LOGISTICS_INVENTORY as number[]).push(PIPE, PIPE_TO_GROUND, STORAGE_TANK, OFFSHORE_PUMP);
+GHOST_BLOCKS.push(PIPE, PIPE_TO_GROUND, STORAGE_TANK, OFFSHORE_PUMP);
 export const FLUID_INVENTORY: readonly number[] = [...FLUID_BLOCKS];

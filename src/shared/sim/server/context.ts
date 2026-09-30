@@ -138,6 +138,12 @@ export interface ServerContext {
   setBossMode(m: BossMode): void;
   /** Marca una entidad como recogida por un jugador (para la animación de recogida). */
   markCollected(entityId: number, playerId: string): void;
+  /** Mensaje para los jugadores de todas las dimensiones (sin anfitrión, los de ésta). */
+  broadcastAll(msg: ServerMsg): void;
+  /** Programa lunar (meteors.ts): cayó el Ancla: que empiecen las lluvias de meteoritos del mundo normal (esté donde esté éste). */
+  awakenMeteors(): void;
+  /** Programa lunar: cuántas lluvias han caído y si el Ancla cayó (lo guarda el mundo normal). */
+  meteorInfo(): { awake: boolean; n: number };
 }
 
 export const TICK_RATE = 20;

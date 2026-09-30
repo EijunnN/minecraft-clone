@@ -219,8 +219,12 @@ export class EndFight {
   // ------------------------------------------------------------------ muerte del dragón
 
   /** setDragonKilled: portal encendido, huevo la primera vez y una puerta del End nueva. */
+  /** Programa lunar (meteors.ts): muere el Dragón de verdad por primera vez desde que vive: cae el Ancla. */
+  onAnchorFell: (() => void) | null = null;
+
   private dragonKilled(real = true): void {
     if (this.save.killed) return;
+    if (real) this.onAnchorFell?.();
     const y = this.podiumY();
     this.load(-8, -8, 8, 8);
     drawPodium(this.level(), 0, y, 0, true);

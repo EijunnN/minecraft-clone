@@ -402,6 +402,12 @@ void main() {
   vec3 L = uLightDir.xyz;
   float NdotLgeom = plant ? 1.0 : dot(N, L);
   float NdotL = plant ? 0.6 : saturate(dot(n, L)) * step(0.0, NdotLgeom);
+  // Programa lunar: el regolito (sin aire) no es lambertiano: refleja casi igual desde cualquier lado que se mire y brilla más con
+  // el Sol a la espalda (el efecto oposición); es lo que da a la Luna su aspecto plano y claro.
+  if (uDimFog.w > 1.5 && !plant) {
+    float mu0 = saturate(dot(n, L)), mu = saturate(dot(n, V));
+    NdotL = mix(mu0, 2.0 * mu0 / (mu0 + mu + 1e-3), 0.55) * (1.0 + 0.35 * smoothstep(0.985, 1.0, dot(V, L))) * step(0.0, NdotLgeom);
+  }
 
   // Sombras (PCF rotado; el TAA integra el ruido).
   float shadow = 0.0;

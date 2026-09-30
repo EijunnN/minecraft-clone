@@ -7,7 +7,7 @@
 // - Horno eléctrico: 3×3, funde lo que le entra (por un brazo o una cinta) sin combustible, a 180 kW; el resultado sale por otro brazo.
 // Sólo hay 1 024 capas de textura y casi están todas: se reutilizan las de hierro, tablones, redstone y horno (más la del panel).
 import { family, L, R_MODEL, familyBase } from './registry';
-import { LOGISTICS_INVENTORY } from './logisticsBlocks';
+import { GHOST_BLOCKS } from './logisticsBlocks';
 import { multiblock, multiBox, multiOf, multiControllerPos } from './multiblock';
 import { mbox } from '../blockModels';
 import { POLES } from '../logistics/energy';
@@ -121,7 +121,7 @@ export function isPowerBlock(id: number): boolean {
 
 /** ¿Se coloca con «fantasma» (la vista previa verde o roja de dónde y cómo quedará)? Toda la logística y la energía. */
 export function isGhostBlock(id: number): boolean {
-  return id > 0 && (isPowerBlock(id) || LOGISTICS_INVENTORY.includes(familyBase(id)));
+  return id > 0 && (isPowerBlock(id) || GHOST_BLOCKS.includes(familyBase(id)));
 }
 
 /** Su sitio en el inventario creativo. */
