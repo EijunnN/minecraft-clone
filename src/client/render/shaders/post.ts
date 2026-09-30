@@ -2,6 +2,7 @@
 // bloom, tonemapping ACES y FXAA.
 import { COMMON } from './common';
 import { ATMOSPHERE } from './atmosphere';
+import { PLANETS } from './planets';
 
 const FOG = /* glsl */ `
 float fogDensityAt(float y) {
@@ -90,54 +91,6 @@ vec3 endSky(vec3 rd) {
   }
   return c;
 }
-/**
- * Programa lunar: el cielo de la Luna. Sin aire no hay color: negro con estrellas que no titilan, el Sol como un disco duro
- * y la Tierra, azul con nubes y casquetes, con su fase según dónde esté el Sol (nueva cuando el Sol está detrás de ella).
- */
-vec3 moonSky(vec3 rd) {
-  vec3 c = vec3(0.0);
-  vec3 q = rd * 230.0;
-  vec3 cell = floor(q);
-  float h = hash13(cell);
-  if (h > 0.962) {
-    vec3 off = vec3(hash13(cell + 1.7), hash13(cell + 5.3), hash13(cell + 9.1)) - 0.5;
-    float d = length(fract(q) - 0.5 - off * 0.4);
-    float b = 0.3 + pow((h - 0.962) / 0.038, 3.0) * 2.6;
-    vec3 tint = mix(vec3(0.72, 0.84, 1.0), vec3(1.0, 0.86, 0.66), hash13(cell + 3.3));
-    c += tint * smoothstep(0.30, 0.0, d) * b * 0.55;
-  }
-  // La Vía Láctea: una banda difusa y granulosa.
-  float band = exp(-pow(dot(rd, normalize(vec3(0.35, 0.8, 0.5))) * 4.2, 2.0));
-  c += vec3(0.05, 0.055, 0.07) * 0.3 * band * (0.25 + 0.75 * fbm3(rd * 5.0 + 2.0));
-  // Sol.
-  vec3 sd = normalize(uSunDir.xyz);
-  float cs = dot(rd, sd);
-  c += vec3(1.0, 0.97, 0.9) * smoothstep(cos(0.0125), cos(0.0105), cs) * 120.0;
-  // Tierra: un disco de 3,4° de radio (más grande que el real, para que se vea) fijo en el cielo.
-  vec3 ed = normalize(vec3(0.34, 0.62, -0.71));
-  const float ER = 0.06;
-  float ang = acos(clamp(dot(rd, ed), -1.0, 1.0));
-  if (ang < ER * 1.03) {
-    vec3 t = normalize(cross(vec3(0.0, 1.0, 0.0), ed));
-    vec3 bb = cross(ed, t);
-    vec2 p = vec2(dot(rd - ed, t), dot(rd - ed, bb)) / ER;
-    float rr = dot(p, p);
-    if (rr < 1.0) {
-      vec3 nw = t * p.x + bb * p.y + ed * sqrt(1.0 - rr);
-      float lit = smoothstep(-0.1, 0.25, dot(nw, sd));
-      float a = uWind.w * 0.012;
-      vec3 pp = vec3(nw.x * cos(a) + nw.z * sin(a), nw.y, -nw.x * sin(a) + nw.z * cos(a));
-      float land = smoothstep(0.55, 0.62, fbm3(pp * 2.3 + 3.0));
-      vec3 alb = mix(vec3(0.03, 0.11, 0.32), vec3(0.12, 0.24, 0.08), land);
-      alb = mix(alb, vec3(0.9), smoothstep(0.78, 0.92, abs(pp.y)));
-      alb = mix(alb, vec3(0.96), smoothstep(0.52, 0.74, fbm3(pp * 3.6 + 9.0 + uWind.w * 0.002)) * 0.85);
-      float rim = pow(1.0 - sqrt(1.0 - rr), 2.5);
-      vec3 earth = alb * (0.05 + lit * 1.9) + vec3(0.25, 0.5, 1.0) * rim * (0.1 + lit * 1.4);
-      c = mix(earth, c, smoothstep(0.96, 1.0, rr));
-    }
-  }
-  return c;
-}
 /** Camino que recorre el rayo dentro de la capa de aire caliente (2,5 bloques sobre la lava). */
 float heatPath(vec3 rd, float dist) {
   if (uDim.y <= 0.0) return 0.0;
@@ -205,6 +158,7 @@ export const COMPOSITE_FS = /* glsl */ `
 ${COMMON}
 ${ATMOSPHERE}
 ${FOG}
+${PLANETS}
 uniform sampler2D uScene;
 uniform sampler2D uDepth;
 uniform sampler2D uClouds;
@@ -244,9 +198,17 @@ void main() {
   vec3 col = texture(uScene, suv).rgb;
   float eyeSky = uMisc.w;
   vec3 ambUp = texelFetch(uIrradiance, ivec2(2, 0), 0).rgb;
-  if (uDimFog.w > 1.5) {
-    // Programa lunar: sin aire, sin bruma ni niebla: sólo el cielo negro con la Tierra y las estrellas.
-    if (sky) col = moonSky(rd);
+  if (uOrbit.x > 0.5) {
+    // Programa lunar: en tránsito por el espacio, el cielo es el espacio (la Tierra y la Luna donde estén), en cualquier dimensión.
+    if (sky) col = spaceSky(rd, uDimFog.w > 1.5, 0.0);
+  } else if (uDimFog.w > 1.5) {
+    // Programa lunar: sin aire, sin bruma ni niebla: el cielo negro con la Tierra y las estrellas, y el suelo de la Luna hasta su
+    // horizonte curvo más allá de los bloques (cerca del suelo, sólo desde donde acaban los bloques cargados).
+    if (sky) {
+      float lowCam = step(uCamPos.y - MOON_BASE_Y, 1200.0);
+      float tStart = lowCam * uFog.w * 0.8 / max(length(rd.xz), 0.05);
+      col = spaceSky(rd, true, tStart);
+    }
   } else if (dark) {
     // Fase 8: dimensión sin cielo (el Nether): la niebla de su bioma, más espesa y encendida junto al mar de
     // lava (la luz de la lava la ilumina desde abajo) y más oscura hacia el techo; el fondo, un degradado.

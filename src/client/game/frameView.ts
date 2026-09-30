@@ -105,6 +105,8 @@ export function splitEntities(g: Game): { mobs: ClientEntity[]; drops: ClientEnt
   for (const e of g.ents.list.values()) {
     // Fase 7: barcas y vagonetas van con los modelos de cajas; de las criaturas invisibles sólo se dibuja
     // lo que llevan (lo decide MobRenderer).
+    // Programa lunar: el cohete propio no se dibuja en primera persona (la cabina es el marco de la ventana; si no, tapa la vista).
+    if (e.type === ENT_ROCKET && e.id === g.rocket.entityId && g.camera.thirdPerson === 0) continue;
     if (MOBS[e.type] || isVehicleType(e.type) || e.type === ENT_ROCKET || e.type === ENT_END_CRYSTAL || e.type === ENT_SHULKER_BULLET || e.type === ENT_WITHER_SKULL) mobs.push(e); // Fase 8.6: y los cristales del End y las balas de shulker
     else drops.push(e);
   }
@@ -159,6 +161,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
   const dead = g.survival.dead;
   const out: FrameState = {
     camX, camY, camZ, yaw, pitch, roll: g.hurtRoll,
+    space: g.rocket.spaceFrame(camX, camY, camZ, performance.now() / 1000), // Programa lunar: los planetas
     time: performance.now() / 1000,
     dt: f.dt,
     dayTime: f.sky.dayTime,
@@ -209,7 +212,7 @@ export function frameState(g: Game, f: FrameInput): FrameState {
     ...endFight.frame(g), // Fase 8.6: rayos del dragón, haces de los cristales y de las puertas del End
     fishLines: fishingLines(g.bobbers, g.ents.list, g.net?.id ?? null, localRod, f.views),
     leashes: leashLines(g.ents.list, g.net?.id ?? null, localRod, f.views), // Fase 6.5 (remate)
-    showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass',
+    showHand: firstPerson && !g.hudHidden && use?.kind !== 'spyglass' && !g.rocket.active, // (en la cabina, las manos en los mandos)
     ...effectsView(g, f.dt), // Fase 7 (efectos): náuseas, ceguera y oscuridad
     dim: world.dim, // Fase 8: cielo, niebla y luz de la dimensión
     fog: g.netherAtmos.fog, // Fase 8.2: la niebla del bioma del Nether

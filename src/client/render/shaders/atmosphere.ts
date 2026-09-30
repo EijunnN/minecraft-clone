@@ -1,6 +1,7 @@
 // Cielo físico (modelo de Hillaire 2020): LUT de transmitancia, de dispersión múltiple y
 // de vista del cielo; más el dibujado del cielo (sol, luna y estrellas) e irradiancia ambiental.
 import { COMMON } from './common';
+import { PLANET_COMMON, EARTH_SURFACE, EARTH_AIR } from './planets';
 
 export const ATMOSPHERE = /* glsl */ `
 const float Rg = 6360.0;
@@ -335,6 +336,9 @@ uniform sampler2D uSkyView;
 uniform sampler2D uTransmittance;
 in vec2 vUV;
 out vec4 outColor;
+${PLANET_COMMON}
+${EARTH_SURFACE}
+${EARTH_AIR}
 
 vec3 starField(vec3 rd) {
   // Rotación lenta de la bóveda celeste con la hora del día.
@@ -361,6 +365,16 @@ void main() {
   float r = cameraRadius();
   vec3 camT = texture(uTransmittance, transmittanceUV(r, max(rd.y, 0.0))).rgb;
   float above = smoothstep(-0.02, 0.01, rd.y);
+  // Programa lunar: desde lo alto (el cohete) el suelo es el planeta curvo, con sus mares, continentes y nubes, y el horizonte baja.
+  float hKm = r - Rg;
+  if (hKm > 0.35 && uDim.x > 0.5 && uDimFog.w < 0.5) {
+    float k = smoothstep(0.35, 2.2, hKm);
+    vec3 air = earthFromAir(rd, uSkyView, uTransmittance, uSite.w * 0.001, smoothstep(1.2, 6.0, hKm));
+    col = mix(col, air, k);
+    float tG = earthGroundHit(rd);
+    above = mix(above, tG > 0.0 ? 0.0 : 1.0, k);
+    if (tG <= 0.0) camT = mix(camT, texture(uTransmittance, transmittanceUV(r, clamp(rd.y, -1.0, 1.0))).rgb, k);
+  }
   // Sol con oscurecimiento de limbo.
   float cosSun = dot(rd, uSunDir.xyz);
   const float SUN_R = 0.0105;
@@ -396,7 +410,8 @@ void main() {
   // Estrellas: de noche y, a partir de ~20 km de altura (el cohete), también de día: casi no queda aire.
   float space = smoothstep(18.0, 60.0, r - Rg);
   float starK = max(night, space);
-  if (starK > 0.0 && rd.y > -0.05) col += starField(rd) * starK * camT * 0.05;
-  outColor = vec4(col, 1.0);
+  if (starK > 0.0 && above > 0.5) col += starField(rd) * starK * camT * 0.05;
+  // Sin aire alrededor el Sol ilumina con la escala del espacio (la misma que en el tránsito y en la Luna).
+  outColor = vec4(col * uOrbit.y, 1.0);
 }
 `;

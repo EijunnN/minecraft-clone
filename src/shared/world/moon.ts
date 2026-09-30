@@ -64,9 +64,12 @@ export class MoonGenerator extends TerrainGenerator {
     return { x, z, r, depth: Math.min(r * 0.32, 9 + r * 0.12) };
   }
 
-  /** Cuánto suben o bajan los cráteres el suelo en (x, z) y si el punto cae dentro de uno grande (para el hielo). */
-  private craterShape(x: number, z: number): { dy: number; big: boolean } {
-    let dy = 0, big = false;
+  /**
+   * Cuánto suben o bajan los cráteres el suelo en (x, z), si el punto cae dentro de uno grande (para el hielo) y si está en el borde
+   * de uno grande o mediano (donde caen las rocas que saltaron con el impacto).
+   */
+  private craterShape(x: number, z: number): { dy: number; big: boolean; rim: boolean } {
+    let dy = 0, big = false, rim = false;
     for (let s = 0; s < SCALES.length; s++) {
       const cell = SCALES[s].cell;
       const ci = Math.floor(x / cell), cj = Math.floor(z / cell);
@@ -77,9 +80,12 @@ export class MoonGenerator extends TerrainGenerator {
           const d = Math.hypot(x - c.x, z - c.z);
           if (d > c.r * 1.45) continue;
           const t = d / c.r;
+          if (s < 2 && t > 0.9 && t < 1.5) rim = true;
           if (t < 1) {
-            // Cuenco: fondo casi plano y paredes que suben hasta el borde.
+            // Cuenco: fondo casi plano y paredes que suben hasta el borde, sin escalón: la pared interior acaba a la altura del
+            // borde elevado de fuera (con una pendiente de ~30°, la del talud del polvo; antes era un muro de columnas).
             dy -= c.depth * (1 - t * t) ** 1.6 * (1 - 0.18 * t);
+            dy += c.depth * 0.42 * t ** 4;
             if (s === 0 && t < 0.72) big = true;
           } else {
             // Borde elevado que baja hacia fuera.
@@ -89,7 +95,7 @@ export class MoonGenerator extends TerrainGenerator {
         }
       }
     }
-    return { dy, big };
+    return { dy, big, rim };
   }
 
   /** ¿Es mar (regolito oscuro)? Manchas grandes: ruido de escala muy larga. */
@@ -252,12 +258,20 @@ export class MoonGenerator extends TerrainGenerator {
         const x = x0 + lx, z = z0 + lz;
         const top = this.heightAt(x, z);
         const mare = this.isMare(x, z);
-        const { big } = this.craterShape(x, z);
+        const { big, rim } = this.craterShape(x, z);
         const ice = big && Math.abs(z) > MOON_ICE_LATITUDE;
         // Un recurso por columna, por orden: hierro, cobre, carbón, piedra.
         const vein = ice ? 0 : this.veinAt(x, z) ? MOON_IRON_VEIN : this.copperAt(x, z) ? MOON_COPPER_VEIN : this.coalAt(x, z) ? MOON_COAL_VEIN : this.stoneAt(x, z) ? MOON_STONE_VEIN : 0;
         const well = !ice && !vein && this.oilAt(x, z);
-        heights[lz * CHUNK_SIZE + lx] = top;
+        // Rocas sueltas en los bordes de los cráteres: bloques de roca que saltaron con el impacto (nunca junto al aterrizaje).
+        let boulder = 0;
+        if (rim && !ice && !vein && !well) {
+          const h = (hash2(x, z, this.seed ^ 0xb0a1de) >>> 0) / 0x100000000;
+          const sp = this.spawnPoint();
+          if (h < 0.03 && Math.hypot(x - sp.x, z - sp.z) > 48) boulder = h < 0.008 ? 2 : 1;
+        }
+        heights[lz * CHUNK_SIZE + lx] = top + boulder;
+        for (let b = 1; b <= boulder; b++) blocks[blockIndex(lx, top + b, lz)] = MOON_ROCK;
         const soil = mare ? MOON_REGOLITH_DARK : MOON_REGOLITH;
         for (let y = MIN_Y; y <= top; y++) {
           let b = MOON_ROCK;

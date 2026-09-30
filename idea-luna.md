@@ -23,13 +23,13 @@ Se empezó por **el viaje**, no por la Luna a pie: un cohete en el que te subes 
 - **El cohete Selene** (entidad propia, 4 plazas, modelo de 24 bloques): `/cohete` lo pone delante de ti. Clic derecho para subir,
   **Espacio** despega, **Mayús** baja (o aborta la cuenta atrás antes de la ignición).
 - **El vuelo** lo lleva el servidor (`src/shared/rocket.ts`, `sim/server/rockets.ts`): cuenta atrás de 10 s con ignición a T-3,
-  ascenso de 30 s hasta ~61 km (el cielo es físico: se ve el mundo desde arriba y se pone negro con estrellas), tránsito a oscuras y
-  **descenso frenando** hasta posarse en el otro mundo. Los pasajeros viajan juntos; de vuelta, el mismo cohete los deja en la
+  ascenso de 48 s hasta ~96 km (la Tierra se curva debajo y el cielo se pone negro), **tránsito** de 46 s por el espacio con la
+  Tierra y la Luna a escala real (`src/shared/voyage.ts`) y **descenso motorizado** de 15 km hasta posarse en el otro mundo. Los pasajeros viajan juntos; de vuelta, el mismo cohete los deja en la
   plataforma de la que salieron.
 - **La Luna** como dimensión: terreno propio (`world/moon.ts`: tierras altas, mares y cráteres de tres tamaños), bloques
   (regolito claro y oscuro, roca lunar, hielo sucio), un sexto de gravedad, **sin aire** (la barra baja como bajo el agua; la
   cabina del cohete sí tiene aire) y un cielo sin atmósfera (negro, estrellas que no titilan, el Sol duro y la Tierra a la vista).
-- Cabina con marco de ventana, cuenta atrás, telemetría (altitud, velocidad), fundido a negro del tránsito, llamas, humo, polvo,
+- Cabina con marco de ventana, cuenta atrás, telemetría (altitud, velocidad, tiempo de misión), notas de la misión, plasma de la reentrada, llamas, humo, polvo,
   temblor de cámara y rugido de motores.
 
 Lo que **aún no** está: el cohete se fabrica con la mesa y las piezas (ahora es un prefabricado), el combustible y el Δv

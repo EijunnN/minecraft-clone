@@ -19,9 +19,17 @@ comparte ids de bloques y capas de textura con la Tierra.
 - ✅ Terreno lunar: tierras altas, mares, cráteres de tres tamaños, hielo sucio en los cráteres polares.
 - ✅ Bloques: regolito claro y oscuro, roca lunar, hielo sucio. Pestaña propia en el creativo (Tierra / Luna).
 - ✅ Cielo sin atmósfera: negro, estrellas, Sol duro, Tierra a la vista, sin nubes ni bruma; exposición compensada.
-- ✅ Cohete Selene (prefabricado, 4 plazas, `/cohete`): subir, cuenta atrás, ascenso a ~61 km, tránsito, descenso frenando y posado.
+- ✅ Cohete Selene (prefabricado, 4 plazas, `/cohete`): subir, cuenta atrás, ascenso a ~96 km, tránsito, descenso frenando y posado.
 - ✅ Vuelta a la Tierra en el mismo cohete, a la plataforma de salida. Varios jugadores.
-- ✅ Cabina: marco, cuenta atrás, telemetría, fundido, llamas, humo, polvo, temblor y rugido de motores (el sonido sin oír en pruebas).
+- ✅ Cabina: marco, cuenta atrás, telemetría, llamas, humo, polvo, temblor y rugido de motores (el sonido sin oír en pruebas).
+- ✅ El viaje se ve entero, sin pantallas negras (2026-09-30, `shared/voyage.ts`, `render/shaders/planets.ts`): al subir, el suelo se
+  convierte en la Tierra curva (mares, continentes, nubes, el limbo azul) y el cielo se pone negro; en el tránsito (46 s, ya en la
+  dimensión de destino mientras se carga su terreno) la Tierra y la Luna a tamaño y distancia reales: inyección, crucero con la Tierra
+  alejándose, maniobra de giro, inserción en órbita lunar a 15 km (o reentrada con plasma, de vuelta) y descenso motorizado de 15 km
+  con el suelo corriendo debajo. Telemetría de misión real (velocidades, distancias, tiempo de misión de tres días con su aceleración).
+- ✅ Entorno lunar más real: horizonte curvo a su distancia real (~2,4 km) con el suelo pintado más allá de los bloques con el mismo
+  relieve del generador (mapa lejano) y cráteres grandes que se ven desde órbita; reflectancia del regolito (efecto oposición); la
+  Tierra en el cielo a su tamaño real (2°) y girando; cráteres con taludes en vez de muros; rocas sueltas en sus bordes.
 - ❌ Montaje por módulos (tanques, motores, cabina) con combustible y Δv reales (idea-luna §4).
 - ❌ Plataforma de lanzamiento, Receptor de la Señal y los tres vuelos (Centella, Baliza, Selene I).
 - ❌ La Señal en el cielo tras el Dragón y las Bitácoras en las ciudades del End.
@@ -87,7 +95,7 @@ Es la base de todo el árbol de la Luna.
 
 ## Fase 6 · Pulido y equilibrio ❌
 - ❌ Jugarlo por horas y ajustar constantes (energía, calor, tiempos, reservas de hielo).
-- ❌ Suavizar las paredes de los cráteres (salen como columnas finas).
+- ✅ Suavizar las paredes de los cráteres (salían como columnas finas): la pared interior acaba a la altura del borde exterior.
 - ❌ Rendimiento con fábricas grandes y varios jugadores.
 
 ---

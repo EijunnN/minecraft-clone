@@ -2,9 +2,10 @@
 //
 // Una entidad sin IA (ENT_ROCKET) que este sistema crea, mueve y retira. A diferencia de las barcas, la mueve SIEMPRE el
 // servidor por las curvas de shared/rocket.ts: el cliente sólo dibuja y se sienta donde le dicen. Fases:
-//   en tierra (con gente subiendo) → cuenta atrás → ascenso → tránsito a oscuras → [otra dimensión] → descenso → en tierra.
-// En el tránsito cada pasajero viaja a la dimensión de destino (Multiverse.travel con Arrival 'rocket') y allí se crea un
-// cohete nuevo, en lo alto y ya descendiendo, con ellos sentados dentro. Los cohetes en tierra se guardan; los que vuelan, no.
+//   en tierra (con gente subiendo) → cuenta atrás → ascenso → [otra dimensión] → tránsito → descenso → en tierra.
+// Al acabar el ascenso cada pasajero viaja a la dimensión de destino (Multiverse.travel con Arrival 'rocket') y allí se crea un
+// cohete nuevo, quieto en lo alto, con ellos sentados dentro: mientras dura el tránsito su cliente pinta el viaje por el espacio y
+// carga el terreno de abajo; luego baja frenando. Los cohetes en tierra se guardan; los que vuelan, no.
 //
 // Ir y volver: la plataforma de la que sale cada vuelo viaja con él (`pad`), y el destino la recuerda para el regreso.
 import { STATE_DEAD, type ClientMsg, type ServerMsg } from '../../protocol';
@@ -35,8 +36,6 @@ interface Rocket {
   dest: number;
   /** Identifica un vuelo entre dimensiones (los pasajeros de un mismo vuelo llegan al mismo cohete). */
   flight: number;
-  /** En el descenso, esperando a que todos los pasajeros tengan montada esta dimensión. */
-  waiting: boolean;
   /** Plataforma de la que salió este vuelo (en la otra dimensión), para recordarla al llegar. */
   from: number;
   pad: Pad | null;
@@ -100,7 +99,7 @@ export class Rockets {
     e.yaw = e.bodyYaw = yaw;
     const r: Rocket = {
       e, phase: RK_PHASE.IDLE, t: 0, seats: new Array(ROCKET_SEATS).fill(null), restY: y, dest: rocketDestination(this.ctx.dim),
-      flight: 0, waiting: false, from: this.ctx.dim, pad: null,
+      flight: 0, from: this.ctx.dim, pad: null,
     };
     this.rockets.set(e.id, r);
     this.publish(r);
@@ -219,32 +218,25 @@ export class Rockets {
       case RK_PHASE.ASCENT:
         r.t += DT;
         e.y = r.restY + ascentHeight(r.t);
-        if (r.t >= ASCENT_S) {
-          r.phase = RK_PHASE.COAST;
+        if (r.t >= ASCENT_S) this.transfer(r);
+        return;
+      case RK_PHASE.COAST: {
+        // Tránsito (ya en el destino): el cohete espera en lo alto. Acaba cuando pasa su tiempo y todos los pasajeros tienen montada
+        // esta dimensión (su cliente carga el terreno de abajo); si alguno tarda demasiado, se baja igual.
+        r.t += DT;
+        const ready = r.seats.every((id) => {
+          if (id === null) return true;
+          const s = this.find(id);
+          return !s || !s.dimPending;
+        });
+        if ((r.t >= COAST_S && ready) || r.t > COAST_S + 25) {
+          r.phase = RK_PHASE.DESCENT;
           r.t = 0;
           this.publish(r);
         }
         return;
-      case RK_PHASE.COAST:
-        r.t += DT;
-        if (r.t >= COAST_S) this.transfer(r);
-        return;
+      }
       case RK_PHASE.DESCENT: {
-        if (r.waiting) {
-          // Espera a que todos los pasajeros tengan montada esta dimensión (su cliente carga el terreno de abajo).
-          const ready = r.seats.every((id) => {
-            if (id === null) return true;
-            const s = this.find(id);
-            return !s || !s.dimPending;
-          });
-          r.t += DT;
-          if (ready || r.t > 25) {
-            r.waiting = false;
-            r.t = 0;
-            this.publish(r);
-          }
-          return;
-        }
         r.t += DT;
         const decel = this.ctx.dim === DIM_MOON ? DESCENT_DECEL.moon : DESCENT_DECEL.earth;
         const h = descentStep(e.y - r.restY, DT, decel);
@@ -261,7 +253,7 @@ export class Rockets {
     }
   }
 
-  /** Fin del tránsito: los pasajeros viajan a la otra dimensión y el cohete de aquí desaparece (allí se crea otro). */
+  /** Fin del ascenso: los pasajeros viajan a la otra dimensión y el cohete de aquí desaparece (allí se crea otro, en tránsito). */
   private transfer(r: Rocket): void {
     const pad: Pad = r.pad ?? [r.e.x, r.restY, r.e.z];
     const landAt = this.pads.get(r.dest) ?? null; // si ya vinimos de allí, la plataforma de esa dimensión
@@ -289,7 +281,7 @@ export class Rockets {
   }
 
   /**
-   * Un jugador llega en un cohete: se le busca (o se crea) el cohete de su vuelo, en lo alto y ya descendiendo, y se le
+   * Un jugador llega en un cohete: se le busca (o se crea) el cohete de su vuelo, quieto en lo alto y en tránsito, y se le
    * sienta. Devuelve dónde aparece.
    */
   arrive(s: Session, a: Extract<Arrival, { kind: 'rocket' }>): [number, number, number] {
@@ -299,8 +291,7 @@ export class Rockets {
       const landY = a.landAt ? a.landAt[1] : this.groundFeetY(x, z);
       r = this.spawn(x, landY + DESCENT_START, z, 0);
       r.restY = landY;
-      r.phase = RK_PHASE.DESCENT;
-      r.waiting = true;
+      r.phase = RK_PHASE.COAST;
       r.flight = a.flight;
       r.from = a.from;
       r.pad = a.pad;

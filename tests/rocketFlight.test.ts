@@ -6,7 +6,7 @@ import { MemoryStore } from '../src/shared/sim/store';
 import { Multiverse } from '../src/shared/sim/Multiverse';
 import { PROTOCOL_VERSION } from '../src/shared/protocol';
 import { DIM_OVERWORLD, DIM_MOON, dimensionByKey, dimensionDef } from '../src/shared/dimensions';
-import { RK_PHASE, ASCENT_TOP, ROCKET_CABIN_Y, DESCENT_START } from '../src/shared/rocket';
+import { RK_PHASE, ASCENT_TOP, ASCENT_S, COAST_S, ROCKET_CABIN_Y, DESCENT_START } from '../src/shared/rocket';
 import { createGenerator } from '../src/shared/world/generators';
 import { MoonGenerator } from '../src/shared/world/moon';
 import { MOON_REGOLITH, MOON_REGOLITH_DARK, MOON_ROCK } from '../src/shared/blocks';
@@ -110,7 +110,7 @@ test('cohete: de la Tierra a la Luna y de vuelta, con dos pasajeros', () => {
   room.fly(200 - 1);
   let ph = ana.conn.take('rocket').pop();
   assert.equal(ph?.ph, RK_PHASE.ASCENT, 'a los 10 s despega');
-  room.fly(200); // 10 s de ascenso
+  room.fly(500); // 25 s de ascenso
   assert.ok(rocket.y > baseY + 5_000, `sube: ${rocket.y - baseY}`);
   // Los pasajeros van en la cabina, no donde diga su cliente (que intenta quedarse en el suelo).
   ana.send({ t: 'pos', p: [0, baseY, 0], r: [0, 0], s: 0 });
@@ -118,8 +118,8 @@ test('cohete: de la Tierra a la Luna y de vuelta, con dos pasajeros', () => {
   const anaSession = [...(ow as unknown as { sessions: Map<unknown, { name: string; p: number[] }> }).sessions.values()].find((s) => s.name === 'ana')!;
   assert.ok(Math.abs(anaSession.p[1] - (rocket.y + ROCKET_CABIN_Y)) < 0.5, 'el pasajero va con el cohete');
 
-  // Hasta el final del ascenso y el tránsito a oscuras.
-  room.fly(400 + 80 + 2);
+  // Hasta el final del ascenso: pasan a la otra dimensión (el tránsito se ve ya allí).
+  room.fly(460 + 2);
   const wa = ana.conn.take('welcome');
   const wl = leo.conn.take('welcome');
   assert.equal(wa.length, 1, 'llega a la Luna');
@@ -130,22 +130,25 @@ test('cohete: de la Tierra a la Luna y de vuelta, con dos pasajeros', () => {
   assert.ok(wa[0].at[1] > 1000, `llegan en lo alto de la Luna: ${wa[0].at[1]}`);
   assert.equal(ow.entities.list.has(id), false, 'el cohete de la Tierra desaparece');
 
-  // En la Luna hay un cohete nuevo, esperando a que sus pasajeros monten el mundo; luego baja frenando y se posa.
+  // En la Luna hay un cohete nuevo, en tránsito: quieto en lo alto mientras dura el viaje y hasta que sus pasajeros montan el mundo;
+  // luego baja frenando y se posa.
   const moon = room.mv.server(DIM_MOON);
   const arrived = [...moon.entities.list.values()].filter((e) => e.type === 170);
   assert.equal(arrived.length, 1, 'un único cohete para los dos');
   const mr = arrived[0];
   const y0 = mr.y;
-  room.tick(40);
+  assert.equal(ana.conn.take('rocket').pop()?.ph, RK_PHASE.COAST, 'llega en tránsito');
+  room.fly(20 * (COAST_S + 2));
   assert.equal(mr.y, y0, 'espera a que carguen (dimok)');
   ana.send({ t: 'dimok', d: DIM_MOON });
   leo.send({ t: 'dimok', d: DIM_MOON });
   room.tick(2);
+  assert.equal(ana.conn.take('rocket').pop()?.ph, RK_PHASE.DESCENT, 'cargados y pasado el tránsito, baja');
   room.fly(20 * 8);
   assert.ok(mr.y < y0 - 100, 'baja');
   // Se posa en el suelo de la Luna.
   let guard = 0;
-  while (guard++ < 20 * 90) {
+  while (guard++ < 20 * 120) {
     room.fly(1);
     const st = ana.conn.take('rocket').pop();
     if (st?.ph === RK_PHASE.IDLE) break;
@@ -157,7 +160,7 @@ test('cohete: de la Tierra a la Luna y de vuelta, con dos pasajeros', () => {
 
   // Vuelta: mismo cohete, mismos pasajeros, sin salir de sus plazas; despega de la Luna y llega a la plataforma de la Tierra.
   ana.send({ t: 'rlaunch' });
-  room.fly(200 + 600 + 80 + 20);
+  room.fly(200 + 20 * ASCENT_S + 20);
   const back = ana.conn.take('welcome');
   assert.equal(back.at(-1)?.dim, DIM_OVERWORLD, 'vuelve a la Tierra');
   assert.ok(ASCENT_TOP > 0);

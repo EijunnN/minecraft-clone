@@ -13,7 +13,7 @@ import { remoteViews, selfView, animateHand, splitEntities, frameState, updateNa
 import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
 import { Renderer } from '../render/Renderer';
 import { World } from '../world/World';
-import { dimensionDef, DIM_END } from '../../shared/dimensions'; // Fase 8 (dimensiones)
+import { dimensionDef, DIM_END, DIM_MOON } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 import { PortalFx } from './portalFx';
 import { Player } from './Player';
 import { Input } from './Input';
@@ -418,7 +418,7 @@ export class Game {
     const cores = navigator.hardwareConcurrency || 4;
     this.world = new World(w.seed, this.renderer.terrain, Math.max(2, Math.min(6, cores - 1)), w.dim);
     this.player.gravityScale = dimensionDef(w.dim).gravity;
-    this.rocket.reset(); // Programa lunar: los cohetes del mundo anterior ya no están
+    this.rocket.reset(); // Programa lunar: los cohetes del mundo anterior ya no están (el viaje en curso, si lo hay, sigue)
     this.belts.reset();
     this.arms.reset();
     this.research.reset();
@@ -453,18 +453,25 @@ export class Game {
     p.vx = p.vy = p.vz = 0;
     p.kx = p.kz = 0;
     p.fallDistance = 0;
-    this.changingDim = true;
     this.portalFx.reset();
     this.renderer.resetTemporal();
+    // Programa lunar: en cohete no hay pantalla de carga: el terreno de destino se carga debajo mientras se ve el espacio.
+    if (this.rocket.travelling) {
+      this.loadingBehind = true;
+      return;
+    }
+    this.changingDim = true;
     this.ui.showLoading(`Entrando en ${dimensionDef(w.dim).name}…`, 0.1);
     this.audio.playUi('portal');
   }
 
-  /** Carga el mundo nuevo; cuando está listo alrededor del jugador, se sigue jugando. */
-  private loadNewDimension(dt: number): void {
+  /** Programa lunar: cargando la dimensión de destino por detrás (llegando en cohete), sin parar el juego. */
+  private loadingBehind = false;
+
+  /** ¿Está listo el terreno alrededor del jugador (los 5 × 5 chunks de su alrededor)? Devuelve [listos, total]. */
+  private readyAround(): [number, number] {
     const world = this.world!;
     const p = this.player;
-    world.update(p.x, p.z, p.yaw, dt);
     const pcx = Math.floor(p.x / CHUNK_SIZE), pcz = Math.floor(p.z / CHUNK_SIZE);
     let ready = 0, total = 0;
     for (let dz = -2; dz <= 2; dz++) {
@@ -473,6 +480,26 @@ export class Game {
         if (world.isReady(pcx + dx, pcz + dz)) ready++;
       }
     }
+    return [ready, total];
+  }
+
+  /** Programa lunar: cuando el destino está cargado se avisa al servidor (el cohete no baja hasta entonces). */
+  private checkLoadingBehind(): void {
+    const [ready, total] = this.readyAround();
+    if (ready < total) return;
+    this.loadingBehind = false;
+    this.net?.send({ t: 'dimok', d: this.world!.dim });
+    this.sendPos(true);
+    this.sendState(true);
+    this.refreshHotbar(true);
+  }
+
+  /** Carga el mundo nuevo; cuando está listo alrededor del jugador, se sigue jugando. */
+  private loadNewDimension(dt: number): void {
+    const world = this.world!;
+    const p = this.player;
+    world.update(p.x, p.z, p.yaw, dt);
+    const [ready, total] = this.readyAround();
     this.ui.showLoading(`Entrando en ${dimensionDef(world.dim).name}…`, 0.15 + 0.85 * (ready / total));
     if (ready < total) return;
     this.changingDim = false;
@@ -909,6 +936,9 @@ export class Game {
       this.loadNewDimension(dt);
       return;
     }
+    if (this.loadingBehind) this.checkLoadingBehind();
+    // Programa lunar: en la Luna, las alturas del generador alrededor (el suelo que se pinta hasta el horizonte).
+    if (world.dim === DIM_MOON) this.renderer.moonMap.update(world.generator, this.player.x, this.player.z);
 
     this.handleUiKeys();
 
