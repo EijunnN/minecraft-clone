@@ -50,9 +50,9 @@ const GEAR = FACTORIO_NEW['iron-gear-wheel'], STICK = FACTORIO_NEW['iron-stick']
 const bucketKey = () => recipesMaking(GEAR)[0].key;
 
 test('ensambladoras: las cifras de Factorio y las recetas de fabricación', () => {
-  assert.deepEqual(ASSEMBLERS.map((a) => a.speed), [0.5, 0.75, 1.25]);
-  assert.deepEqual(ASSEMBLERS.map((a) => a.kw), [75, 150, 375]);
-  assert.deepEqual(ASSEMBLERS.map((a) => a.drainKw), [2.5, 5, 12.5]);
+  assert.deepEqual(ASSEMBLERS.map((a) => a.speed), [0.5, 0.75, 1.25, 1, 1]);
+  assert.deepEqual(ASSEMBLERS.map((a) => a.kw), [75, 150, 375, 210, 420]);
+  assert.deepEqual(ASSEMBLERS.slice(0, 3).map((a) => a.drainKw), [2.5, 5, 12.5]);
   assert.deepEqual(FURNACES.map((f) => f.speed), [1, 2]);
   assert.ok(assemblerRecipes().length >= 25, 'las recetas de Factorio disponibles');
   assert.equal(recipesMaking(GEAR).length, 1);

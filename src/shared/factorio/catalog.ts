@@ -3,6 +3,7 @@
 // de energía (el bloque), o uno de los objetos nuevos de itemDefs.ts. Una receta sólo está «disponible» si TODOS sus objetos existen y su
 // categoría sabe hacerse (fabricación, fabricación avanzada, fundición; los fluidos y la química llegan con las tuberías).
 import recipesJson from './recipes.json';
+import { fluidByName } from '../logistics/fluidTypes';
 import { FACTORIO_NEW, COAL, IRON_INGOT, COPPER_INGOT, RAW_IRON, RAW_COPPER, type ItemStack } from '../items';
 import {
   COBBLESTONE, BELTS, UNDERGROUNDS, SPLITTERS, INSERTERS, POLE_SMALL, POLE_MEDIUM, POLE_BIG, SUBSTATION, SOLAR_PANEL, ACCUMULATOR, ASSEMBLER_BLOCKS,
@@ -25,7 +26,7 @@ const EXISTING: Readonly<Record<string, readonly number[]>> = {
   'bulk-inserter': [INSERTERS[4]],
   'small-electric-pole': [POLE_SMALL], 'medium-electric-pole': [POLE_MEDIUM], 'big-electric-pole': [POLE_BIG], substation: [SUBSTATION],
   'solar-panel': [SOLAR_PANEL], accumulator: [ACCUMULATOR],
-  'assembling-machine-1': [ASSEMBLER_BLOCKS[0]], 'assembling-machine-2': [ASSEMBLER_BLOCKS[1]], 'assembling-machine-3': [ASSEMBLER_BLOCKS[2]],
+  'assembling-machine-1': [ASSEMBLER_BLOCKS[0]], 'assembling-machine-2': [ASSEMBLER_BLOCKS[1]], 'assembling-machine-3': [ASSEMBLER_BLOCKS[2]], 'chemical-plant': [ASSEMBLER_BLOCKS[3]], 'oil-refinery': [ASSEMBLER_BLOCKS[4]],
   'stone-furnace': [FURNACE_BLOCKS[0]], 'steel-furnace': [FURNACE_BLOCKS[1]], 'electric-furnace': [ELECTRIC_SMELTER],
   'electric-mining-drill': [EXTRACTOR],
   lab: [LAB_BLOCK],
@@ -52,6 +53,13 @@ export interface FNeed {
   n: number;
 }
 
+/** Un fluido de una receta: cuál, cuánto y en qué caja de fluido de la máquina (0, 1… entre las de entrada o entre las de salida). */
+export interface FFluid {
+  fluid: number;
+  amount: number;
+  box: number;
+}
+
 export interface FRecipe {
   /** Clave estable de 32 bits (de su nombre). */
   key: number;
@@ -59,8 +67,12 @@ export interface FRecipe {
   category: string;
   /** Segundos de fabricación a velocidad 1 (`energy_required`). */
   time: number;
+  /** Ingredientes que son objetos. */
   needs: readonly FNeed[];
-  /** El resultado (los de fabricación y fundición sólo tienen uno). */
+  /** Ingredientes y resultados que son fluidos. */
+  fluidsIn: readonly FFluid[];
+  fluidsOut: readonly FFluid[];
+  /** El resultado que es un objeto ({ id: 0, count: 0 } si la receta sólo da fluidos). */
   out: ItemStack;
   /** ¿Está desbloqueada desde el principio? (`enabled`; el resto, con la investigación que las libera). */
   enabled: boolean;
@@ -71,12 +83,14 @@ interface RawRecipe {
   category: string;
   time: number;
   enabled: boolean;
-  ingredients: [string, number, string][];
-  results: [string, number, string, number][];
+  ingredients: [string, number, string, number][];
+  results: [string, number, string, number, number][];
 }
 
-/** Las categorías que ya saben hacerse: a mano/ensambladora (`crafting`, `advanced-crafting`) y en horno (`smelting`). */
-export const SUPPORTED_CATEGORIES: ReadonlySet<string> = new Set(['crafting', 'advanced-crafting', 'smelting']);
+/** Las categorías que ya saben hacerse: a mano/ensambladora, fundición, ensambladora con fluidos, planta química y refinería. */
+export const SUPPORTED_CATEGORIES: ReadonlySet<string> = new Set([
+  'crafting', 'advanced-crafting', 'smelting', 'crafting-with-fluid', 'chemistry', 'oil-processing',
+]);
 
 function hash32(s: string): number {
   let h = 0x811c9dc5;
@@ -96,20 +110,41 @@ export function factorioRecipes(): readonly FRecipe[] {
   if (cache) return cache;
   cache = [];
   for (const r of recipesJson as RawRecipe[]) {
-    if (!SUPPORTED_CATEGORIES.has(r.category) || r.results.length !== 1 || r.results[0][2] !== 'item' || r.results[0][3] !== 1) continue;
+    if (!SUPPORTED_CATEGORIES.has(r.category) || r.results.length === 0) continue;
     const needs: FNeed[] = [];
+    const fluidsIn: FFluid[] = [];
+    const fluidsOut: FFluid[] = [];
+    const items: ItemStack[] = [];
     let ok = true;
-    for (const [name, amount, type] of r.ingredients) {
-      const alts = type === 'item' ? itemAlts(name) : null;
-      if (!alts) {
-        ok = false;
-        break;
+    let seq = 0;
+    for (const [name, amount, type, fb] of r.ingredients) {
+      if (type === 'fluid') {
+        const f = fluidByName(name);
+        if (!f) ok = false;
+        else fluidsIn.push({ fluid: f.id, amount, box: fb > 0 ? fb - 1 : seq++ });
+        continue;
       }
-      needs.push({ alts, n: amount });
+      const alts = itemAlts(name);
+      if (!alts) ok = false;
+      else needs.push({ alts, n: amount });
     }
-    const res = itemAlts(r.results[0][0]);
-    if (!ok || !res) continue;
-    const rec: FRecipe = { key: hash32('factorio|' + r.name), name: r.name, category: r.category, time: r.time, needs, out: { id: res[0], count: r.results[0][1] }, enabled: r.enabled };
+    seq = 0;
+    for (const [name, amount, type, prob, fb] of r.results) {
+      if (type === 'fluid') {
+        const f = fluidByName(name);
+        if (!f) ok = false;
+        else fluidsOut.push({ fluid: f.id, amount, box: fb > 0 ? fb - 1 : seq++ });
+        continue;
+      }
+      const res = itemAlts(name);
+      if (!res || prob !== 1 || !Number.isInteger(amount)) ok = false;
+      else items.push({ id: res[0], count: amount });
+    }
+    if (!ok || items.length > 1) continue;
+    const rec: FRecipe = {
+      key: hash32('factorio|' + r.name), name: r.name, category: r.category, time: r.time, needs, fluidsIn, fluidsOut,
+      out: items[0] ?? { id: 0, count: 0 }, enabled: r.enabled,
+    };
     cache.push(rec);
     byKey.set(rec.key, rec);
     byName.set(rec.name, rec);

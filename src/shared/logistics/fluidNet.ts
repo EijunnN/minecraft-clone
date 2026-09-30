@@ -11,6 +11,10 @@ export interface FBox {
   /** Id del fluido (0 = vacía). */
   fluid: number;
   amount: number;
+  /** Si se pone, la caja sólo admite ese fluido (las de una máquina, según su receta). */
+  filter?: number;
+  /** 'in': sólo recibe de las tuberías (la entrada de una máquina); 'out': sólo da (su salida). Sin poner, va en los dos sentidos. */
+  mode?: 'in' | 'out';
 }
 
 export class FluidGraph {
@@ -46,7 +50,7 @@ export class FluidGraph {
   /** Mete hasta `n` del fluido en la caja; devuelve cuánto entró. */
   put(key: number, fluid: number, n: number): number {
     const b = this.boxes.get(key);
-    if (!b || n <= 0 || (b.amount > 1e-9 && b.fluid !== fluid)) return 0;
+    if (!b || n <= 0 || (b.amount > 1e-9 && b.fluid !== fluid) || (b.filter && b.filter !== fluid)) return 0;
     const m = Math.min(n, b.cap - b.amount);
     if (m <= 0) return 0;
     b.fluid = fluid;
@@ -82,6 +86,9 @@ export class FluidGraph {
       if (Math.abs(d) < 1e-9) continue;
       const flow = Math.abs(d) * FLOW_FACTOR * Math.min(a.cap, b.cap);
       const from = d > 0 ? ka : kb, to = d > 0 ? kb : ka;
+      const src = d > 0 ? a : b, dst = d > 0 ? b : a;
+      if (src.mode === 'in' || dst.mode === 'out') continue; // una entrada no da y una salida no recibe
+      if (dst.filter && src.fluid !== dst.filter) continue;
       moves.push([from, to, flow]);
       out.set(from, (out.get(from) ?? 0) + flow);
     }

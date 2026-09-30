@@ -214,3 +214,19 @@
   align-content: flex-start;
   gap: 6px;
 }
+
+#fluid-hint {
+  position: fixed;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  z-index: 12;
+  padding: 4px 10px;
+  color: #fff;
+  background: rgba(14, 17, 24, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font: 600 12px var(--font);
+  pointer-events: none;
+  display: none;
+}

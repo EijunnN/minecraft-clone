@@ -61,12 +61,19 @@ test('factorio: las recetas disponibles usan sólo objetos que existen; las de f
   const all = factorioRecipes();
   assert.ok(all.length >= 45);
   for (const rec of all) {
-    assert.ok(ITEMS[rec.out.id], rec.name);
+    if (rec.out.count > 0) assert.ok(ITEMS[rec.out.id], rec.name);
     for (const n of rec.needs) for (const a of n.alts) assert.ok(ITEMS[a], `${rec.name} necesita un objeto que no existe`);
-    assert.ok(['crafting', 'advanced-crafting', 'smelting'].includes(rec.category));
+    assert.ok(['crafting', 'advanced-crafting', 'smelting', 'crafting-with-fluid', 'chemistry', 'oil-processing'].includes(rec.category));
   }
-  assert.equal(factorioRecipeByName('sulfur'), undefined, 'la química aún no');
-  assert.equal(factorioRecipeByName('plastic-bar'), undefined);
+  const plastic = factorioRecipeByName('plastic-bar')!;
+  assert.equal(plastic.category, 'chemistry');
+  assert.deepEqual(plastic.fluidsIn.map((f) => f.amount), [20]);
+  assert.equal(plastic.out.count, 2);
+  assert.equal(plastic.time, 1);
+  const basic = factorioRecipeByName('basic-oil-processing')!;
+  assert.equal(basic.time, 5);
+  assert.deepEqual([basic.fluidsIn[0].amount, basic.fluidsIn[0].box, basic.fluidsOut[0].amount, basic.fluidsOut[0].box], [100, 1, 45, 2], 'el crudo por la 2.ª entrada y el gas por la 3.ª salida');
+  assert.equal(basic.out.count, 0, 'sólo da fluidos');
 });
 
 test('factorio: la investigación tiene los costes del original (automatización 10 paquetes rojos a 10 s)', () => {

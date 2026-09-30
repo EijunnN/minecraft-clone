@@ -62,6 +62,7 @@ import { RocketClient } from './rocketClient'; // Programa lunar
 import { BeltClient } from './beltClient'; // Programa lunar: cintas
 import { ArmClient } from './armClient';
 import { ResearchClient } from './researchClient'; // Programa lunar: investigación
+import { FluidClient } from './fluidClient'; // Programa lunar: fluidos
 import { ResearchScreen, CraftScreen } from '../ui/factorioScreens';
 import { WireClient } from './wireClient'; // Programa lunar: cables de los postes
 import { MachinePanel, type PanelSpec, type PanelPatch } from '../ui/MachinePanel'; // Programa lunar: configuración de máquinas
@@ -122,6 +123,7 @@ export class Game {
   readonly belts = new BeltClient(this); // Programa lunar: las cintas transportadoras
   readonly arms = new ArmClient(this); // Programa lunar: los brazos
   readonly research = new ResearchClient(); // Programa lunar: qué está investigado
+  readonly fluidsHud = new FluidClient(this); // Programa lunar: rótulo de fluidos
   researchScreen!: ResearchScreen;
   craftScreen!: CraftScreen;
   readonly wires = new WireClient(); // Programa lunar: los cables entre postes eléctricos
@@ -333,6 +335,7 @@ export class Game {
     this.belts.reset();
     this.arms.reset();
     this.research.reset();
+    this.fluidsHud.reset();
     this.wires.reset(); // Programa lunar: los cables del mundo anterior
     this.beacons.reset(); // Fase 8.5: los faros de este mundo
     resetGateways();
@@ -419,6 +422,7 @@ export class Game {
     this.belts.reset();
     this.arms.reset();
     this.research.reset();
+    this.fluidsHud.reset();
     this.wires.reset(); // Programa lunar: los cables del mundo anterior
     this.beacons.reset(); // Fase 8.5: los faros de este mundo
     resetGateways();
@@ -954,6 +958,7 @@ export class Game {
     this.rocket.afterEntities(dt); // Programa lunar
     this.belts.update(dt);
     this.arms.update(dt);
+    this.fluidsHud.update();
     this.craftScreen.update(dt); // la cola de fabricación a mano avanza aunque la ventana esté cerrada
     vehicleFrame(this, dt);
     this.interaction.autoPickup(nowS);

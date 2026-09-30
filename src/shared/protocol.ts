@@ -379,7 +379,7 @@ export type ServerMsg =
   | {
       t: 'mview'; x: number; y: number; z: number; kind: 0 | 1; tier: number; recipe: number; alts: number[]; needs: number[][];
       out: [number, number] | null; progress: number; working: 0 | 1; fuel: [number, number] | null; input: [number, number] | null; energy: number;
-      took: number; open: 0 | 1;
+      took: number; open: 0 | 1; fin?: number[][]; fout?: number[][];
     }
   /** Programa lunar: la configuración de un brazo (respuesta a `mcfg`): filtro, modo, tope de pila, combustible, y cuánto de lo ofrecido aceptó. */
   | {

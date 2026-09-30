@@ -18,11 +18,20 @@ export interface PanelSlots {
   ids: number[];
 }
 
+export interface PanelGridEntry {
+  /** Lo que se manda al elegirlo (la clave de la receta). */
+  value: number;
+  /** Objeto del icono (0 = ninguno: se dibuja un cuadro del color del fluido) y texto de ayuda. */
+  icon: number;
+  label: string;
+  color?: readonly [number, number, number];
+}
+
 export interface PanelGrid {
   key: string;
   label: string;
-  /** Objetos entre los que se elige y el elegido (0 = ninguno). */
-  ids: number[];
+  entries: PanelGridEntry[];
+  /** El elegido (0 = ninguno). */
   value: number;
 }
 
@@ -104,7 +113,7 @@ export class MachinePanel {
     }
     if (spec.grid) {
       rows.push(`<div class="row"><span class="lbl">${spec.grid.label}</span></div><div class="grid2">${
-        spec.grid.ids.map((id) => `<div class="slot2${id === spec.grid!.value ? ' on' : ''}" data-g="${id}"><div class="ico"></div><span class="cnt"></span><div class="dur"><i></i></div></div>`).join('')
+        spec.grid.entries.map((e) => `<div class="slot2${e.value === spec.grid!.value ? ' on' : ''}" data-g="${e.value}"><div class="ico"></div><span class="cnt"></span><div class="dur"><i></i></div></div>`).join('')
       }</div>`);
     }
     if (spec.hint) rows.push(`<p>${spec.hint}</p>`);
@@ -120,12 +129,20 @@ export class MachinePanel {
       });
     });
     this.root.querySelectorAll<HTMLElement>('[data-g]').forEach((e) => {
-      const id = Number(e.dataset.g);
-      paintSlot(e, { id, count: 1 }, this.icons);
-      e.title = ITEMS[id]?.name ?? '';
+      const value = Number(e.dataset.g);
+      const entry = spec.grid!.entries.find((x) => x.value === value)!;
+      if (entry.icon) paintSlot(e, { id: entry.icon, count: 1 }, this.icons);
+      else if (entry.color) {
+        const ico = e.querySelector('.ico') as HTMLElement;
+        const [r, g, b] = entry.color;
+        ico.style.background = `radial-gradient(circle at 35% 30%, rgb(${Math.min(255, r + 60)},${Math.min(255, g + 60)},${Math.min(255, b + 60)}), rgb(${r},${g},${b}))`;
+        ico.style.borderRadius = '50% 50% 45% 45%';
+        ico.style.inset = '9px';
+      }
+      e.title = entry.label;
       e.addEventListener('click', () => {
-        spec.grid!.value = id;
-        this.apply?.({ [spec.grid!.key]: [id] });
+        spec.grid!.value = value;
+        this.apply?.({ recipe: value });
         this.render();
       });
     });

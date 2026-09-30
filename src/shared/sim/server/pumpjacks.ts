@@ -15,6 +15,7 @@ import { DT, type ServerContext } from './context';
 import type { Redstone } from './redstone';
 import type { Power, PowerConsumer } from './power';
 import type { Fluids } from './fluids';
+import type { Research } from './research';
 
 const SYSTEMS = new WeakMap<RedstoneApi, Pumpjacks>();
 
@@ -32,6 +33,8 @@ interface Jack {
 }
 
 export class Pumpjacks implements PowerConsumer {
+  /** La investigación (la primera vez que se bombea crudo se abre «oil-processing»). */
+  research: Research | null = null;
   private list = new Map<number, Jack>();
   /** Reserva gastada de cada pozo (posKey del bloque del pozo). */
   private used = new Map<number, number>();
@@ -126,6 +129,7 @@ export class Pumpjacks implements PowerConsumer {
       const put = this.fluids.graph.put(j.box, CRUDE, OIL_PER_SECOND * yld * j.sat * DT);
       if (put <= 0) continue;
       j.working = true;
+      this.research?.noteMined('crude-oil');
       const wk = posKey(wx, wy, wz);
       this.used.set(wk, (this.used.get(wk) ?? 0) + OIL_DEPLETION_PER_SECOND * j.sat * DT);
       this.saveDirty = true;

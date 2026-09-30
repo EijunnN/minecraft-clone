@@ -68,6 +68,7 @@ export class MachineConfig {
     this.ctx.send(s, {
       t: 'mview', x: ctrl[0], y: ctrl[1], z: ctrl[2], kind: 0, tier: v.tier, recipe: v.recipe, alts, needs: v.needs, out: v.output,
       progress: Math.round(v.progress * 1000), working: v.working ? 1 : 0, fuel: null, input: null, energy: 0, took: 0, open: 'q' in c && !('r' in c) ? 1 : 0,
+      fin: v.fluidsIn, fout: v.fluidsOut,
     });
   }
 

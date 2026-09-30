@@ -176,9 +176,9 @@ const num = (v, d) => (typeof v === 'number' ? v : d);
 const recipes = [];
 for (const r of load('recipe.lua')) {
   if (!r || r.type !== 'recipe' || r.parameter) continue;
-  const ing = (r.ingredients ?? []).map((x) => (Array.isArray(x) ? [x[0], x[1], 'item'] : [x.name, x.amount, x.type ?? 'item']));
+  const ing = (r.ingredients ?? []).map((x) => (Array.isArray(x) ? [x[0], x[1], 'item', 0] : [x.name, x.amount, x.type ?? 'item', x.fluidbox_index ?? 0]));
   let res = r.results ?? (r.result ? [{ type: 'item', name: r.result, amount: r.result_count ?? 1 }] : []);
-  res = res.map((x) => [x.name, x.amount ?? ((num(x.amount_min, 0) + num(x.amount_max, 0)) / 2), x.type ?? 'item', x.probability ?? 1]);
+  res = res.map((x) => [x.name, x.amount ?? ((num(x.amount_min, 0) + num(x.amount_max, 0)) / 2), x.type ?? 'item', x.probability ?? 1, x.fluidbox_index ?? 0]);
   recipes.push({
     name: r.name, category: r.category ?? 'crafting', time: num(r.energy_required, 0.5), enabled: r.enabled !== false,
     ingredients: ing, results: res, ...(r.main_product ? { main: r.main_product } : {}),

@@ -157,6 +157,8 @@ test('pozo de petróleo: saca 10 × rendimiento por segundo con energía, lo lle
   l.h.tick(3);
   const y0 = l.sys().pumpjacks.yieldAt(l.bx, l.by - 1, l.bz);
   assert.ok(y0 >= 0.5 && y0 <= 3, `rendimiento ${y0}`);
+  assert.equal(l.sys().research.isDone('oil-processing'), false, 'antes de bombear (y sin oil-gathering) no está');
+  l.sys().research.grant('oil-gathering');
   l.h.tick(20 * 30);
   const t = l.sys().fluids.boxAt(l.bx + 4, l.by, l.bz)!;
   const crude = fluidByName('crude-oil')!.id;
@@ -164,6 +166,7 @@ test('pozo de petróleo: saca 10 × rendimiento por segundo con energía, lo lle
   const want = 10 * y0 * 30;
   assert.ok(t.amount > want * 0.85 && t.amount < want * 1.02 + 100, `sacó ${t.amount}, esperaba ~${want}`);
   assert.ok(l.sys().pumpjacks.yieldAt(l.bx, l.by - 1, l.bz) < y0, 'el pozo pierde rendimiento');
+  assert.equal(l.sys().research.isDone('oil-processing'), true, 'bombear crudo abre el procesado de petróleo');
 });
 
 test('pozo de petróleo: sin energía no saca, y sólo se pone sobre un pozo', async () => {

@@ -151,6 +151,7 @@ export class Research {
       }
     }
     this.changed();
+    this.checkTriggers(); // (las que esperaban a estos prerrequisitos ya tienen lo que pedían)
     return true;
   }
 
@@ -187,13 +188,26 @@ export class Research {
     this.checkTriggers();
   }
 
+  /** Se minó algo (petróleo crudo con un pozo…): cuenta para las tecnologías que se abren al minar una entidad. */
+  noteMined(entity: string): void {
+    const key = 'mined:' + entity;
+    if (this.produced.has(key)) return;
+    this.produced.set(key, 1);
+    this.dirty = true;
+    this.checkTriggers();
+  }
+
   private checkTriggers(): void {
     let any = false;
     for (let again = true; again; ) {
       again = false;
       for (const t of TECHS) {
-        if (!t.trigger || this.done.has(t.name) || t.trigger.type !== 'craft-item' || !t.prerequisites.every((p) => this.done.has(p))) continue;
-        if ((this.produced.get(t.trigger.item ?? '') ?? 0) < (t.trigger.count ?? 1)) continue;
+        if (!t.trigger || this.done.has(t.name) || !t.prerequisites.every((p) => this.done.has(p))) continue;
+        if (t.trigger.type === 'craft-item') {
+          if ((this.produced.get(t.trigger.item ?? '') ?? 0) < (t.trigger.count ?? 1)) continue;
+        } else if (t.trigger.type === 'mine-entity') {
+          if (!this.produced.has('mined:' + (t.trigger.entity ?? ''))) continue;
+        } else continue;
         this.done.add(t.name);
         for (const r of t.unlocks) this.recipes.add(r);
         this.ctx.broadcast({ t: 'chat', id: null, name: '', m: `Investigación terminada: ${t.name}.` });

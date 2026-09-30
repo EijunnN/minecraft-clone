@@ -25,6 +25,7 @@ export class ServerEvents {
     if (this.g.belts.onMessage(msg)) return; // Programa lunar: 'belts'
     if (this.g.arms.onMessage(msg)) return; // Programa lunar: 'arms'
     if (this.g.research.onMessage(msg)) return; // Programa lunar: 'research'
+    if (this.g.fluidsHud.onMessage(msg)) return; // Programa lunar: 'fluids'
     if (this.g.wires.onMessage(msg)) return; // Programa lunar: 'wires'
     if (msg.t === 'mview') return this.g.interaction.onMachineView(msg); // Programa lunar: ventana de ensambladoras y hornos
     if (msg.t === 'icfg') return this.g.interaction.onInserterConfig(msg); // Programa lunar: la ventana de un brazo

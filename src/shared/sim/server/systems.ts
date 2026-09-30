@@ -288,10 +288,12 @@ export class ServerSystems {
     this.research = new Research(ctx, store);
     this.labs = new Labs(ctx, rs, store, this.power, this.research);
     this.fluids = new Fluids(ctx, rs, store, this.power);
+    this.assemblers.fluids = this.fluids;
     this.pumpjacks = new Pumpjacks(ctx, rs, store, this.power, this.fluids);
     this.steam = new Steam(ctx, rs, store, this.power, this.fluids);
     this.machines.research = this.assemblers.research = this.furnaces.research = this.research;
     this.commands.research = this.research; // /investigar
+    this.pumpjacks.research = this.research;
     rs.hooks = {
       slots: (x, y, z) => this.containers.slotsAt(x, y, z),
       viewers: (x, y, z) => this.containers.viewers(x, y, z),

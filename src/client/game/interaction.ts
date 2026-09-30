@@ -66,7 +66,9 @@ import { isOrientable, dirYaw, lookDir, marchDir } from '../../shared/logisticsP
 import { isGhostBlock, EXTRACTOR, BELTS, beltInfo, beltState, poleInfo, poleSpec, multiInfo, multiFootprint, multiControllerPos, isMultiPart, isSplitter, inserterInfo, isAssemblerBlock, isFuelFurnace, isLabBlock, type PoleInfo } from '../../shared/blocks';
 import type { PanelSpec } from '../ui/MachinePanel';
 import { INSERTER_TYPES, INSERTER_FILTERS } from '../../shared/logistics/inserters';
-import { assemblerRecipe, assemblerRecipes } from '../../shared/logistics/assembly';
+import { assemblerRecipe, recipesOfType } from '../../shared/logistics/assembly';
+import { FLUIDS } from '../../shared/logistics/fluidTypes';
+import { recipeLabel } from '../../shared/factorio/labels';
 import { ASSEMBLERS, FURNACES } from '../../shared/logistics/assemblyTypes'; // Programa lunar: lo que enseña un fantasma al colocarlo
 import { POLE_MAX_WIRES } from '../../shared/logistics/energy';
 import { EXTRACTOR_RADIUS, EXTRACTOR_DEPTH } from '../../shared/logistics/veins';
@@ -547,11 +549,14 @@ export class Interaction {
       title: t.name,
       choices,
       grid: {
-        key: 'out', label: 'Receta (lo que fabrica)', value: r?.out.id ?? 0,
-        ids: [...new Set(assemblerRecipes().filter((x) => this.g.research.recipeUnlocked(x.name)).map((x) => x.out.id))],
+        key: 'recipe', label: 'Receta', value: msg.recipe,
+        entries: recipesOfType(t).filter((x) => this.g.research.recipeUnlocked(x.name)).map((x) => ({
+          value: x.key, icon: x.out.count > 0 ? x.out.id : 0, label: recipeLabel(x.name), color: x.fluidsOut[0] ? FLUIDS[x.fluidsOut[0].fluid].color : undefined,
+        })),
       },
       hint: r
-        ? `Ingredientes: ${needs}. Resultado: ${msg.out ? `${name(msg.out[0])} ×${msg.out[1]}` : 'nada aún'} (por tanda: ${r.out.count}). Progreso: ${pct}${msg.working ? ' (trabajando)' : ''}. ` +
+        ? `Ingredientes: ${[needs, ...(msg.fin ?? []).map((f) => `${FLUIDS[f[0]]?.es ?? '?'} ${Math.round(f[1])}/${f[2]}`)].filter(Boolean).join('; ')}. ` +
+          `Resultado: ${msg.out ? `${name(msg.out[0])} ×${msg.out[1]}` : r.out.count > 0 ? 'nada aún' : ''}${(msg.fout ?? []).map((f) => ` ${FLUIDS[f[0]]?.es ?? '?'} ${Math.round(f[1])}`).join(',')} (por tanda: ${r.out.count > 0 ? r.out.count : (r.fluidsOut.map((f) => `${f.amount} de ${FLUIDS[f.fluid].es}`).join(' y '))}). Progreso: ${pct}${msg.working ? ' (trabajando)' : ''}. ` +
           `Velocidad ${t.speed}, ${t.kw} kW.`
         : `Sin receta. Clic en la ranura con el objeto que quieres fabricar en la mano. Velocidad ${t.speed}, ${t.kw} kW.`,
     };
