@@ -12,6 +12,7 @@ import { useTotem } from './raidClient'; // Fase 6 (asaltos)
 import { isPricklyBush } from '../../shared/blocks'; // Fase 6.5 (océano y plantas)
 import { Freezing } from './freezing'; // Fase 6.5 (materiales)
 import { equipmentSurvival, playerInFire } from './equipmentLife'; // Fase 6.5 (equipo)
+import { oxygenStep, suitSealed } from '../../shared/spacesuit'; // Programa lunar: el traje y el oxígeno
 
 /** Destino de los efectos en creativo: nada hace daño ni cura. */
 const CREATIVE_TARGET: EffectTarget = { health: 20, absorption: 0, heal: () => {}, damage: () => 0, addExhaustion: () => {} };
@@ -20,6 +21,8 @@ export class LifeCycle {
   constructor(private g: Game) {}
 
   voidTimer = 0;
+  /** Programa lunar: tiempo desde el último aviso de que cambiaron las botellas de oxígeno. */
+  private bottleT = 0;
   suffocateTimer = 0;
   /** Fase 6.5 (materiales): frío de la nieve polvo. */
   readonly freezing = new Freezing();
@@ -225,8 +228,17 @@ export class LifeCycle {
       fx.tick(dt, surv);
       const exposed = g.world!.getLight(Math.floor(p.x), Math.floor(p.eyeY), Math.floor(p.z)) >> 4 >= 15;
       const feet = g.world!.getBlock(Math.floor(p.x), Math.floor(p.y + 0.05), Math.floor(p.z));
+      // Programa lunar: el oxígeno del traje (la cabina del cohete tiene aire y rellena el traje y las botellas).
+      const where = g.rocket.active ? 'cabin' : dimensionDef(g.world!.dim).breathable ? 'air' : 'vacuum';
+      const oxy = oxygenStep(surv.oxygen, dt, where, suitSealed(g.inv.armor), g.inv.slots);
+      surv.oxygen = oxy.tank;
+      this.bottleT += dt;
+      if (oxy.bottlesChanged && this.bottleT > 0.25) {
+        this.bottleT = 0;
+        g.inv.changed(); // (a lo sumo 4 veces por segundo: al rellenar cambian en cada frame)
+      }
       surv.update(dt, {
-        eyeInWater: p.eyeInWater, eyeInBubble: p.eyeInBubble, noAir: !dimensionDef(g.world!.dim).breathable && !g.rocket.active, // programa lunar: la cabina tiene aire
+        eyeInWater: p.eyeInWater, eyeInBubble: p.eyeInBubble, noAir: !oxy.breathing,
          inLava: p.inLava, inWater: p.inWater, inRain: rain > 0.2 && exposed, difficulty: g.difficulty,
         fireResistant: fx.fireResistant, waterBreathing: fx.waterBreathing,
         onCampfire: isCampfire(feet) && stateProps(feet)!.lit === 1,

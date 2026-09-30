@@ -1,5 +1,6 @@
 // Programa lunar: los nombres en español de Factorio (data/base/locale/es-ES) de tecnologías, recetas y objetos, para las ventanas.
 import names from './names-es.json';
+import { LUNAR_RECIPE_NAMES } from './catalog';
 
 type Names = Record<string, string>;
 const N = names as { item: Names; entity: Names; recipe: Names; technology: Names; fluid: Names };
@@ -19,5 +20,5 @@ export function techLabel(id: string): string {
 
 /** Nombre de una receta o de su objeto. */
 export function recipeLabel(id: string): string {
-  return N.recipe[id] ?? N.item[id] ?? N.entity[id] ?? N.fluid[id] ?? humanize(id);
+  return N.recipe[id] ?? LUNAR_RECIPE_NAMES[id] ?? N.item[id] ?? N.entity[id] ?? N.fluid[id] ?? humanize(id);
 }

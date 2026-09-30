@@ -13,6 +13,7 @@ import { remoteViews, selfView, animateHand, splitEntities, frameState, updateNa
 import { BOLT_LIFE, type Bolt } from '../render/LightningRenderer';
 import { Renderer } from '../render/Renderer';
 import { World } from '../world/World';
+import { SUIT_TANK } from '../../shared/spacesuit'; // Programa lunar
 import { dimensionDef, DIM_END, DIM_MOON } from '../../shared/dimensions'; // Fase 8 (dimensiones)
 import { PortalFx } from './portalFx';
 import { Player } from './Player';
@@ -526,6 +527,7 @@ export class Game {
       this.survival.food = Math.max(0, Math.min(20, save.food));
       this.survival.saturation = Math.max(0, Math.min(20, save.sat));
       this.survival.air = save.air ?? 15;
+      this.survival.oxygen = save.oxy ?? SUIT_TANK; // Programa lunar
       this.statusEffects.fromWire(save.fx, this.survival);
       this.survival.absorption = Math.max(0, Math.min(20, Number(save.abs) || 0));
       this.survival.dead = !!save.dead || this.survival.health <= 0;
@@ -817,7 +819,7 @@ export class Game {
     this.net.send({
       t: 'state',
       d: {
-        inv: this.inv.toWire(), hp: s.health, food: s.food, sat: Math.round(s.saturation * 10) / 10, air: Math.round(s.air),
+        inv: this.inv.toWire(), hp: s.health, food: s.food, sat: Math.round(s.saturation * 10) / 10, air: Math.round(s.air), oxy: Math.round(s.oxygen),
         pos: [p.x, p.y, p.z], rot: [p.yaw, p.pitch], fly: p.flying, sel: this.selected, dead: s.dead,
         armor: this.inv.armorToWire(), off: this.inv.offhandToWire(), xp: this.xp.total, fx: this.statusEffects.toWire(), abs: s.absorption,
         es: this.enchant.seed, // Fase 7 (encantamientos)

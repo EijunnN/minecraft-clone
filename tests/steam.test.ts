@@ -149,3 +149,39 @@ test('planta química: gas de petróleo + carbón → 2 barras de plástico por 
   assert.equal(made, (coal - (v.needs[0]?.[1] ?? 0)) * 2, '2 barras por cada carbón gastado');
   assert.equal(v.output?.[0], FACTORIO_NEW['plastic-bar']);
 });
+
+test('agua en la Luna: la planta química funde hielo sucio (1 → 20 de agua por segundo, «ice-melting» de Factorio 2.0) y el agua sale por tubería', async () => {
+  const { ASSEMBLER_BLOCKS, STORAGE_TANK, SOLAR_PANEL, DIRTY_ICE } = await import('../src/shared/blocks');
+  const { factorioRecipeByName } = await import('../src/shared/factorio/catalog');
+  const { recipeLabel } = await import('../src/shared/factorio/labels');
+  const b = build();
+  const s = b.sys();
+  const melt = factorioRecipeByName('ice-melting')!;
+  assert.ok(melt && melt.enabled, 'abierta desde el principio (lo que cuesta es la planta química)');
+  assert.equal(recipeLabel('ice-melting'), 'Fundido de hielo');
+  assert.deepEqual(melt.needs.map((n) => [n.alts[0], n.n]), [[DIRTY_ICE, 1]]);
+  assert.deepEqual(melt.fluidsOut.map((f) => [f.fluid, f.amount]), [[WATER, 20]]);
+  // Planta química mirando al norte: el agua sale por el sur (lz 2, cara +z) → tubería y tanque.
+  const cx = b.bx + 12, cz = b.bz + 12;
+  putMulti(b.W, ASSEMBLER_BLOCKS[3], 3, cx, b.by, cz);
+  b.set(cx - 1, b.by, cz + 2, PIPE);
+  putMulti(b.W, STORAGE_TANK, 0, cx - 1, b.by, cz + 4);
+  b.set(cx + 4, b.by, cz + 1, POLE_MEDIUM);
+  (b.h.gs as unknown as { setTime(d: number): void }).setTime(10.25);
+  for (const [px, pz] of [[8, 1], [4, 5], [4, -3]]) putMulti(b.W, SOLAR_PANEL, 0, cx + px, b.by, cz + pz);
+  b.h.tick(3);
+  assert.equal(s.assemblers.setRecipe(cx, b.by, cz, melt.key), true);
+  let ice = 0;
+  for (let i = 0; i < 20 * 12; i++) {
+    ice += s.assemblers.insert(cx, b.by, cz, { id: DIRTY_ICE, count: 1 }); // (lo que haría un brazo)
+    b.h.tick(1);
+  }
+  const v = s.assemblers.view(cx, b.by, cz)!;
+  const melted = ice - (v.needs[0]?.[1] ?? 0);
+  // 12 s a velocidad 1 con ~86 % de energía ≈ 10 fundidos.
+  assert.ok(melted >= 7 && melted <= 13, `hielo fundido ${melted}`);
+  const tank = s.fluids.boxAt(cx - 1, b.by, cz + 4)!;
+  assert.equal(tank.fluid, WATER, 'sale agua');
+  // Todo el agua de los fundidos está en el tanque, la tubería o aún en la salida de la planta (100 como mucho).
+  assert.ok(tank.amount >= melted * 20 - 250 && tank.amount <= melted * 20, `agua ${tank.amount} de ${melted * 20}`);
+});

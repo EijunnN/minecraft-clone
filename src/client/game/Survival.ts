@@ -2,6 +2,7 @@
 // invulnerabilidad tras un golpe, armadura, regeneración, inanición y muerte (reglas de Minecraft).
 import { ARMOR_BYPASS, armorReduce, armorWear } from '../../shared/armor';
 import { resistanceFactor } from '../../shared/effects'; // Fase 6.5 (equipo)
+import { SUIT_TANK } from '../../shared/spacesuit'; // Programa lunar
 
 export interface SurvivalContext {
   eyeInWater: boolean;
@@ -106,6 +107,8 @@ export class Survival {
   exhaustion = 0;
   /** Aire en segundos (15 = lleno). */
   air = 15;
+  /** Programa lunar: oxígeno en el depósito del traje (uO; spacesuit.ts). */
+  oxygen = SUIT_TANK;
   /** Segundos que le quedan ardiendo. */
   fire = 0;
   dead = false;
@@ -145,6 +148,7 @@ export class Survival {
     this.saturation = 5;
     this.exhaustion = 0;
     this.air = 15;
+    this.oxygen = SUIT_TANK;
     this.fire = 0;
     this.absorption = 0;
     this.dead = false;

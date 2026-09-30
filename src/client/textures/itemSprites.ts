@@ -230,6 +230,7 @@ const ARMOR_INKS: Record<string, Record<string, Ink>> = {
   diamond: TOOL_MATERIALS.diamond,
   copper: COPPER_TOOL_INKS, // Fase 6.5 (cobre)
   netherite: TOOL_MATERIALS.netherite, // Fase 8.5
+  space: ramp([255, 255, 252], [232, 232, 228], [196, 198, 200], [146, 150, 158], [60, 64, 74]), // Programa lunar: el traje
 };
 
 /** Detalle claro: costuras en el cuero, destello en el metal. */
@@ -240,6 +241,7 @@ const ARMOR_ACCENT: Record<string, Ink> = {
   diamond: ink([246, 255, 255], [12, 66, 66]),
   copper: COPPER_ARMOR_ACCENT, // Fase 6.5 (cobre)
   netherite: ink([190, 170, 196], [18, 14, 18]), // Fase 8.5
+  space: ink([236, 112, 36], [96, 40, 8]), // Programa lunar: la franja naranja del traje
 };
 
 const HELMET = [
@@ -2316,13 +2318,40 @@ Object.assign(SPRITES, NETHER_GOODS_SPRITES);
 Object.assign(SPRITES, END_SPRITES);
 // Programa lunar: los intermedios, paquetes de ciencia y módulos de Factorio.
 Object.assign(SPRITES, FACTORIO_SPRITES);
+// Programa lunar: la botella de oxígeno (acero con la válvula arriba y la franja azul del oxígeno).
+SPRITES.oxygen_bottle = {
+  rows: [
+    '................',
+    '......kkkk......',
+    '.......vv.......',
+    '......1221......',
+    '.....122223.....',
+    '.....122223.....',
+    '.....bbbbbb.....',
+    '.....bbbbbb.....',
+    '.....122223.....',
+    '.....122223.....',
+    '.....122223.....',
+    '.....122233.....',
+    '.....122233.....',
+    '.....123333.....',
+    '......4444......',
+    '................',
+  ],
+  inks: {
+    ...ramp([248, 248, 250], [206, 208, 212], [160, 162, 170], [108, 110, 120], [40, 42, 50]),
+    k: ink([60, 62, 70], [20, 20, 24]),
+    v: ink([120, 124, 132], [30, 30, 36]),
+    b: ink([70, 140, 230], [20, 40, 90]),
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Rasterizado
 // ---------------------------------------------------------------------------
 
 const TOOL_RE = /^(wooden|stone|iron|golden|diamond|copper|netherite)_(pickaxe|axe|shovel|sword|hoe)$/; // Fase 6.5: cobre; 8.5: netherita
-const ARMOR_RE = /^(leather|iron|golden|diamond|copper|netherite)_(helmet|chestplate|leggings|boots)$/;
+const ARMOR_RE = /^(leather|iron|golden|diamond|copper|netherite|space)_(helmet|chestplate|leggings|boots)$/;
 
 /** Marcador para sprites que aún no tienen dibujo. */
 const PLACEHOLDER: SpriteDef = {

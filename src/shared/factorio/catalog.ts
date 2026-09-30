@@ -8,6 +8,7 @@ import { FACTORIO_NEW, COAL, IRON_INGOT, COPPER_INGOT, RAW_IRON, RAW_COPPER, typ
 import {
   COBBLESTONE, BELTS, UNDERGROUNDS, SPLITTERS, INSERTERS, POLE_SMALL, POLE_MEDIUM, POLE_BIG, SUBSTATION, SOLAR_PANEL, ACCUMULATOR, ASSEMBLER_BLOCKS,
   FURNACE_BLOCKS, ELECTRIC_SMELTER, EXTRACTOR, ALL_LOGS, LAB_BLOCK, PIPE, PIPE_TO_GROUND, STORAGE_TANK, PUMP, OFFSHORE_PUMP, PUMPJACK, BOILER, STEAM_ENGINE,
+  DIRTY_ICE,
 } from '../blocks';
 
 /** Objetos del juego que valen por cada nombre de Factorio (varios = cualquiera de ellos). */
@@ -32,6 +33,7 @@ const EXISTING: Readonly<Record<string, readonly number[]>> = {
   lab: [LAB_BLOCK],
   pipe: [PIPE], 'pipe-to-ground': [PIPE_TO_GROUND], 'storage-tank': [STORAGE_TANK], pump: [PUMP], 'offshore-pump': [OFFSHORE_PUMP], pumpjack: [PUMPJACK],
   boiler: [BOILER], 'steam-engine': [STEAM_ENGINE],
+  ice: [DIRTY_ICE], // Programa lunar: el hielo sucio de los cráteres polares
 };
 
 /** Los objetos del juego que valen por ese nombre de Factorio (null si aún no existe). */
@@ -101,6 +103,17 @@ function hash32(s: string): number {
   return h | 0;
 }
 
+/**
+ * Programa lunar: recetas que no están en el Factorio base (recipes.json sale de él), con los números de Factorio 2.0 (Space Age) cuando
+ * los hay. «Fundido de hielo» (ice-melting): 1 hielo → 20 de agua en 1 s en la planta química; es el agua de la Luna (calderas, ácido,
+ * azufre), que no tiene agua líquida. Abierta desde el principio: lo que cuesta es la planta química (procesado de petróleo).
+ */
+export const LUNAR_RECIPES: readonly RawRecipe[] = [
+  { name: 'ice-melting', category: 'chemistry', time: 1, enabled: true, ingredients: [['ice', 1, 'item', 0]], results: [['water', 20, 'fluid', 1, 0]] },
+];
+/** Nombres en español de las recetas lunares (names-es.json es el de Factorio base). */
+export const LUNAR_RECIPE_NAMES: Readonly<Record<string, string>> = { 'ice-melting': 'Fundido de hielo' };
+
 let cache: FRecipe[] | null = null;
 const byKey = new Map<number, FRecipe>();
 const byName = new Map<string, FRecipe>();
@@ -109,7 +122,7 @@ const byName = new Map<string, FRecipe>();
 export function factorioRecipes(): readonly FRecipe[] {
   if (cache) return cache;
   cache = [];
-  for (const r of recipesJson as RawRecipe[]) {
+  for (const r of [...(recipesJson as RawRecipe[]), ...LUNAR_RECIPES]) {
     if (!SUPPORTED_CATEGORIES.has(r.category) || r.results.length === 0) continue;
     const needs: FNeed[] = [];
     const fluidsIn: FFluid[] = [];

@@ -117,6 +117,8 @@ export interface PlayerSave {
   food: number;
   sat: number;
   air?: number;
+  /** Programa lunar: oxígeno en el depósito del traje (uO). */
+  oxy?: number;
   pos?: [number, number, number];
   rot?: [number, number];
   fly?: boolean;

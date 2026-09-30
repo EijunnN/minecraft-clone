@@ -73,7 +73,8 @@ Es la base de todo el árbol de la Luna.
 - ❌ Cálculo por tasas para que la fábrica siga produciendo con el chunk descargado.
 
 ## Fase 3 · Sobrevivir en la Luna ❌
-- ❌ Traje espacial con botella de oxígeno y barra de oxígeno propia (ahora, en supervivencia, se acaba el aire en ~25 s fuera del cohete).
+- ✅ Traje espacial (4 piezas, sella con las cuatro) con depósito de 10 min, botellas de 20 min y barra de O₂ propia; se rellena en la
+  cabina del cohete y donde hay aire (`shared/spacesuit.ts`). Falta: generador de oxígeno en la base (con agua y electrólisis).
 - ❌ Hábitat prefabricado, esclusas de aire, aire por volúmenes sellados y fugas.
 - ❌ Frío, calor y noche larga (40 min de ciclo); radiadores y límite de calor por base.
 - ❌ Micrometeoritos, tormentas solares y refugios blindados.
