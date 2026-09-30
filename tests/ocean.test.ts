@@ -294,7 +294,7 @@ test('mallado: una planta anegada lleva agua en su celda', () => {
   cols[4][blockIndex(8, 70, 8)] = KELP_TOP;
   const r = mesher.mesh(cols, 0, 0);
   assert.ok(r.cutout.length > 0, 'la planta');
-  assert.equal(r.translucent.length / 8, 6, 'el agua de su celda (6 caras al aire)');
+  assert.equal(r.translucent.length / 12, 6, 'el agua de su celda (6 caras al aire; 4 vértices de 3 enteros por cara)');
   const plain = Array.from({ length: 9 }, () => new Uint16Array(CHUNK_VOLUME));
   plain[4][blockIndex(8, 70, 8)] = stateOf(CORALS.tube.fan, { water: 0 });
   assert.equal(mesher.mesh(plain, 0, 0).translucent.length, 0, 'la gorgonia seca no lleva agua');

@@ -516,7 +516,12 @@ test('rendimiento: una red grande y varios relojes sin pasarse de tiempo', () =>
     for (const [dx, dz] of [[0, 3], [1, 3], [2, 3], [2, 2], [2, 1], [2, 0], [1, 0]]) set(x + dx, by, z + dz, wireState(0, false));
     clocks.push(x);
   }
-  h.tick(5);
+  // Antes de cronometrar, que acabe de generarse el terreno alrededor del jugador (si no, se mide la generación de chunks, no la
+  // redstone).
+  c.pos(x0 - 1.5, by + 3, z0 + 0.5);
+  const warm0 = h.gs.sys.redstone.updates;
+  h.tick(200);
+  const warm = h.gs.sys.redstone.updates - warm0; // (los avisos del calentamiento no cuentan)
   let toggles = 0;
   const torchAt = (x: number) => get(x, by, z0 + 42);
   let prev = clocks.map(torchAt);
@@ -536,12 +541,13 @@ test('rendimiento: una red grande y varios relojes sin pasarse de tiempo', () =>
   assert.ok(isWire(get(x0 + 39, by, z0 + 39)));
   assert.ok(toggles >= 80, `los relojes siguen andando (${toggles} cambios)`);
   assert.ok(clocks.every((x) => get(x, by, z0 + 42) !== AIR), 'ninguna antorcha se ha roto');
-  console.log(`rendimiento: ${ms.toFixed(3)} ms por tick, ${h.gs.sys.redstone.updates} avisos, ${h.gs.sys.redstone.scheduledCount} ticks pendientes`);
-  // El tiempo depende de la máquina (con la suite entera va al doble): margen amplio, y el trabajo
-  // (número de avisos) se comprueba aparte, que no depende de la carga.
-  assert.ok(ms < 15, `${ms.toFixed(2)} ms por tick de media`);
+  const updates = h.gs.sys.redstone.updates - warm;
+  console.log(`rendimiento: ${ms.toFixed(3)} ms por tick, ${updates} avisos, ${h.gs.sys.redstone.scheduledCount} ticks pendientes`);
+  // El tiempo depende de la máquina (sola, ~9 ms en un VPS compartido; con la suite entera en paralelo, ~14): margen amplio, y el
+  // trabajo (número de avisos) se comprueba aparte, que no depende de la carga.
+  assert.ok(ms < 25, `${ms.toFixed(2)} ms por tick de media`);
   // Auditoría de la redstone: el polvo va cable a cable como en Java (cada cambio avisa a los vecinos de sus
   // siete posiciones), así que hay más avisos que cuando se resolvía la red de una vez.
-  assert.ok(h.gs.sys.redstone.updates < 250000, `${h.gs.sys.redstone.updates} avisos`);
+  assert.ok(updates < 250000, `${updates} avisos`);
   assert.ok(h.gs.sys.redstone.scheduledCount < 100);
 });

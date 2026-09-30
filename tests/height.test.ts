@@ -102,7 +102,7 @@ test('mallado: bloques en el fondo y en el techo del mundo', () => {
   const r = mesher.mesh(cols, 0, 0);
   assert.equal(r.minY, MIN_Y + 1);
   assert.equal(r.maxY, MAX_Y);
-  assert.equal(r.opaque.length / 8, 12, 'dos cubos sueltos: 12 caras');
+  assert.equal(r.opaque.length / 12, 12, 'dos cubos sueltos: 12 caras (4 vértices de 3 enteros por cara)');
   assert.equal(r.light.length, CHUNK_VOLUME);
   assert.equal(r.light[blockIndex(8, MAX_Y - 2, 8)] >> 4, 14, 'bajo el bloque del techo llega luz del cielo difusa');
 });

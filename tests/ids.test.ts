@@ -339,8 +339,8 @@ test('los ids de la fase 8.5 no cambian', () => {
 // Fase 8.6 (el End): piedra del End, púrpura, vara del End, coro, marco y portal del End, puerta del End, huevo de
 // dragón, cajas de shulker, cofre de ender y cabeza de dragón; la fruta de coro, el ojo de ender, los huevos
 // generadores, el cristal del End, el caparazón de shulker y los élitros; endermita, dragón y shulker.
-import { END_STONE, END_PORTAL_FRAME, END_GATEWAY, DRAGON_EGG, ENDER_CHEST, SHULKER_BOXES, BLOCK_COUNT } from '../src/shared/blocks';
-import { CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, SHULKER_SHELL, ELYTRA, ITEM_COUNT } from '../src/shared/items';
+import { END_STONE, END_PORTAL_FRAME, END_GATEWAY, DRAGON_EGG, ENDER_CHEST, SHULKER_BOXES } from '../src/shared/blocks'; // (BLOCK_COUNT e ITEM_COUNT, arriba)
+import { CHORUS_FRUIT, ENDER_EYE, END_CRYSTAL, SHULKER_SHELL, ELYTRA } from '../src/shared/items';
 import { MOB_ENDERMITE, MOB_ENDER_DRAGON, MOB_SHULKER, ENT_END_CRYSTAL, ENT_DRAGON_FIREBALL, ENT_SHULKER_BULLET } from '../src/shared/mobs';
 test('los ids de la fase 8.6 no cambian', () => {
   assert.deepEqual([END_STONE, END_PORTAL_FRAME, END_GATEWAY, DRAGON_EGG, SHULKER_BOXES[''], SHULKER_BOXES.black, ENDER_CHEST, SKULLS.dragon], [6035, 6077, 6086, 6087, 6088, 6184, 6190, 6194]);
